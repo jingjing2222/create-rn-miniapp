@@ -130,6 +130,8 @@ docs/
    - 옵션 파싱 단위 테스트
    - 빠진 값에 대해 인터랙티브 입력기로 위임되는지 검증
    - 기존 명령 계획/릴리스 테스트와 함께 `pnpm verify` 통과
+5. 릴리스 후속 작업
+   - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates` 둘 다 patch changeset을 추가해 CLI UX 변경을 함께 배포한다.
 
 ## 남은 작업
 1. npm publish 준비
