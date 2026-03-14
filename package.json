@@ -2,7 +2,7 @@
   "name": "create-miniapp-workspace",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@10.6.0",
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
     "build": "nx run-many -t build --all",
     "typecheck": "nx run-many -t typecheck --all",

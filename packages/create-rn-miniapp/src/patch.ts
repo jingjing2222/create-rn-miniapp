@@ -6,6 +6,7 @@ import {
   patchGraniteConfigSource,
   patchTsconfigModuleSource,
 } from './ast.js'
+import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
 import type { ServerProvider } from './server-provider.js'
 import {
   type TemplateTokens,
@@ -15,7 +16,7 @@ import {
   removePathIfExists,
 } from './templates.js'
 
-const TOOLING_FILES = [
+const STATIC_TOOLING_FILES = [
   'biome.json',
   '.biome.json',
   'eslint.config.js',
@@ -30,7 +31,6 @@ const TOOLING_FILES = [
   'prettier.config.js',
   'prettier.config.cjs',
   'prettier.config.mjs',
-  'pnpm-lock.yaml',
 ] as const
 
 const TOOLING_DEPENDENCIES = [
@@ -44,8 +44,6 @@ const TOOLING_DEPENDENCIES = [
   'typescript-eslint',
   'prettier',
 ] as const
-
-const WORKSPACE_ARTIFACTS = ['node_modules'] as const
 
 const SUPABASE_JS_VERSION = '^2.57.4'
 const DOTENV_VERSION = '^16.4.7'
@@ -201,6 +199,7 @@ type PackageJson = {
 }
 
 type WorkspacePatchOptions = {
+  packageManager: PackageManager
   serverProvider: ServerProvider | null
 }
 
@@ -260,15 +259,21 @@ function resolveGranitePluginVersion(packageJson: PackageJson) {
   )
 }
 
-async function removeToolingFiles(workspaceRoot: string) {
+async function removeToolingFiles(workspaceRoot: string, packageManager: PackageManager) {
+  const adapter = getPackageManagerAdapter(packageManager)
   await Promise.all(
-    TOOLING_FILES.map((fileName) => removePathIfExists(path.join(workspaceRoot, fileName))),
+    [...STATIC_TOOLING_FILES, ...adapter.toolingFiles].map((fileName) =>
+      removePathIfExists(path.join(workspaceRoot, fileName)),
+    ),
   )
 }
 
-async function removeWorkspaceArtifacts(workspaceRoot: string) {
+async function removeWorkspaceArtifacts(workspaceRoot: string, packageManager: PackageManager) {
+  const adapter = getPackageManagerAdapter(packageManager)
   await Promise.all(
-    WORKSPACE_ARTIFACTS.map((fileName) => removePathIfExists(path.join(workspaceRoot, fileName))),
+    adapter.workspaceArtifacts.map((fileName) =>
+      removePathIfExists(path.join(workspaceRoot, fileName)),
+    ),
   )
 }
 
@@ -360,8 +365,8 @@ export async function patchFrontendWorkspace(
   }
 
   await writePackageJson(packageJsonPath, packageJson)
-  await removeToolingFiles(frontendRoot)
-  await removeWorkspaceArtifacts(frontendRoot)
+  await removeToolingFiles(frontendRoot, options.packageManager)
+  await removeWorkspaceArtifacts(frontendRoot, options.packageManager)
   await patchGraniteConfig(frontendRoot, tokens, options.serverProvider)
   await patchWorkspaceTsconfigModules(frontendRoot, ['tsconfig.json'])
 
@@ -397,8 +402,8 @@ export async function patchBackofficeWorkspace(
     'tsconfig.node.json',
   ])
   await patchBackofficeEntryFiles(backofficeRoot)
-  await removeToolingFiles(backofficeRoot)
-  await removeWorkspaceArtifacts(backofficeRoot)
+  await removeToolingFiles(backofficeRoot, options.packageManager)
+  await removeWorkspaceArtifacts(backofficeRoot, options.packageManager)
 
   if (options.serverProvider === 'supabase') {
     await writeBackofficeSupabaseBootstrap(backofficeRoot)
@@ -407,9 +412,14 @@ export async function patchBackofficeWorkspace(
   await applyWorkspaceProjectTemplate(targetRoot, 'backoffice', tokens)
 }
 
-export async function patchServerWorkspace(targetRoot: string, tokens: TemplateTokens) {
+export async function patchServerWorkspace(
+  targetRoot: string,
+  tokens: TemplateTokens,
+  options: Pick<WorkspacePatchOptions, 'packageManager'>,
+) {
   await applyServerPackageTemplate(targetRoot, tokens)
-  await removeWorkspaceArtifacts(path.join(targetRoot, 'server'))
+  await removeToolingFiles(path.join(targetRoot, 'server'), options.packageManager)
+  await removeWorkspaceArtifacts(path.join(targetRoot, 'server'), options.packageManager)
   await applyWorkspaceProjectTemplate(targetRoot, 'server', tokens)
 }
 

@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { log } from '@clack/prompts'
 import { buildCommandPlan, runCommand } from './commands.js'
+import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
 import { patchBackofficeWorkspace, patchFrontendWorkspace, patchServerWorkspace } from './patch.js'
 import type { ServerProvider } from './server-provider.js'
 import {
@@ -13,6 +14,7 @@ import {
 } from './templates.js'
 
 export type ScaffoldOptions = {
+  packageManager: PackageManager
   appName: string
   displayName: string
   outputDir: string
@@ -23,9 +25,14 @@ export type ScaffoldOptions = {
 
 export async function scaffoldWorkspace(options: ScaffoldOptions) {
   const targetRoot = path.resolve(options.outputDir, options.appName)
+  const packageManager = getPackageManagerAdapter(options.packageManager)
   const tokens: TemplateTokens = {
     appName: options.appName,
     displayName: options.displayName,
+    packageManager: options.packageManager,
+    packageManagerCommand: options.packageManager,
+    packageManagerExecCommand: `${options.packageManager} exec`,
+    verifyCommand: packageManager.verifyCommand(),
   }
 
   await ensureEmptyDirectory(targetRoot)
@@ -37,6 +44,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
   const plan = buildCommandPlan({
     appName: options.appName,
     targetRoot,
+    packageManager: options.packageManager,
     serverProvider: options.serverProvider,
     withBackoffice: options.withBackoffice,
   })
@@ -49,33 +57,35 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
   await applyRootTemplates(targetRoot, tokens)
   await applyDocsTemplates(targetRoot, tokens)
   await patchFrontendWorkspace(targetRoot, tokens, {
+    packageManager: options.packageManager,
     serverProvider: options.serverProvider,
   })
 
   if (options.withBackoffice && (await pathExists(path.join(targetRoot, 'backoffice')))) {
     await patchBackofficeWorkspace(targetRoot, tokens, {
+      packageManager: options.packageManager,
       serverProvider: options.serverProvider,
     })
   }
 
   if (options.serverProvider && (await pathExists(path.join(targetRoot, 'server')))) {
-    await patchServerWorkspace(targetRoot, tokens)
+    await patchServerWorkspace(targetRoot, tokens, {
+      packageManager: options.packageManager,
+    })
   }
 
   if (!options.skipInstall) {
-    log.step('루트 pnpm install')
+    log.step(`루트 ${options.packageManager} install`)
     await runCommand({
       cwd: targetRoot,
-      command: 'pnpm',
-      args: ['install'],
-      label: '루트 pnpm install',
+      ...packageManager.install(),
+      label: `루트 ${options.packageManager} install`,
     })
 
     log.step('루트 biome check --write --unsafe')
     await runCommand({
       cwd: targetRoot,
-      command: 'pnpm',
-      args: ['exec', 'biome', 'check', '.', '--write', '--unsafe'],
+      ...packageManager.exec('biome', ['check', '.', '--write', '--unsafe']),
       label: '루트 biome check --write --unsafe',
     })
   }

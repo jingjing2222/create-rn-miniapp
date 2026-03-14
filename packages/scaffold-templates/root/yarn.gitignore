@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+.nx
+.DS_Store
+.env
+.env.local
+.env.*.local
+.yarn/
+.pnp.*

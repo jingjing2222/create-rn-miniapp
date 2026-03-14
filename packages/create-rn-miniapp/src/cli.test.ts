@@ -12,6 +12,8 @@ import {
 test('parseCliArgs parses long-form CLI options with yargs', async () => {
   const argv = await parseCliArgs(
     [
+      '--package-manager',
+      'yarn',
       '--name',
       'ebook-miniapp',
       '--display-name',
@@ -27,6 +29,7 @@ test('parseCliArgs parses long-form CLI options with yargs', async () => {
     '/workspace',
   )
 
+  assert.equal(argv.packageManager, 'yarn')
   assert.equal(argv.name, 'ebook-miniapp')
   assert.equal(argv.displayName, '전자책 미니앱')
   assert.equal(argv.withServer, true)
@@ -45,7 +48,11 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   }> = []
   const selectMessages: string[] = []
   const promptValues = ['ebook-miniapp', '전자책 미니앱']
-  const promptSelections: Array<'supabase' | 'yes' | 'no'> = ['supabase', 'no']
+  const promptSelections: Array<'pnpm' | 'yarn' | 'supabase' | 'yes' | 'no'> = [
+    'yarn',
+    'supabase',
+    'no',
+  ]
 
   const prompts: CliPrompter = {
     async text(options) {
@@ -87,6 +94,7 @@ test('resolveCliOptions asks for missing values when interactive input is needed
 
   assert.equal(resolved.appName, 'ebook-miniapp')
   assert.equal(resolved.displayName, '전자책 미니앱')
+  assert.equal(resolved.packageManager, 'yarn')
   assert.equal(resolved.withServer, true)
   assert.equal(resolved.serverProvider, 'supabase')
   assert.equal(resolved.withBackoffice, false)
@@ -105,6 +113,7 @@ test('resolveCliOptions asks for missing values when interactive input is needed
     },
   ])
   assert.deepEqual(selectMessages, [
+    '패키지 매니저를 선택하세요.',
     '`server` 제공자를 선택하세요.',
     '`backoffice` 워크스페이스를 같이 만들까요?',
   ])
@@ -142,6 +151,7 @@ test('resolveCliOptions keeps prompts optional when yes flag is set', async () =
   )
 
   assert.equal(promptCalled, false)
+  assert.equal(resolved.packageManager, 'pnpm')
   assert.equal(resolved.displayName, 'Ebook Miniapp')
   assert.equal(resolved.withServer, false)
   assert.equal(resolved.serverProvider, null)
@@ -206,6 +216,7 @@ test('formatCliHelp renders Korean help text', () => {
 
   assert.match(help, /사용법/)
   assert.match(help, /옵션/)
+  assert.match(help, /--package-manager <pnpm\|yarn>/)
   assert.match(help, /--server-provider <supabase>/)
   assert.match(help, /도움말 보기/)
   assert.match(help, /버전 보기/)

@@ -2,9 +2,11 @@ import path from 'node:path'
 import { isCancel, log, select, text } from '@clack/prompts'
 import yargs from 'yargs'
 import { assertValidAppName, toDefaultDisplayName } from './layout.js'
+import { PACKAGE_MANAGERS, type PackageManager } from './package-manager.js'
 import { SERVER_PROVIDERS, type ServerProvider } from './server-provider.js'
 
 export type ParsedCliArgs = {
+  packageManager?: PackageManager
   name?: string
   displayName?: string
   withServer?: boolean
@@ -53,6 +55,7 @@ type ClackPrompter = {
 }
 
 export type ResolvedCliOptions = {
+  packageManager: PackageManager
   appName: string
   displayName: string
   serverProvider: ServerProvider | null
@@ -75,6 +78,10 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     .option('name', {
       type: 'string',
       describe: 'Granite appName과 생성 디렉터리 이름',
+    })
+    .option('package-manager', {
+      choices: PACKAGE_MANAGERS,
+      describe: '생성에 사용할 package manager 지정',
     })
     .option('display-name', {
       type: 'string',
@@ -100,7 +107,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     .option('skip-install', {
       type: 'boolean',
       default: false,
-      describe: '마지막 루트 `pnpm install` 생략',
+      describe: '마지막 루트 package manager install 생략',
     })
     .option('yes', {
       type: 'boolean',
@@ -120,6 +127,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     .parse()
 
   return {
+    packageManager: argv.packageManager,
     name: argv.name,
     displayName: argv.displayName,
     withServer: argv.withServer,
@@ -139,18 +147,20 @@ export function formatCliHelp() {
     '  create-miniapp [옵션]',
     '',
     '옵션',
+    '  --package-manager <pnpm|yarn> package manager 지정',
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
     '  --with-server                  `server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
     '  --server-provider <supabase>   `server` 워크스페이스 제공자 지정',
     '  --with-backoffice              `backoffice` 워크스페이스 포함',
     '  --output-dir <디렉터리>        생성할 모노레포의 상위 디렉터리',
-    '  --skip-install                 마지막 루트 `pnpm install` 생략',
+    '  --skip-install                 마지막 루트 package manager install 생략',
     '  --yes                          선택형 질문을 기본값으로 진행',
     '  --help                         도움말 보기',
     '  --version                      버전 보기',
     '',
     '예시',
+    '  create-miniapp --package-manager yarn --name my-miniapp --display-name "내 미니앱"',
     '  create-miniapp --name my-miniapp --display-name "내 미니앱"',
     '  create-miniapp --name my-miniapp --server-provider supabase --with-backoffice',
     '',
@@ -162,6 +172,19 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
   if (argv.withServer === false && argv.serverProvider) {
     throw new Error('`--with-server` 없이 `--server-provider`를 사용할 수 없습니다.')
   }
+
+  const packageManager =
+    argv.packageManager ??
+    (argv.yes
+      ? 'pnpm'
+      : await prompt.select<PackageManager>({
+          message: '패키지 매니저를 선택하세요.',
+          options: [
+            { label: 'pnpm', value: 'pnpm' },
+            { label: 'yarn', value: 'yarn' },
+          ],
+          initialValue: 'pnpm',
+        }))
 
   const rawName =
     argv.name ??
@@ -228,6 +251,7 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
         })) === 'yes')
 
   return {
+    packageManager,
     appName,
     displayName,
     serverProvider: normalizedServerProvider,

@@ -1,7 +1,7 @@
 # Implement
 
 ## 현재 구현 기준선
-- 루트 기준 `pnpm` workspace + `nx` + `biome`
+- 루트 기준 `{{packageManagerCommand}}` workspace + `nx` + `biome`
 - `frontend`: AppInToss + Granite + `@apps-in-toss/framework` + TDS
 - `backoffice`: optional Vite workspace
 - `server`: optional Supabase workspace
@@ -21,7 +21,7 @@
 - 구현은 red → green → refactor 순서를 기본으로 한다.
 
 ## 검증 명령
-- `pnpm verify`
+- `{{verifyCommand}}`
 
 ## PR 제출 체크
 - PR 본문에 실행한 검증 명령과 결과를 남긴다.

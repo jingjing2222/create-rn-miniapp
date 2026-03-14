@@ -6,7 +6,7 @@
 ## Golden Rules
 1. Plan first: 작업 전 `docs/ai/Plan.md`를 먼저 갱신한다.
 2. TDD first: 로직 변경과 버그 수정은 실패 테스트나 재현 절차부터 남긴다.
-3. Self-verify first: `pnpm verify`를 통과해야 완료로 본다.
+3. Self-verify first: `{{verifyCommand}}`를 통과해야 완료로 본다.
 4. Small diffs: 한 커밋과 한 PR은 하나의 목적만 가진다.
 5. Docs first: 구조와 규칙이 바뀌면 코드보다 문서를 먼저 맞춘다.
 6. No secrets: 키, 토큰, 내부 URL 같은 민감정보를 코드, 로그, PR에 남기지 않는다.
@@ -42,7 +42,7 @@
 - `docs`: 제품, 엔지니어링, AI 하네스 문서
 
 현재 기준선:
-- 루트 툴체인: `pnpm + nx + biome`
+- 루트 툴체인: `{{packageManagerCommand}} + nx + biome`
 - MiniApp 기준: AppInToss React Native tutorial + `@apps-in-toss/framework` + TDS
 - 내부 워크스페이스는 루트 검증 흐름을 따른다
 
@@ -53,15 +53,15 @@
 4. UI 작업이면 TDS 문서를 먼저 확인한다.
 5. 실패 테스트 또는 재현 절차를 만든다.
 6. 구현한다.
-7. `pnpm verify`를 실행한다.
+7. `{{verifyCommand}}`를 실행한다.
 8. `Status`와 필요하면 `Decisions`를 갱신한다.
 9. 브랜치, 커밋, 푸시, PR 순으로 마무리한다.
 
 ## Verify Gate
-- `pnpm format:check`
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
+- `{{packageManagerCommand}} format:check`
+- `{{packageManagerCommand}} lint`
+- `{{packageManagerCommand}} typecheck`
+- `{{packageManagerCommand}} test`
 - 문서 링크와 실제 구조 정합성 확인
 
 ## Commit And Branch Policy

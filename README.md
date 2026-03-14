@@ -5,7 +5,7 @@
 - `frontend`: Granite + `@apps-in-toss/framework` 기반 MiniApp
 - `server`: optional Supabase workspace
 - `backoffice`: optional Vite + React + TypeScript workspace
-- 루트: `pnpm + nx + biome` 기준 monorepo 설정과 하네스 문서
+- 루트: 선택한 package manager + `nx` + `biome` 기준 monorepo 설정과 하네스 문서
 
 ## 빠른 시작
 
@@ -15,21 +15,29 @@
 pnpm create rn-miniapp
 ```
 
+또는
+
+```bash
+yarn create rn-miniapp
+```
+
 옵션으로 한 번에 생성:
 
 ```bash
 pnpm dlx create-rn-miniapp \
+  --package-manager yarn \
   --name my-miniapp \
   --display-name "내 미니앱" \
   --server-provider supabase \
   --with-backoffice
 ```
 
-생성이 끝나면:
+생성이 끝나면 선택한 package manager로 검증합니다:
 
 ```bash
 cd my-miniapp
 pnpm verify
+# 또는 yarn verify
 ```
 
 ## 생성되는 구조
@@ -43,25 +51,27 @@ pnpm verify
   AGENTS.md
   package.json
   nx.json
-  pnpm-workspace.yaml
+  pnpm-workspace.yaml  # pnpm일 때만
+  .yarnrc.yml          # yarn일 때만
   biome.json
   tsconfig.base.json
 ```
 
 ## CLI 옵션
 
+- `--package-manager <pnpm|yarn>`: 생성과 루트 monorepo에 사용할 package manager
 - `--name`: Granite `appName`이자 생성 디렉터리 이름
 - `--display-name`: 사용자에게 보이는 앱 이름
 - `--with-server`: `server` 워크스페이스 포함. 현재는 `supabase`로 연결됩니다.
 - `--server-provider <supabase>`: `server` 제공자 명시
 - `--with-backoffice`: `backoffice` 워크스페이스 포함
 - `--output-dir <dir>`: 생성할 모노레포의 상위 디렉터리
-- `--skip-install`: 마지막 루트 `pnpm install`과 Biome 정리를 생략
+- `--skip-install`: 마지막 루트 package manager install과 Biome 정리를 생략
 - `--yes`: 선택형 질문을 기본값으로 진행
 - `--help`: 도움말 출력
 - `--version`: 버전 출력
 
-옵션으로 주지 않은 값은 한국어 프롬프트로 이어집니다.
+옵션으로 주지 않은 값은 한국어 프롬프트로 이어지며, package manager 선택이 가장 먼저 나옵니다.
 
 ## Supabase를 같이 만들면
 
@@ -77,6 +87,8 @@ pnpm verify
 - `.env.local.example`
 - `src/vite-env.d.ts`
 - `src/lib/supabase.ts`
+
+`yarn`을 선택하면 root에는 `.yarnrc.yml`과 `package.json.workspaces`가 생성되고, `pnpm-workspace.yaml`은 생성되지 않습니다.
 
 생성 후에는 예시 파일을 참고해서 실제 `.env.local`을 채우면 됩니다.
 
@@ -102,6 +114,7 @@ pnpm --filter create-rn-miniapp exec tsx src/index.ts --help
 
 ```bash
 pnpm --filter create-rn-miniapp exec tsx src/index.ts \
+  --package-manager yarn \
   --name local-miniapp \
   --display-name "로컬 미니앱" \
   --server-provider supabase \

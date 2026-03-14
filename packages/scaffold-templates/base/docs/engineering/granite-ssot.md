@@ -42,7 +42,7 @@ API 후보를 찾는 용도는 `appsintoss-granite-api-index.md`와 `appsintoss-
 1. `router.gen.ts` 동기화 확인
    - route key와 entry 파일 구조가 일치해야 한다.
 2. 정적 검증
-   - `pnpm verify`
+   - `{{verifyCommand}}`
 
 ## 4) Forbidden vs Allowed
 
@@ -74,7 +74,7 @@ API 후보를 찾는 용도는 `appsintoss-granite-api-index.md`와 `appsintoss-
 | id | command | pass criteria |
 |---|---|---|
 | `router-sync` | `test -f frontend/src/router.gen.ts` | `router.gen.ts` exists and route keys match entry pages |
-| `verify` | `pnpm verify` | exit code 0 |
+| `verify` | `{{verifyCommand}}` | exit code 0 |
 
 ### Required report evidence fields
 

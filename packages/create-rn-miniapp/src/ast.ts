@@ -699,3 +699,97 @@ export function patchTsconfigModuleSource(source: string) {
 
   return `${JSON.stringify(normalized, null, 2)}\n`
 }
+
+type OrderedJsonEntry = {
+  key: string
+  value: unknown
+}
+
+function parseOrderedJsonObjectEntries(source: string) {
+  const parsed = parse(source, [], JSONC_PARSE_OPTIONS)
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('루트 package.json을 JSON 객체로 파싱하지 못했습니다.')
+  }
+
+  return Object.entries(parsed).map(([key, value]) => ({ key, value }))
+}
+
+function upsertOrderedJsonEntry(
+  entries: OrderedJsonEntry[],
+  key: string,
+  value: unknown,
+  options?: {
+    afterKey?: string
+  },
+) {
+  const existingIndex = entries.findIndex((entry) => entry.key === key)
+  const nextEntry = { key, value }
+
+  if (existingIndex !== -1) {
+    entries.splice(existingIndex, 1)
+  }
+
+  if (options?.afterKey) {
+    const anchorIndex = entries.findIndex((entry) => entry.key === options.afterKey)
+
+    if (anchorIndex !== -1) {
+      entries.splice(anchorIndex + 1, 0, nextEntry)
+      return
+    }
+  }
+
+  if (existingIndex !== -1 && existingIndex <= entries.length) {
+    entries.splice(existingIndex, 0, nextEntry)
+    return
+  }
+
+  entries.push(nextEntry)
+}
+
+function removeOrderedJsonEntry(entries: OrderedJsonEntry[], key: string) {
+  const existingIndex = entries.findIndex((entry) => entry.key === key)
+
+  if (existingIndex !== -1) {
+    entries.splice(existingIndex, 1)
+  }
+}
+
+function stringifyOrderedJsonEntries(entries: OrderedJsonEntry[]) {
+  const object: Record<string, unknown> = {}
+
+  for (const entry of entries) {
+    object[entry.key] = entry.value
+  }
+
+  return `${JSON.stringify(object, null, 2)}\n`
+}
+
+export function patchRootPackageJsonSource(
+  source: string,
+  patch: {
+    packageManagerField: string
+    scripts: Record<string, string>
+    workspaces: string[] | null
+  },
+) {
+  const entries = parseOrderedJsonObjectEntries(source)
+  const existingScripts = entries.find((entry) => entry.key === 'scripts')?.value
+  const scripts =
+    existingScripts && typeof existingScripts === 'object' && !Array.isArray(existingScripts)
+      ? { ...(existingScripts as Record<string, string>), ...patch.scripts }
+      : patch.scripts
+
+  upsertOrderedJsonEntry(entries, 'packageManager', patch.packageManagerField)
+  upsertOrderedJsonEntry(entries, 'scripts', scripts)
+
+  if (patch.workspaces) {
+    upsertOrderedJsonEntry(entries, 'workspaces', patch.workspaces, {
+      afterKey: 'packageManager',
+    })
+  } else {
+    removeOrderedJsonEntry(entries, 'workspaces')
+  }
+
+  return stringifyOrderedJsonEntries(entries)
+}

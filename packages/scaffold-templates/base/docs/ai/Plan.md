@@ -16,4 +16,4 @@
 ## DoD
 - [ ] 문서 갱신
 - [ ] 구현
-- [ ] `pnpm verify`
+- [ ] `{{verifyCommand}}`

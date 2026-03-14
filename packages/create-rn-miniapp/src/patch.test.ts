@@ -91,8 +91,15 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
 
   await patchFrontendWorkspace(
     targetRoot,
-    { appName: 'ebook-miniapp', displayName: '전자책 미니앱' },
-    { serverProvider: null },
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: null },
   )
 
   const packageJson = JSON.parse(
@@ -164,8 +171,15 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
 
   await patchFrontendWorkspace(
     targetRoot,
-    { appName: 'ebook-miniapp', displayName: '전자책 미니앱' },
-    { serverProvider: 'supabase' },
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'supabase' },
   )
 
   const packageJson = JSON.parse(
@@ -294,8 +308,15 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
 
   await patchBackofficeWorkspace(
     targetRoot,
-    { appName: 'ebook-miniapp', displayName: '전자책 미니앱' },
-    { serverProvider: 'supabase' },
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'supabase' },
   )
 
   const packageJson = JSON.parse(

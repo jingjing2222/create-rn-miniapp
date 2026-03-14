@@ -1,3 +1,34 @@
+## 2026-03-14 — pnpm / Yarn package manager 선택 지원
+- 상태
+  - 생성 시작 시 package manager를 먼저 선택하고, 그 선택이 공식 CLI 실행, 루트 템플릿, generated 문서, root install/verify 흐름까지 일관되게 반영되도록 확장했다.
+  - `yarn`은 Berry + `nodeLinker: pnp` 기준으로 지원하고, root `.yarnrc.yml`, `package.json.workspaces`, PnP 산출물 ignore/cleanup까지 포함했다.
+- 반영한 변경
+  - `packages/create-rn-miniapp/src/package-manager.ts`
+    - `PackageManagerAdapter` 추가
+    - `pnpm`, `yarn` 명령 생성 로직 분리
+  - `packages/create-rn-miniapp/src/cli.ts`
+    - `--package-manager <pnpm|yarn>` 추가
+    - 인터랙티브 첫 질문을 package manager 선택으로 변경
+  - `packages/create-rn-miniapp/src/commands.ts`
+  - `packages/create-rn-miniapp/src/scaffold.ts`
+  - `packages/create-rn-miniapp/src/templates.ts`
+  - `packages/create-rn-miniapp/src/patch.ts`
+    - manager별 root/workspace 파일 생성과 cleanup 처리
+    - root `package.json`은 JSON AST patch로 `packageManager`, `workspaces`, `scripts`를 주입
+    - `yarn` 생성물의 `workspaces` 순서는 `frontend`, `server`, `backoffice`로 고정
+  - `packages/scaffold-templates/root/yarnrc.yml`
+    - `nodeLinker: pnp`
+  - `packages/scaffold-templates/root/pnpm.biome.json`
+  - `packages/scaffold-templates/root/yarn.biome.json`
+    - `yarn` 생성물에만 `.yarn`, `.pnp.*` ignore
+  - `README.md`
+  - `packages/scaffold-templates/base/docs/*`
+    - generated 문서의 install/verify 안내를 manager-aware하게 정리
+- 검증
+  - `pnpm verify` ✅
+  - `pnpm` 실제 스캐폴드 smoke ✅
+  - `yarn` 실제 스캐폴드 smoke ✅
+
 ## 2026-03-14 — README 및 scaffold 문서 재편
 - 상태
   - 루트 `README.md`를 저장소 소개보다 사용자 사용 설명서 기준으로 다시 정리했다.
@@ -143,11 +174,11 @@
     - `packages/scaffold-templates`
     - generic `AGENTS.md`, `docs/ai/*`, `docs/product/기능명세서.md`, Granite/TDS index placeholder 추가
     - source scaffold template가 아니라 문서/하네스 overlay 전용이라는 원칙 반영
-    - generated repo 루트용 `package.json`, `pnpm-workspace.yaml`, `nx.json`, `biome.json`, `tsconfig.base.json`, `*.project.json` 템플릿 추가
+    - generated repo 루트용 `package.json`, manager별 workspace/ignore/biome, `nx.json`, `tsconfig.base.json`, `*.project.json` 템플릿 추가
   - 기준선 고정
     - MiniApp frontend는 AppInToss React Native 튜토리얼 기준으로 생성
     - `pnpm create granite-app -> pnpm install -> pnpm install @apps-in-toss/framework -> pnpm ait init -> TDS 설치` 순서를 source of truth로 명시
-    - 생성 결과물의 루트 툴체인은 `pnpm + nx + biome`로 고정
+    - 생성 결과물의 루트 툴체인은 선택한 package manager + `nx` + `biome` 기준으로 유지
     - 내부 워크스페이스는 lint/format를 별도로 들지 않는 방향으로 patch
 - 검증
   - `pnpm install` ✅

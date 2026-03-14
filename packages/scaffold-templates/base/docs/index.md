@@ -8,7 +8,7 @@
 - `ai/`: Prompt, Plan, Implement, Status, Decisions
 
 ## 현재 기준선
-- 루트는 `pnpm + nx + biome`
+- 루트는 `{{packageManagerCommand}} + nx + biome`
 - `frontend`: AppInToss + Granite + `@apps-in-toss/framework` + TDS 기반 MiniApp
 - `backoffice`: optional Vite 기반 workspace
 - `server`: optional Supabase workspace
@@ -37,18 +37,18 @@
 ## format and lint
 - Biome는 루트 단일 진입점만 사용한다.
 - 아래 명령은 반드시 저장소 루트에서 실행한다.
-  - `pnpm format`
-  - `pnpm format:check`
-  - `pnpm lint`
-  - `pnpm verify`
+  - `{{packageManagerCommand}} format`
+  - `{{packageManagerCommand}} format:check`
+  - `{{packageManagerCommand}} lint`
+  - `{{verifyCommand}}`
 
 ## Nx 실행 가이드
-- 그래프 생성: `pnpm nx graph --file=tmp/nx-graph.html`
-- 전체 검증: `pnpm nx run-many -t typecheck,test --all`
+- 그래프 생성: `{{packageManagerExecCommand}} nx graph --file=tmp/nx-graph.html`
+- 전체 검증: `{{packageManagerExecCommand}} nx run-many -t typecheck,test --all`
 - 프로젝트별 예시
-  - `pnpm nx run frontend:typecheck`
-  - `pnpm nx run backoffice:build`
-  - `pnpm nx run server:test`
+  - `{{packageManagerExecCommand}} nx run frontend:typecheck`
+  - `{{packageManagerExecCommand}} nx run backoffice:build`
+  - `{{packageManagerExecCommand}} nx run server:test`
 
 ## 테스트 규칙
 - 테스트는 가능한 한 인접 배치를 우선한다.

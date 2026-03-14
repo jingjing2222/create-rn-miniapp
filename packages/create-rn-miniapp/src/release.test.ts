@@ -47,7 +47,23 @@ test('scaffold templates tarball keeps the root gitignore template', () => {
 
   assert.ok(packResult)
   assert.equal(
-    packResult.files.some((file) => file.path === 'root/gitignore'),
+    packResult.files.some((file) => file.path === 'root/pnpm.gitignore'),
+    true,
+  )
+  assert.equal(
+    packResult.files.some((file) => file.path === 'root/yarn.gitignore'),
+    true,
+  )
+  assert.equal(
+    packResult.files.some((file) => file.path === 'root/pnpm.biome.json'),
+    true,
+  )
+  assert.equal(
+    packResult.files.some((file) => file.path === 'root/yarn.biome.json'),
+    true,
+  )
+  assert.equal(
+    packResult.files.some((file) => file.path === 'root/yarnrc.yml'),
     true,
   )
 })

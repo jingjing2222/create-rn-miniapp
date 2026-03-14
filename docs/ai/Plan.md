@@ -53,23 +53,26 @@ docs/
 3. template로 유지하는 것은 하네스 문서와 기본 운영 규칙뿐이다.
 4. 따라서 대응 포인트는 "공식 CLI 호출부"와 "후처리 patch" 두 군데다.
 5. frontend patch는 Granite 일반 예제가 아니라 AppInToss React Native 튜토리얼 결과물을 기준으로 잡는다.
-6. 생성 결과물의 툴체인은 루트 `pnpm + nx + biome`로 고정하고, 내부 워크스페이스는 lint/format 설정을 제거하거나 추가하지 않는다.
+6. 생성 결과물의 툴체인은 루트 `package manager + nx + biome` 기준으로 맞추고, 내부 워크스페이스는 lint/format 설정을 제거하거나 추가하지 않는다.
 
 ## 템플릿 범위
 1. `packages/scaffold-templates/root/package.json`
 2. `packages/scaffold-templates/root/pnpm-workspace.yaml`
-3. `packages/scaffold-templates/root/nx.json`
-4. `packages/scaffold-templates/root/biome.json`
-5. `packages/scaffold-templates/root/tsconfig.base.json`
-6. `packages/scaffold-templates/root/*.project.json`
-7. `packages/scaffold-templates/base/AGENTS.md`
-8. `packages/scaffold-templates/base/docs/ai/Plan.md`
-9. `packages/scaffold-templates/base/docs/ai/Status.md`
-10. `packages/scaffold-templates/base/docs/ai/Implement.md`
-11. `packages/scaffold-templates/base/docs/ai/Decisions.md`
-12. `packages/scaffold-templates/base/docs/ai/Prompt.md`
-13. `packages/scaffold-templates/base/docs/product/기능명세서.md`
-14. Granite/TDS 참조 안내 문서
+3. `packages/scaffold-templates/root/pnpm.gitignore`
+4. `packages/scaffold-templates/root/yarn.gitignore`
+5. `packages/scaffold-templates/root/pnpm.biome.json`
+6. `packages/scaffold-templates/root/yarn.biome.json`
+7. `packages/scaffold-templates/root/nx.json`
+8. `packages/scaffold-templates/root/tsconfig.base.json`
+9. `packages/scaffold-templates/root/*.project.json`
+10. `packages/scaffold-templates/base/AGENTS.md`
+11. `packages/scaffold-templates/base/docs/ai/Plan.md`
+12. `packages/scaffold-templates/base/docs/ai/Status.md`
+13. `packages/scaffold-templates/base/docs/ai/Implement.md`
+14. `packages/scaffold-templates/base/docs/ai/Decisions.md`
+15. `packages/scaffold-templates/base/docs/ai/Prompt.md`
+16. `packages/scaffold-templates/base/docs/product/기능명세서.md`
+17. Granite/TDS 참조 안내 문서
 
 ## CLI 책임
 1. 입력 수집
@@ -204,6 +207,53 @@ docs/
 7. 검증
    - `pnpm verify`
 
+## 현재 package manager 확장 작업
+1. 생성 시작 시 `pnpm` 또는 `yarn`을 선택할 수 있게 하고, 이 선택이 전체 scaffold 흐름의 source of truth가 되게 만든다.
+2. 기존 `pnpm` 전용 실행 플로우는 `PackageManagerAdapter` 같은 인터페이스로 추상화한다.
+3. `yarn`은 같은 인터페이스를 구현하되, 생성 명령, 의존성 설치, `dlx`/`exec`, 루트 install, workspace 실행 명령을 모두 해당 adapter가 반환하게 한다.
+4. 선택 순서
+   - 인터랙티브에서는 package manager 선택을 가장 먼저 받는다.
+   - 그 다음 `appName`, `displayName`, `server provider`, `backoffice` 여부 순으로 이어진다.
+   - CLI 옵션으로도 `--package-manager <pnpm|yarn>`을 지원한다.
+5. 추상화 대상
+   - `packages/create-rn-miniapp/src/commands.ts`의 공식 CLI 실행 명령
+   - `packages/create-rn-miniapp/src/scaffold.ts`의 루트 install / biome 실행 단계
+   - `packages/create-rn-miniapp/src/templates.ts`의 root 템플릿 파일 선택
+   - `packages/create-rn-miniapp/src/patch.ts`의 manager별 lockfile / workspace artifact 정리
+   - `packages/scaffold-templates/root/*`의 root `package.json`, workspace 정의, Nx target command, server package scripts
+   - CLI help / README / 문서 템플릿의 사용자 안내 문구
+6. 설계 방향
+   - `pnpm`과 `yarn`이 공통으로 필요한 동작은 adapter 메서드로 고정한다.
+     - `install`
+     - `add`
+     - `exec`
+     - `dlx`
+     - `createGraniteApp`
+     - `createViteApp`
+     - `workspaceRun`
+   - root 템플릿은 공통 파일과 manager 전용 파일로 나누거나, manager 토큰으로 조건부 생성한다.
+   - `yarn`은 Berry + `nodeLinker: pnp`를 명시적으로 사용하는 기준으로 지원한다.
+7. 우선 확인할 리스크
+   - `yarn dlx`는 Yarn Berry 기준이라 classic 1.x를 지원할지 여부를 명확히 해야 한다.
+   - `pnpm-workspace.yaml`은 Yarn에서 제거되어야 하고, 대신 root `package.json`의 `workspaces`와 `.yarnrc.yml`이 필요할 수 있다.
+   - workspace 내부에서 생성되는 `pnpm-lock.yaml`, `yarn.lock` 등 manager별 잔여 lockfile 정리 정책이 달라진다.
+   - README, AGENTS, generated docs의 `pnpm verify` 표현을 manager 선택과 어떻게 공존시킬지 기준이 필요하다.
+8. 테스트 범위
+   - CLI가 `--package-manager`를 파싱하고, 프롬프트 첫 단계에서 선택을 받는지 검증
+   - command plan이 `pnpm`과 `yarn`에서 각각 다른 명령을 생성하는지 검증
+   - root template 결과물이 manager별로 올바른 파일 집합과 명령 문자열을 가지는지 검증
+   - patch 단계가 manager별 lockfile과 artifact를 올바르게 정리하는지 검증
+9. 완료 기준
+   - 사용자가 `pnpm` 또는 `yarn`을 선택해 실제 스캐폴딩을 끝낼 수 있다.
+   - generated root가 선택한 manager 기준으로 install, verify, Nx orchestration을 수행한다.
+   - 기존 `pnpm` 플로우는 회귀 없이 유지된다.
+10. 후속 정리
+   - `pnpm` 버전은 `10.32.1`, `yarn` 버전은 `4.13.0` 기준으로 맞춘다.
+   - root `biome.json`과 `.gitignore`는 공통 파일이 아니라 manager별 템플릿으로 분리한다.
+   - `.pnp.*`, `.yarn/**` ignore는 `yarn` 생성물에만 들어가고, `pnpm` 생성물에는 들어가지 않게 한다.
+   - root `package.json` AST patch가 기존 `devDependencies`를 지우지 않도록 회귀 테스트와 함께 보정한다.
+   - GitHub Actions의 `pnpm/action-setup`는 루트 `packageManager`를 source of truth로 삼도록 `version` 고정을 제거한다.
+
 ## 남은 작업
 1. npm publish 준비
    - Changesets 설정
@@ -241,7 +291,7 @@ docs/
 1. 공식 CLI를 순서대로 실행하는 orchestration이 동작한다. ✅
 2. 결과물에 `frontend`, `server`, `backoffice` 구조가 생성된다. ✅
 3. 결과물에 generic `AGENTS.md`, `docs/ai/*`, `docs/product/기능명세서.md`가 복사된다. ✅
-4. 결과물 루트에 `pnpm + nx + biome`가 설정된다. ✅
+4. 결과물 루트에 선택한 package manager + `nx` + `biome`가 설정된다. ✅
 5. 내부 워크스페이스는 자체 lint/format 도구 없이 루트 오케스트레이션만 사용한다. ✅
 6. 생성 직후 루트 `pnpm verify`가 동작한다. ✅
 7. 이 저장소 안에는 source scaffold template가 남아 있지 않다. ✅

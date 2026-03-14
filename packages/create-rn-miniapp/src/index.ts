@@ -30,6 +30,7 @@ export async function main() {
 
     note(
       [
+        `package manager: ${resolved.packageManager}`,
         `앱 이름(appName): ${resolved.appName}`,
         `표시 이름(displayName): ${resolved.displayName}`,
         `생성 위치: ${resolved.outputDir}/${resolved.appName}`,

@@ -4,5 +4,4 @@
 - 반영한 변경
   - 
 - 검증
-  - `pnpm verify`
-
+  - `{{verifyCommand}}`

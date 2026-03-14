@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
 import type { ServerProvider } from './server-provider.js'
 
 export type CommandSpec = {
@@ -11,50 +12,45 @@ export type CommandSpec = {
 export function buildCommandPlan(options: {
   appName: string
   targetRoot: string
+  packageManager: PackageManager
   serverProvider: ServerProvider | null
   withBackoffice: boolean
 }) {
+  const packageManager = getPackageManagerAdapter(options.packageManager)
   const frontendRoot = `${options.targetRoot}/frontend`
   const serverRoot = `${options.targetRoot}/server`
 
   const plan: CommandSpec[] = [
     {
       cwd: options.targetRoot,
-      command: 'pnpm',
-      args: ['create', 'granite-app', 'frontend', '--tools', 'biome'],
+      ...packageManager.createGraniteApp('frontend'),
       label: 'frontend Granite 생성',
     },
     {
       cwd: frontendRoot,
-      command: 'pnpm',
-      args: ['install'],
+      ...packageManager.install(),
       label: 'frontend 의존성 설치',
     },
     {
       cwd: frontendRoot,
-      command: 'pnpm',
-      args: ['add', '@apps-in-toss/framework'],
+      ...packageManager.add(['@apps-in-toss/framework']),
       label: 'frontend AppInToss Framework 설치',
     },
     {
       cwd: frontendRoot,
-      command: 'pnpm',
-      args: [
-        'exec',
-        'ait',
+      ...packageManager.exec('ait', [
         'init',
         '--template',
         'react-native',
         '--app-name',
         options.appName,
         '--skip-input',
-      ],
+      ]),
       label: 'frontend ait 초기화',
     },
     {
       cwd: frontendRoot,
-      command: 'pnpm',
-      args: ['add', '@toss/tds-react-native@2.0.2'],
+      ...packageManager.add(['@toss/tds-react-native@2.0.2']),
       label: 'frontend TDS 설치',
     },
   ]
@@ -62,8 +58,7 @@ export function buildCommandPlan(options: {
   if (options.serverProvider === 'supabase') {
     plan.push({
       cwd: serverRoot,
-      command: 'pnpm',
-      args: ['dlx', 'supabase', 'init'],
+      ...packageManager.dlx('supabase', ['init']),
       label: 'server Supabase 초기화',
     })
   }
@@ -71,8 +66,7 @@ export function buildCommandPlan(options: {
   if (options.withBackoffice) {
     plan.push({
       cwd: options.targetRoot,
-      command: 'pnpm',
-      args: ['dlx', 'create-vite', 'backoffice', '--template', 'react-ts', '--no-interactive'],
+      ...packageManager.createViteApp('backoffice'),
       label: 'backoffice Vite 생성',
     })
   }
