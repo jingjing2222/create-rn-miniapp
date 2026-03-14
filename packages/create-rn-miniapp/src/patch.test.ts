@@ -87,9 +87,12 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
     dependencies?: Record<string, string>
     devDependencies?: Record<string, string>
   }
+  const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
 
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], undefined)
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], undefined)
+  assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/\.\.'\)/)
+  assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
   assert.equal(await pathExists(path.join(frontendRoot, '.env.local.example')), false)
   assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'supabase.ts')), false)
 })
@@ -165,6 +168,8 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], '^2.57.4')
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
+  assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/\.\.'\)/)
+  assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
   assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
   assert.match(graniteConfig, /import dotenv from 'dotenv'/)
   assert.match(graniteConfig, /const appRoot = __dirname/)

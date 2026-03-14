@@ -51,14 +51,23 @@ function parseExpression(source: string, tsx = false) {
 }
 
 function parseObjectProperty(source: string) {
-  const objectExpression = parseExpression(`({ ${source} })`) as SwcObjectExpression
-  const [property] = objectExpression.properties
+  const expression = parseExpression(`({ ${source} })`) as SwcExpression & {
+    expression?: SwcExpression
+  }
+  const objectExpression =
+    expression.type === 'ParenthesisExpression' ? expression.expression : expression
+
+  if (!objectExpression || objectExpression.type !== 'ObjectExpression') {
+    throw new Error('객체 속성을 파싱하지 못했습니다.')
+  }
+
+  const [property] = (objectExpression as SwcObjectExpression).properties
 
   if (!property) {
     throw new Error('객체 속성을 파싱하지 못했습니다.')
   }
 
-  return property
+  return property as SwcModuleItem & { value: SwcExpression }
 }
 
 function parseStatements(source: string, tsx = false) {
@@ -165,7 +174,8 @@ function upsertObjectProperty(
   propertyName: string,
   expressionSource: string,
 ) {
-  const nextExpression = parseExpression(expressionSource)
+  const nextProperty = parseObjectProperty(`${propertyName}: ${expressionSource}`)
+  const nextExpression = nextProperty.value
   const existingProperty = getObjectProperty(objectExpression, propertyName)
 
   if (existingProperty) {
@@ -293,18 +303,6 @@ function getDefineConfigObject(module: SwcModule) {
   return firstArgument as SwcObjectExpression
 }
 
-function getPluginsArrayExpression(configObject: SwcObjectExpression) {
-  const pluginsExpression = getObjectPropertyValue(configObject, 'plugins')
-
-  if (pluginsExpression?.type === 'ArrayExpression') {
-    return pluginsExpression as SwcArrayExpression
-  }
-
-  const nextPluginsExpression = parseExpression('[]') as SwcArrayExpression
-  upsertObjectProperty(configObject, 'plugins', '[]')
-  return nextPluginsExpression
-}
-
 function ensurePluginsArrayExpression(configObject: SwcObjectExpression) {
   const pluginsProperty = getObjectProperty(configObject, 'plugins')
 
@@ -322,6 +320,40 @@ function ensurePluginsArrayExpression(configObject: SwcObjectExpression) {
 
   nextPluginsProperty.value = nextPluginsExpression
   return nextPluginsProperty.value as SwcArrayExpression
+}
+
+function ensureNestedObjectProperty(objectExpression: SwcObjectExpression, propertyName: string) {
+  const existingValue = getObjectPropertyValue(objectExpression, propertyName)
+
+  if (existingValue?.type === 'ObjectExpression') {
+    return existingValue as SwcObjectExpression
+  }
+
+  upsertObjectProperty(objectExpression, propertyName, '{}')
+  const nextValue = getObjectPropertyValue(objectExpression, propertyName)
+
+  if (!nextValue || nextValue.type !== 'ObjectExpression') {
+    throw new Error(`${propertyName} 객체를 만들지 못했습니다.`)
+  }
+
+  return nextValue as SwcObjectExpression
+}
+
+function ensureArrayProperty(objectExpression: SwcObjectExpression, propertyName: string) {
+  const existingValue = getObjectPropertyValue(objectExpression, propertyName)
+
+  if (existingValue?.type === 'ArrayExpression') {
+    return existingValue as SwcArrayExpression
+  }
+
+  upsertObjectProperty(objectExpression, propertyName, '[]')
+  const nextValue = getObjectPropertyValue(objectExpression, propertyName)
+
+  if (!nextValue || nextValue.type !== 'ArrayExpression') {
+    throw new Error(`${propertyName} 배열을 만들지 못했습니다.`)
+  }
+
+  return nextValue as SwcArrayExpression
 }
 
 function findPluginCall(arrayExpression: SwcArrayExpression, pluginName: string) {
@@ -374,6 +406,27 @@ function updateAppsInTossBrand(configObject: SwcObjectExpression, tokens: Templa
   upsertObjectProperty(brandExpression as SwcObjectExpression, 'icon', JSON.stringify(''))
 }
 
+function ensureRepoRootWatchFolder(configObject: SwcObjectExpression) {
+  const metroObject = ensureNestedObjectProperty(configObject, 'metro')
+  const watchFoldersArray = ensureArrayProperty(metroObject, 'watchFolders')
+  const hasRepoRoot = watchFoldersArray.elements.some((element) => {
+    return isIdentifier(element?.expression, 'repoRoot')
+  })
+
+  if (hasRepoRoot) {
+    return
+  }
+
+  watchFoldersArray.elements.push({
+    spread: null,
+    expression: parseExpression('repoRoot'),
+  })
+}
+
+const FRONTEND_REPO_ROOT_PREAMBLE = ["const repoRoot = path.resolve(__dirname, '../..')", ''].join(
+  '\n',
+)
+
 const FRONTEND_SUPABASE_PREAMBLE = [
   'const appRoot = __dirname',
   '',
@@ -409,11 +462,13 @@ export function patchGraniteConfigSource(
 
   upsertObjectProperty(configObject, 'appName', JSON.stringify(tokens.appName))
   updateAppsInTossBrand(configObject, tokens)
+  ensureImport(module, 'node:path', `import path from 'node:path'`)
+  ensureTopLevelStatementBlock(module, FRONTEND_REPO_ROOT_PREAMBLE)
+  ensureRepoRootWatchFolder(configObject)
 
   if (serverProvider === 'supabase') {
     ensureImport(module, '@granite-js/plugin-env', `import { env } from '@granite-js/plugin-env'`)
     ensureImport(module, 'dotenv', `import dotenv from 'dotenv'`)
-    ensureImport(module, 'node:path', `import path from 'node:path'`)
     ensureTopLevelStatementBlock(module, FRONTEND_SUPABASE_PREAMBLE)
     ensureEnvPlugin(ensurePluginsArrayExpression(configObject))
   }

@@ -155,6 +155,9 @@ docs/
 8. 후속 안정화
    - `granite.config.ts`, `backoffice/src/main.tsx`, `backoffice/src/App.tsx`의 문자열 `replace` patch를 SWC AST 기반 수정으로 교체한다.
    - 포맷과 quote style이 달라도 patch가 유지되도록 테스트를 보강한다.
+9. granite runtime 보강
+   - `frontend/granite.config.ts`의 `defineConfig`에 `metro.watchFolders = [repoRoot]`를 SWC AST로 추가한다.
+   - `const repoRoot = path.resolve(__dirname, '../..')`도 함께 주입해 monorepo 루트 watch가 유지되게 한다.
 
 ## 남은 작업
 1. npm publish 준비
