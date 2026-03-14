@@ -36,6 +36,8 @@ type ProvisionSupabaseProjectOptions = {
   projectMode: ServerProjectMode | null
 }
 
+const CREATE_SUPABASE_PROJECT_SENTINEL = '__create_supabase_project__'
+
 function buildSupabaseCommand(
   packageManager: PackageManager,
   cwd: string,
@@ -217,18 +219,40 @@ async function ensureSupabaseProjects(packageManager: PackageManager, cwd: strin
   }
 }
 
-async function selectSupabaseProject(prompt: CliPrompter, projects: SupabaseProject[]) {
-  if (projects.length === 0) {
+async function selectSupabaseProject(
+  prompt: CliPrompter,
+  projects: SupabaseProject[],
+  options?: {
+    includeCreateOption?: boolean
+    message?: string
+  },
+) {
+  if (projects.length === 0 && !options?.includeCreateOption) {
     throw new Error('사용 가능한 Supabase 프로젝트가 없습니다. 먼저 새 프로젝트를 만들어주세요.')
   }
 
+  const projectOptions = projects.map((project) => ({
+    value: project.id,
+    label: project.region ? `${project.name} (${project.region})` : project.name,
+  }))
+  const selectOptions = options?.includeCreateOption
+    ? [
+        ...projectOptions,
+        {
+          value: CREATE_SUPABASE_PROJECT_SENTINEL,
+          label: '+ 새 Supabase 프로젝트 생성',
+        },
+      ]
+    : projectOptions
+
+  const initialValue =
+    selectOptions.find((option) => option.value !== CREATE_SUPABASE_PROJECT_SENTINEL)?.value ??
+    CREATE_SUPABASE_PROJECT_SENTINEL
+
   return await prompt.select({
-    message: '사용할 Supabase 프로젝트를 선택하세요.',
-    options: projects.map((project) => ({
-      value: project.id,
-      label: project.region ? `${project.name} (${project.region})` : project.name,
-    })),
-    initialValue: projects[0]?.id,
+    message: options?.message ?? '사용할 Supabase 프로젝트를 선택하세요.',
+    options: selectOptions,
+    initialValue,
   })
 }
 
@@ -296,24 +320,51 @@ async function pushSupabaseDatabase(packageManager: PackageManager, serverRoot: 
 export async function provisionSupabaseProject(
   options: ProvisionSupabaseProjectOptions,
 ): Promise<ProvisionedSupabaseProject | null> {
-  if (options.projectMode === null) {
-    return null
-  }
-
   const serverRoot = path.join(options.targetRoot, 'server')
   const projects = await ensureSupabaseProjects(options.packageManager, options.targetRoot)
 
-  let selectedProjectId: string
+  let selectedProjectId: string | null = null
+  let resolvedProjectMode = options.projectMode
 
-  if (options.projectMode === 'create') {
+  if (resolvedProjectMode === null) {
+    const selectedProject = await selectSupabaseProject(options.prompt, projects, {
+      includeCreateOption: true,
+      message: '사용할 Supabase 프로젝트를 선택하세요. 새 프로젝트 생성도 바로 할 수 있습니다.',
+    })
+
+    if (selectedProject === CREATE_SUPABASE_PROJECT_SENTINEL) {
+      resolvedProjectMode = 'create'
+    } else {
+      resolvedProjectMode = 'existing'
+      selectedProjectId = selectedProject
+    }
+  }
+
+  if (resolvedProjectMode === 'create') {
     await createSupabaseProject(options.packageManager, options.targetRoot)
     const refreshedProjects = await ensureSupabaseProjects(
       options.packageManager,
       options.targetRoot,
     )
-    selectedProjectId = await selectSupabaseProject(options.prompt, refreshedProjects)
-  } else {
+
+    const previousProjectIds = new Set(projects.map((project) => project.id))
+    const newlyCreatedProjects = refreshedProjects.filter(
+      (project) => !previousProjectIds.has(project.id),
+    )
+
+    if (newlyCreatedProjects.length === 1) {
+      selectedProjectId = newlyCreatedProjects[0].id
+    } else {
+      selectedProjectId = await selectSupabaseProject(options.prompt, refreshedProjects, {
+        message: '연결할 Supabase 프로젝트를 선택하세요.',
+      })
+    }
+  } else if (resolvedProjectMode === 'existing' && !selectedProjectId) {
     selectedProjectId = await selectSupabaseProject(options.prompt, projects)
+  }
+
+  if (!selectedProjectId || !resolvedProjectMode) {
+    throw new Error('연결할 Supabase 프로젝트를 결정하지 못했습니다.')
   }
 
   const publishableKey = await tryGetSupabasePublishableKey(
@@ -328,7 +379,7 @@ export async function provisionSupabaseProject(
   return {
     projectRef: selectedProjectId,
     publishableKey,
-    mode: options.projectMode,
+    mode: resolvedProjectMode,
   }
 }
 

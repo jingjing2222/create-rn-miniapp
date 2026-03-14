@@ -70,6 +70,7 @@ export type ResolvedCliOptions = {
   displayName: string
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
+  skipServerProvisioning: boolean
   withServer: boolean
   withBackoffice: boolean
   outputDir: string
@@ -86,6 +87,7 @@ export type ResolvedAddCliOptions = {
   existingHasBackoffice: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
+  skipServerProvisioning: boolean
   withServer: boolean
   withBackoffice: boolean
   skipInstall: boolean
@@ -232,40 +234,9 @@ function validateServerProjectMode(
   }
 }
 
-function resolveServerProjectModeInput(
-  prompt: CliPrompter,
-  serverProvider: ServerProvider | null,
-  argv: ParsedCliArgs,
-) {
+function resolveServerProjectModeInput(serverProvider: ServerProvider | null, argv: ParsedCliArgs) {
   validateServerProjectMode(serverProvider, argv.serverProjectMode)
-
-  if (serverProvider !== 'supabase') {
-    if (serverProvider !== 'cloudflare') {
-      return Promise.resolve<ServerProjectMode | null>(null)
-    }
-  }
-
-  if (argv.serverProjectMode) {
-    return Promise.resolve(argv.serverProjectMode)
-  }
-
-  if (argv.yes) {
-    return Promise.resolve<ServerProjectMode | null>(null)
-  }
-
-  const message =
-    serverProvider === 'cloudflare'
-      ? 'Cloudflare Worker를 새로 만들까요, 기존 Worker를 사용할까요?'
-      : 'Supabase 프로젝트를 새로 만들까요, 기존 프로젝트를 사용할까요?'
-
-  return prompt.select<ServerProjectMode>({
-    message,
-    options: [
-      { label: '새로 만들기', value: 'create' },
-      { label: '기존 것 사용', value: 'existing' },
-    ],
-    initialValue: 'create',
-  })
+  return Promise.resolve(argv.serverProjectMode ?? null)
 }
 
 export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter) {
@@ -337,11 +308,8 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
 
   const normalizedServerProvider = serverProvider === 'none' ? null : serverProvider
   const withServer = normalizedServerProvider !== null
-  const serverProjectMode = await resolveServerProjectModeInput(
-    prompt,
-    normalizedServerProvider,
-    argv,
-  )
+  const serverProjectMode = await resolveServerProjectModeInput(normalizedServerProvider, argv)
+  const skipServerProvisioning = argv.yes && !serverProjectMode
 
   if (!withServer && argv.serverProjectMode) {
     throw new Error('`--server-project-mode`는 `server` 워크스페이스와 함께 사용해야 합니다.')
@@ -367,6 +335,7 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
     displayName,
     serverProvider: normalizedServerProvider,
     serverProjectMode,
+    skipServerProvisioning,
     withServer,
     withBackoffice,
     outputDir: path.resolve(argv.outputDir),
@@ -407,11 +376,8 @@ export async function resolveAddCliOptions(
 
   const normalizedServerProvider = addServerProvider === 'none' ? null : addServerProvider
   const withServer = normalizedServerProvider !== null
-  const serverProjectMode = await resolveServerProjectModeInput(
-    prompt,
-    normalizedServerProvider,
-    argv,
-  )
+  const serverProjectMode = await resolveServerProjectModeInput(normalizedServerProvider, argv)
+  const skipServerProvisioning = argv.yes && !serverProjectMode
 
   const withBackoffice = inspection.hasBackoffice
     ? false
@@ -441,6 +407,7 @@ export async function resolveAddCliOptions(
     existingHasBackoffice: inspection.hasBackoffice,
     serverProvider: normalizedServerProvider,
     serverProjectMode,
+    skipServerProvisioning,
     withServer,
     withBackoffice,
     skipInstall: argv.skipInstall,

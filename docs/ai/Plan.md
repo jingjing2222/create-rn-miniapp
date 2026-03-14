@@ -5,16 +5,18 @@
 1. `codex/server-provider-adapters-cloudflare` 브랜치 기준으로 Supabase 인증/프로비저닝 흐름을 Cloudflare provider 지원 위에 병합한다.
 2. create 흐름의 실행 순서는 `frontend scaffold -> server scaffold -> provider provisioning -> optional backoffice scaffold -> patch/finalize`로 고정한다.
 3. add 흐름의 실행 순서는 `optional server scaffold -> provider provisioning -> optional backoffice scaffold -> patch/finalize`로 고정한다.
-4. Cloudflare provider 선택지는 유지하고, Supabase 전용 질문인 프로젝트 생성/기존 프로젝트 사용 선택은 Supabase일 때만 노출한다.
-5. Supabase CLI JSON 파싱은 `pnpm`/`yarn` 로그 노이즈가 섞여도 payload만 추출하도록 보강한다.
-6. Supabase publishable key를 조회할 수 있으면 `create`/`existing`와 관계없이 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동 작성한다.
-7. publishable key 조회에 실패한 경우에만 Supabase 대시보드 API 설정 URL과 `.env.local` 예시를 마지막 안내 메시지로 출력한다.
-8. 자동 `.env.local` 작성이 들어간 기준으로 `frontend`/`backoffice` bootstrap에서 `.env.local.example` 생성은 제거한다.
-9. 테스트 범위
+4. provider 선택 뒤에는 `create|existing`를 따로 묻지 않고, 먼저 기존 리소스 목록을 가져온 다음 단일 선택 리스트로 보여준다.
+5. 선택 리스트에는 기존 리소스들과 함께 `새로 만들기` 항목을 같이 넣는다.
+6. `--server-project-mode`는 scripted override로만 유지하고, 인터랙티브 기본 흐름은 provider provisioning 단계의 단일 선택으로 처리한다.
+7. Supabase CLI JSON 파싱은 `pnpm`/`yarn` 로그 노이즈가 섞여도 payload만 추출하도록 보강한다.
+8. Supabase publishable key를 조회할 수 있으면 `create`/`existing`와 관계없이 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동 작성한다.
+9. publishable key 조회에 실패한 경우에만 Supabase 대시보드 API 설정 URL과 `.env.local` 예시를 마지막 안내 메시지로 출력한다.
+10. 자동 `.env.local` 작성이 들어간 기준으로 `frontend`/`backoffice` bootstrap에서 `.env.local.example` 생성은 제거한다.
+11. 테스트 범위
    - create/add 실행 순서가 provider provisioning 위치를 보장하는지 검증
-   - Cloudflare 선택지가 유지되는지 검증
+   - provider 선택 후 create/existing 추가 질문이 사라지는지 검증
    - Supabase 프로젝트 목록/생성 응답이 패키지 매니저 로그 노이즈가 있어도 파싱되는지 검증
-10. 완료 기준
+12. 완료 기준
    - `pnpm verify` 통과
    - 변경사항을 PR `#22`에 올릴 수 있는 상태
 

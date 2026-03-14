@@ -44,6 +44,8 @@ type ProvisionCloudflareWorkerOptions = {
   appName: string
 }
 
+const CREATE_CLOUDFLARE_WORKER_SENTINEL = '__create_cloudflare_worker__'
+
 type CloudflareApiEnvelope<T> = {
   success: boolean
   errors?: Array<{
@@ -273,18 +275,40 @@ async function selectCloudflareAccount(prompt: CliPrompter, accounts: Cloudflare
   })
 }
 
-async function selectCloudflareWorker(prompt: CliPrompter, workerNames: string[]) {
-  if (workerNames.length === 0) {
+async function selectCloudflareWorker(
+  prompt: CliPrompter,
+  workerNames: string[],
+  options?: {
+    includeCreateOption?: boolean
+    message?: string
+  },
+) {
+  if (workerNames.length === 0 && !options?.includeCreateOption) {
     throw new Error('사용 가능한 Cloudflare Worker가 없습니다. 새 Worker를 먼저 배포하세요.')
   }
 
+  const workerOptions = workerNames.map((workerName) => ({
+    value: workerName,
+    label: workerName,
+  }))
+  const selectOptions = options?.includeCreateOption
+    ? [
+        ...workerOptions,
+        {
+          value: CREATE_CLOUDFLARE_WORKER_SENTINEL,
+          label: '+ 새 Cloudflare Worker 생성',
+        },
+      ]
+    : workerOptions
+
+  const initialValue =
+    selectOptions.find((option) => option.value !== CREATE_CLOUDFLARE_WORKER_SENTINEL)?.value ??
+    CREATE_CLOUDFLARE_WORKER_SENTINEL
+
   return await prompt.select({
-    message: '사용할 Cloudflare Worker를 선택하세요.',
-    options: workerNames.map((workerName) => ({
-      value: workerName,
-      label: workerName,
-    })),
-    initialValue: workerNames[0],
+    message: options?.message ?? '사용할 Cloudflare Worker를 선택하세요.',
+    options: selectOptions,
+    initialValue,
   })
 }
 
@@ -369,34 +393,52 @@ export async function writeCloudflareLocalEnvFiles(options: {
 export async function provisionCloudflareWorker(
   options: ProvisionCloudflareWorkerOptions,
 ): Promise<ProvisionedCloudflareWorker | null> {
-  if (options.projectMode === null) {
-    return null
-  }
-
   const serverRoot = path.join(options.targetRoot, 'server')
   const auth = await ensureWranglerAuth(options.packageManager, options.targetRoot)
   const accounts = await listCloudflareAccounts(auth.oauthToken)
   const accountId = await selectCloudflareAccount(options.prompt, accounts)
+  const existingWorkerNames = await listCloudflareWorkers(auth.oauthToken, accountId)
 
-  const workerName =
-    options.projectMode === 'existing'
-      ? await selectCloudflareWorker(
-          options.prompt,
-          await listCloudflareWorkers(auth.oauthToken, accountId),
-        )
-      : (
-          await options.prompt.text({
-            message: '배포할 Cloudflare Worker 이름을 입력하세요.',
-            initialValue: options.appName,
-            validate(value) {
-              return value.trim().length === 0 ? 'Cloudflare Worker 이름을 입력하세요.' : undefined
-            },
-          })
-        ).trim()
+  let resolvedProjectMode = options.projectMode
+  let workerName: string | null = null
+
+  if (resolvedProjectMode === null) {
+    const selectedWorker = await selectCloudflareWorker(options.prompt, existingWorkerNames, {
+      includeCreateOption: true,
+      message: '사용할 Cloudflare Worker를 선택하세요. 새 Worker 생성도 바로 할 수 있습니다.',
+    })
+
+    if (selectedWorker === CREATE_CLOUDFLARE_WORKER_SENTINEL) {
+      resolvedProjectMode = 'create'
+    } else {
+      resolvedProjectMode = 'existing'
+      workerName = selectedWorker
+    }
+  }
+
+  if (resolvedProjectMode === 'existing' && !workerName) {
+    workerName = await selectCloudflareWorker(options.prompt, existingWorkerNames)
+  }
+
+  if (resolvedProjectMode === 'create') {
+    workerName = (
+      await options.prompt.text({
+        message: '배포할 Cloudflare Worker 이름을 입력하세요.',
+        initialValue: options.appName,
+        validate(value) {
+          return value.trim().length === 0 ? 'Cloudflare Worker 이름을 입력하세요.' : undefined
+        },
+      })
+    ).trim()
+  }
+
+  if (!workerName || !resolvedProjectMode) {
+    throw new Error('연결할 Cloudflare Worker를 결정하지 못했습니다.')
+  }
 
   await patchWranglerWorkerName(serverRoot, workerName)
 
-  if (options.projectMode === 'create') {
+  if (resolvedProjectMode === 'create') {
     await deployCloudflareWorker(options.packageManager, serverRoot, workerName)
   }
 
@@ -413,14 +455,14 @@ export async function provisionCloudflareWorker(
     return {
       workerName,
       apiBaseUrl: null,
-      mode: options.projectMode,
+      mode: resolvedProjectMode,
     }
   }
 
   return {
     workerName,
     apiBaseUrl: buildCloudflareWorkersDevUrl(workerName, accountSubdomain),
-    mode: options.projectMode,
+    mode: resolvedProjectMode,
   }
 }
 

@@ -40,6 +40,7 @@ export type ScaffoldOptions = {
   outputDir: string
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
+  skipServerProvisioning: boolean
   withBackoffice: boolean
   skipInstall: boolean
 }
@@ -54,6 +55,7 @@ export type AddWorkspaceOptions = {
   existingHasBackoffice: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
+  skipServerProvisioning: boolean
   withServer: boolean
   withBackoffice: boolean
   skipInstall: boolean
@@ -123,8 +125,10 @@ async function maybeProvisionSupabaseProject(options: {
   prompt: CliPrompter
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
+  skipServerProvisioning: boolean
 }) {
   if (
+    options.skipServerProvisioning ||
     options.serverProvider !== 'supabase' ||
     !(await pathExists(path.join(options.targetRoot, 'server')))
   ) {
@@ -161,8 +165,10 @@ async function maybeProvisionCloudflareWorker(options: {
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   appName: string
+  skipServerProvisioning: boolean
 }) {
   if (
+    options.skipServerProvisioning ||
     options.serverProvider !== 'cloudflare' ||
     !(await pathExists(path.join(options.targetRoot, 'server')))
   ) {
@@ -236,6 +242,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     prompt: options.prompt,
     serverProvider: options.serverProvider,
     serverProjectMode: options.serverProjectMode,
+    skipServerProvisioning: options.skipServerProvisioning,
   })
   const provisionedCloudflareWorker = await maybeProvisionCloudflareWorker({
     targetRoot,
@@ -244,6 +251,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     serverProvider: options.serverProvider,
     serverProjectMode: options.serverProjectMode,
     appName: options.appName,
+    skipServerProvisioning: options.skipServerProvisioning,
   })
 
   for (const command of phases.backoffice) {
@@ -339,6 +347,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
         prompt: options.prompt,
         serverProvider: options.serverProvider,
         serverProjectMode: options.serverProjectMode,
+        skipServerProvisioning: options.skipServerProvisioning,
       })
     : null
   const provisionedCloudflareWorker = options.withServer
@@ -349,6 +358,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
         serverProvider: options.serverProvider,
         serverProjectMode: options.serverProjectMode,
         appName: options.appName,
+        skipServerProvisioning: options.skipServerProvisioning,
       })
     : null
 
