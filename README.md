@@ -93,8 +93,9 @@ pnpm verify
 
 Supabase 프로젝트 연결 방식은 두 가지입니다.
 
-- 새 프로젝트 생성: 스캐폴드 중 Supabase CLI로 프로젝트를 만들고, `server`를 link/db push 한 뒤 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동으로 작성합니다.
-- 기존 프로젝트 사용: 프로젝트 목록에서 하나를 고른 뒤 `server`를 link/db push 하고, 마지막에 `.env.local`에 넣을 값을 안내 메시지로 출력합니다.
+- 새 프로젝트 생성: 스캐폴드 중 Supabase CLI로 프로젝트를 만들고, `server`를 link/db push 한 뒤 publishable key를 조회할 수 있으면 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동으로 작성합니다.
+- 기존 프로젝트 사용: 프로젝트 목록에서 하나를 고른 뒤 `server`를 link/db push 하고, publishable key를 조회할 수 있으면 동일하게 `.env.local`까지 자동으로 작성합니다.
+- publishable key를 자동으로 못 가져온 경우에만 마지막에 Supabase 대시보드 API 설정 URL과 `.env.local` 예시를 안내합니다.
 
 `yarn`을 선택하면 root에는 `.yarnrc.yml`과 `package.json.workspaces`가 생성되고, `pnpm-workspace.yaml`은 생성되지 않습니다.
 루트 workspace 등록도 고정되지 않고, 실제로 생성된 `frontend`/`server`/`backoffice`만 포함됩니다.

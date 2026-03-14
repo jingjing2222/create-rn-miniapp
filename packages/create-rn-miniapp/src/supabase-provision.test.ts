@@ -5,6 +5,7 @@ import path from 'node:path'
 import test from 'node:test'
 import {
   extractJsonPayload,
+  finalizeSupabaseProvisioning,
   formatSupabaseManualSetupNote,
   resolveSupabaseClientApiKey,
   writeSupabaseLocalEnvFiles,
@@ -34,14 +35,17 @@ test('formatSupabaseManualSetupNote includes frontend and backoffice env guidanc
     targetRoot: '/tmp/ebook-miniapp',
     hasBackoffice: true,
     projectRef: 'abc123',
-    publishableKey: 'sb_publishable_123',
   })
 
   assert.equal(note.title, 'Supabase 환경 변수 안내')
+  assert.match(note.body, /https:\/\/supabase\.com\/dashboard\/project\/abc123\/settings\/api/)
   assert.match(note.body, /frontend\/\.env\.local/)
   assert.match(note.body, /backoffice\/\.env\.local/)
   assert.match(note.body, /MINIAPP_SUPABASE_URL=https:\/\/abc123\.supabase\.co/)
-  assert.match(note.body, /VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_123/)
+  assert.match(
+    note.body,
+    /VITE_SUPABASE_PUBLISHABLE_KEY=<Supabase Settings > API에서 복사한 Publishable key>/,
+  )
 })
 
 test('extractJsonPayload strips package-manager log lines around JSON output', () => {
@@ -89,6 +93,60 @@ test('writeSupabaseLocalEnvFiles writes frontend and backoffice .env.local files
         '',
       ].join('\n'),
     )
+  } finally {
+    await rm(targetRoot, { recursive: true, force: true })
+  }
+})
+
+test('finalizeSupabaseProvisioning writes env files for existing projects when publishable key is available', async () => {
+  const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-supabase-finalize-'))
+
+  try {
+    const notes = await finalizeSupabaseProvisioning({
+      targetRoot,
+      provisionedProject: {
+        projectRef: 'abc123',
+        publishableKey: 'sb_publishable_123',
+        mode: 'existing',
+      },
+    })
+
+    const frontendEnv = await readFile(path.join(targetRoot, 'frontend', '.env.local'), 'utf8')
+
+    assert.equal(
+      frontendEnv,
+      [
+        'MINIAPP_SUPABASE_URL=https://abc123.supabase.co',
+        'MINIAPP_SUPABASE_PUBLISHABLE_KEY=sb_publishable_123',
+        '',
+      ].join('\n'),
+    )
+    assert.equal(notes[0]?.title, 'Supabase 환경 변수 작성 완료')
+    assert.match(
+      notes[0]?.body ?? '',
+      /https:\/\/supabase\.com\/dashboard\/project\/abc123\/settings\/api/,
+    )
+  } finally {
+    await rm(targetRoot, { recursive: true, force: true })
+  }
+})
+
+test('finalizeSupabaseProvisioning falls back to manual setup guidance when publishable key is unavailable', async () => {
+  const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-supabase-manual-'))
+
+  try {
+    const notes = await finalizeSupabaseProvisioning({
+      targetRoot,
+      provisionedProject: {
+        projectRef: 'abc123',
+        publishableKey: null,
+        mode: 'existing',
+      },
+    })
+
+    assert.equal(notes[0]?.title, 'Supabase 환경 변수 안내')
+    assert.match(notes[0]?.body ?? '', /settings\/api/)
+    assert.match(notes[0]?.body ?? '', /frontend\/\.env\.local/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }

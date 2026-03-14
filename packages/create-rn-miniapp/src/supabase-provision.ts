@@ -25,7 +25,7 @@ type SupabaseApiKey = {
 
 export type ProvisionedSupabaseProject = {
   projectRef: string
-  publishableKey: string
+  publishableKey: string | null
   mode: ServerProjectMode
 }
 
@@ -66,6 +66,10 @@ function createSupabaseEnvValues(projectRef: string, publishableKey: string) {
       '',
     ].join('\n'),
   }
+}
+
+function getSupabaseApiSettingsUrl(projectRef: string) {
+  return `https://supabase.com/dashboard/project/${projectRef}/settings/api`
 }
 
 function stripAnsi(value: string) {
@@ -143,11 +147,15 @@ export function formatSupabaseManualSetupNote(options: {
   targetRoot: string
   hasBackoffice: boolean
   projectRef: string
-  publishableKey: string
 }): ProvisioningNote {
-  const env = createSupabaseEnvValues(options.projectRef, options.publishableKey)
+  const env = createSupabaseEnvValues(
+    options.projectRef,
+    '<Supabase Settings > API에서 복사한 Publishable key>',
+  )
   const lines = [
-    '기존 Supabase 프로젝트를 선택했으니 아래 값을 직접 넣어주세요.',
+    'Supabase publishable key를 자동으로 가져오지 못했습니다. 아래 URL에서 키를 확인한 뒤 직접 넣어주세요.',
+    '',
+    getSupabaseApiSettingsUrl(options.projectRef),
     '',
     path.join(options.targetRoot, 'frontend', '.env.local'),
     env.frontend.trimEnd(),
@@ -246,6 +254,19 @@ async function getSupabaseApiKeys(packageManager: PackageManager, cwd: string, p
   return extractJsonPayload<SupabaseApiKey[]>(output)
 }
 
+async function tryGetSupabasePublishableKey(
+  packageManager: PackageManager,
+  cwd: string,
+  projectRef: string,
+) {
+  try {
+    const apiKeys = await getSupabaseApiKeys(packageManager, cwd, projectRef)
+    return resolveSupabaseClientApiKey(apiKeys)
+  } catch {
+    return null
+  }
+}
+
 async function linkSupabaseProject(
   packageManager: PackageManager,
   serverRoot: string,
@@ -295,12 +316,11 @@ export async function provisionSupabaseProject(
     selectedProjectId = await selectSupabaseProject(options.prompt, projects)
   }
 
-  const apiKeys = await getSupabaseApiKeys(
+  const publishableKey = await tryGetSupabasePublishableKey(
     options.packageManager,
     options.targetRoot,
     selectedProjectId,
   )
-  const publishableKey = resolveSupabaseClientApiKey(apiKeys)
 
   await linkSupabaseProject(options.packageManager, serverRoot, selectedProjectId)
   await pushSupabaseDatabase(options.packageManager, serverRoot)
@@ -327,7 +347,7 @@ export async function finalizeSupabaseProvisioning(options: {
 
   const hasBackoffice = await pathExists(path.join(options.targetRoot, 'backoffice'))
 
-  if (options.provisionedProject.mode === 'create') {
+  if (options.provisionedProject.publishableKey) {
     await writeSupabaseLocalEnvFiles({
       targetRoot: options.targetRoot,
       hasBackoffice,
@@ -338,9 +358,14 @@ export async function finalizeSupabaseProvisioning(options: {
     return [
       {
         title: 'Supabase 환경 변수 작성 완료',
-        body: hasBackoffice
-          ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 작성했습니다.'
-          : 'frontend/.env.local 에 Supabase 연결 값을 작성했습니다.',
+        body: [
+          hasBackoffice
+            ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 작성했습니다.'
+            : 'frontend/.env.local 에 Supabase 연결 값을 작성했습니다.',
+          '',
+          '키를 다시 확인해야 하면 아래 URL을 보세요.',
+          getSupabaseApiSettingsUrl(options.provisionedProject.projectRef),
+        ].join('\n'),
       },
     ] satisfies ProvisioningNote[]
   }
@@ -350,7 +375,6 @@ export async function finalizeSupabaseProvisioning(options: {
       targetRoot: options.targetRoot,
       hasBackoffice,
       projectRef: options.provisionedProject.projectRef,
-      publishableKey: options.provisionedProject.publishableKey,
     }),
   ]
 }
