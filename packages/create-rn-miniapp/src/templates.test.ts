@@ -30,6 +30,11 @@ async function createTempTargetRoot(t: test.TestContext) {
   return targetRoot
 }
 
+const NX_ROOT_SCHEMA_URL =
+  'https://raw.githubusercontent.com/nrwl/nx/master/packages/nx/schemas/nx-schema.json'
+const NX_PROJECT_SCHEMA_URL =
+  'https://raw.githubusercontent.com/nrwl/nx/master/packages/nx/schemas/project-schema.json'
+
 test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   const targetRoot = await createTempTargetRoot(t)
 
@@ -40,6 +45,9 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
     workspaces?: string[]
     scripts?: Record<string, string>
     devDependencies?: Record<string, string>
+  }
+  const nxJson = JSON.parse(await readFile(path.join(targetRoot, 'nx.json'), 'utf8')) as {
+    $schema?: string
   }
   const gitignore = await readFile(path.join(targetRoot, '.gitignore'), 'utf8')
   const biomeJson = await readFile(path.join(targetRoot, 'biome.json'), 'utf8')
@@ -55,6 +63,7 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   assert.equal(packageJson.devDependencies?.nx, '^22.5.4')
   assert.equal(packageJson.devDependencies?.typescript, '^5.9.3')
   assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^1.9.4')
+  assert.equal(nxJson.$schema, NX_ROOT_SCHEMA_URL)
   assert.doesNotMatch(gitignore, /^\.yarn\/?$/m)
   assert.doesNotMatch(gitignore, /^\.pnp\.\*$/m)
   assert.doesNotMatch(biomeJson, /\*\*\/\.yarn\/\*\*/)
@@ -82,6 +91,7 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   const frontendProject = JSON.parse(
     await readFile(path.join(targetRoot, 'frontend', 'project.json'), 'utf8'),
   ) as {
+    $schema?: string
     targets?: Record<string, { command?: string }>
   }
   const serverPackageJson = JSON.parse(
@@ -99,6 +109,7 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   assert.equal(packageJson.devDependencies?.nx, '^22.5.4')
   assert.equal(packageJson.devDependencies?.typescript, '^5.9.3')
   assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^1.9.4')
+  assert.equal(frontendProject.$schema, NX_PROJECT_SCHEMA_URL)
   assert.match(gitignore, /^\.yarn\/?$/m)
   assert.match(gitignore, /^\.pnp\.\*$/m)
   assert.match(yarnrc, /nodeLinker: pnp/)

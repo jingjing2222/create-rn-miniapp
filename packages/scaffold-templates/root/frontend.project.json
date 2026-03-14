@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "$schema": "https://raw.githubusercontent.com/nrwl/nx/master/packages/nx/schemas/project-schema.json",
   "sourceRoot": "frontend",
   "projectType": "application",
   "targets": {
