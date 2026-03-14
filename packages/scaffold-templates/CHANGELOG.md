@@ -1,5 +1,11 @@
 # @create-rn-miniapp/scaffold-templates
 
+## 0.0.6
+
+### Patch Changes
+
+- 281bf88: Use remote Nx schema URLs instead of local node_modules-relative schema paths in the workspace and generated templates.
+
 ## 0.0.5
 
 ### Patch Changes
