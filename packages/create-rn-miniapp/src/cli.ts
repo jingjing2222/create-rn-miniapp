@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { isCancel, log, multiselect, text } from '@clack/prompts'
+import { isCancel, log, select, text } from '@clack/prompts'
 import yargs from 'yargs'
 import { assertValidAppName, toDefaultDisplayName } from './layout.js'
 import { SERVER_PROVIDERS, type ServerProvider } from './server-provider.js'
@@ -19,6 +19,7 @@ export type ParsedCliArgs = {
 
 export type TextPromptOptions = {
   message: string
+  guide?: string
   placeholder?: string
   initialValue?: string
   validate?: (value: string) => string | undefined
@@ -40,17 +41,15 @@ export type CliPrompter = {
 
 type ClackPrompter = {
   text(options: TextPromptOptions): Promise<string | symbol>
-  multiselect<T extends string>(options: {
+  select<T extends string>(options: {
     message: string
     options: Array<{
       label: string
       value: T
     }>
-    initialValues?: T[]
-    required?: boolean
-  }): Promise<T[] | symbol>
+    initialValue?: T
+  }): Promise<T | symbol>
   isCancel(value: unknown): value is symbol
-  logError(message: string): void
 }
 
 export type ResolvedCliOptions = {
@@ -190,8 +189,11 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
     (argv.yes
       ? toDefaultDisplayName(appName)
       : await prompt.text({
+          guide: '보여지는 이름이니 한글로 해주세요.',
           message: 'displayName을 입력하세요',
-          initialValue: toDefaultDisplayName(appName),
+          validate(value) {
+            return value.trim().length === 0 ? 'displayName을 입력하세요.' : undefined
+          },
         }))
 
   const serverProvider =
@@ -238,6 +240,10 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
 
 const defaultClackPrompter: ClackPrompter = {
   async text(options: TextPromptOptions) {
+    if (options.guide) {
+      log.message(options.guide)
+    }
+
     return text({
       message: options.message,
       placeholder: options.placeholder,
@@ -247,37 +253,25 @@ const defaultClackPrompter: ClackPrompter = {
       },
     })
   },
-  async multiselect<T extends string>(options: {
+  async select<T extends string>(options: {
     message: string
     options: Array<{
       label: string
       value: T
     }>
-    initialValues?: T[]
-    required?: boolean
+    initialValue?: T
   }) {
-    const clackOptions: Array<{
-      value: T
-      label?: string
-      hint?: string
-      disabled?: boolean
-    }> = options.options.map((option) => ({
-      value: option.value,
-      label: option.label,
-    }))
-
-    return multiselect<T>({
+    return select<T>({
       message: options.message,
-      options: clackOptions as never,
-      initialValues: options.initialValues,
-      required: options.required,
+      options: options.options.map((option) => ({
+        value: option.value,
+        label: option.label,
+      })) as never,
+      initialValue: options.initialValue,
     })
   },
   isCancel(value): value is symbol {
     return isCancel(value)
-  },
-  logError(message) {
-    log.error(message)
   },
 }
 
@@ -295,31 +289,17 @@ export function createClackPrompter(
       return value
     },
     async select<T extends string>(options: SelectPromptOptions<T>) {
-      let initialValues = options.initialValue ? [options.initialValue] : undefined
+      const value = await clackPrompter.select<T>({
+        message: options.message,
+        options: options.options,
+        initialValue: options.initialValue,
+      })
 
-      while (true) {
-        const selection = await clackPrompter.multiselect<T>({
-          message: options.message,
-          options: options.options,
-          initialValues,
-          required: true,
-        })
-
-        if (clackPrompter.isCancel(selection)) {
-          throw new Error('입력을 취소했습니다.')
-        }
-
-        if (selection.length === 1) {
-          const [picked] = selection
-
-          if (picked) {
-            return picked
-          }
-        }
-
-        clackPrompter.logError('하나만 선택하세요.')
-        initialValues = selection
+      if (clackPrompter.isCancel(value)) {
+        throw new Error('입력을 취소했습니다.')
       }
+
+      return value
     },
   }
 }

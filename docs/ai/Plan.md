@@ -144,6 +144,9 @@ docs/
 5. 완료 기준
    - 프롬프트 UI가 Granite 계열과 같은 clack 렌더링으로 동작한다.
    - 더 이상 `execa`에 의존한 프롬프트 렌더링 코드가 남아 있지 않다.
+6. 추가 UX 보정
+   - `displayName` 입력에는 기본 예시를 넣지 않고, 프롬프트 위에 `보여지는 이름이니 한글로 해주세요.` 안내를 노출한다.
+   - `server` 제공자와 `backoffice` 포함 여부는 멀티 선택이 아니라 단일 선택 프롬프트를 사용한다.
 
 ## 현재 Supabase provider bootstrap 작업
 1. `server` 생성 여부를 단순 boolean이 아니라 provider 개념으로 확장한다.

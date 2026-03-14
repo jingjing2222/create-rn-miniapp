@@ -38,14 +38,22 @@ test('parseCliArgs parses long-form CLI options with yargs', async () => {
 })
 
 test('resolveCliOptions asks for missing values when interactive input is needed', async () => {
-  const textMessages: string[] = []
+  const textCalls: Array<{
+    message: string
+    guide?: string
+    initialValue?: string
+  }> = []
   const selectMessages: string[] = []
   const promptValues = ['ebook-miniapp', '전자책 미니앱']
   const promptSelections: Array<'supabase' | 'yes' | 'no'> = ['supabase', 'no']
 
   const prompts: CliPrompter = {
     async text(options) {
-      textMessages.push(options.message)
+      textCalls.push({
+        message: options.message,
+        guide: options.guide,
+        initialValue: options.initialValue,
+      })
       return promptValues.shift() ?? ''
     },
     async select(options) {
@@ -84,7 +92,18 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   assert.equal(resolved.withBackoffice, false)
   assert.equal(resolved.skipInstall, false)
   assert.equal(resolved.outputDir, path.resolve('/tmp/workspace'))
-  assert.deepEqual(textMessages, ['appName을 입력하세요', 'displayName을 입력하세요'])
+  assert.deepEqual(textCalls, [
+    {
+      message: 'appName을 입력하세요',
+      guide: undefined,
+      initialValue: undefined,
+    },
+    {
+      message: 'displayName을 입력하세요',
+      guide: '보여지는 이름이니 한글로 해주세요.',
+      initialValue: undefined,
+    },
+  ])
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 선택하세요.',
     '`backoffice` 워크스페이스를 같이 만들까요?',
@@ -194,40 +213,50 @@ test('formatCliHelp renders Korean help text', () => {
 
 test('createClackPrompter delegates text input and single-choice selection to clack prompts', async () => {
   const messages: string[] = []
-  const errors: string[] = []
   const prompter = createClackPrompter({
     async text(options) {
+      if (options.guide) {
+        messages.push(`guide:${options.guide}`)
+      }
+
       messages.push(`text:${options.message}`)
       return options.initialValue ?? 'ebook-miniapp'
     },
-    async multiselect<T extends string>(options: {
+    async select<T extends string>(options: {
       message: string
       options: Array<{
         label: string
         value: T
       }>
-      initialValues?: T[]
-      required?: boolean
+      initialValue?: T
     }) {
-      messages.push(`multiselect:${options.message}`)
+      messages.push(`select:${options.message}`)
+      const secondary = options.options[1]?.value
 
-      if (messages.filter((message) => message.startsWith('multiselect:')).length === 1) {
-        return ['none', 'supabase'] as T[]
+      if (secondary) {
+        return secondary
       }
 
-      return ['supabase'] as T[]
+      const primary = options.options[0]?.value
+
+      if (!primary) {
+        throw new Error('선택지가 없습니다.')
+      }
+
+      return primary
     },
     isCancel(_value): _value is symbol {
       return false
-    },
-    logError(message) {
-      errors.push(message)
     },
   })
 
   const textValue = await prompter.text({
     message: 'appName을 입력하세요',
     initialValue: 'ebook-miniapp',
+  })
+  await prompter.text({
+    message: 'displayName을 입력하세요',
+    guide: '보여지는 이름이니 한글로 해주세요.',
   })
   const selectValue = await prompter.select({
     message: '`server` 제공자를 선택하세요.',
@@ -242,10 +271,10 @@ test('createClackPrompter delegates text input and single-choice selection to cl
   assert.equal(selectValue, 'supabase')
   assert.deepEqual(messages, [
     'text:appName을 입력하세요',
-    'multiselect:`server` 제공자를 선택하세요.',
-    'multiselect:`server` 제공자를 선택하세요.',
+    'guide:보여지는 이름이니 한글로 해주세요.',
+    'text:displayName을 입력하세요',
+    'select:`server` 제공자를 선택하세요.',
   ])
-  assert.deepEqual(errors, ['하나만 선택하세요.'])
 })
 
 test('createClackPrompter turns prompt cancellation into a user-facing error', async () => {
@@ -254,13 +283,19 @@ test('createClackPrompter turns prompt cancellation into a user-facing error', a
     async text() {
       return cancelled
     },
-    async multiselect<T extends string>() {
-      return [] as T[]
+    async select<T extends string>(options: {
+      message: string
+      options: Array<{
+        label: string
+        value: T
+      }>
+      initialValue?: T
+    }) {
+      return options.options[0]?.value ?? cancelled
     },
     isCancel(value): value is symbol {
       return value === cancelled
     },
-    logError() {},
   })
 
   await assert.rejects(
