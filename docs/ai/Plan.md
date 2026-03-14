@@ -1,6 +1,57 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 현재 provider 인증 스캐폴드 안정화 작업
+1. `codex/server-provider-adapters-cloudflare` 브랜치 기준으로 Supabase 인증/프로비저닝 흐름을 Cloudflare provider 지원 위에 병합한다.
+2. create 흐름의 실행 순서는 `frontend scaffold -> server scaffold -> provider provisioning -> optional backoffice scaffold -> patch/finalize`로 고정한다.
+3. add 흐름의 실행 순서는 `optional server scaffold -> provider provisioning -> optional backoffice scaffold -> patch/finalize`로 고정한다.
+4. Cloudflare provider 선택지는 유지하고, Supabase 전용 질문인 프로젝트 생성/기존 프로젝트 사용 선택은 Supabase일 때만 노출한다.
+5. Supabase CLI JSON 파싱은 `pnpm`/`yarn` 로그 노이즈가 섞여도 payload만 추출하도록 보강한다.
+6. 테스트 범위
+   - create/add 실행 순서가 provider provisioning 위치를 보장하는지 검증
+   - Cloudflare 선택지가 유지되는지 검증
+   - Supabase 프로젝트 목록/생성 응답이 패키지 매니저 로그 노이즈가 있어도 파싱되는지 검증
+7. 완료 기준
+   - `pnpm verify` 통과
+   - 변경사항을 PR `#22`에 올릴 수 있는 상태
+
+## 현재 provider 인증 기반 스캐폴드 연동 작업
+1. `--provision` 같은 별도 단계는 두지 않고, `server` provider를 생성/추가하는 `create`와 `--add` 흐름 안에서 인증과 원격 프로젝트 선택/생성을 함께 처리한다.
+2. provider UX는 공통으로 맞춘다.
+   - `server` provider 선택 후 기존 프로젝트 사용 / 새 프로젝트 생성 여부를 묻는다.
+   - 기존 프로젝트를 쓰면 인증 후 프로젝트 목록을 띄워 선택한다.
+   - 새 프로젝트를 만들면 provider 공식 CLI나 API를 통해 생성한다.
+3. Supabase는 `desktop/code/hot-updater/plugins/supabase/iac` 흐름을 참고해 구현한다.
+   - 로그인 상태 확인 및 필요 시 `supabase login`
+   - 프로젝트 목록 조회 및 선택
+   - 새 프로젝트 생성 후 재조회
+   - API key 조회
+   - local `supabase link`와 `db push`
+   - `frontend`/optional `backoffice` env 파일 작성 또는 마지막 안내 메시지 출력
+4. Cloudflare는 `desktop/code/hot-updater/plugins/cloudflare/iac` 흐름을 참고해 구현한다.
+   - Wrangler OAuth 토큰 재사용 및 필요 시 `wrangler login`
+   - account 목록 조회 및 선택
+   - 필요 시 기존 Worker/R2/D1 선택 또는 새 리소스 생성
+   - server workspace에 선택 결과를 반영한다.
+5. 구조는 provider adapter에 provisioning lifecycle을 추가하는 방향으로 정리한다.
+   - auth 확인
+   - create/use-existing 선택
+   - 원격 리소스 선택/생성
+   - local workspace patch/link/env write
+   - 최종 안내 메시지 생성
+6. 테스트 범위
+   - CLI가 provider provisioning 선택 입력을 해석하는지 검증
+   - provider adapter가 create/add 시 provisioning 단계를 삽입하는지 검증
+   - Supabase 기존/신규 프로젝트 선택 결과가 env/link 단계로 이어지는지 검증
+   - Cloudflare 인증 토큰/계정 선택 결과가 Worker 설정 단계로 이어지는지 검증
+7. 구현 순서
+   - provider provisioning 타입/registry 추가
+   - CLI 질문 흐름 확장
+   - scaffold/add orchestration에 provisioning 실행 삽입
+   - Supabase 구현
+   - Cloudflare 구현
+   - README와 테스트 갱신
+
 ## 현재 root workspace manifest 동적화 작업
 1. 루트 workspace 등록은 고정 템플릿이 아니라 실제 생성된 workspace 목록 기준으로 계산한다.
 2. 초기 생성 시점에는 `frontend`와 선택된 `server`/`backoffice`만 root manifest에 등록한다.

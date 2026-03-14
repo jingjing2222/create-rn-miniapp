@@ -1,10 +1,22 @@
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { log } from '@clack/prompts'
-import { buildAddCommandPlan, buildCommandPlan, runCommand, type CommandSpec } from './commands.js'
+import {
+  buildAddCommandPhases,
+  buildCreateCommandPhases,
+  runCommand,
+  type CommandSpec,
+} from './commands.js'
+import type { CliPrompter } from './cli.js'
 import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
 import { patchBackofficeWorkspace, patchFrontendWorkspace } from './patch.js'
+import type { ProvisioningNote, ServerProjectMode } from './server-project.js'
 import { getServerProviderAdapter, type ServerProvider } from './server-provider.js'
+import {
+  finalizeSupabaseProvisioning,
+  provisionSupabaseProject,
+  type ProvisionedSupabaseProject,
+} from './supabase-provision.js'
 import {
   type TemplateTokens,
   type WorkspaceName,
@@ -16,16 +28,19 @@ import {
 } from './templates.js'
 
 export type ScaffoldOptions = {
+  prompt: CliPrompter
   packageManager: PackageManager
   appName: string
   displayName: string
   outputDir: string
   serverProvider: ServerProvider | null
+  serverProjectMode: ServerProjectMode | null
   withBackoffice: boolean
   skipInstall: boolean
 }
 
 export type AddWorkspaceOptions = {
+  prompt: CliPrompter
   rootDir: string
   packageManager: PackageManager
   appName: string
@@ -33,6 +48,7 @@ export type AddWorkspaceOptions = {
   existingServerProvider: ServerProvider | null
   existingHasBackoffice: boolean
   serverProvider: ServerProvider | null
+  serverProjectMode: ServerProjectMode | null
   withServer: boolean
   withBackoffice: boolean
   skipInstall: boolean
@@ -68,6 +84,22 @@ export function buildRootFinalizePlan(options: {
   return plan
 }
 
+export function buildCreateExecutionOrder(options: {
+  appName: string
+  targetRoot: string
+  packageManager: PackageManager
+  serverProvider: ServerProvider | null
+  withBackoffice: boolean
+}) {
+  const phases = buildCreateCommandPhases(options)
+
+  return [
+    ...phases.frontend.map((command) => command.label),
+    ...phases.server.map((command) => command.label),
+    ...phases.backoffice.map((command) => command.label),
+  ]
+}
+
 async function resolveRootWorkspaces(targetRoot: string) {
   const workspaces: WorkspaceName[] = []
 
@@ -80,9 +112,47 @@ async function resolveRootWorkspaces(targetRoot: string) {
   return workspaces
 }
 
+async function maybeProvisionSupabaseProject(options: {
+  targetRoot: string
+  packageManager: PackageManager
+  prompt: CliPrompter
+  serverProvider: ServerProvider | null
+  serverProjectMode: ServerProjectMode | null
+}) {
+  if (
+    options.serverProvider !== 'supabase' ||
+    !(await pathExists(path.join(options.targetRoot, 'server')))
+  ) {
+    return null
+  }
+
+  return await provisionSupabaseProject({
+    targetRoot: options.targetRoot,
+    packageManager: options.packageManager,
+    prompt: options.prompt,
+    projectMode: options.serverProjectMode,
+  })
+}
+
+async function maybeFinalizeSupabaseProvisioning(options: {
+  targetRoot: string
+  provisionedProject: ProvisionedSupabaseProject | null
+  serverProvider: ServerProvider | null
+}) {
+  if (options.serverProvider !== 'supabase') {
+    return [] satisfies ProvisioningNote[]
+  }
+
+  return await finalizeSupabaseProvisioning({
+    targetRoot: options.targetRoot,
+    provisionedProject: options.provisionedProject,
+  })
+}
+
 export async function scaffoldWorkspace(options: ScaffoldOptions) {
   const targetRoot = path.resolve(options.outputDir, options.appName)
   const packageManager = getPackageManagerAdapter(options.packageManager)
+  const notes: ProvisioningNote[] = []
   const tokens: TemplateTokens = {
     appName: options.appName,
     displayName: options.displayName,
@@ -98,7 +168,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     await mkdir(path.join(targetRoot, 'server'), { recursive: true })
   }
 
-  const plan = buildCommandPlan({
+  const phases = buildCreateCommandPhases({
     appName: options.appName,
     targetRoot,
     packageManager: options.packageManager,
@@ -106,7 +176,25 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     withBackoffice: options.withBackoffice,
   })
 
-  for (const command of plan) {
+  for (const command of phases.frontend) {
+    log.step(command.label)
+    await runCommand(command)
+  }
+
+  for (const command of phases.server) {
+    log.step(command.label)
+    await runCommand(command)
+  }
+
+  const provisionedSupabaseProject = await maybeProvisionSupabaseProject({
+    targetRoot,
+    packageManager: options.packageManager,
+    prompt: options.prompt,
+    serverProvider: options.serverProvider,
+    serverProjectMode: options.serverProjectMode,
+  })
+
+  for (const command of phases.backoffice) {
     log.step(command.label)
     await runCommand(command)
   }
@@ -135,6 +223,14 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     })
   }
 
+  notes.push(
+    ...(await maybeFinalizeSupabaseProvisioning({
+      targetRoot,
+      provisionedProject: provisionedSupabaseProject,
+      serverProvider: options.serverProvider,
+    })),
+  )
+
   if (!options.skipInstall) {
     for (const command of buildRootFinalizePlan({
       targetRoot,
@@ -145,12 +241,13 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     }
   }
 
-  return { targetRoot }
+  return { targetRoot, notes }
 }
 
 export async function addWorkspaces(options: AddWorkspaceOptions) {
   const targetRoot = path.resolve(options.rootDir)
   const packageManager = getPackageManagerAdapter(options.packageManager)
+  const notes: ProvisioningNote[] = []
   const tokens: TemplateTokens = {
     appName: options.appName,
     displayName: options.displayName,
@@ -164,14 +261,29 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     await mkdir(path.join(targetRoot, 'server'), { recursive: true })
   }
 
-  const plan = buildAddCommandPlan({
+  const phases = buildAddCommandPhases({
     targetRoot,
     packageManager: options.packageManager,
     serverProvider: options.serverProvider,
     withBackoffice: options.withBackoffice,
   })
 
-  for (const command of plan) {
+  for (const command of phases.server) {
+    log.step(command.label)
+    await runCommand(command)
+  }
+
+  const provisionedSupabaseProject = options.withServer
+    ? await maybeProvisionSupabaseProject({
+        targetRoot,
+        packageManager: options.packageManager,
+        prompt: options.prompt,
+        serverProvider: options.serverProvider,
+        serverProjectMode: options.serverProjectMode,
+      })
+    : null
+
+  for (const command of phases.backoffice) {
     log.step(command.label)
     await runCommand(command)
   }
@@ -224,6 +336,16 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     })
   }
 
+  if (options.withServer) {
+    notes.push(
+      ...(await maybeFinalizeSupabaseProvisioning({
+        targetRoot,
+        provisionedProject: provisionedSupabaseProject,
+        serverProvider: options.serverProvider,
+      })),
+    )
+  }
+
   if (!options.skipInstall) {
     for (const command of buildRootFinalizePlan({
       targetRoot,
@@ -234,5 +356,5 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     }
   }
 
-  return { targetRoot }
+  return { targetRoot, notes }
 }

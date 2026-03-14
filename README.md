@@ -65,6 +65,7 @@ pnpm verify
 - `--display-name`: 사용자에게 보이는 앱 이름
 - `--with-server`: `server` 워크스페이스 포함. 호환성 기본값은 `supabase`입니다.
 - `--server-provider <supabase|cloudflare>`: `server` 제공자 명시
+- `--server-project-mode <create|existing>`: `server`를 만들 때 Supabase 원격 프로젝트를 새로 만들지, 기존 프로젝트를 쓸지 지정
 - `--with-backoffice`: `backoffice` 워크스페이스 포함
 - `--root-dir <dir>`: `--add`에서 수정할 기존 모노레포 루트. 기본값은 현재 디렉터리
 - `--output-dir <dir>`: 생성할 모노레포의 상위 디렉터리
@@ -73,7 +74,7 @@ pnpm verify
 - `--help`: 도움말 출력
 - `--version`: 버전 출력
 
-옵션으로 주지 않은 값은 한국어 프롬프트로 이어지며, package manager 선택이 가장 먼저 나옵니다.
+옵션으로 주지 않은 값은 한국어 프롬프트로 이어지며, package manager 선택이 가장 먼저 나옵니다. `server-provider supabase`를 선택하면 Supabase 프로젝트를 새로 만들지, 기존 프로젝트를 쓸지도 이어서 묻습니다. `--yes`를 쓰면 원격 Supabase 프로젝트 연결은 건너뛰고 로컬 scaffold만 진행합니다.
 
 ## Supabase를 같이 만들면
 
@@ -90,13 +91,15 @@ pnpm verify
 - `src/vite-env.d.ts`
 - `src/lib/supabase.ts`
 
+Supabase 프로젝트 연결 방식은 두 가지입니다.
+
+- 새 프로젝트 생성: 스캐폴드 중 Supabase CLI로 프로젝트를 만들고, `server`를 link/db push 한 뒤 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동으로 작성합니다.
+- 기존 프로젝트 사용: 프로젝트 목록에서 하나를 고른 뒤 `server`를 link/db push 하고, 마지막에 `.env.local`에 넣을 값을 안내 메시지로 출력합니다.
+
 `yarn`을 선택하면 root에는 `.yarnrc.yml`과 `package.json.workspaces`가 생성되고, `pnpm-workspace.yaml`은 생성되지 않습니다.
 루트 workspace 등록도 고정되지 않고, 실제로 생성된 `frontend`/`server`/`backoffice`만 포함됩니다.
 
 `--server-provider cloudflare`를 쓰면 Cloudflare C3의 Worker only + TypeScript scaffold를 `server/`에 생성합니다. 이 경우 `frontend`와 `backoffice`에는 Supabase bootstrap 파일을 만들지 않습니다.
-
-생성 후에는 예시 파일을 참고해서 실제 `.env.local`을 채우면 됩니다.
-
 ## 기존 워크스페이스에 추가하기
 
 이미 생성된 루트에서 `server`나 `backoffice`만 나중에 붙이고 싶으면 `--add`를 사용합니다.
