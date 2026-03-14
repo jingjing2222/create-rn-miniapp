@@ -104,6 +104,10 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   ) as {
     scripts?: Record<string, string>
   }
+  const serverDbApplyScript = await readFile(
+    path.join(targetRoot, 'server', 'scripts', 'supabase-db-apply.mjs'),
+    'utf8',
+  )
 
   assert.equal(packageJson.packageManager, 'yarn@4.13.0')
   assert.deepEqual(packageJson.workspaces, ['frontend', 'server'])
@@ -127,10 +131,18 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   assert.equal(frontendProject.targets?.typecheck.command, 'yarn workspace frontend typecheck')
   assert.equal(serverPackageJson.scripts?.dev, 'yarn dlx supabase start --workdir .')
   assert.equal(serverPackageJson.scripts?.build, 'yarn typecheck')
+  assert.equal(serverPackageJson.scripts?.['db:apply'], 'node ./scripts/supabase-db-apply.mjs')
+  assert.equal(
+    serverPackageJson.scripts?.['db:apply:local'],
+    'yarn dlx supabase db push --local --workdir .',
+  )
   assert.equal(
     serverPackageJson.scripts?.['db:reset'],
     'yarn dlx supabase db reset --local --workdir .',
   )
+  assert.match(serverDbApplyScript, /SUPABASE_DB_PASSWORD/)
+  assert.match(serverDbApplyScript, /supabase', 'db', 'push'/)
+  assert.match(serverDbApplyScript, /yarn/)
 })
 
 test('syncRootWorkspaceManifest adds newly added workspaces to existing root manifests', async (t) => {

@@ -20,6 +20,19 @@
    - `pnpm verify` 통과
    - 변경사항을 PR `#22`에 올릴 수 있는 상태
 
+## 현재 Supabase server 원격 운영 스크립트 작업
+1. Supabase provider를 선택해 프로젝트를 연결한 경우 `server/.env.local`도 함께 세팅한다.
+2. `server/.env.local`에는 적어도 `SUPABASE_PROJECT_REF`와 `SUPABASE_DB_PASSWORD` 자리를 유지한다.
+3. 이미 `server/.env.local`이 있으면 사용자가 넣어둔 `SUPABASE_DB_PASSWORD`는 지우지 않고 보존한다.
+4. `server/package.json`의 기본 SQL 반영 스크립트는 원격 기준 `db:apply`를 제공한다.
+5. 원격 `db:apply`는 `server/.env.local`을 읽고 `supabase db push --linked --password ...`를 실행해야 한다.
+6. 로컬용 명령은 필요할 때를 위해 별도 보조 스크립트로만 남기고, 기본 동선은 원격 push 기준으로 둔다.
+7. 테스트 범위
+   - `applyServerPackageTemplate`가 Supabase 원격 `db:apply`와 helper 스크립트를 생성하는지 검증
+   - `finalizeSupabaseProvisioning`가 `server/.env.local`을 만들고 기존 DB password를 보존하는지 검증
+8. 완료 기준
+   - `pnpm verify` 통과
+
 ## 현재 Cloudflare URL bootstrap 작업
 1. Cloudflare provider도 원격 Worker 연결 흐름을 가진다.
    - `create`: 새 Worker를 배포하고 URL을 얻는다.

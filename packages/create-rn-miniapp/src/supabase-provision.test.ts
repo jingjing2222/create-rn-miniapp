@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -8,6 +8,7 @@ import {
   finalizeSupabaseProvisioning,
   formatSupabaseManualSetupNote,
   resolveSupabaseClientApiKey,
+  writeSupabaseServerLocalEnvFile,
   writeSupabaseLocalEnvFiles,
 } from './supabase-provision.js'
 
@@ -98,6 +99,54 @@ test('writeSupabaseLocalEnvFiles writes frontend and backoffice .env.local files
   }
 })
 
+test('writeSupabaseServerLocalEnvFile creates server env file and preserves an existing DB password', async () => {
+  const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-supabase-server-'))
+
+  try {
+    await writeSupabaseServerLocalEnvFile({
+      targetRoot,
+      projectRef: 'abc123',
+    })
+
+    const initialServerEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
+
+    assert.equal(
+      initialServerEnv,
+      [
+        '# Used by server/package.json db:apply for remote Supabase pushes.',
+        'SUPABASE_PROJECT_REF=abc123',
+        'SUPABASE_DB_PASSWORD=',
+        '',
+      ].join('\n'),
+    )
+
+    await writeFile(
+      path.join(targetRoot, 'server', '.env.local'),
+      [
+        '# Used by server/package.json db:apply for remote Supabase pushes.',
+        'SUPABASE_PROJECT_REF=old-project',
+        'SUPABASE_DB_PASSWORD=secret-password',
+        'EXTRA=value',
+        '',
+      ].join('\n'),
+      'utf8',
+    )
+
+    await writeSupabaseServerLocalEnvFile({
+      targetRoot,
+      projectRef: 'next-project',
+    })
+
+    const updatedServerEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
+
+    assert.match(updatedServerEnv, /^SUPABASE_PROJECT_REF=next-project$/m)
+    assert.match(updatedServerEnv, /^SUPABASE_DB_PASSWORD=secret-password$/m)
+    assert.match(updatedServerEnv, /^EXTRA=value$/m)
+  } finally {
+    await rm(targetRoot, { recursive: true, force: true })
+  }
+})
+
 test('finalizeSupabaseProvisioning writes env files for existing projects when publishable key is available', async () => {
   const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-supabase-finalize-'))
 
@@ -112,6 +161,7 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
     })
 
     const frontendEnv = await readFile(path.join(targetRoot, 'frontend', '.env.local'), 'utf8')
+    const serverEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
 
     assert.equal(
       frontendEnv,
@@ -121,11 +171,15 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
         '',
       ].join('\n'),
     )
+    assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
+    assert.match(serverEnv, /^SUPABASE_DB_PASSWORD=$/m)
     assert.equal(notes[0]?.title, 'Supabase 환경 변수 작성 완료')
     assert.match(
       notes[0]?.body ?? '',
       /https:\/\/supabase\.com\/dashboard\/project\/abc123\/settings\/api/,
     )
+    assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
+    assert.match(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }
@@ -144,9 +198,13 @@ test('finalizeSupabaseProvisioning falls back to manual setup guidance when publ
       },
     })
 
+    const serverEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
+
     assert.equal(notes[0]?.title, 'Supabase 환경 변수 안내')
     assert.match(notes[0]?.body ?? '', /settings\/api/)
     assert.match(notes[0]?.body ?? '', /frontend\/\.env\.local/)
+    assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
+    assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }

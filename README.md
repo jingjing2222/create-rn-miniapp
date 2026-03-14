@@ -89,11 +89,17 @@ pnpm verify
 - `src/vite-env.d.ts`
 - `src/lib/supabase.ts`
 
+`server`:
+- `.env.local`
+- `package.json`의 원격 `db:apply` 스크립트
+
 Supabase를 선택하면 먼저 기존 프로젝트 목록을 보여주고, 마지막 항목에서 새 프로젝트 생성도 선택할 수 있습니다.
 
 - 기존 프로젝트를 고르면 해당 프로젝트로 `server`를 link/db push 하고, publishable key를 조회할 수 있으면 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동으로 작성합니다.
 - 새 프로젝트 생성을 고르면 스캐폴드 중 Supabase CLI로 프로젝트를 만든 뒤 같은 방식으로 link/db push 와 `.env.local` 작성을 이어갑니다.
 - publishable key를 자동으로 못 가져온 경우에만 마지막에 Supabase 대시보드 API 설정 URL과 `.env.local` 예시를 안내합니다.
+- `server/.env.local`에는 `SUPABASE_PROJECT_REF`와 `SUPABASE_DB_PASSWORD` 자리를 함께 만들어 두고, `server/package.json`의 `db:apply`는 이 파일을 읽어 원격 `supabase db push`를 실행합니다.
+- 로컬 DB가 필요하면 `db:apply:local`, `db:reset`를 그대로 사용할 수 있지만 기본 동선은 원격 `db:apply` 기준입니다.
 
 `yarn`을 선택하면 root에는 `.yarnrc.yml`과 `package.json.workspaces`가 생성되고, `pnpm-workspace.yaml`은 생성되지 않습니다.
 루트 workspace 등록도 고정되지 않고, 실제로 생성된 `frontend`/`server`/`backoffice`만 포함됩니다.

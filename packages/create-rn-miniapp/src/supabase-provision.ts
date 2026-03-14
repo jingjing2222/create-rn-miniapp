@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { log } from '@clack/prompts'
 import {
@@ -68,6 +68,15 @@ function createSupabaseEnvValues(projectRef: string, publishableKey: string) {
       '',
     ].join('\n'),
   }
+}
+
+function createSupabaseServerEnvValues(projectRef: string, dbPassword = '') {
+  return [
+    '# Used by server/package.json db:apply for remote Supabase pushes.',
+    `SUPABASE_PROJECT_REF=${projectRef}`,
+    `SUPABASE_DB_PASSWORD=${dbPassword}`,
+    '',
+  ].join('\n')
 }
 
 function getSupabaseApiSettingsUrl(projectRef: string) {
@@ -171,6 +180,14 @@ export function formatSupabaseManualSetupNote(options: {
     )
   }
 
+  lines.push(
+    '',
+    path.join(options.targetRoot, 'server', '.env.local'),
+    createSupabaseServerEnvValues(options.projectRef, '<프로젝트 DB password>').trimEnd(),
+    '',
+    'server/package.json 의 db:apply 는 server/.env.local 의 SUPABASE_DB_PASSWORD 를 사용합니다.',
+  )
+
   return {
     title: 'Supabase 환경 변수 안내',
     body: lines.join('\n'),
@@ -193,6 +210,67 @@ export async function writeSupabaseLocalEnvFiles(options: {
     const backofficeEnvPath = path.join(options.targetRoot, 'backoffice', '.env.local')
     await mkdir(path.dirname(backofficeEnvPath), { recursive: true })
     await writeFile(backofficeEnvPath, env.backoffice, 'utf8')
+  }
+}
+
+export async function writeSupabaseServerLocalEnvFile(options: {
+  targetRoot: string
+  projectRef: string
+}) {
+  const serverEnvPath = path.join(options.targetRoot, 'server', '.env.local')
+  let existingSource = ''
+
+  if (await pathExists(serverEnvPath)) {
+    existingSource = await readFile(serverEnvPath, 'utf8')
+  }
+
+  const lines = existingSource.length > 0 ? existingSource.split(/\r?\n/) : []
+  const nextLines =
+    lines.length > 0
+      ? [...lines]
+      : ['# Used by server/package.json db:apply for remote Supabase pushes.']
+  let hasProjectRef = false
+  let hasPassword = false
+  let hasNonEmptyPassword = false
+
+  for (let index = 0; index < nextLines.length; index += 1) {
+    const trimmed = nextLines[index]?.trim() ?? ''
+
+    if (trimmed.startsWith('SUPABASE_PROJECT_REF=')) {
+      nextLines[index] = `SUPABASE_PROJECT_REF=${options.projectRef}`
+      hasProjectRef = true
+      continue
+    }
+
+    if (trimmed.startsWith('SUPABASE_DB_PASSWORD=')) {
+      hasPassword = true
+      hasNonEmptyPassword = trimmed.slice('SUPABASE_DB_PASSWORD='.length).trim().length > 0
+    }
+  }
+
+  if (!hasProjectRef) {
+    nextLines.push(`SUPABASE_PROJECT_REF=${options.projectRef}`)
+  }
+
+  if (!hasPassword) {
+    nextLines.push('SUPABASE_DB_PASSWORD=')
+  }
+
+  const normalizedSource = `${nextLines
+    .filter((line, index, array) => {
+      if (index === array.length - 1) {
+        return line.length > 0
+      }
+
+      return true
+    })
+    .join('\n')}\n`
+
+  await mkdir(path.dirname(serverEnvPath), { recursive: true })
+  await writeFile(serverEnvPath, normalizedSource, 'utf8')
+
+  return {
+    hasDbPassword: hasNonEmptyPassword,
   }
 }
 
@@ -397,6 +475,10 @@ export async function finalizeSupabaseProvisioning(options: {
   }
 
   const hasBackoffice = await pathExists(path.join(options.targetRoot, 'backoffice'))
+  const serverEnv = await writeSupabaseServerLocalEnvFile({
+    targetRoot: options.targetRoot,
+    projectRef: options.provisionedProject.projectRef,
+  })
 
   if (options.provisionedProject.publishableKey) {
     await writeSupabaseLocalEnvFiles({
@@ -413,6 +495,10 @@ export async function finalizeSupabaseProvisioning(options: {
           hasBackoffice
             ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 작성했습니다.'
             : 'frontend/.env.local 에 Supabase 연결 값을 작성했습니다.',
+          'server/.env.local 에 Supabase 원격 db push 설정을 작성했습니다.',
+          serverEnv.hasDbPassword
+            ? 'server/package.json 의 db:apply 로 원격 SQL push를 계속 진행할 수 있습니다.'
+            : 'server/.env.local 의 SUPABASE_DB_PASSWORD 를 채우면 server/package.json 의 db:apply 로 원격 SQL push를 계속 진행할 수 있습니다.',
           '',
           '키를 다시 확인해야 하면 아래 URL을 보세요.',
           getSupabaseApiSettingsUrl(options.provisionedProject.projectRef),
