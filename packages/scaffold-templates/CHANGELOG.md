@@ -1,5 +1,12 @@
 # @create-rn-miniapp/scaffold-templates
 
+## 0.0.5
+
+### Patch Changes
+
+- 0e3bc72: feat: 하네스 문서 수정
+- 0bcd9de: Add package manager selection with Yarn Berry support, manager-aware root templates, and updated generated docs.
+
 ## 0.0.4
 
 ### Patch Changes
