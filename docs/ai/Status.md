@@ -1,3 +1,27 @@
+## 2026-03-14 — README 및 scaffold 문서 재편
+- 상태
+  - 루트 `README.md`를 저장소 소개보다 사용자 사용 설명서 기준으로 다시 정리했다.
+  - 생성 결과물의 `AGENTS.md`는 첫 진입 체크리스트로 줄이고, 상세 규칙은 하위 문서로 분리했다.
+  - `granite-ssot.md`, quick index, full index의 역할을 분리해 중복을 줄였고, `granite-rules.yml` 내용은 `granite-ssot.md`로 흡수한 뒤 파일을 제거했다.
+- 반영한 변경
+  - `README.md`
+    - 설치, 실행, 옵션, 생성 구조, Supabase bootstrap, 로컬 스모크 테스트 기준으로 재작성
+  - `packages/scaffold-templates/base/AGENTS.md`
+    - 첫 진입 안내서와 문서별 역할 안내로 축약
+  - `packages/scaffold-templates/base/docs/engineering/granite-ssot.md`
+    - 라우팅, 페이지 구조, 검증 규칙의 SSoT로 재정의
+    - `granite-rules.yml`의 forbidden pattern, required checks, evidence fields 흡수
+  - `packages/scaffold-templates/base/docs/engineering/appsintoss-granite-api-index.md`
+    - 빠른 API 탐색용 문서로 역할 고정
+  - `packages/scaffold-templates/base/docs/engineering/appsintoss-granite-full-api-index.md`
+    - 전체 API 카탈로그 역할로 정리
+  - `packages/scaffold-templates/base/docs/index.md`
+  - `packages/scaffold-templates/base/docs/engineering/하네스-실행가이드.md`
+  - `packages/scaffold-templates/base/docs/engineering/에이전트전략.md`
+  - `packages/scaffold-templates/base/docs/ai/Implement.md`
+- 검증
+  - `pnpm verify` ✅
+
 ## 2026-03-14 — Changesets 포맷 재발 방지
 - 상태
   - release PR이 package manifest 버전만 올리면서 Biome 포맷과 어긋날 수 있는 재발 포인트를 제거했다.

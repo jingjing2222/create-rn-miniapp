@@ -1,18 +1,38 @@
-# create-miniapp
+# create-rn-miniapp
 
-`create-miniapp`은 AppInToss MiniApp용 `frontend`, optional `server`, optional `backoffice`
-를 한 번에 오케스트레이션하는 CLI 저장소입니다.
+`create-rn-miniapp`은 AppInToss MiniApp용 모노레포를 한 번에 생성하는 CLI입니다.
 
-이 저장소는 생성 결과물 source template를 들고 있지 않습니다. 실제 앱 코드는 공식 CLI가 만들고,
-이 도구는 루트 monorepo 설정과 하네스 문서만 overlay 합니다.
+- `frontend`: Granite + `@apps-in-toss/framework` 기반 MiniApp
+- `server`: optional Supabase workspace
+- `backoffice`: optional Vite + React + TypeScript workspace
+- 루트: `pnpm + nx + biome` 기준 monorepo 설정과 하네스 문서
 
-## Source Of Truth
+## 빠른 시작
 
-- frontend: [AppInToss React Native Tutorial](https://developers-apps-in-toss.toss.im/tutorials/react-native.html)
-- server: [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
-- backoffice: [Vite Getting Started](https://vite.dev/guide/)
+대화형으로 생성:
 
-## Generated Output
+```bash
+pnpm create rn-miniapp
+```
+
+옵션으로 한 번에 생성:
+
+```bash
+pnpm dlx create-rn-miniapp \
+  --name my-miniapp \
+  --display-name "내 미니앱" \
+  --server-provider supabase \
+  --with-backoffice
+```
+
+생성이 끝나면:
+
+```bash
+cd my-miniapp
+pnpm verify
+```
+
+## 생성되는 구조
 
 ```text
 <appName>/
@@ -28,70 +48,63 @@
   tsconfig.base.json
 ```
 
-## Generated Monorepo Rules
+## CLI 옵션
 
-- 루트는 `pnpm + nx + biome`
-- 내부 워크스페이스는 자체 lint/format 설정을 들지 않음
-- `frontend`는 AppInToss React Native 튜토리얼 순서대로 생성
-- `server`는 `supabase init` 기준으로 생성
-- `backoffice`는 `create-vite --template react-ts --no-interactive` 기준으로 생성
-- 생성이 끝나면 루트 `biome check --write --unsafe`로 전체 monorepo를 정리
+- `--name`: Granite `appName`이자 생성 디렉터리 이름
+- `--display-name`: 사용자에게 보이는 앱 이름
+- `--with-server`: `server` 워크스페이스 포함. 현재는 `supabase`로 연결됩니다.
+- `--server-provider <supabase>`: `server` 제공자 명시
+- `--with-backoffice`: `backoffice` 워크스페이스 포함
+- `--output-dir <dir>`: 생성할 모노레포의 상위 디렉터리
+- `--skip-install`: 마지막 루트 `pnpm install`과 Biome 정리를 생략
+- `--yes`: 선택형 질문을 기본값으로 진행
+- `--help`: 도움말 출력
+- `--version`: 버전 출력
 
-## Usage
+옵션으로 주지 않은 값은 한국어 프롬프트로 이어집니다.
 
-퍼블릭 배포 후:
+## Supabase를 같이 만들면
 
-```bash
-pnpm create rn-miniapp
-```
+`--with-server` 또는 `--server-provider supabase`를 쓰면 `server/`뿐 아니라 `frontend`와 optional `backoffice`에도 바로 연결할 수 있는 기본 파일을 생성합니다.
 
-로컬 개발 중:
+`frontend`:
+- `.env.local.example`
+- `src/env.d.ts`
+- `src/lib/supabase.ts`
+- `granite.config.ts` env plugin 및 monorepo `watchFolders` patch
 
-```bash
-pnpm --filter create-rn-miniapp exec tsx src/index.ts
-```
+`backoffice`:
+- `.env.local.example`
+- `src/vite-env.d.ts`
+- `src/lib/supabase.ts`
 
-예시:
+생성 후에는 예시 파일을 참고해서 실제 `.env.local`을 채우면 됩니다.
 
-```bash
-pnpm --filter create-rn-miniapp exec tsx src/index.ts \
-  --name my-miniapp \
-  --display-name "내 미니앱" \
-  --with-server \
-  --with-backoffice
-```
+## 생성 기준
 
-## Tool Workspace
+- `frontend`: [AppInToss React Native tutorial](https://developers-apps-in-toss.toss.im/tutorials/react-native.html)
+- `server`: [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
+- `backoffice`: [Vite](https://vite.dev/guide/)
 
-```text
-packages/create-rn-miniapp/
-packages/scaffold-templates/
-docs/
-```
+이 저장소는 앱 소스 전체를 템플릿으로 들고 있지 않습니다. 공식 scaffold 결과에 루트 설정, 문서, 필요한 patch만 적용합니다.
 
-## Verify
+## 로컬 개발
+
+저장소에서 CLI를 직접 테스트하려면:
 
 ```bash
 pnpm install
 pnpm verify
+pnpm --filter create-rn-miniapp exec tsx src/index.ts --help
 ```
 
-## Release
+실제 스캐폴딩 스모크 테스트:
 
 ```bash
-pnpm changeset
-pnpm version-packages
-pnpm release
+pnpm --filter create-rn-miniapp exec tsx src/index.ts \
+  --name local-miniapp \
+  --display-name "로컬 미니앱" \
+  --server-provider supabase \
+  --with-backoffice \
+  --output-dir /tmp
 ```
-
-`pnpm version-packages`는 `changeset version` 뒤에 루트 `pnpm format`까지 같이 실행해서
-release PR에서 Biome 포맷 차이로 CI가 깨지지 않게 유지합니다.
-
-GitHub Actions:
-- PR / `main` / `codex/**` push: `Verify` 워크플로에서 `pnpm verify`
-- `main` push: `Release` 워크플로에서 Changesets가 릴리스 PR 생성 또는 npm publish 수행
-- npm publish는 저장소 secret `NPM_TOKEN`을 사용
-
-공개 npm 패키지:
-- `create-rn-miniapp`
-- `@create-rn-miniapp/scaffold-templates`

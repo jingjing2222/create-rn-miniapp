@@ -188,6 +188,22 @@ docs/
 7. 릴리스 후속 작업
    - `create-rn-miniapp`와 `@create-rn-miniapp/scaffold-templates`를 같은 patch changeset에 넣어 함께 버전 업한다.
 
+## 현재 README 및 scaffold 문서 재편 작업
+1. 루트 `README.md`는 저장소 개발자 관점보다 생성기 사용자 관점으로 다시 쓴다.
+2. `packages/scaffold-templates/base/AGENTS.md`는 생성 직후 가장 먼저 읽는 실행 안내서 역할만 남기고, 상세 규칙과 배경 설명은 하위 문서로 분리한다.
+3. `docs/engineering/granite-ssot.md`, `docs/engineering/appsintoss-granite-api-index.md`, `docs/engineering/appsintoss-granite-full-api-index.md`, `AGENTS.md` 사이의 역할을 재정의해 중복을 제거한다.
+4. 내용은 빠뜨리지 않되, 같은 규칙/링크/설명을 여러 파일에 반복하지 않도록 문서별 책임을 분리한다.
+5. 검토 대상
+   - `AGENTS.md`에서 제거 또는 축약 가능한 항목
+   - `granite-rules.yml`은 별도 유지하지 않고 `granite-ssot.md`로 흡수한다.
+   - 현재 문서 링크 구조가 처음 읽는 사용자/에이전트에게 혼란을 주는지 여부
+6. 완료 기준
+   - README만 봐도 설치/실행/옵션/주의사항을 이해할 수 있다.
+   - AGENTS는 첫 진입용 체크리스트로 짧고 명확하다.
+   - Granite/AppInToss 문서 3종은 각각 목적이 겹치지 않는다.
+7. 검증
+   - `pnpm verify`
+
 ## 남은 작업
 1. npm publish 준비
    - Changesets 설정

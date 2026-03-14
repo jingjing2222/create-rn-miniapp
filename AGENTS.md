@@ -15,9 +15,6 @@
 - CLI package: `packages/create-rn-miniapp`
 - Template package: `packages/scaffold-templates`
 - Template AGENTS: `packages/scaffold-templates/base/AGENTS.md`
-- Granite/AppInToss full index: `packages/scaffold-templates/base/docs/engineering/appsintoss-granite-full-api-index.md`
-- Granite/AppInToss quick index: `packages/scaffold-templates/base/docs/engineering/appsintoss-granite-api-index.md`
-- TDS RN index: `packages/scaffold-templates/base/docs/engineering/tds-react-native-index.md`
 
 ## Workspace Mental Model
 - `packages/create-rn-miniapp`: generator CLI
@@ -28,7 +25,6 @@
 2. 이 저장소는 scaffold 결과물을 template으로 들고 있지 않는다.
 3. template으로 유지하는 것은 AGENTS, docs/ai, docs/product 같은 하네스 문서다.
 4. MiniApp frontend 스캐폴딩 기준은 AppInToss React Native 튜토리얼과 `@apps-in-toss/framework` 초기화 절차를 source of truth로 둔다.
-5. UI 가이드 기준은 TDS 문서와 인덱스를 따른다.
 
 ## Verify Gate
 - `pnpm format:check`

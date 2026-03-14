@@ -5,14 +5,13 @@
 - `frontend`: AppInToss + Granite + `@apps-in-toss/framework` + TDS
 - `backoffice`: optional Vite workspace
 - `server`: optional Supabase workspace
-- 공식 scaffold 위에 overlay를 덧입히는 방식으로 유지한다
 
 ## 구현 규칙
 - 구현 전에 문서를 먼저 갱신한다.
-- MiniApp 작업이면 `docs/engineering/appsintoss-granite-full-api-index.md`를 먼저 확인한다.
+- MiniApp 작업이면 `docs/engineering/appsintoss-granite-api-index.md`를 먼저 확인한다.
+- 빠른 인덱스로 부족하면 `docs/engineering/appsintoss-granite-full-api-index.md`를 추가로 확인한다.
 - `@apps-in-toss/framework` 초기화와 화면 제어는 공식 문서와 튜토리얼 절차를 먼저 확인한다.
 - UI 구현이 포함되면 `docs/engineering/tds-react-native-index.md`와 TDS 원문 문서를 먼저 확인한다.
-- 상세 근거가 필요하면 `docs/engineering/appsintoss-granite-api-index.md`를 추가로 확인한다.
 - 라우팅과 페이지 구조는 `docs/engineering/granite-ssot.md`를 따른다.
 - 네이티브 연동은 `docs/engineering/native-modules-policy.md`를 따른다.
 
@@ -25,8 +24,8 @@
 - `pnpm verify`
 
 ## PR 제출 체크
-- UI나 UX가 바뀌면 스크린샷 또는 영상을 PR에 첨부한다.
 - PR 본문에 실행한 검증 명령과 결과를 남긴다.
+- 문서 링크와 실제 구조가 맞는지 확인한다.
 
 ## 관련 문서
 - [Plan](./Plan.md)
