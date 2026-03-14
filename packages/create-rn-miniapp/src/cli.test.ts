@@ -278,7 +278,10 @@ test('resolveCliOptions keeps prompts optional when yes flag is set', async () =
   assert.equal(resolved.noGit, false)
 })
 
-test('resolveCliOptions keeps with-server compatibility by defaulting provider to supabase', async () => {
+test('resolveCliOptions asks for a concrete provider when with-server is set', async () => {
+  const selectMessages: string[] = []
+  const selections = ['cloudflare', 'no']
+  const textValues = ['전자책 미니앱']
   const resolved = await resolveCliOptions(
     {
       add: false,
@@ -287,16 +290,29 @@ test('resolveCliOptions keeps with-server compatibility by defaulting provider t
       rootDir: '/tmp/workspace',
       outputDir: '/tmp/workspace',
       skipInstall: false,
-      yes: true,
+      yes: false,
       help: false,
       version: false,
     },
     {
       async text() {
-        throw new Error('text prompt should not be called')
+        return textValues.shift() ?? ''
       },
-      async select() {
-        throw new Error('select prompt should not be called')
+      async select(options) {
+        selectMessages.push(options.message)
+        const fallback = options.options[0]
+
+        if (!fallback) {
+          throw new Error('선택지가 없습니다.')
+        }
+
+        const nextSelection = selections.shift()
+
+        if (nextSelection && options.options.some((option) => option.value === nextSelection)) {
+          return nextSelection as typeof fallback.value
+        }
+
+        return fallback.value
       },
     },
     {
@@ -305,8 +321,43 @@ test('resolveCliOptions keeps with-server compatibility by defaulting provider t
   )
 
   assert.equal(resolved.withServer, true)
-  assert.equal(resolved.serverProvider, 'supabase')
+  assert.equal(resolved.serverProvider, 'cloudflare')
   assert.equal(resolved.serverProjectMode, null)
+  assert.deepEqual(selectMessages, [
+    '`server` 제공자를 선택하세요.',
+    '`backoffice` 워크스페이스를 같이 만들까요?',
+  ])
+})
+
+test('resolveCliOptions rejects with-server in yes mode when server-provider is omitted', async () => {
+  await assert.rejects(
+    () =>
+      resolveCliOptions(
+        {
+          add: false,
+          name: 'ebook-miniapp',
+          withServer: true,
+          rootDir: '/tmp/workspace',
+          outputDir: '/tmp/workspace',
+          skipInstall: false,
+          yes: true,
+          help: false,
+          version: false,
+        },
+        {
+          async text() {
+            throw new Error('text prompt should not be called')
+          },
+          async select() {
+            throw new Error('select prompt should not be called')
+          },
+        },
+        {
+          npm_config_user_agent: 'pnpm/10.32.1 npm/? node/v25.6.1 darwin arm64',
+        },
+      ),
+    /`--with-server`를 `--yes`와 함께 사용할 때는 `--server-provider`를 명시해야 합니다\./,
+  )
 })
 
 test('resolveCliOptions rejects conflicting server flags', async () => {
@@ -676,6 +727,42 @@ test('resolveAddCliOptions detects additive targets from an existing workspace',
     '`server` 제공자를 선택하세요.',
     '`backoffice` 워크스페이스를 추가할까요?',
   ])
+})
+
+test('resolveAddCliOptions rejects with-server in yes mode when server-provider is omitted', async () => {
+  await assert.rejects(
+    () =>
+      resolveAddCliOptions(
+        {
+          add: true,
+          withServer: true,
+          rootDir: '/tmp/existing-miniapp',
+          outputDir: '/tmp/workspace',
+          skipInstall: false,
+          yes: true,
+          help: false,
+          version: false,
+        },
+        {
+          async text() {
+            throw new Error('text prompt should not be called')
+          },
+          async select() {
+            throw new Error('select prompt should not be called')
+          },
+        },
+        {
+          rootDir: '/tmp/existing-miniapp',
+          packageManager: 'pnpm',
+          appName: 'ebook-miniapp',
+          displayName: '전자책 미니앱',
+          hasServer: false,
+          hasBackoffice: false,
+          serverProvider: null,
+        },
+      ),
+    /`--with-server`를 `--yes`와 함께 사용할 때는 `--server-provider`를 명시해야 합니다\./,
+  )
 })
 
 test('formatCliHelp renders Korean help text', () => {

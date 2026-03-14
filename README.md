@@ -118,7 +118,7 @@ pnpm verify
 - `--add`: 이미 생성된 워크스페이스에 빠진 `server`/`backoffice`를 추가할 수 있어요.
 - `--name`: Granite `appName`이자 생성 디렉터리 이름이에요.
 - `--display-name`: 사용자에게 보이는 앱 이름이에요.
-- `--with-server`: `server` 워크스페이스를 포함해요. 호환성 기본값은 `supabase`예요.
+- `--with-server`: `server` 워크스페이스를 포함해요. provider는 `--server-provider`로 주거나 인터랙티브에서 골라요.
 - `--server-provider <supabase|cloudflare|firebase>`: `server` 제공자를 명시할 수 있어요.
 - `--server-project-mode <create|existing>`: `server` 원격 리소스를 새로 만들지, 기존 것을 쓸지 지정할 수 있어요.
 - `--with-backoffice`: `backoffice` 워크스페이스를 포함해요.
@@ -130,7 +130,7 @@ pnpm verify
 - `--help`: 도움말을 출력해요.
 - `--version`: 버전을 출력해요.
 
-옵션으로 주지 않은 값은 한국어 프롬프트로 이어져요. package manager는 호출한 create 커맨드를 그대로 따라가요. 그래서 `npm create`, `pnpm create`, `yarn create`, `bun create`로 시작했으면 각각 그 값을 바로 사용해요. create 경로를 감지하지 못하면 기본값으로 숨기지 않고, `--package-manager`를 직접 넣으라고 에러를 내요. `server-provider`를 선택하면 provider의 기존 원격 리소스 목록을 먼저 보여주고, 마지막 항목에서 새로 만들기도 바로 선택할 수 있어요. `--yes`를 쓰면 원격 연결은 건너뛰고 로컬 scaffold만 진행해요.
+옵션으로 주지 않은 값은 한국어 프롬프트로 이어져요. package manager는 호출한 create 커맨드를 그대로 따라가요. 그래서 `npm create`, `pnpm create`, `yarn create`, `bun create`로 시작했으면 각각 그 값을 바로 사용해요. create 경로를 감지하지 못하면 기본값으로 숨기지 않고, `--package-manager`를 직접 넣으라고 에러를 내요. `server-provider`를 선택하면 provider의 기존 원격 리소스 목록을 먼저 보여주고, 마지막 항목에서 새로 만들기도 바로 선택할 수 있어요. `--with-server`만 주면 인터랙티브에서 provider를 고르고, `--yes`를 함께 쓸 때는 `--server-provider`도 같이 넣어야 해요. `--yes`를 쓰면 원격 연결은 건너뛰고 로컬 scaffold만 진행해요.
 
 ## Provider IaC
 
@@ -144,7 +144,7 @@ pnpm verify
 
 ## Supabase를 같이 만들면
 
-`--with-server` 또는 `--server-provider supabase`를 쓰면 `server/`뿐 아니라 `frontend`와 optional `backoffice`에도 바로 연결할 수 있는 기본 파일을 같이 만들어줘요.
+`server` provider로 `supabase`를 선택하면 `server/`뿐 아니라 `frontend`와 optional `backoffice`에도 바로 연결할 수 있는 기본 파일을 같이 만들어줘요.
 
 `frontend`:
 - `src/env.d.ts`

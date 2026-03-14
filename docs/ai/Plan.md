@@ -1,6 +1,24 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: `--with-server` implicit supabase 기본값 제거
+1. 문제
+   - 현재 CLI는 `--with-server`만 주면 provider를 묻지 않고 `supabase`로 기본값을 잡는다.
+   - 그래서 사용자가 Cloudflare나 Firebase를 의도해도 flag 조합에 따라 실제 patch/provision은 `supabase`로 흘러갈 수 있다.
+2. 방향
+   - `--with-server`는 더 이상 `supabase` 축약형으로 취급하지 않는다.
+   - 인터랙티브에서는 `--with-server`가 있으면 provider만 바로 고르게 하고, `--with-server`가 없을 때만 `none + providers` 선택을 보여준다.
+   - `--yes`와 `--with-server`를 같이 쓰면 `--server-provider`를 명시하도록 에러를 낸다.
+   - `--add`도 같은 규칙으로 맞춘다.
+3. 테스트
+   - `--with-server` + interactive에서 provider prompt가 뜨는지 검증
+   - `--with-server` + `--yes` + no provider면 에러를 내는지 검증
+   - `--add`에서도 같은 규칙을 검증
+4. 완료 기준
+   - `--with-server`만으로 `supabase`가 자동 선택되지 않는다.
+   - Cloudflare/Firebase 의도와 실제 generated patch/provider가 어긋나지 않는다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: granite.config.ts unused optional env helper 제거
 1. 문제
    - 현재 frontend `granite.config.ts` 코드젠은 optional env binding이 없는 provider(`supabase`, `cloudflare`)에서도 `resolveOptionalMiniappEnv()` helper를 항상 생성한다.

@@ -131,7 +131,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     })
     .option('with-server', {
       type: 'boolean',
-      describe: '`server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
+      describe: '`server` 워크스페이스 포함 (provider는 옵션 또는 인터랙티브에서 선택)',
     })
     .option('server-provider', {
       choices: SERVER_PROVIDERS,
@@ -209,7 +209,7 @@ export function formatCliHelp() {
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
     '  --no-git                       생성 완료 후 루트 git init 생략',
-    '  --with-server                  `server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
+    '  --with-server                  `server` 워크스페이스 포함 (provider는 옵션 또는 인터랙티브에서 선택)',
     `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
     '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
     '  --with-backoffice              `backoffice` 워크스페이스 포함',
@@ -226,7 +226,7 @@ export function formatCliHelp() {
     '  create-miniapp --name my-miniapp --server-provider supabase --with-backoffice',
     '  create-miniapp --name my-miniapp --server-provider cloudflare',
     '  create-miniapp --name my-miniapp --server-provider firebase',
-    '  create-miniapp --name my-miniapp --with-server --server-project-mode existing',
+    '  create-miniapp --name my-miniapp --with-server --server-provider supabase --server-project-mode existing',
     '  create-miniapp --name my-miniapp --server-provider cloudflare --server-project-mode existing',
     '  create-miniapp --add --with-server',
     '  create-miniapp --add --root-dir /path/to/existing-miniapp --with-backoffice',
@@ -249,6 +249,42 @@ function validateServerProjectMode(
 function resolveServerProjectModeInput(serverProvider: ServerProvider | null, argv: ParsedCliArgs) {
   validateServerProjectMode(serverProvider, argv.serverProjectMode)
   return Promise.resolve(argv.serverProjectMode ?? null)
+}
+
+async function resolveServerProviderInput(
+  argv: ParsedCliArgs,
+  prompt: CliPrompter,
+  options: {
+    promptMessage: string
+    noneLabel: string
+  },
+) {
+  if (argv.serverProvider) {
+    return argv.serverProvider
+  }
+
+  if (argv.withServer) {
+    if (argv.yes) {
+      throw new Error(
+        '`--with-server`를 `--yes`와 함께 사용할 때는 `--server-provider`를 명시해야 합니다.',
+      )
+    }
+
+    return await prompt.select<ServerProvider>({
+      message: options.promptMessage,
+      options: SERVER_PROVIDER_OPTIONS,
+    })
+  }
+
+  if (argv.withServer === false || argv.yes) {
+    return null
+  }
+
+  return await prompt.select<'none' | ServerProvider>({
+    message: options.promptMessage,
+    options: [{ label: options.noneLabel, value: 'none' }, ...SERVER_PROVIDER_OPTIONS],
+    initialValue: 'none',
+  })
 }
 
 export function detectInvocationPackageManager(
@@ -348,17 +384,10 @@ export async function resolveCliOptions(
           },
         }))
 
-  const serverProvider =
-    argv.serverProvider ??
-    (argv.withServer
-      ? 'supabase'
-      : argv.withServer === false || argv.yes
-        ? null
-        : await prompt.select<'none' | ServerProvider>({
-            message: '`server` 제공자를 선택하세요.',
-            options: [{ label: '생성 안 함', value: 'none' }, ...SERVER_PROVIDER_OPTIONS],
-            initialValue: 'none',
-          }))
+  const serverProvider = await resolveServerProviderInput(argv, prompt, {
+    promptMessage: '`server` 제공자를 선택하세요.',
+    noneLabel: '생성 안 함',
+  })
 
   const normalizedServerProvider = serverProvider === 'none' ? null : serverProvider
   const withServer = normalizedServerProvider !== null
@@ -418,16 +447,10 @@ export async function resolveAddCliOptions(
   const rootDir = path.resolve(argv.rootDir)
   const addServerProvider = inspection.hasServer
     ? null
-    : (argv.serverProvider ??
-      (argv.withServer
-        ? 'supabase'
-        : argv.withServer === false || argv.yes
-          ? null
-          : await prompt.select<'none' | ServerProvider>({
-              message: '`server` 제공자를 선택하세요.',
-              options: [{ label: '추가 안 함', value: 'none' }, ...SERVER_PROVIDER_OPTIONS],
-              initialValue: 'none',
-            })))
+    : await resolveServerProviderInput(argv, prompt, {
+        promptMessage: '`server` 제공자를 선택하세요.',
+        noneLabel: '추가 안 함',
+      })
 
   const normalizedServerProvider = addServerProvider === 'none' ? null : addServerProvider
   const withServer = normalizedServerProvider !== null
