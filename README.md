@@ -42,19 +42,19 @@
 퍼블릭 배포 후:
 
 ```bash
-pnpm create miniapp
+pnpm create rn-miniapp
 ```
 
 로컬 개발 중:
 
 ```bash
-pnpm --filter create-miniapp exec tsx src/index.ts
+pnpm --filter create-rn-miniapp exec tsx src/index.ts
 ```
 
 예시:
 
 ```bash
-pnpm --filter create-miniapp exec tsx src/index.ts \
+pnpm --filter create-rn-miniapp exec tsx src/index.ts \
   --name my-miniapp \
   --display-name "내 미니앱" \
   --with-server \
@@ -64,7 +64,7 @@ pnpm --filter create-miniapp exec tsx src/index.ts \
 ## Tool Workspace
 
 ```text
-packages/create-miniapp/
+packages/create-rn-miniapp/
 packages/scaffold-templates/
 docs/
 ```
@@ -91,3 +91,7 @@ GitHub Actions:
 - PR / `main` / `codex/**` push: `Verify` 워크플로에서 `pnpm verify`
 - `main` push: `Release` 워크플로에서 Changesets가 릴리스 PR 생성 또는 npm publish 수행
 - npm publish는 저장소 secret `NPM_TOKEN`을 사용
+
+공개 npm 패키지:
+- `create-rn-miniapp`
+- `@create-rn-miniapp/scaffold-templates`

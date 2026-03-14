@@ -5,7 +5,7 @@
 - 반영한 변경
   - `package.json`
     - `version-packages`를 `changeset version && pnpm format`으로 변경
-  - `packages/create-miniapp/src/release.test.ts`
+  - `packages/create-rn-miniapp/src/release.test.ts`
     - release version script가 포맷까지 포함하는지 검증 추가
   - `README.md`
     - release flow에 format 동작 설명 추가
@@ -32,7 +32,7 @@
 ## 2026-03-14 — Changesets 릴리스 흐름 추가
 - 상태
   - 공개 npm 배포를 위해 Changesets 기반 버전 관리 흐름을 추가했다.
-  - `create-miniapp`와 `@create-miniapp/scaffold-templates`를 함께 릴리스할 수 있는 초기 patch changeset을 만들었다.
+  - `create-rn-miniapp`와 `@create-rn-miniapp/scaffold-templates`를 함께 릴리스할 수 있는 초기 patch changeset을 만들었다.
 - 반영한 변경
   - `package.json`
     - `changeset`, `version-packages`, `release` 스크립트 추가
@@ -76,14 +76,14 @@
   - `create-miniapp` CLI가 실제 temp directory에서 공식 CLI들을 순서대로 실행한다.
   - `frontend only`와 `frontend + server + backoffice` 두 조합 모두 생성 직후 루트 `pnpm verify`를 통과한다.
 - 반영한 변경
-  - `packages/create-miniapp/src/commands.ts`
+  - `packages/create-rn-miniapp/src/commands.ts`
     - `ait init --template react-native --skip-input`
     - `create-vite --no-interactive`
     - TDS 설치 순서 조정
-  - `packages/create-miniapp/src/scaffold.ts`
+  - `packages/create-rn-miniapp/src/scaffold.ts`
     - root `pnpm install`
     - root `biome check --write --unsafe`
-  - `packages/create-miniapp/src/patch.ts`
+  - `packages/create-rn-miniapp/src/patch.ts`
     - Granite `displayName`, `icon` patch
     - nested `node_modules`, `pnpm-lock.yaml` 제거
     - backoffice `tsconfig*.json` 정규화
@@ -91,14 +91,14 @@
   - `README.md`
     - 실제 사용법과 생성 순서 반영
 - 검증
-  - `pnpm --filter create-miniapp test` ✅
-  - `pnpm --filter create-miniapp typecheck` ✅
+  - `pnpm --filter create-rn-miniapp test` ✅
+  - `pnpm --filter create-rn-miniapp typecheck` ✅
   - `frontend only` smoke + generated root `pnpm verify` ✅
   - `frontend + server + backoffice` smoke + generated root `pnpm verify` ✅
 
 ## 2026-03-14 — 단일 제품 모노레포 뼈대 생성
 - 상태
-  - 새 저장소는 `packages/create-miniapp`, `packages/scaffold-templates`, `docs/` 중심의 도구 저장소로 정리했다.
+  - 새 저장소는 `packages/create-rn-miniapp`, `packages/scaffold-templates`, `docs/` 중심의 도구 저장소로 정리했다.
   - 실제 `frontend`, `backoffice`, `server`는 이 저장소 안에 source template로 두지 않고, CLI 실행 결과로 생성하는 방향으로 바로잡았다.
 - 반영한 변경
   - 루트
@@ -111,7 +111,7 @@
     - `AGENTS.md`
     - `README.md`
   - CLI package
-    - `packages/create-miniapp`
+    - `packages/create-rn-miniapp`
     - `yargs`, `@clack/prompts` 기반 CLI entry placeholder 추가
     - generated workspace layout test 추가
     - `project.json` 추가로 root `nx` orchestration 연결

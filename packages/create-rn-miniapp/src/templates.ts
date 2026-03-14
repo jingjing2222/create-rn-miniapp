@@ -10,7 +10,7 @@ export type TemplateTokens = {
 const require = createRequire(import.meta.url)
 
 function resolveTemplatesPackageRoot() {
-  const packageJsonPath = require.resolve('@create-miniapp/scaffold-templates/package.json')
+  const packageJsonPath = require.resolve('@create-rn-miniapp/scaffold-templates/package.json')
   return path.dirname(packageJsonPath)
 }
 

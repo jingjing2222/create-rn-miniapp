@@ -12,7 +12,7 @@
 ## Quick Links
 - Planner: `docs/ai/Plan.md`
 - Status: `docs/ai/Status.md`
-- CLI package: `packages/create-miniapp`
+- CLI package: `packages/create-rn-miniapp`
 - Template package: `packages/scaffold-templates`
 - Template AGENTS: `packages/scaffold-templates/base/AGENTS.md`
 - Granite/AppInToss full index: `packages/scaffold-templates/base/docs/engineering/appsintoss-granite-full-api-index.md`
@@ -20,7 +20,7 @@
 - TDS RN index: `packages/scaffold-templates/base/docs/engineering/tds-react-native-index.md`
 
 ## Workspace Mental Model
-- `packages/create-miniapp`: generator CLI
+- `packages/create-rn-miniapp`: generator CLI
 - `packages/scaffold-templates`: generated repo에 복사할 하네스/문서 템플릿
 
 ## Generator Principle

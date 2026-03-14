@@ -20,7 +20,7 @@ pnpm-workspace.yaml
 
 ## 도구 저장소 구조
 ```text
-packages/create-miniapp/
+packages/create-rn-miniapp/
 packages/scaffold-templates/
 docs/
 ```
@@ -96,7 +96,7 @@ docs/
    - 하네스 문서 템플릿 복사
 
 ## 현재 구현 상태
-1. `packages/create-miniapp`
+1. `packages/create-rn-miniapp`
    - `yargs + @clack/prompts` 입력 수집 완료
    - `appName` 디렉터리 생성 후 그 안에서 스캐폴딩 시작
    - Granite/AppInToss/Supabase/Vite 공식 CLI orchestration 완료

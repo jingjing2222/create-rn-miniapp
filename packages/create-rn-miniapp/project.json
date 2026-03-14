@@ -1,17 +1,17 @@
 {
-  "name": "create-miniapp",
+  "name": "create-rn-miniapp",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/create-miniapp/src",
+  "sourceRoot": "packages/create-rn-miniapp/src",
   "projectType": "application",
   "targets": {
     "build": {
-      "command": "pnpm --filter create-miniapp build"
+      "command": "pnpm --filter create-rn-miniapp build"
     },
     "typecheck": {
-      "command": "pnpm --filter create-miniapp typecheck"
+      "command": "pnpm --filter create-rn-miniapp typecheck"
     },
     "test": {
-      "command": "pnpm --filter create-miniapp test"
+      "command": "pnpm --filter create-rn-miniapp test"
     }
   },
   "tags": []

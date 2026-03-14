@@ -22,7 +22,7 @@
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
-    "@create-miniapp/scaffold-templates": "workspace:*",
+    "@create-rn-miniapp/scaffold-templates": "workspace:*",
     "@clack/prompts": "^1.1.0",
     "yargs": "^18.0.0"
   },

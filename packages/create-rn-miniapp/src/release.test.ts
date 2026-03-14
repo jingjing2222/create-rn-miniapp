@@ -13,3 +13,24 @@ test('version-packages formats workspace after changeset bump', () => {
 
   assert.equal(packageJson.scripts?.['version-packages'], 'changeset version && pnpm format')
 })
+
+test('published package names match the released npm packages', () => {
+  const cliPackageJson = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'packages/create-rn-miniapp/package.json'), 'utf8'),
+  ) as {
+    name: string
+    dependencies?: Record<string, string>
+  }
+  const templatesPackageJson = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'packages/scaffold-templates/package.json'), 'utf8'),
+  ) as {
+    name: string
+  }
+
+  assert.equal(cliPackageJson.name, 'create-rn-miniapp')
+  assert.equal(
+    cliPackageJson.dependencies?.['@create-rn-miniapp/scaffold-templates'],
+    'workspace:*',
+  )
+  assert.equal(templatesPackageJson.name, '@create-rn-miniapp/scaffold-templates')
+})
