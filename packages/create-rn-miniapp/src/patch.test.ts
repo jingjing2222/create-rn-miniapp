@@ -3,7 +3,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { patchBackofficeWorkspace, patchFrontendWorkspace } from './patch.js'
+import {
+  patchBackofficeWorkspace,
+  patchCloudflareServerWorkspace,
+  patchFrontendWorkspace,
+  patchSupabaseServerWorkspace,
+} from './patch.js'
 
 async function createTempWorkspace(t: test.TestContext) {
   const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-patch-'))
@@ -215,7 +220,6 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
     devDependencies?: Record<string, string>
   }
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
-  const envExample = await readFile(path.join(frontendRoot, '.env.local.example'), 'utf8')
   const envTypes = await readFile(path.join(frontendRoot, 'src', 'env.d.ts'), 'utf8')
   const tsconfig = JSON.parse(await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')) as {
     compilerOptions?: {
@@ -252,12 +256,108 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   assert.match(graniteConfig, /MINIAPP_SUPABASE_URL: miniappSupabaseUrl/)
   assert.equal(tsconfig.compilerOptions?.module, 'esnext')
   assert.deepEqual(tsconfig.compilerOptions?.types, ['node'])
-  assert.match(envExample, /MINIAPP_SUPABASE_URL=https:\/\/your-project\.supabase\.co/)
-  assert.match(envExample, /MINIAPP_SUPABASE_PUBLISHABLE_KEY=your-publishable-key/)
+  assert.equal(await pathExists(path.join(frontendRoot, '.env.local.example')), false)
   assert.match(envTypes, /readonly MINIAPP_SUPABASE_URL: string/)
   assert.match(supabaseClient, /createClient/)
   assert.match(supabaseClient, /import\.meta\.env\.MINIAPP_SUPABASE_URL/)
   assert.doesNotMatch(supabaseClient, /process\.env\./)
+})
+
+test('patchFrontendWorkspace adds cloudflare API bootstrap when cloudflare server provider is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const frontendRoot = path.join(targetRoot, 'frontend')
+
+  await mkdir(path.join(frontendRoot, 'src'), { recursive: true })
+  await writeJson(path.join(frontendRoot, 'package.json'), {
+    name: 'ebook-miniapp',
+    private: true,
+    scripts: {
+      dev: 'granite dev',
+      build: 'ait build',
+    },
+    dependencies: {
+      '@apps-in-toss/framework': '^2.0.5',
+    },
+    devDependencies: {
+      '@granite-js/plugin-hermes': '1.0.7',
+      '@granite-js/plugin-router': '1.0.7',
+      typescript: '^5.8.3',
+    },
+  })
+  await writeFile(
+    path.join(frontendRoot, 'tsconfig.json'),
+    [
+      '{',
+      '  "compilerOptions": {',
+      '    "module": "commonjs",',
+      '    "target": "es2020"',
+      '  }',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig(',
+      '  {',
+      '    scheme: "intoss",',
+      '    appName: "ebook-miniapp",',
+      '    plugins: [',
+      '      appsInToss({',
+      '        brand: {',
+      '          displayName: "전자책 미니앱",',
+      '          primaryColor: "#3182F6",',
+      '          icon: null,',
+      '        },',
+      '        permissions: [],',
+      '      }),',
+      '    ],',
+      '  },',
+      ')',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+
+  await patchFrontendWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'cloudflare' },
+  )
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(frontendRoot, 'package.json'), 'utf8'),
+  ) as {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
+  const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
+  const envTypes = await readFile(path.join(frontendRoot, 'src', 'env.d.ts'), 'utf8')
+  const apiClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'api.ts'), 'utf8')
+
+  assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], undefined)
+  assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
+  assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
+  assert.match(graniteConfig, /MINIAPP_API_BASE_URL: miniappApiBaseUrl/)
+  assert.match(
+    graniteConfig,
+    /const miniappApiBaseUrl = resolveMiniappEnv\('MINIAPP_API_BASE_URL'\)/,
+  )
+  assert.match(envTypes, /readonly MINIAPP_API_BASE_URL: string/)
+  assert.match(apiClient, /import\.meta\.env\.MINIAPP_API_BASE_URL/)
+  assert.match(apiClient, /export async function apiFetch/)
 })
 
 test('patchBackofficeWorkspace adds supabase bootstrap when supabase server provider is selected', async (t) => {
@@ -372,7 +472,6 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
     scripts?: Record<string, string>
     dependencies?: Record<string, string>
   }
-  const envExample = await readFile(path.join(backofficeRoot, '.env.local.example'), 'utf8')
   const envTypes = await readFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), 'utf8')
   const mainSource = await readFile(path.join(backofficeRoot, 'src', 'main.tsx'), 'utf8')
   const appSource = await readFile(path.join(backofficeRoot, 'src', 'App.tsx'), 'utf8')
@@ -388,8 +487,7 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   assert.equal(packageJson.scripts?.build, 'tsc -b && vite build')
   assert.equal(packageJson.scripts?.typecheck, 'tsc -b --pretty false')
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], '^2.57.4')
-  assert.match(envExample, /VITE_SUPABASE_URL=https:\/\/your-project\.supabase\.co/)
-  assert.match(envExample, /VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key/)
+  assert.equal(await pathExists(path.join(backofficeRoot, '.env.local.example')), false)
   assert.match(envTypes, /readonly VITE_SUPABASE_URL: string/)
   assert.match(tsconfigSource, /"module": "esnext"/)
   assert.match(tsconfigAppSource, /"module": "esnext"/)
@@ -400,4 +498,259 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   assert.match(appSource, /type=["']button["']/)
   assert.match(supabaseClient, /createClient/)
   assert.match(supabaseClient, /import\.meta\.env\.VITE_SUPABASE_URL/)
+})
+
+test('patchBackofficeWorkspace adds cloudflare API bootstrap when cloudflare server provider is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const backofficeRoot = path.join(targetRoot, 'backoffice')
+
+  await mkdir(path.join(backofficeRoot, 'src'), { recursive: true })
+  await writeJson(path.join(backofficeRoot, 'package.json'), {
+    name: 'backoffice',
+    private: true,
+    version: '0.0.0',
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'tsc -b && vite build',
+    },
+    dependencies: {
+      react: '^19.2.4',
+      'react-dom': '^19.2.4',
+    },
+    devDependencies: {
+      vite: '^8.0.0',
+      typescript: '~5.9.3',
+    },
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.json'), {
+    compilerOptions: {
+      module: 'commonjs',
+    },
+    files: [],
+    references: [{ path: './tsconfig.app.json' }, { path: './tsconfig.node.json' }],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.app.json'), {
+    compilerOptions: {
+      module: 'commonjs',
+    },
+    include: ['src'],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.node.json'), {
+    compilerOptions: {
+      composite: true,
+      module: 'commonjs',
+    },
+    include: ['vite.config.ts'],
+  })
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'main.tsx'),
+    [
+      "import { StrictMode } from 'react'",
+      "import { createRoot } from 'react-dom/client'",
+      "import './index.css'",
+      "import App from './App.tsx'",
+      '',
+      'createRoot(document.getElementById("root")!).render(',
+      '  <StrictMode>',
+      '    <App />',
+      '  </StrictMode>,',
+      ')',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'App.tsx'),
+    [
+      'export default function App() {',
+      '  return (',
+      "    <button data-kind='counter' className='counter'>count is 0</button>",
+      '  )',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+
+  await patchBackofficeWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'cloudflare' },
+  )
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(backofficeRoot, 'package.json'), 'utf8'),
+  ) as {
+    dependencies?: Record<string, string>
+  }
+  const envTypes = await readFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), 'utf8')
+  const apiClient = await readFile(path.join(backofficeRoot, 'src', 'lib', 'api.ts'), 'utf8')
+
+  assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], undefined)
+  assert.match(envTypes, /readonly VITE_API_BASE_URL: string/)
+  assert.match(apiClient, /import\.meta\.env\.VITE_API_BASE_URL/)
+  assert.match(apiClient, /export async function apiFetch/)
+})
+
+test('patchCloudflareServerWorkspace keeps worker scripts and removes local tooling files', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const serverRoot = path.join(targetRoot, 'server')
+
+  await mkdir(path.join(serverRoot, '.vscode'), { recursive: true })
+  await mkdir(path.join(serverRoot, 'src'), { recursive: true })
+  await writeJson(path.join(serverRoot, 'package.json'), {
+    name: 'my-worker',
+    private: true,
+    scripts: {
+      deploy: 'wrangler deploy',
+      dev: 'wrangler dev',
+      start: 'wrangler dev',
+      test: 'vitest',
+      'cf-typegen': 'wrangler types',
+    },
+    devDependencies: {
+      wrangler: '^4.73.0',
+      vitest: '~3.2.0',
+      typescript: '^5.5.2',
+    },
+  })
+  await writeFile(path.join(serverRoot, '.gitignore'), '.wrangler\n', 'utf8')
+  await writeFile(path.join(serverRoot, '.prettierrc'), '{}\n', 'utf8')
+  await writeFile(path.join(serverRoot, '.editorconfig'), 'root = true\n', 'utf8')
+  await writeFile(path.join(serverRoot, 'AGENTS.md'), '# local agent\n', 'utf8')
+  await writeFile(path.join(serverRoot, '.vscode', 'settings.json'), '{}\n', 'utf8')
+  await writeFile(
+    path.join(targetRoot, '.gitignore'),
+    ['node_modules', 'dist', 'coverage', '.nx', '.DS_Store', '.env', '.env.local', ''].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'biome.json'),
+    `${JSON.stringify(
+      {
+        $schema: 'https://biomejs.dev/schemas/1.9.4/schema.json',
+        files: {
+          ignore: ['**/.nx/**', '**/node_modules/**', '**/dist/**'],
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  )
+  await writeFile(
+    path.join(serverRoot, 'wrangler.jsonc'),
+    '{\n  "$schema": "node_modules/wrangler/config-schema.json",\n  "name": "server"\n}\n',
+    'utf8',
+  )
+
+  await patchCloudflareServerWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm' },
+  )
+
+  const packageJson = JSON.parse(await readFile(path.join(serverRoot, 'package.json'), 'utf8')) as {
+    name?: string
+    scripts?: Record<string, string>
+  }
+  const projectJson = JSON.parse(await readFile(path.join(serverRoot, 'project.json'), 'utf8')) as {
+    targets?: Record<string, { command?: string }>
+  }
+  const wranglerConfig = JSON.parse(
+    await readFile(path.join(serverRoot, 'wrangler.jsonc'), 'utf8'),
+  ) as {
+    $schema?: string
+  }
+  const rootGitignore = await readFile(path.join(targetRoot, '.gitignore'), 'utf8')
+  const rootBiome = JSON.parse(await readFile(path.join(targetRoot, 'biome.json'), 'utf8')) as {
+    files?: {
+      ignore?: string[]
+    }
+  }
+  const readme = await readFile(path.join(serverRoot, 'README.md'), 'utf8')
+
+  assert.equal(packageJson.name, 'server')
+  assert.equal(packageJson.scripts?.dev, 'wrangler dev')
+  assert.equal(packageJson.scripts?.build, 'wrangler deploy --dry-run')
+  assert.equal(packageJson.scripts?.typecheck, 'wrangler types && tsc --noEmit')
+  assert.equal(packageJson.scripts?.deploy, 'wrangler deploy')
+  assert.equal(packageJson.scripts?.['deploy:remote'], undefined)
+  assert.equal(packageJson.scripts?.test, 'vitest')
+  assert.equal(wranglerConfig.$schema, 'https://unpkg.com/wrangler@4.73.0/config-schema.json')
+  assert.equal(projectJson.targets?.build?.command, 'pnpm --dir server build')
+  assert.equal(projectJson.targets?.typecheck?.command, 'pnpm --dir server typecheck')
+  assert.match(rootGitignore, /^server\/worker-configuration\.d\.ts$/m)
+  assert.deepEqual(rootBiome.files?.ignore, [
+    '**/.nx/**',
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/server/worker-configuration.d.ts',
+  ])
+  assert.match(readme, /^# server$/m)
+  assert.match(readme, /Cloudflare Worker/)
+  assert.match(readme, /wrangler\.jsonc/)
+  assert.match(readme, /worker-configuration\.d\.ts/)
+  assert.match(readme, /pnpm run deploy/)
+  assert.match(readme, /frontend\/\.env\.local/)
+  assert.match(readme, /MINIAPP_API_BASE_URL/)
+  assert.match(readme, /backoffice\/\.env\.local/)
+  assert.match(readme, /VITE_API_BASE_URL/)
+  assert.equal(await pathExists(path.join(serverRoot, '.gitignore')), false)
+  assert.equal(await pathExists(path.join(serverRoot, '.prettierrc')), false)
+  assert.equal(await pathExists(path.join(serverRoot, '.editorconfig')), false)
+  assert.equal(await pathExists(path.join(serverRoot, 'AGENTS.md')), false)
+  assert.equal(await pathExists(path.join(serverRoot, 'scripts', 'cloudflare-deploy.mjs')), false)
+  assert.equal(await pathExists(path.join(serverRoot, '.vscode', 'settings.json')), false)
+})
+
+test('patchSupabaseServerWorkspace creates a server README with remote and local guidance', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+
+  await patchSupabaseServerWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm' },
+  )
+
+  const serverPackageJson = JSON.parse(
+    await readFile(path.join(targetRoot, 'server', 'package.json'), 'utf8'),
+  ) as {
+    scripts?: Record<string, string>
+  }
+  const readme = await readFile(path.join(targetRoot, 'server', 'README.md'), 'utf8')
+
+  assert.equal(serverPackageJson.scripts?.['db:apply'], 'node ./scripts/supabase-db-apply.mjs')
+  assert.match(readme, /^# server$/m)
+  assert.match(readme, /Supabase/)
+  assert.match(readme, /supabase\/config\.toml/)
+  assert.match(readme, /supabase\/migrations\//)
+  assert.match(readme, /pnpm run db:apply/)
+  assert.match(readme, /pnpm run db:apply:local/)
+  assert.match(readme, /frontend\/src\/lib\/supabase\.ts/)
+  assert.match(readme, /MINIAPP_SUPABASE_URL/)
+  assert.match(readme, /backoffice\/src\/lib\/supabase\.ts/)
+  assert.match(readme, /VITE_SUPABASE_URL/)
 })

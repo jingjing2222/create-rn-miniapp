@@ -1,6 +1,141 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 현재 changeset / PR 설명 정리 작업
+1. PR `#22`는 초기 Cloudflare provider 추가를 넘어서 provider별 IaC, env bootstrap, server README, root README 개편까지 포함하게 됐다.
+2. 기존 changeset 한 줄 요약으로는 실제 변경 범위를 설명하지 못하므로, 사용자 관점 release note로 다시 쓴다.
+3. PR 본문도 현재 구현 범위에 맞게 다시 정리한다.
+   - provider adapter registry
+   - Supabase / Cloudflare 인증 및 원격 리소스 선택/생성
+   - frontend / backoffice / server env bootstrap
+   - provider별 server README
+   - root README 및 docs 컨텍스트 보강
+4. 완료 기준
+   - changeset이 두 패키지 patch 배포 범위를 자세히 설명한다.
+   - PR 본문만 읽어도 현재 브랜치의 사용자 영향과 검증 범위를 이해할 수 있다.
+
+## 현재 root README 포지셔닝 보강 작업
+1. 루트 README의 첫 설명을 "MiniApp을 생성하는 CLI" 수준에서 끝내지 않고, Granite, `@apps-in-toss/framework`, TDS를 바로 활용할 수 있도록 컨텍스트를 patch하는 스캐폴딩 도구라는 점까지 드러낸다.
+2. 공식 CLI 우선 원칙과 함께, 이 저장소가 실제로 덧입히는 가치가 무엇인지 README 앞부분에서 설명한다.
+   - 루트 monorepo tooling
+   - AI/engineering/product docs 컨텍스트
+   - provider별 env/bootstrap patch
+   - provider IaC 및 원격 리소스 연결
+3. 생성 결과의 `docs/` 구조를 단순 나열이 아니라 용도 중심으로 설명한다.
+   - `docs/ai`
+   - `docs/engineering`
+   - `docs/product`
+4. Supabase/Cloudflare provider 설명에는 "server 생성"뿐 아니라 인증, 기존 리소스 선택, 새 리소스 생성, `.env.local` 작성까지 포함된 IaC 흐름이라는 점을 README에 명시한다.
+5. 완료 기준
+   - 루트 README만 읽어도 이 도구가 "공식 scaffold 위에 MiniApp 실행 컨텍스트와 provider IaC를 patch하는 도구"라는 점이 이해된다.
+   - `pnpm verify` 통과
+6. README 최상단에는 Cloudflare 생성/연결 흐름을 보여주는 GIF를 raw GitHub URL로 노출한다.
+
+## 현재 provider 인증 스캐폴드 안정화 작업
+1. `codex/server-provider-adapters-cloudflare` 브랜치 기준으로 Supabase 인증/프로비저닝 흐름을 Cloudflare provider 지원 위에 병합한다.
+2. create 흐름의 실행 순서는 `frontend scaffold -> server scaffold -> provider provisioning -> optional backoffice scaffold -> patch/finalize`로 고정한다.
+3. add 흐름의 실행 순서는 `optional server scaffold -> provider provisioning -> optional backoffice scaffold -> patch/finalize`로 고정한다.
+4. provider 선택 뒤에는 `create|existing`를 따로 묻지 않고, 먼저 기존 리소스 목록을 가져온 다음 단일 선택 리스트로 보여준다.
+5. 선택 리스트에는 기존 리소스들과 함께 `새로 만들기` 항목을 같이 넣는다.
+6. `--server-project-mode`는 scripted override로만 유지하고, 인터랙티브 기본 흐름은 provider provisioning 단계의 단일 선택으로 처리한다.
+7. Supabase CLI JSON 파싱은 `pnpm`/`yarn` 로그 노이즈가 섞여도 payload만 추출하도록 보강한다.
+8. Supabase publishable key를 조회할 수 있으면 `create`/`existing`와 관계없이 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동 작성한다.
+9. publishable key 조회에 실패한 경우에만 Supabase 대시보드 API 설정 URL과 `.env.local` 예시를 마지막 안내 메시지로 출력한다.
+10. 자동 `.env.local` 작성이 들어간 기준으로 `frontend`/`backoffice` bootstrap에서 `.env.local.example` 생성은 제거한다.
+11. 테스트 범위
+   - create/add 실행 순서가 provider provisioning 위치를 보장하는지 검증
+   - provider 선택 후 create/existing 추가 질문이 사라지는지 검증
+   - Supabase 프로젝트 목록/생성 응답이 패키지 매니저 로그 노이즈가 있어도 파싱되는지 검증
+12. 완료 기준
+   - `pnpm verify` 통과
+   - 변경사항을 PR `#22`에 올릴 수 있는 상태
+
+## 현재 Supabase server 원격 운영 스크립트 작업
+1. Supabase provider를 선택해 프로젝트를 연결한 경우 `server/.env.local`도 함께 세팅한다.
+2. `server/.env.local`에는 적어도 `SUPABASE_PROJECT_REF`와 `SUPABASE_DB_PASSWORD` 자리를 유지한다.
+3. 이미 `server/.env.local`이 있으면 사용자가 넣어둔 `SUPABASE_DB_PASSWORD`는 지우지 않고 보존한다.
+4. `server/package.json`의 기본 SQL 반영 스크립트는 원격 기준 `db:apply`를 제공한다.
+5. 원격 `db:apply`는 `server/.env.local`을 읽고 `supabase db push --linked --password ...`를 실행해야 한다.
+6. 로컬용 명령은 필요할 때를 위해 별도 보조 스크립트로만 남기고, 기본 동선은 원격 push 기준으로 둔다.
+7. `server/.env.local`의 `SUPABASE_DB_PASSWORD`가 비어 있으면 최종 안내 문구에서 사용자가 직접 채워 넣어야 한다는 점을 분명히 보여준다.
+8. 테스트 범위
+   - `applyServerPackageTemplate`가 Supabase 원격 `db:apply`와 helper 스크립트를 생성하는지 검증
+   - `finalizeSupabaseProvisioning`가 `server/.env.local`을 만들고 기존 DB password를 보존하는지 검증
+9. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 Cloudflare URL bootstrap 작업
+1. Cloudflare provider도 원격 Worker 연결 흐름을 가진다.
+   - `create`: 새 Worker를 배포하고 URL을 얻는다.
+   - `existing`: 기존 Worker를 선택하고 URL을 얻는다.
+2. Cloudflare는 `public key` 대신 배포된 `workers.dev` 기반 API URL을 `frontend/.env.local`과 optional `backoffice/.env.local`에 자동 작성한다.
+3. 원격 URL 자동 작성이 의미 있으려면 local bootstrap도 같이 들어가야 한다.
+   - `frontend`: `MINIAPP_API_BASE_URL` 타입 선언, Granite env plugin 주입, `src/lib/api.ts` 생성
+   - `backoffice`: `VITE_API_BASE_URL` 타입 선언, `src/lib/api.ts` 생성
+4. Cloudflare 원격 흐름은 `desktop/code/hot-updater/plugins/cloudflare/iac`의 Wrangler auth/account/subdomain 흐름을 참고한다.
+   - Wrangler 로그인 상태 확인 및 필요 시 `wrangler login`
+   - account 목록 조회 및 선택
+   - existing일 때 Worker 목록 조회 및 선택
+   - create일 때 Worker 이름 입력 후 deploy
+   - account subdomain 조회 또는 필요 시 생성
+   - script workers.dev subdomain 활성화
+5. 테스트 범위
+   - Cloudflare 선택 시 create/existing 연결 모드를 해석하는지 검증
+   - Cloudflare bootstrap이 frontend/backoffice에 API env/client 파일을 생성하는지 검증
+   - Cloudflare provisioning finalizer가 URL이 있을 때 `.env.local`을 쓰는지 검증
+6. 완료 기준
+   - `pnpm verify` 통과
+   - Cloudflare provider도 생성 직후 frontend/backoffice에서 API base URL을 바로 쓸 수 있는 상태
+
+## 현재 Cloudflare server 원격 운영 스크립트 작업
+1. Cloudflare provider를 선택해 Worker를 연결한 경우 `server/.env.local`도 함께 세팅한다.
+2. `server/.env.local`에는 적어도 `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME`, `CLOUDFLARE_API_BASE_URL` 자리를 유지한다.
+3. 이미 `server/.env.local`이 있으면 사용자가 넣어둔 `CLOUDFLARE_API_TOKEN` 같은 비밀값은 지우지 않고 보존한다.
+4. `server/package.json`에는 원격 Worker 재배포용 기본 `deploy` 스크립트를 제공한다.
+5. 원격 `deploy`는 `server/.env.local`을 읽고 `wrangler deploy --env-file ./.env.local --name ...`를 실행해야 한다.
+6. 테스트 범위
+   - `patchCloudflareServerWorkspace`가 원격 `deploy` 스크립트와 helper 파일을 생성하는지 검증
+   - `finalizeCloudflareProvisioning`가 `server/.env.local`을 만들고 기존 API token을 보존하는지 검증
+7. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 provider 인증 기반 스캐폴드 연동 작업
+1. `--provision` 같은 별도 단계는 두지 않고, `server` provider를 생성/추가하는 `create`와 `--add` 흐름 안에서 인증과 원격 프로젝트 선택/생성을 함께 처리한다.
+2. provider UX는 공통으로 맞춘다.
+   - `server` provider 선택 후 기존 프로젝트 사용 / 새 프로젝트 생성 여부를 묻는다.
+   - 기존 프로젝트를 쓰면 인증 후 프로젝트 목록을 띄워 선택한다.
+   - 새 프로젝트를 만들면 provider 공식 CLI나 API를 통해 생성한다.
+3. Supabase는 `desktop/code/hot-updater/plugins/supabase/iac` 흐름을 참고해 구현한다.
+   - 로그인 상태 확인 및 필요 시 `supabase login`
+   - 프로젝트 목록 조회 및 선택
+   - 새 프로젝트 생성 후 재조회
+   - API key 조회
+   - local `supabase link`와 `db push`
+   - `frontend`/optional `backoffice` env 파일 작성 또는 마지막 안내 메시지 출력
+4. Cloudflare는 `desktop/code/hot-updater/plugins/cloudflare/iac` 흐름을 참고해 구현한다.
+   - Wrangler OAuth 토큰 재사용 및 필요 시 `wrangler login`
+   - account 목록 조회 및 선택
+   - 필요 시 기존 Worker/R2/D1 선택 또는 새 리소스 생성
+   - server workspace에 선택 결과를 반영한다.
+5. 구조는 provider adapter에 provisioning lifecycle을 추가하는 방향으로 정리한다.
+   - auth 확인
+   - create/use-existing 선택
+   - 원격 리소스 선택/생성
+   - local workspace patch/link/env write
+   - 최종 안내 메시지 생성
+6. 테스트 범위
+   - CLI가 provider provisioning 선택 입력을 해석하는지 검증
+   - provider adapter가 create/add 시 provisioning 단계를 삽입하는지 검증
+   - Supabase 기존/신규 프로젝트 선택 결과가 env/link 단계로 이어지는지 검증
+   - Cloudflare 인증 토큰/계정 선택 결과가 Worker 설정 단계로 이어지는지 검증
+7. 구현 순서
+   - provider provisioning 타입/registry 추가
+   - CLI 질문 흐름 확장
+   - scaffold/add orchestration에 provisioning 실행 삽입
+   - Supabase 구현
+   - Cloudflare 구현
+   - README와 테스트 갱신
+
 ## 현재 root workspace manifest 동적화 작업
 1. 루트 workspace 등록은 고정 템플릿이 아니라 실제 생성된 workspace 목록 기준으로 계산한다.
 2. 초기 생성 시점에는 `frontend`와 선택된 `server`/`backoffice`만 root manifest에 등록한다.
@@ -11,6 +146,25 @@
    - 선택된 workspace만 root manifest에 들어가는지 검증
    - add mode에서 새 workspace 추가 후 root manifest가 갱신되는지 검증
 6. 릴리스 후속 작업
+   - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates`를 같은 patch changeset에 넣어 함께 배포한다.
+
+## 현재 server provider adapter + Cloudflare 작업
+1. `supabase` 하드코딩 분기를 provider adapter registry로 추출한다.
+2. `commands`, `scaffold`, `workspace-inspector`, `cli`는 provider registry를 source of truth로 쓰게 바꾼다.
+3. `cloudflare` provider를 추가한다.
+   - 공식 scaffold는 Cloudflare C3 비대화형 명령을 사용한다.
+   - 초기 템플릿은 Worker only + TypeScript 기준으로 생성한다.
+4. Cloudflare server workspace 후처리
+   - root orchestration에 맞게 `build`, `typecheck` 스크립트를 보강한다.
+   - workspace 내부의 `.gitignore`, `.prettierrc`, `.editorconfig`, `.vscode`, `AGENTS.md` 등 중복 하네스/툴링 파일은 제거한다.
+   - `wrangler.jsonc`의 `$schema`는 local `node_modules` 경로 대신 remote pinned URL로 정규화한다.
+5. Supabase provider는 기존 frontend/backoffice bootstrap 동작을 유지한다.
+6. 테스트 범위
+   - provider registry가 CLI 선택지와 명령 계획에 반영되는지 검증
+   - `supabase`/`cloudflare` create/add command plan이 각각 맞는 CLI를 쓰는지 검증
+   - workspace inspector가 기존 server provider를 marker file로 감지하는지 검증
+   - Cloudflare server patch가 build/typecheck 스크립트와 cleanup을 적용하는지 검증
+7. 릴리스 후속 작업
    - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates`를 같은 patch changeset에 넣어 함께 배포한다.
 
 ## 목표
@@ -398,3 +552,64 @@ docs/
 7. 이 저장소 안에는 source scaffold template가 남아 있지 않다. ✅
 8. 공개 패키지 릴리스용 Changesets 흐름이 설정된다.
 9. PR 검증과 main 릴리스 자동화용 GitHub Actions가 설정된다.
+
+## 현재 Cloudflare Wrangler auth 경로 회귀 수정
+1. `wrangler login` 이후 인증 토큰을 찾지 못하는 회귀를 수정한다.
+2. 실제 Wrangler 4.73.0이 쓰는 auth 저장 위치와 포맷을 로컬에서 확인한다.
+3. `desktop/code/hot-updater/plugins/cloudflare/iac/getWranglerLoginAuthToken.ts` 구현을 참고해 현재 reader를 교체하거나 보강한다.
+4. 테스트 범위
+   - 새로운 Wrangler auth 파일 포맷을 읽을 수 있는지 검증
+   - 기존 fallback 경로도 계속 읽을 수 있는지 검증
+5. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 Cloudflare account verify 에러 안내 개선
+1. Cloudflare deploy 실패 시 API code 10034(이메일 미인증)를 별도 메시지로 안내한다.
+2. Wrangler stderr를 읽어 사용자가 바로 다음 액션을 알 수 있게 URL과 원인을 포함한다.
+3. 테스트 범위
+   - code 10034 또는 verify-email-address 문구가 있으면 사용자 친화 메시지로 바뀌는지 검증
+4. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 Cloudflare workers.dev onboarding 순서 수정
+1. Cloudflare Worker create 흐름에서 workers.dev subdomain 확보를 deploy 이전으로 옮긴다.
+2. onboarding 미완료 에러는 별도 사용자 안내로 바꾼다.
+3. 테스트 범위
+   - workers.dev onboarding 경고 문구가 사용자 친화 메시지로 바뀌는지 검증
+   - create 흐름이 deploy 전에 account subdomain을 확보하도록 순서를 고정하는지 검증
+4. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 Cloudflare workers.dev false negative 복구
+1. `wrangler deploy`가 workers.dev onboarding 에러를 반환하더라도, Cloudflare API에서 account subdomain과 Worker 존재가 확인되면 false negative로 간주하고 계속 진행한다.
+2. 실제로 account subdomain이 없을 때만 onboarding 안내를 유지한다.
+3. 테스트 범위
+   - onboarding 에러 + subdomain 존재 + worker 존재면 복구되는지 검증
+   - onboarding 에러라도 subdomain 또는 worker가 없으면 복구하지 않는지 검증
+4. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 Cloudflare deploy script 정리
+1. Cloudflare server `package.json`에서 중복인 `deploy:remote`를 제거하고 `deploy`만 남긴다.
+2. 테스트 범위
+   - Cloudflare server patch 결과에 `deploy`만 남는지 검증
+3. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 Cloudflare API token 안내 보강
+1. Cloudflare provision 완료 후 `server/.env.local`의 `CLOUDFLARE_API_TOKEN`이 비어 있으면 사용자가 직접 채워야 한다는 안내를 note에 포함한다.
+2. 기존 token이 이미 있으면 불필요한 안내는 생략한다.
+3. 테스트 범위
+   - 성공 note에 token 입력 안내가 포함되는지 검증
+   - 기존 token이 있으면 token 입력 안내가 생략되는지 검증
+4. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 provider별 server README 추가
+1. Supabase server와 Cloudflare server에 provider별 `README.md`를 patch 단계에서 생성한다.
+2. README에는 디렉토리 구조, 주요 스크립트, frontend/backoffice 연결 방식을 포함한다.
+3. 테스트 범위
+   - Supabase server patch 결과에 README가 생성되고 핵심 스크립트/연결 설명이 포함되는지 검증
+   - Cloudflare server patch 결과에 README가 생성되고 핵심 스크립트/연결 설명이 포함되는지 검증
+4. 완료 기준
+   - `pnpm verify` 통과

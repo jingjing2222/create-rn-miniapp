@@ -3,7 +3,12 @@ import { isCancel, log, select, text } from '@clack/prompts'
 import yargs from 'yargs'
 import { assertValidAppName, toDefaultDisplayName } from './layout.js'
 import { PACKAGE_MANAGERS, type PackageManager } from './package-manager.js'
-import { SERVER_PROVIDERS, type ServerProvider } from './server-provider.js'
+import { SERVER_PROJECT_MODES, type ServerProjectMode } from './server-project.js'
+import {
+  SERVER_PROVIDERS,
+  SERVER_PROVIDER_OPTIONS,
+  type ServerProvider,
+} from './server-provider.js'
 import type { WorkspaceInspection } from './workspace-inspector.js'
 
 export type ParsedCliArgs = {
@@ -13,6 +18,7 @@ export type ParsedCliArgs = {
   displayName?: string
   withServer?: boolean
   serverProvider?: ServerProvider
+  serverProjectMode?: ServerProjectMode
   withBackoffice?: boolean
   rootDir: string
   outputDir: string
@@ -63,6 +69,8 @@ export type ResolvedCliOptions = {
   appName: string
   displayName: string
   serverProvider: ServerProvider | null
+  serverProjectMode: ServerProjectMode | null
+  skipServerProvisioning: boolean
   withServer: boolean
   withBackoffice: boolean
   outputDir: string
@@ -78,6 +86,8 @@ export type ResolvedAddCliOptions = {
   existingServerProvider: ServerProvider | null
   existingHasBackoffice: boolean
   serverProvider: ServerProvider | null
+  serverProjectMode: ServerProjectMode | null
+  skipServerProvisioning: boolean
   withServer: boolean
   withBackoffice: boolean
   skipInstall: boolean
@@ -117,6 +127,10 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     .option('server-provider', {
       choices: SERVER_PROVIDERS,
       describe: '`server` 워크스페이스 제공자 지정',
+    })
+    .option('server-project-mode', {
+      choices: SERVER_PROJECT_MODES,
+      describe: '`server` 제공자의 원격 리소스 연결 방식 지정',
     })
     .option('with-backoffice', {
       type: 'boolean',
@@ -161,6 +175,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     displayName: argv.displayName,
     withServer: argv.withServer,
     serverProvider: argv.serverProvider,
+    serverProjectMode: argv.serverProjectMode,
     withBackoffice: argv.withBackoffice,
     rootDir: argv.rootDir,
     outputDir: argv.outputDir,
@@ -172,6 +187,8 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
 }
 
 export function formatCliHelp() {
+  const serverProviderList = SERVER_PROVIDERS.join('|')
+
   return [
     '사용법',
     '  create-miniapp [옵션]',
@@ -182,7 +199,8 @@ export function formatCliHelp() {
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
     '  --with-server                  `server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
-    '  --server-provider <supabase>   `server` 워크스페이스 제공자 지정',
+    `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
+    '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
     '  --with-backoffice              `backoffice` 워크스페이스 포함',
     '  --root-dir <디렉터리>          `--add`에서 수정할 기존 모노레포 루트 디렉터리',
     '  --output-dir <디렉터리>        생성할 모노레포의 상위 디렉터리',
@@ -195,6 +213,9 @@ export function formatCliHelp() {
     '  create-miniapp --package-manager yarn --name my-miniapp --display-name "내 미니앱"',
     '  create-miniapp --name my-miniapp --display-name "내 미니앱"',
     '  create-miniapp --name my-miniapp --server-provider supabase --with-backoffice',
+    '  create-miniapp --name my-miniapp --server-provider cloudflare',
+    '  create-miniapp --name my-miniapp --with-server --server-project-mode existing',
+    '  create-miniapp --name my-miniapp --server-provider cloudflare --server-project-mode existing',
     '  create-miniapp --add --with-server',
     '  create-miniapp --add --root-dir /path/to/existing-miniapp --with-backoffice',
     '',
@@ -202,9 +223,29 @@ export function formatCliHelp() {
   ].join('\n')
 }
 
+function validateServerProjectMode(
+  serverProvider: ServerProvider | null,
+  serverProjectMode: ServerProjectMode | undefined,
+) {
+  if (!serverProvider && serverProjectMode) {
+    throw new Error(
+      '`--server-project-mode`는 `server` provider를 선택했을 때만 사용할 수 있습니다.',
+    )
+  }
+}
+
+function resolveServerProjectModeInput(serverProvider: ServerProvider | null, argv: ParsedCliArgs) {
+  validateServerProjectMode(serverProvider, argv.serverProjectMode)
+  return Promise.resolve(argv.serverProjectMode ?? null)
+}
+
 export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter) {
   if (argv.withServer === false && argv.serverProvider) {
     throw new Error('`--with-server` 없이 `--server-provider`를 사용할 수 없습니다.')
+  }
+
+  if (argv.withServer === false && argv.serverProjectMode) {
+    throw new Error('`--with-server` 없이 `--server-project-mode`를 사용할 수 없습니다.')
   }
 
   const packageManager =
@@ -261,15 +302,18 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
         ? null
         : await prompt.select<'none' | ServerProvider>({
             message: '`server` 제공자를 선택하세요.',
-            options: [
-              { label: '생성 안 함', value: 'none' },
-              { label: 'Supabase', value: 'supabase' },
-            ],
+            options: [{ label: '생성 안 함', value: 'none' }, ...SERVER_PROVIDER_OPTIONS],
             initialValue: 'none',
           }))
 
   const normalizedServerProvider = serverProvider === 'none' ? null : serverProvider
   const withServer = normalizedServerProvider !== null
+  const serverProjectMode = await resolveServerProjectModeInput(normalizedServerProvider, argv)
+  const skipServerProvisioning = argv.yes && !serverProjectMode
+
+  if (!withServer && argv.serverProjectMode) {
+    throw new Error('`--server-project-mode`는 `server` 워크스페이스와 함께 사용해야 합니다.')
+  }
 
   const withBackoffice =
     argv.withBackoffice ??
@@ -290,6 +334,8 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
     appName,
     displayName,
     serverProvider: normalizedServerProvider,
+    serverProjectMode,
+    skipServerProvisioning,
     withServer,
     withBackoffice,
     outputDir: path.resolve(argv.outputDir),
@@ -310,6 +356,10 @@ export async function resolveAddCliOptions(
     throw new Error('`--with-server` 없이 `--server-provider`를 사용할 수 없습니다.')
   }
 
+  if (argv.withServer === false && argv.serverProjectMode) {
+    throw new Error('`--with-server` 없이 `--server-project-mode`를 사용할 수 없습니다.')
+  }
+
   const rootDir = path.resolve(argv.rootDir)
   const addServerProvider = inspection.hasServer
     ? null
@@ -320,15 +370,14 @@ export async function resolveAddCliOptions(
           ? null
           : await prompt.select<'none' | ServerProvider>({
               message: '`server` 제공자를 선택하세요.',
-              options: [
-                { label: '추가 안 함', value: 'none' },
-                { label: 'Supabase', value: 'supabase' },
-              ],
+              options: [{ label: '추가 안 함', value: 'none' }, ...SERVER_PROVIDER_OPTIONS],
               initialValue: 'none',
             })))
 
   const normalizedServerProvider = addServerProvider === 'none' ? null : addServerProvider
   const withServer = normalizedServerProvider !== null
+  const serverProjectMode = await resolveServerProjectModeInput(normalizedServerProvider, argv)
+  const skipServerProvisioning = argv.yes && !serverProjectMode
 
   const withBackoffice = inspection.hasBackoffice
     ? false
@@ -357,6 +406,8 @@ export async function resolveAddCliOptions(
     existingServerProvider: inspection.serverProvider,
     existingHasBackoffice: inspection.hasBackoffice,
     serverProvider: normalizedServerProvider,
+    serverProjectMode,
+    skipServerProvisioning,
     withServer,
     withBackoffice,
     skipInstall: argv.skipInstall,

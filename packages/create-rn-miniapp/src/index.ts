@@ -47,12 +47,20 @@ export async function main() {
           `수정 위치: ${resolved.rootDir}`,
           `server 추가: ${String(resolved.withServer)}`,
           `server 제공자: ${resolved.serverProvider ?? '없음'}`,
+          `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '건너뜀' : (resolved.serverProjectMode ?? '목록에서 선택')) : '해당 없음'}`,
           `backoffice 추가: ${String(resolved.withBackoffice)}`,
         ].join('\n'),
         '수정 설정',
       )
 
-      const result = await addWorkspaces(resolved)
+      const result = await addWorkspaces({
+        ...resolved,
+        prompt,
+      })
+
+      for (const item of result.notes) {
+        note(item.body, item.title)
+      }
 
       outro(`${result.targetRoot} 수정 완료`)
       return
@@ -69,12 +77,20 @@ export async function main() {
         `생성 구조: ${generatedWorkspaceLayout.join(', ')}`,
         `server 포함: ${String(resolved.withServer)}`,
         `server 제공자: ${resolved.serverProvider ?? '없음'}`,
+        `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '건너뜀' : (resolved.serverProjectMode ?? '목록에서 선택')) : '해당 없음'}`,
         `backoffice 포함: ${String(resolved.withBackoffice)}`,
       ].join('\n'),
       '생성 설정',
     )
 
-    const result = await scaffoldWorkspace(resolved)
+    const result = await scaffoldWorkspace({
+      ...resolved,
+      prompt,
+    })
+
+    for (const item of result.notes) {
+      note(item.body, item.title)
+    }
 
     outro(`${resolved.appName} 생성 완료: ${result.targetRoot}`)
   } catch (error) {

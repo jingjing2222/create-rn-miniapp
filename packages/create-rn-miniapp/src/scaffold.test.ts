@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import test from 'node:test'
-import { buildRootFinalizePlan } from './scaffold.js'
+import { buildCreateExecutionOrder, buildRootFinalizePlan } from './scaffold.js'
 
 test('buildRootFinalizePlan keeps pnpm root finalize steps minimal', () => {
   const targetRoot = path.join('/tmp', 'ebook')
@@ -39,4 +39,24 @@ test('buildRootFinalizePlan adds yarn sdk generation after root install', () => 
     args: ['dlx', '@yarnpkg/sdks', 'base'],
     label: '루트 yarn sdks 생성',
   })
+})
+
+test('buildCreateExecutionOrder runs server scaffold before backoffice scaffold', () => {
+  const labels = buildCreateExecutionOrder({
+    appName: 'ebook',
+    targetRoot: path.join('/tmp', 'ebook'),
+    packageManager: 'pnpm',
+    serverProvider: 'supabase',
+    withBackoffice: true,
+  })
+
+  assert.deepEqual(labels, [
+    'frontend Granite 생성',
+    'frontend 의존성 설치',
+    'frontend AppInToss Framework 설치',
+    'frontend ait 초기화',
+    'frontend TDS 설치',
+    'server Supabase 초기화',
+    'backoffice Vite 생성',
+  ])
 })

@@ -107,6 +107,41 @@ test('buildCommandPlan emits yarn commands when yarn is selected', () => {
   ])
 })
 
+test('buildCommandPlan emits Cloudflare C3 commands when cloudflare is selected', () => {
+  const targetRoot = path.join('/tmp', 'ebook')
+  const plan = buildCommandPlan({
+    appName: 'ebook',
+    targetRoot,
+    packageManager: 'pnpm',
+    serverProvider: 'cloudflare',
+    withBackoffice: false,
+  })
+
+  assert.deepEqual(
+    plan.map((step) => step.label),
+    [
+      'frontend Granite 생성',
+      'frontend 의존성 설치',
+      'frontend AppInToss Framework 설치',
+      'frontend ait 초기화',
+      'frontend TDS 설치',
+      'server Cloudflare Workers 초기화',
+    ],
+  )
+  assert.deepEqual(plan[5]?.args, [
+    'create',
+    'cloudflare@latest',
+    'server',
+    '--type',
+    'hello-world',
+    '--lang',
+    'ts',
+    '--no-deploy',
+    '--no-git',
+    '--accept-defaults',
+  ])
+})
+
 test('buildAddCommandPlan only includes requested missing workspaces', () => {
   const targetRoot = path.join('/tmp', 'ebook')
   const plan = buildAddCommandPlan({
@@ -128,5 +163,32 @@ test('buildAddCommandPlan only includes requested missing workspaces', () => {
     '--template',
     'react-ts',
     '--no-interactive',
+  ])
+})
+
+test('buildAddCommandPlan emits cloudflare add step when requested', () => {
+  const targetRoot = path.join('/tmp', 'ebook')
+  const plan = buildAddCommandPlan({
+    targetRoot,
+    packageManager: 'yarn',
+    serverProvider: 'cloudflare',
+    withBackoffice: false,
+  })
+
+  assert.deepEqual(
+    plan.map((step) => step.label),
+    ['server Cloudflare Workers 초기화'],
+  )
+  assert.deepEqual(plan[0]?.args, [
+    'create',
+    'cloudflare@latest',
+    'server',
+    '--type',
+    'hello-world',
+    '--lang',
+    'ts',
+    '--no-deploy',
+    '--no-git',
+    '--accept-defaults',
   ])
 })

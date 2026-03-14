@@ -376,16 +376,18 @@ function findPluginCall(arrayExpression: SwcArrayExpression, pluginName: string)
     | undefined
 }
 
-function ensureEnvPlugin(arrayExpression: SwcArrayExpression) {
-  if (findPluginCall(arrayExpression, 'env')) {
+function ensureEnvPlugin(arrayExpression: SwcArrayExpression, pluginSource: string) {
+  const nextPluginExpression = parseExpression(pluginSource)
+  const existingPluginCall = findPluginCall(arrayExpression, 'env')
+
+  if (existingPluginCall && nextPluginExpression.type === 'CallExpression') {
+    Object.assign(existingPluginCall, cloneAstNode(nextPluginExpression))
     return
   }
 
   arrayExpression.elements.unshift({
     spread: null,
-    expression: parseExpression(
-      'env({ MINIAPP_SUPABASE_URL: miniappSupabaseUrl, MINIAPP_SUPABASE_PUBLISHABLE_KEY: miniappSupabasePublishableKey }, { dts: false })',
-    ),
+    expression: nextPluginExpression,
   })
 }
 
@@ -436,26 +438,66 @@ const FRONTEND_REPO_ROOT_PREAMBLE = ["const repoRoot = path.resolve(__dirname, '
   '\n',
 )
 
-const FRONTEND_SUPABASE_PREAMBLE = [
-  'const appRoot = __dirname',
-  '',
-  "dotenv.config({ path: path.join(appRoot, '.env') })",
-  "dotenv.config({ path: path.join(appRoot, '.env.local'), override: true })",
-  '',
-  "function resolveMiniappEnv(name: 'MINIAPP_SUPABASE_URL' | 'MINIAPP_SUPABASE_PUBLISHABLE_KEY') {",
-  '  const value = process.env[name]',
-  '',
-  '  if (!value || value.trim().length === 0) {',
-  '    throw new Error(`[frontend] ${name} is required. Set frontend/.env.local before running dev/build.`)',
-  '  }',
-  '',
-  '  return value.trim()',
-  '}',
-  '',
-  "const miniappSupabaseUrl = resolveMiniappEnv('MINIAPP_SUPABASE_URL')",
-  "const miniappSupabasePublishableKey = resolveMiniappEnv('MINIAPP_SUPABASE_PUBLISHABLE_KEY')",
-  '',
-].join('\n')
+function createFrontendEnvPreamble(bindings: Array<{ envName: string; identifierName: string }>) {
+  const envNameUnion = bindings.map((binding) => `'${binding.envName}'`).join(' | ')
+  const envStatements = bindings.map(
+    (binding) => `const ${binding.identifierName} = resolveMiniappEnv('${binding.envName}')`,
+  )
+
+  return [
+    'const appRoot = __dirname',
+    '',
+    "dotenv.config({ path: path.join(appRoot, '.env') })",
+    "dotenv.config({ path: path.join(appRoot, '.env.local'), override: true })",
+    '',
+    `function resolveMiniappEnv(name: ${envNameUnion}) {`,
+    '  const value = process.env[name]',
+    '',
+    '  if (!value || value.trim().length === 0) {',
+    '    throw new Error(`[frontend] ${name} is required. Set frontend/.env.local before running dev/build.`)',
+    '  }',
+    '',
+    '  return value.trim()',
+    '}',
+    '',
+    ...envStatements,
+    '',
+  ].join('\n')
+}
+
+const FRONTEND_PROVIDER_ENV_CONFIG = {
+  supabase: {
+    pluginSource:
+      'env({ MINIAPP_SUPABASE_URL: miniappSupabaseUrl, MINIAPP_SUPABASE_PUBLISHABLE_KEY: miniappSupabasePublishableKey }, { dts: false })',
+    preamble: createFrontendEnvPreamble([
+      {
+        envName: 'MINIAPP_SUPABASE_URL',
+        identifierName: 'miniappSupabaseUrl',
+      },
+      {
+        envName: 'MINIAPP_SUPABASE_PUBLISHABLE_KEY',
+        identifierName: 'miniappSupabasePublishableKey',
+      },
+    ]),
+  },
+  cloudflare: {
+    pluginSource: 'env({ MINIAPP_API_BASE_URL: miniappApiBaseUrl }, { dts: false })',
+    preamble: createFrontendEnvPreamble([
+      {
+        envName: 'MINIAPP_API_BASE_URL',
+        identifierName: 'miniappApiBaseUrl',
+      },
+    ]),
+  },
+} as const satisfies Partial<
+  Record<
+    ServerProvider,
+    {
+      pluginSource: string
+      preamble: string
+    }
+  >
+>
 
 function ensureBlankLineBefore(source: string, marker: string) {
   const pattern = new RegExp(`([^\\n])\\n(${escapeRegExp(marker)})`, 'g')
@@ -470,6 +512,8 @@ function formatGraniteConfigSource(source: string) {
     'dotenv.config({',
     'function resolveMiniappEnv(',
     'const miniappSupabaseUrl =',
+    'const miniappSupabasePublishableKey =',
+    'const miniappApiBaseUrl =',
     'export default defineConfig(',
   ]) {
     next = ensureBlankLineBefore(next, marker)
@@ -496,11 +540,15 @@ export function patchGraniteConfigSource(
   ensureTopLevelStatementBlock(module, FRONTEND_REPO_ROOT_PREAMBLE)
   ensureRepoRootWatchFolder(configObject)
 
-  if (serverProvider === 'supabase') {
+  const frontendEnvConfig = serverProvider
+    ? FRONTEND_PROVIDER_ENV_CONFIG[serverProvider]
+    : undefined
+
+  if (frontendEnvConfig) {
     ensureImport(module, '@granite-js/plugin-env', `import { env } from '@granite-js/plugin-env'`)
     ensureImport(module, 'dotenv', `import dotenv from 'dotenv'`)
-    ensureTopLevelStatementBlock(module, FRONTEND_SUPABASE_PREAMBLE)
-    ensureEnvPlugin(ensurePluginsArrayExpression(configObject))
+    ensureTopLevelStatementBlock(module, frontendEnvConfig.preamble)
+    ensureEnvPlugin(ensurePluginsArrayExpression(configObject), frontendEnvConfig.pluginSource)
   }
 
   return formatGraniteConfigSource(printTypeScriptModule(module))
@@ -758,6 +806,32 @@ export function patchTsconfigModuleSource(
   }
 
   next.compilerOptions = compilerOptions
+
+  return `${JSON.stringify(next, null, 2)}\n`
+}
+
+export function patchWranglerConfigSource(
+  source: string,
+  patch: {
+    schemaUrl?: string
+    name?: string
+  },
+) {
+  const parsed = parse(source, [], JSONC_PARSE_OPTIONS)
+
+  if (!isRecord(parsed)) {
+    return source
+  }
+
+  const next = { ...parsed }
+
+  if (patch.schemaUrl) {
+    next.$schema = patch.schemaUrl
+  }
+
+  if (patch.name) {
+    next.name = patch.name
+  }
 
   return `${JSON.stringify(next, null, 2)}\n`
 }

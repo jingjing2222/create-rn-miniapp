@@ -1,26 +1,38 @@
 import { spawn } from 'node:child_process'
 import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
-import type { ServerProvider } from './server-provider.js'
+import {
+  getServerProviderAdapter,
+  type ServerProvider,
+  type ServerProviderCommandSpec,
+} from './server-provider.js'
 
-export type CommandSpec = {
-  cwd: string
-  command: string
-  args: string[]
-  label: string
+export type CommandSpec = ServerProviderCommandSpec
+
+export type CommandOutput = {
+  stdout: string
+  stderr: string
 }
 
-export function buildCommandPlan(options: {
+type CreatePlanOptions = {
   appName: string
   targetRoot: string
   packageManager: PackageManager
   serverProvider: ServerProvider | null
   withBackoffice: boolean
-}) {
+}
+
+type AddPlanOptions = {
+  targetRoot: string
+  packageManager: PackageManager
+  serverProvider: ServerProvider | null
+  withBackoffice: boolean
+}
+
+export function buildCreateCommandPhases(options: CreatePlanOptions) {
   const packageManager = getPackageManagerAdapter(options.packageManager)
   const frontendRoot = `${options.targetRoot}/frontend`
-  const serverRoot = `${options.targetRoot}/server`
 
-  const plan: CommandSpec[] = [
+  const frontend: CommandSpec[] = [
     {
       cwd: options.targetRoot,
       ...packageManager.createGraniteApp('frontend'),
@@ -55,72 +67,100 @@ export function buildCommandPlan(options: {
     },
   ]
 
-  if (options.serverProvider === 'supabase') {
-    plan.push({
-      cwd: serverRoot,
-      ...packageManager.dlx('supabase', ['init']),
-      label: 'server Supabase 초기화',
-    })
-  }
+  const server = options.serverProvider
+    ? getServerProviderAdapter(options.serverProvider).buildCreatePlan(options)
+    : []
 
-  if (options.withBackoffice) {
-    plan.push({
-      cwd: options.targetRoot,
-      ...packageManager.createViteApp('backoffice'),
-      label: 'backoffice Vite 생성',
-    })
-  }
+  const backoffice = options.withBackoffice
+    ? [
+        {
+          cwd: options.targetRoot,
+          ...packageManager.createViteApp('backoffice'),
+          label: 'backoffice Vite 생성',
+        },
+      ]
+    : []
 
-  return plan
+  return {
+    frontend,
+    server,
+    backoffice,
+  }
 }
 
-export function buildAddCommandPlan(options: {
-  targetRoot: string
-  packageManager: PackageManager
-  serverProvider: ServerProvider | null
-  withBackoffice: boolean
-}) {
+export function buildCommandPlan(options: CreatePlanOptions) {
+  const phases = buildCreateCommandPhases(options)
+
+  return [...phases.frontend, ...phases.server, ...phases.backoffice]
+}
+
+export function buildAddCommandPhases(options: AddPlanOptions) {
   const packageManager = getPackageManagerAdapter(options.packageManager)
-  const serverRoot = `${options.targetRoot}/server`
-  const plan: CommandSpec[] = []
+  const server = options.serverProvider
+    ? getServerProviderAdapter(options.serverProvider).buildAddPlan(options)
+    : []
 
-  if (options.serverProvider === 'supabase') {
-    plan.push({
-      cwd: serverRoot,
-      ...packageManager.dlx('supabase', ['init']),
-      label: 'server Supabase 초기화',
-    })
+  const backoffice = options.withBackoffice
+    ? [
+        {
+          cwd: options.targetRoot,
+          ...packageManager.createViteApp('backoffice'),
+          label: 'backoffice Vite 생성',
+        },
+      ]
+    : []
+
+  return {
+    server,
+    backoffice,
   }
-
-  if (options.withBackoffice) {
-    plan.push({
-      cwd: options.targetRoot,
-      ...packageManager.createViteApp('backoffice'),
-      label: 'backoffice Vite 생성',
-    })
-  }
-
-  return plan
 }
 
-export async function runCommand(spec: CommandSpec) {
-  await new Promise<void>((resolve, reject) => {
+export function buildAddCommandPlan(options: AddPlanOptions) {
+  const phases = buildAddCommandPhases(options)
+
+  return [...phases.server, ...phases.backoffice]
+}
+
+async function executeCommand(spec: CommandSpec, captureOutput: boolean) {
+  return await new Promise<CommandOutput>((resolve, reject) => {
+    let stdout = ''
+    let stderr = ''
     const child = spawn(spec.command, spec.args, {
       cwd: spec.cwd,
-      stdio: 'inherit',
+      stdio: captureOutput ? ['ignore', 'pipe', 'pipe'] : 'inherit',
       shell: false,
     })
+
+    if (captureOutput) {
+      child.stdout?.on('data', (chunk) => {
+        stdout += String(chunk)
+      })
+      child.stderr?.on('data', (chunk) => {
+        stderr += String(chunk)
+      })
+    }
 
     child.on('error', reject)
     child.on('exit', (code) => {
       if (code === 0) {
-        resolve()
+        resolve({ stdout, stderr })
         return
       }
 
       reject(
-        new Error(`${spec.label} 단계가 실패했습니다. (${spec.command} ${spec.args.join(' ')})`),
+        new Error(
+          `${spec.label} 단계가 실패했습니다. (${spec.command} ${spec.args.join(' ')})${captureOutput && stderr ? `\n${stderr.trim()}` : ''}`,
+        ),
       )
     })
   })
+}
+
+export async function runCommand(spec: CommandSpec) {
+  await executeCommand(spec, false)
+}
+
+export async function runCommandWithOutput(spec: CommandSpec) {
+  return await executeCommand(spec, true)
 }

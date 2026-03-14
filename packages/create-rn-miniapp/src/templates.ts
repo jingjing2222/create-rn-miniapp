@@ -88,6 +88,85 @@ async function writeJsonFile(targetPath: string, value: unknown) {
   await writeFile(targetPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
 }
 
+function renderSupabaseDbApplyScript(tokens: TemplateTokens) {
+  return [
+    "import { spawnSync } from 'node:child_process'",
+    "import { existsSync, readFileSync } from 'node:fs'",
+    "import path from 'node:path'",
+    "import process from 'node:process'",
+    "import { fileURLToPath } from 'node:url'",
+    '',
+    "const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')",
+    "const envPath = path.join(serverRoot, '.env.local')",
+    '',
+    'function stripWrappingQuotes(value) {',
+    `  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {`,
+    '    return value.slice(1, -1)',
+    '  }',
+    '',
+    '  return value',
+    '}',
+    '',
+    'function loadLocalEnv(filePath) {',
+    '  if (!existsSync(filePath)) {',
+    '    return',
+    '  }',
+    '',
+    "  const source = readFileSync(filePath, 'utf8')",
+    '',
+    '  for (const line of source.split(/\\r?\\n/)) {',
+    '    const trimmed = line.trim()',
+    '',
+    "    if (!trimmed || trimmed.startsWith('#')) {",
+    '      continue',
+    '    }',
+    '',
+    "    const separatorIndex = trimmed.indexOf('=')",
+    '    if (separatorIndex <= 0) {',
+    '      continue',
+    '    }',
+    '',
+    '    const key = trimmed.slice(0, separatorIndex).trim()',
+    '    const value = stripWrappingQuotes(trimmed.slice(separatorIndex + 1).trim())',
+    '',
+    '    if (process.env[key] === undefined) {',
+    '      process.env[key] = value',
+    '    }',
+    '  }',
+    '}',
+    '',
+    'loadLocalEnv(envPath)',
+    '',
+    "const password = process.env.SUPABASE_DB_PASSWORD?.trim() ?? ''",
+    'if (!password) {',
+    "  console.error('[server] SUPABASE_DB_PASSWORD is required. Set server/.env.local before running db:apply.')",
+    '  process.exit(1)',
+    '}',
+    '',
+    `const packageManagerCommand = process.platform === 'win32' ? '${tokens.packageManagerCommand}.cmd' : '${tokens.packageManagerCommand}'`,
+    'const result = spawnSync(',
+    '  packageManagerCommand,',
+    "  ['dlx', 'supabase', 'db', 'push', '--workdir', '.', '--linked', '--password', password, '--yes'],",
+    '  {',
+    '    cwd: serverRoot,',
+    "    stdio: 'inherit',",
+    '    env: process.env,',
+    '  },',
+    ')',
+    '',
+    "if (typeof result.status === 'number') {",
+    '  process.exit(result.status)',
+    '}',
+    '',
+    'if (result.error) {',
+    '  throw result.error',
+    '}',
+    '',
+    'process.exit(1)',
+    '',
+  ].join('\n')
+}
+
 function normalizeRootWorkspaces(workspaces: WorkspaceName[]) {
   const included = new Set(workspaces)
   return ROOT_WORKSPACE_ORDER.filter((workspace) => included.has(workspace))
@@ -249,12 +328,20 @@ export async function applyServerPackageTemplate(targetRoot: string, tokens: Tem
   packageJson.scripts ??= {}
   packageJson.scripts.dev = `${packageManager.runScript('dlx')} supabase start --workdir .`
   packageJson.scripts.build = packageManager.runScript('typecheck')
+  packageJson.scripts['db:apply'] = 'node ./scripts/supabase-db-apply.mjs'
+  packageJson.scripts['db:apply:remote'] = 'node ./scripts/supabase-db-apply.mjs'
+  packageJson.scripts['db:apply:local'] =
+    `${packageManager.runScript('dlx')} supabase db push --local --workdir .`
   packageJson.scripts['db:reset'] =
     `${packageManager.runScript('dlx')} supabase db reset --local --workdir .`
-  packageJson.scripts['db:apply'] =
-    `${packageManager.runScript('dlx')} supabase db push --local --workdir .`
 
   await writeJsonFile(path.join(targetRoot, 'server', 'package.json'), packageJson)
+  await mkdir(path.join(targetRoot, 'server', 'scripts'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'server', 'scripts', 'supabase-db-apply.mjs'),
+    renderSupabaseDbApplyScript(tokens),
+    'utf8',
+  )
 }
 
 export async function removePathIfExists(targetPath: string) {
