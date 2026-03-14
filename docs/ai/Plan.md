@@ -185,6 +185,8 @@ docs/
 6. 완료 기준
    - `pnpm verify` 통과
    - scaffold 결과물의 frontend/backoffice tsconfig가 `module: "esnext"`를 갖는다.
+7. 릴리스 후속 작업
+   - `create-rn-miniapp`와 `@create-rn-miniapp/scaffold-templates`를 같은 patch changeset에 넣어 함께 버전 업한다.
 
 ## 남은 작업
 1. npm publish 준비
