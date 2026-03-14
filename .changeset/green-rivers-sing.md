@@ -1,5 +1,6 @@
 ---
 'create-rn-miniapp': patch
+'@create-rn-miniapp/scaffold-templates': patch
 ---
 
 Add Supabase Edge Functions to the Supabase server provider flow and soften user-facing README tone.
