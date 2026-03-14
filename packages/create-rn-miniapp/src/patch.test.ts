@@ -49,6 +49,20 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
     },
   })
   await writeFile(
+    path.join(frontendRoot, 'tsconfig.json'),
+    [
+      '{',
+      '  // frontend tsconfig comment',
+      '  "compilerOptions": {',
+      '    "module": "commonjs",',
+      '    "target": "es2020"',
+      '  }',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
     path.join(frontendRoot, 'granite.config.ts'),
     [
       "import { appsInToss } from '@apps-in-toss/framework/plugins'",
@@ -88,11 +102,14 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
     devDependencies?: Record<string, string>
   }
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
+  const tsconfigSource = await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')
 
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], undefined)
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], undefined)
   assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/\.\.'\)/)
   assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
+  assert.match(tsconfigSource, /\/\/ frontend tsconfig comment/)
+  assert.match(tsconfigSource, /"module": "esnext"/)
   assert.equal(await pathExists(path.join(frontendRoot, '.env.local.example')), false)
   assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'supabase.ts')), false)
 })
@@ -206,18 +223,23 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
     },
   })
   await writeJson(path.join(backofficeRoot, 'tsconfig.json'), {
+    compilerOptions: {
+      module: 'commonjs',
+    },
     files: [],
     references: [{ path: './tsconfig.app.json' }, { path: './tsconfig.node.json' }],
   })
   await writeJson(path.join(backofficeRoot, 'tsconfig.app.json'), {
     compilerOptions: {
       jsx: 'react-jsx',
+      module: 'commonjs',
     },
     include: ['src'],
   })
   await writeJson(path.join(backofficeRoot, 'tsconfig.node.json'), {
     compilerOptions: {
       composite: true,
+      module: 'commonjs',
     },
     include: ['vite.config.ts'],
   })
@@ -266,6 +288,9 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   const envTypes = await readFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), 'utf8')
   const mainSource = await readFile(path.join(backofficeRoot, 'src', 'main.tsx'), 'utf8')
   const appSource = await readFile(path.join(backofficeRoot, 'src', 'App.tsx'), 'utf8')
+  const tsconfigSource = await readFile(path.join(backofficeRoot, 'tsconfig.json'), 'utf8')
+  const tsconfigAppSource = await readFile(path.join(backofficeRoot, 'tsconfig.app.json'), 'utf8')
+  const tsconfigNodeSource = await readFile(path.join(backofficeRoot, 'tsconfig.node.json'), 'utf8')
   const supabaseClient = await readFile(
     path.join(backofficeRoot, 'src', 'lib', 'supabase.ts'),
     'utf8',
@@ -275,6 +300,9 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   assert.match(envExample, /VITE_SUPABASE_URL=https:\/\/your-project\.supabase\.co/)
   assert.match(envExample, /VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key/)
   assert.match(envTypes, /readonly VITE_SUPABASE_URL: string/)
+  assert.match(tsconfigSource, /"module": "esnext"/)
+  assert.match(tsconfigAppSource, /"module": "esnext"/)
+  assert.match(tsconfigNodeSource, /"module": "esnext"/)
   assert.match(mainSource, /const rootElement = document\.getElementById\('root'\)/)
   assert.match(mainSource, /throw new Error\('Root element not found'\)/)
   assert.match(appSource, /type=["']button["']/)

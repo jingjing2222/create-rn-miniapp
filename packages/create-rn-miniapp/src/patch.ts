@@ -4,6 +4,7 @@ import {
   patchBackofficeAppSource,
   patchBackofficeMainSource,
   patchGraniteConfigSource,
+  patchTsconfigModuleSource,
 } from './ast.js'
 import type { ServerProvider } from './server-provider.js'
 import {
@@ -216,18 +217,14 @@ async function writeTextFile(filePath: string, contents: string) {
   await writeFile(filePath, contents, 'utf8')
 }
 
-function stripJsonComments(source: string) {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '')
-}
-
-async function normalizeJsonFile(filePath: string) {
+async function patchTsconfigModuleFile(filePath: string) {
   if (!(await pathExists(filePath))) {
     return
   }
 
   const source = await readFile(filePath, 'utf8')
-  const parsed = JSON.parse(stripJsonComments(source)) as unknown
-  await writeFile(filePath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8')
+  const next = patchTsconfigModuleSource(source)
+  await writeFile(filePath, next, 'utf8')
 }
 
 function stripToolingFromPackageJson(packageJson: PackageJson) {
@@ -290,6 +287,12 @@ async function patchGraniteConfig(
   const next = patchGraniteConfigSource(source, tokens, serverProvider)
 
   await writeFile(graniteConfigPath, next, 'utf8')
+}
+
+async function patchWorkspaceTsconfigModules(workspaceRoot: string, fileNames: string[]) {
+  await Promise.all(
+    fileNames.map((fileName) => patchTsconfigModuleFile(path.join(workspaceRoot, fileName))),
+  )
 }
 
 async function writeFrontendSupabaseBootstrap(frontendRoot: string) {
@@ -360,6 +363,7 @@ export async function patchFrontendWorkspace(
   await removeToolingFiles(frontendRoot)
   await removeWorkspaceArtifacts(frontendRoot)
   await patchGraniteConfig(frontendRoot, tokens, options.serverProvider)
+  await patchWorkspaceTsconfigModules(frontendRoot, ['tsconfig.json'])
 
   if (options.serverProvider === 'supabase') {
     await writeFrontendSupabaseBootstrap(frontendRoot)
@@ -387,9 +391,11 @@ export async function patchBackofficeWorkspace(
   }
 
   await writePackageJson(packageJsonPath, packageJson)
-  await normalizeJsonFile(path.join(backofficeRoot, 'tsconfig.json'))
-  await normalizeJsonFile(path.join(backofficeRoot, 'tsconfig.app.json'))
-  await normalizeJsonFile(path.join(backofficeRoot, 'tsconfig.node.json'))
+  await patchWorkspaceTsconfigModules(backofficeRoot, [
+    'tsconfig.json',
+    'tsconfig.app.json',
+    'tsconfig.node.json',
+  ])
   await patchBackofficeEntryFiles(backofficeRoot)
   await removeToolingFiles(backofficeRoot)
   await removeWorkspaceArtifacts(backofficeRoot)

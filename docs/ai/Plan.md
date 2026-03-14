@@ -174,6 +174,17 @@ docs/
    - `frontend/granite.config.ts`의 `defineConfig`에 `metro.watchFolders = [repoRoot]`를 SWC AST로 추가한다.
    - `const repoRoot = path.resolve(__dirname, '../..')`도 함께 주입해 monorepo 루트 watch가 유지되게 한다.
 
+## 현재 tsconfig module 안정화 작업
+1. Supabase bootstrap 여부와 관계없이 `frontend`와 `backoffice` 워크스페이스의 tsconfig에서 `compilerOptions.module`을 `esnext`로 맞춘다.
+2. `import.meta`를 사용하는 생성 파일이 TypeScript `TS1343` 오류 없이 타입체크되도록 만든다.
+3. 문자열 치환이 아니라 JSON AST 기반 patch로 적용해 기존 구조와 주석 손상을 최소화한다.
+4. 테스트 범위
+   - `frontend/tsconfig.json`의 `module`이 `esnext`로 바뀌는지 검증
+   - `backoffice/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json`의 `module`이 `esnext`로 바뀌는지 검증
+5. 완료 기준
+   - `pnpm verify` 통과
+   - scaffold 결과물의 frontend/backoffice tsconfig가 `module: "esnext"`를 갖는다.
+
 ## 남은 작업
 1. npm publish 준비
    - Changesets 설정

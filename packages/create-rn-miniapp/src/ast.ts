@@ -1,3 +1,4 @@
+import { applyEdits, findNodeAtLocation, modify, parseTree } from 'jsonc-parser'
 import { parseSync, printSync } from '@swc/core'
 import type { ServerProvider } from './server-provider.js'
 import type { TemplateTokens } from './templates.js'
@@ -26,6 +27,16 @@ type SwcArrayExpression = SwcExpression & {
 
 function cloneAstNode<T>(value: T) {
   return JSON.parse(JSON.stringify(value)) as T
+}
+
+const JSONC_PARSE_OPTIONS = {
+  allowTrailingComma: true,
+}
+
+const JSONC_FORMATTING_OPTIONS = {
+  eol: '\n',
+  insertSpaces: true,
+  tabSize: 2,
 }
 
 function parseTypeScriptModule(source: string, tsx = false) {
@@ -659,4 +670,31 @@ export function patchBackofficeAppSource(source: string) {
   const module = parseTypeScriptModule(source, true)
   patchCounterButtonAttributes(module)
   return printTypeScriptModule(module)
+}
+
+export function patchTsconfigModuleSource(source: string) {
+  const root = parseTree(source, [], JSONC_PARSE_OPTIONS)
+
+  if (!root || root.type !== 'object') {
+    return source
+  }
+
+  const moduleNode = findNodeAtLocation(root, ['compilerOptions', 'module'])
+  if (moduleNode?.type === 'string' && moduleNode.value === 'esnext') {
+    return source
+  }
+
+  const next = applyEdits(
+    source,
+    modify(source, ['compilerOptions', 'module'], 'esnext', {
+      formattingOptions: JSONC_FORMATTING_OPTIONS,
+    }),
+  )
+
+  const nextRoot = parseTree(next, [], JSONC_PARSE_OPTIONS)
+  if (!nextRoot || nextRoot.type !== 'object') {
+    throw new Error('tsconfig를 수정한 뒤 JSONC를 다시 파싱하지 못했습니다.')
+  }
+
+  return next.endsWith('\n') ? next : `${next}\n`
 }
