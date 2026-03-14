@@ -158,6 +158,7 @@ export function formatSupabaseManualSetupNote(options: {
   targetRoot: string
   hasBackoffice: boolean
   projectRef: string
+  hasDbPassword: boolean
 }): ProvisioningNote {
   const env = createSupabaseEnvValues(
     options.projectRef,
@@ -187,6 +188,12 @@ export function formatSupabaseManualSetupNote(options: {
     '',
     'server/package.json 의 db:apply 는 server/.env.local 의 SUPABASE_DB_PASSWORD 를 사용합니다.',
   )
+
+  if (!options.hasDbPassword) {
+    lines.push(
+      'server/.env.local 의 SUPABASE_DB_PASSWORD 는 비어 있으니, 프로젝트 생성 시 사용한 DB password를 직접 채워 넣으세요.',
+    )
+  }
 
   return {
     title: 'Supabase 환경 변수 안내',
@@ -498,7 +505,12 @@ export async function finalizeSupabaseProvisioning(options: {
           'server/.env.local 에 Supabase 원격 db push 설정을 작성했습니다.',
           serverEnv.hasDbPassword
             ? 'server/package.json 의 db:apply 로 원격 SQL push를 계속 진행할 수 있습니다.'
-            : 'server/.env.local 의 SUPABASE_DB_PASSWORD 를 채우면 server/package.json 의 db:apply 로 원격 SQL push를 계속 진행할 수 있습니다.',
+            : 'server/.env.local 의 SUPABASE_DB_PASSWORD 는 비어 있으니, 프로젝트 생성 시 사용한 DB password를 직접 채워 넣으세요.',
+          ...(!serverEnv.hasDbPassword
+            ? [
+                'SUPABASE_DB_PASSWORD 를 채운 뒤 server/package.json 의 db:apply 로 원격 SQL push를 계속 진행할 수 있습니다.',
+              ]
+            : []),
           '',
           '키를 다시 확인해야 하면 아래 URL을 보세요.',
           getSupabaseApiSettingsUrl(options.provisionedProject.projectRef),
@@ -512,6 +524,7 @@ export async function finalizeSupabaseProvisioning(options: {
       targetRoot: options.targetRoot,
       hasBackoffice,
       projectRef: options.provisionedProject.projectRef,
+      hasDbPassword: serverEnv.hasDbPassword,
     }),
   ]
 }

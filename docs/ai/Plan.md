@@ -44,10 +44,11 @@
 4. `server/package.json`의 기본 SQL 반영 스크립트는 원격 기준 `db:apply`를 제공한다.
 5. 원격 `db:apply`는 `server/.env.local`을 읽고 `supabase db push --linked --password ...`를 실행해야 한다.
 6. 로컬용 명령은 필요할 때를 위해 별도 보조 스크립트로만 남기고, 기본 동선은 원격 push 기준으로 둔다.
-7. 테스트 범위
+7. `server/.env.local`의 `SUPABASE_DB_PASSWORD`가 비어 있으면 최종 안내 문구에서 사용자가 직접 채워 넣어야 한다는 점을 분명히 보여준다.
+8. 테스트 범위
    - `applyServerPackageTemplate`가 Supabase 원격 `db:apply`와 helper 스크립트를 생성하는지 검증
    - `finalizeSupabaseProvisioning`가 `server/.env.local`을 만들고 기존 DB password를 보존하는지 검증
-8. 완료 기준
+9. 완료 기준
    - `pnpm verify` 통과
 
 ## 현재 Cloudflare URL bootstrap 작업

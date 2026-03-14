@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -36,6 +36,7 @@ test('formatSupabaseManualSetupNote includes frontend and backoffice env guidanc
     targetRoot: '/tmp/ebook-miniapp',
     hasBackoffice: true,
     projectRef: 'abc123',
+    hasDbPassword: false,
   })
 
   assert.equal(note.title, 'Supabase 환경 변수 안내')
@@ -47,6 +48,7 @@ test('formatSupabaseManualSetupNote includes frontend and backoffice env guidanc
     note.body,
     /VITE_SUPABASE_PUBLISHABLE_KEY=<Supabase Settings > API에서 복사한 Publishable key>/,
   )
+  assert.match(note.body, /SUPABASE_DB_PASSWORD 는 비어 있으니/)
 })
 
 test('extractJsonPayload strips package-manager log lines around JSON output', () => {
@@ -179,7 +181,46 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
       /https:\/\/supabase\.com\/dashboard\/project\/abc123\/settings\/api/,
     )
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
-    assert.match(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD/)
+    assert.match(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD 는 비어 있으니/)
+    assert.match(notes[0]?.body ?? '', /db:apply/)
+  } finally {
+    await rm(targetRoot, { recursive: true, force: true })
+  }
+})
+
+test('finalizeSupabaseProvisioning skips password guidance when server db password already exists', async () => {
+  const targetRoot = await mkdtemp(
+    path.join(os.tmpdir(), 'create-rn-miniapp-supabase-finalize-existing-password-'),
+  )
+
+  try {
+    await mkdir(path.join(targetRoot, 'server'), { recursive: true })
+
+    await writeFile(
+      path.join(targetRoot, 'server', '.env.local'),
+      [
+        '# Used by server/package.json db:apply for remote Supabase pushes.',
+        'SUPABASE_PROJECT_REF=old-project',
+        'SUPABASE_DB_PASSWORD=secret-password',
+        '',
+      ].join('\n'),
+      'utf8',
+    )
+
+    const notes = await finalizeSupabaseProvisioning({
+      targetRoot,
+      provisionedProject: {
+        projectRef: 'abc123',
+        publishableKey: 'sb_publishable_123',
+        mode: 'existing',
+      },
+    })
+
+    const serverEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
+
+    assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
+    assert.match(serverEnv, /^SUPABASE_DB_PASSWORD=secret-password$/m)
+    assert.doesNotMatch(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD 는 비어 있으니/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }
@@ -204,6 +245,7 @@ test('finalizeSupabaseProvisioning falls back to manual setup guidance when publ
     assert.match(notes[0]?.body ?? '', /settings\/api/)
     assert.match(notes[0]?.body ?? '', /frontend\/\.env\.local/)
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
+    assert.match(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD 는 비어 있으니/)
     assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
