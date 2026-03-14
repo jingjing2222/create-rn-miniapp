@@ -17,7 +17,12 @@ test('inspectWorkspace reads package manager and frontend metadata from an exist
   const targetRoot = await createTempWorkspace(t)
 
   await mkdir(path.join(targetRoot, 'frontend'), { recursive: true })
-  await mkdir(path.join(targetRoot, 'server'), { recursive: true })
+  await mkdir(path.join(targetRoot, 'server', 'supabase'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'server', 'supabase', 'config.toml'),
+    'project_id = "local"\n',
+    'utf8',
+  )
   await writeFile(
     path.join(targetRoot, 'package.json'),
     JSON.stringify(
@@ -58,6 +63,55 @@ test('inspectWorkspace reads package manager and frontend metadata from an exist
   assert.equal(inspection.hasServer, true)
   assert.equal(inspection.hasBackoffice, false)
   assert.equal(inspection.serverProvider, 'supabase')
+})
+
+test('inspectWorkspace detects cloudflare server workspaces from wrangler config', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+
+  await mkdir(path.join(targetRoot, 'frontend'), { recursive: true })
+  await mkdir(path.join(targetRoot, 'server'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'package.json'),
+    JSON.stringify(
+      {
+        packageManager: 'pnpm@10.32.1',
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [',
+      '    appsInToss({',
+      '      brand: {',
+      '        displayName: "전자책 미니앱",',
+      '      },',
+      '    }),',
+      '  ],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'server', 'wrangler.jsonc'),
+    '{\n  "name": "server"\n}\n',
+    'utf8',
+  )
+
+  const inspection = await inspectWorkspace(targetRoot)
+
+  assert.equal(inspection.packageManager, 'pnpm')
+  assert.equal(inspection.hasServer, true)
+  assert.equal(inspection.serverProvider, 'cloudflare')
 })
 
 test('inspectWorkspace rejects roots without a supported packageManager field', async (t) => {

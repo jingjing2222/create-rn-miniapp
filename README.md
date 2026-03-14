@@ -3,7 +3,7 @@
 `create-rn-miniapp`은 AppInToss MiniApp용 모노레포를 한 번에 생성하는 CLI입니다.
 
 - `frontend`: Granite + `@apps-in-toss/framework` 기반 MiniApp
-- `server`: optional Supabase workspace
+- `server`: optional Supabase 또는 Cloudflare workspace
 - `backoffice`: optional Vite + React + TypeScript workspace
 - 루트: 선택한 package manager + `nx` + `biome` 기준 monorepo 설정과 하네스 문서
 
@@ -63,8 +63,8 @@ pnpm verify
 - `--add`: 이미 생성된 워크스페이스에 빠진 `server`/`backoffice` 추가
 - `--name`: Granite `appName`이자 생성 디렉터리 이름
 - `--display-name`: 사용자에게 보이는 앱 이름
-- `--with-server`: `server` 워크스페이스 포함. 현재는 `supabase`로 연결됩니다.
-- `--server-provider <supabase>`: `server` 제공자 명시
+- `--with-server`: `server` 워크스페이스 포함. 호환성 기본값은 `supabase`입니다.
+- `--server-provider <supabase|cloudflare>`: `server` 제공자 명시
 - `--with-backoffice`: `backoffice` 워크스페이스 포함
 - `--root-dir <dir>`: `--add`에서 수정할 기존 모노레포 루트. 기본값은 현재 디렉터리
 - `--output-dir <dir>`: 생성할 모노레포의 상위 디렉터리
@@ -93,6 +93,8 @@ pnpm verify
 `yarn`을 선택하면 root에는 `.yarnrc.yml`과 `package.json.workspaces`가 생성되고, `pnpm-workspace.yaml`은 생성되지 않습니다.
 루트 workspace 등록도 고정되지 않고, 실제로 생성된 `frontend`/`server`/`backoffice`만 포함됩니다.
 
+`--server-provider cloudflare`를 쓰면 Cloudflare C3의 Worker only + TypeScript scaffold를 `server/`에 생성합니다. 이 경우 `frontend`와 `backoffice`에는 Supabase bootstrap 파일을 만들지 않습니다.
+
 생성 후에는 예시 파일을 참고해서 실제 `.env.local`을 채우면 됩니다.
 
 ## 기존 워크스페이스에 추가하기
@@ -117,7 +119,7 @@ create-miniapp --add --root-dir /path/to/existing-miniapp --with-server --with-b
 ## 생성 기준
 
 - `frontend`: [AppInToss React Native tutorial](https://developers-apps-in-toss.toss.im/tutorials/react-native.html)
-- `server`: [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
+- `server`: [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started), [Cloudflare C3](https://developers.cloudflare.com/workers/get-started/guide/)
 - `backoffice`: [Vite](https://vite.dev/guide/)
 
 이 저장소는 앱 소스 전체를 템플릿으로 들고 있지 않습니다. 공식 scaffold 결과에 루트 설정, 문서, 필요한 patch만 적용합니다.
@@ -139,7 +141,7 @@ pnpm --filter create-rn-miniapp exec tsx src/index.ts \
   --package-manager yarn \
   --name local-miniapp \
   --display-name "로컬 미니앱" \
-  --server-provider supabase \
+  --server-provider cloudflare \
   --with-backoffice \
   --output-dir /tmp
 ```

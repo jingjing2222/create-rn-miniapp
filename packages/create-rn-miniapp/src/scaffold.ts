@@ -3,14 +3,8 @@ import path from 'node:path'
 import { log } from '@clack/prompts'
 import { buildAddCommandPlan, buildCommandPlan, runCommand, type CommandSpec } from './commands.js'
 import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
-import {
-  ensureBackofficeSupabaseBootstrap,
-  ensureFrontendSupabaseBootstrap,
-  patchBackofficeWorkspace,
-  patchFrontendWorkspace,
-  patchServerWorkspace,
-} from './patch.js'
-import type { ServerProvider } from './server-provider.js'
+import { patchBackofficeWorkspace, patchFrontendWorkspace } from './patch.js'
+import { getServerProviderAdapter, type ServerProvider } from './server-provider.js'
 import {
   type TemplateTokens,
   type WorkspaceName,
@@ -132,7 +126,11 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
   }
 
   if (options.serverProvider && (await pathExists(path.join(targetRoot, 'server')))) {
-    await patchServerWorkspace(targetRoot, tokens, {
+    const serverProvider = getServerProviderAdapter(options.serverProvider)
+
+    await serverProvider.patchServerWorkspace({
+      targetRoot,
+      tokens,
       packageManager: options.packageManager,
     })
   }
@@ -187,10 +185,21 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
   const finalServerProvider = options.existingServerProvider ?? options.serverProvider
 
   if (options.withServer && (await pathExists(path.join(targetRoot, 'server')))) {
-    await patchServerWorkspace(targetRoot, tokens, {
+    if (!options.serverProvider) {
+      throw new Error('추가할 server 제공자를 결정하지 못했습니다.')
+    }
+
+    const serverProvider = getServerProviderAdapter(options.serverProvider)
+
+    await serverProvider.patchServerWorkspace({
+      targetRoot,
+      tokens,
       packageManager: options.packageManager,
     })
-    await ensureFrontendSupabaseBootstrap(targetRoot, tokens)
+    await serverProvider.bootstrapFrontend?.({
+      targetRoot,
+      tokens,
+    })
   }
 
   if (options.withBackoffice && (await pathExists(path.join(targetRoot, 'backoffice')))) {
@@ -203,7 +212,16 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     options.existingHasBackoffice &&
     (await pathExists(path.join(targetRoot, 'backoffice')))
   ) {
-    await ensureBackofficeSupabaseBootstrap(targetRoot, tokens)
+    if (!finalServerProvider) {
+      throw new Error('기존 server 제공자를 결정하지 못했습니다.')
+    }
+
+    const serverProvider = getServerProviderAdapter(finalServerProvider)
+
+    await serverProvider.bootstrapBackoffice?.({
+      targetRoot,
+      tokens,
+    })
   }
 
   if (!options.skipInstall) {

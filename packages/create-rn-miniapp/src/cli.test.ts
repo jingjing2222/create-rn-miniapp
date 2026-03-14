@@ -41,6 +41,12 @@ test('parseCliArgs parses long-form CLI options with yargs', async () => {
   assert.equal(argv.yes, false)
 })
 
+test('parseCliArgs accepts cloudflare as a server provider', async () => {
+  const argv = await parseCliArgs(['--server-provider', 'cloudflare'], '/workspace')
+
+  assert.equal(argv.serverProvider, 'cloudflare')
+})
+
 test('parseCliArgs parses add mode flags', async () => {
   const argv = await parseCliArgs(['--add', '--root-dir', '/tmp/existing-miniapp'], '/workspace')
 
@@ -56,7 +62,7 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   }> = []
   const selectMessages: string[] = []
   const promptValues = ['ebook-miniapp', '전자책 미니앱']
-  const promptSelections: Array<'pnpm' | 'yarn' | 'supabase' | 'yes' | 'no'> = [
+  const promptSelections: Array<'pnpm' | 'yarn' | 'supabase' | 'cloudflare' | 'yes' | 'no'> = [
     'yarn',
     'supabase',
     'no',
@@ -229,7 +235,7 @@ test('resolveCliOptions rejects conflicting server flags', async () => {
 
 test('resolveAddCliOptions detects additive targets from an existing workspace', async () => {
   const selectMessages: string[] = []
-  const promptSelections: Array<'supabase' | 'yes' | 'no'> = ['supabase', 'yes']
+  const promptSelections: Array<'supabase' | 'cloudflare' | 'yes' | 'no'> = ['cloudflare', 'yes']
 
   const resolved = await resolveAddCliOptions(
     {
@@ -278,7 +284,7 @@ test('resolveAddCliOptions detects additive targets from an existing workspace',
   assert.equal(resolved.displayName, '전자책 미니앱')
   assert.equal(resolved.rootDir, path.resolve('/tmp/existing-miniapp'))
   assert.equal(resolved.withServer, true)
-  assert.equal(resolved.serverProvider, 'supabase')
+  assert.equal(resolved.serverProvider, 'cloudflare')
   assert.equal(resolved.withBackoffice, true)
   assert.equal(resolved.existingServerProvider, null)
   assert.equal(resolved.existingHasBackoffice, false)
@@ -296,7 +302,7 @@ test('formatCliHelp renders Korean help text', () => {
   assert.match(help, /--package-manager <pnpm\|yarn>/)
   assert.match(help, /--add/)
   assert.match(help, /--root-dir <디렉터리>/)
-  assert.match(help, /--server-provider <supabase>/)
+  assert.match(help, /--server-provider <supabase\|cloudflare>/)
   assert.match(help, /도움말 보기/)
   assert.match(help, /버전 보기/)
 })
@@ -353,6 +359,7 @@ test('createClackPrompter delegates text input and single-choice selection to cl
     options: [
       { label: '생성 안 함', value: 'none' },
       { label: 'Supabase', value: 'supabase' },
+      { label: 'Cloudflare Workers', value: 'cloudflare' },
     ],
     initialValue: 'none',
   })

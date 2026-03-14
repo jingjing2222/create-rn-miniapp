@@ -13,6 +13,25 @@
 6. 릴리스 후속 작업
    - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates`를 같은 patch changeset에 넣어 함께 배포한다.
 
+## 현재 server provider adapter + Cloudflare 작업
+1. `supabase` 하드코딩 분기를 provider adapter registry로 추출한다.
+2. `commands`, `scaffold`, `workspace-inspector`, `cli`는 provider registry를 source of truth로 쓰게 바꾼다.
+3. `cloudflare` provider를 추가한다.
+   - 공식 scaffold는 Cloudflare C3 비대화형 명령을 사용한다.
+   - 초기 템플릿은 Worker only + TypeScript 기준으로 생성한다.
+4. Cloudflare server workspace 후처리
+   - root orchestration에 맞게 `build`, `typecheck` 스크립트를 보강한다.
+   - workspace 내부의 `.gitignore`, `.prettierrc`, `.editorconfig`, `.vscode`, `AGENTS.md` 등 중복 하네스/툴링 파일은 제거한다.
+   - `wrangler.jsonc`의 `$schema`는 local `node_modules` 경로 대신 remote pinned URL로 정규화한다.
+5. Supabase provider는 기존 frontend/backoffice bootstrap 동작을 유지한다.
+6. 테스트 범위
+   - provider registry가 CLI 선택지와 명령 계획에 반영되는지 검증
+   - `supabase`/`cloudflare` create/add command plan이 각각 맞는 CLI를 쓰는지 검증
+   - workspace inspector가 기존 server provider를 marker file로 감지하는지 검증
+   - Cloudflare server patch가 build/typecheck 스크립트와 cleanup을 적용하는지 검증
+7. 릴리스 후속 작업
+   - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates`를 같은 patch changeset에 넣어 함께 배포한다.
+
 ## 목표
 1. Granite miniapp, optional Supabase server, optional Vite backoffice를 공식 CLI로 생성한 뒤 필요한 수정만 자동으로 적용하는 CLI를 만든다.
 2. 이 저장소는 생성 결과물 source template를 들고 있지 않고, 하네스/문서 템플릿만 유지한다.

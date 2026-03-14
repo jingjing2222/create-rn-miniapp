@@ -3,7 +3,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { patchBackofficeWorkspace, patchFrontendWorkspace } from './patch.js'
+import {
+  patchBackofficeWorkspace,
+  patchCloudflareServerWorkspace,
+  patchFrontendWorkspace,
+} from './patch.js'
 
 async function createTempWorkspace(t: test.TestContext) {
   const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-patch-'))
@@ -400,4 +404,78 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   assert.match(appSource, /type=["']button["']/)
   assert.match(supabaseClient, /createClient/)
   assert.match(supabaseClient, /import\.meta\.env\.VITE_SUPABASE_URL/)
+})
+
+test('patchCloudflareServerWorkspace keeps worker scripts and removes local tooling files', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const serverRoot = path.join(targetRoot, 'server')
+
+  await mkdir(path.join(serverRoot, '.vscode'), { recursive: true })
+  await mkdir(path.join(serverRoot, 'src'), { recursive: true })
+  await writeJson(path.join(serverRoot, 'package.json'), {
+    name: 'my-worker',
+    private: true,
+    scripts: {
+      deploy: 'wrangler deploy',
+      dev: 'wrangler dev',
+      start: 'wrangler dev',
+      test: 'vitest',
+      'cf-typegen': 'wrangler types',
+    },
+    devDependencies: {
+      wrangler: '^4.73.0',
+      vitest: '~3.2.0',
+      typescript: '^5.5.2',
+    },
+  })
+  await writeFile(path.join(serverRoot, '.gitignore'), '.wrangler\n', 'utf8')
+  await writeFile(path.join(serverRoot, '.prettierrc'), '{}\n', 'utf8')
+  await writeFile(path.join(serverRoot, '.editorconfig'), 'root = true\n', 'utf8')
+  await writeFile(path.join(serverRoot, 'AGENTS.md'), '# local agent\n', 'utf8')
+  await writeFile(path.join(serverRoot, '.vscode', 'settings.json'), '{}\n', 'utf8')
+  await writeFile(
+    path.join(serverRoot, 'wrangler.jsonc'),
+    '{\n  "$schema": "node_modules/wrangler/config-schema.json",\n  "name": "server"\n}\n',
+    'utf8',
+  )
+
+  await patchCloudflareServerWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm' },
+  )
+
+  const packageJson = JSON.parse(await readFile(path.join(serverRoot, 'package.json'), 'utf8')) as {
+    name?: string
+    scripts?: Record<string, string>
+  }
+  const projectJson = JSON.parse(await readFile(path.join(serverRoot, 'project.json'), 'utf8')) as {
+    targets?: Record<string, { command?: string }>
+  }
+  const wranglerConfig = JSON.parse(
+    await readFile(path.join(serverRoot, 'wrangler.jsonc'), 'utf8'),
+  ) as {
+    $schema?: string
+  }
+
+  assert.equal(packageJson.name, 'server')
+  assert.equal(packageJson.scripts?.dev, 'wrangler dev')
+  assert.equal(packageJson.scripts?.build, 'wrangler deploy --dry-run')
+  assert.equal(packageJson.scripts?.typecheck, 'wrangler types && tsc --noEmit')
+  assert.equal(packageJson.scripts?.test, 'vitest')
+  assert.equal(wranglerConfig.$schema, 'https://unpkg.com/wrangler@4.73.0/config-schema.json')
+  assert.equal(projectJson.targets?.build?.command, 'pnpm --dir server build')
+  assert.equal(projectJson.targets?.typecheck?.command, 'pnpm --dir server typecheck')
+  assert.equal(await pathExists(path.join(serverRoot, '.gitignore')), false)
+  assert.equal(await pathExists(path.join(serverRoot, '.prettierrc')), false)
+  assert.equal(await pathExists(path.join(serverRoot, '.editorconfig')), false)
+  assert.equal(await pathExists(path.join(serverRoot, 'AGENTS.md')), false)
+  assert.equal(await pathExists(path.join(serverRoot, '.vscode', 'settings.json')), false)
 })

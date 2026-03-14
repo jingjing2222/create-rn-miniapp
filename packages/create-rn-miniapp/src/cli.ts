@@ -3,7 +3,11 @@ import { isCancel, log, select, text } from '@clack/prompts'
 import yargs from 'yargs'
 import { assertValidAppName, toDefaultDisplayName } from './layout.js'
 import { PACKAGE_MANAGERS, type PackageManager } from './package-manager.js'
-import { SERVER_PROVIDERS, type ServerProvider } from './server-provider.js'
+import {
+  SERVER_PROVIDERS,
+  SERVER_PROVIDER_OPTIONS,
+  type ServerProvider,
+} from './server-provider.js'
 import type { WorkspaceInspection } from './workspace-inspector.js'
 
 export type ParsedCliArgs = {
@@ -172,6 +176,8 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
 }
 
 export function formatCliHelp() {
+  const serverProviderList = SERVER_PROVIDERS.join('|')
+
   return [
     '사용법',
     '  create-miniapp [옵션]',
@@ -182,7 +188,7 @@ export function formatCliHelp() {
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
     '  --with-server                  `server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
-    '  --server-provider <supabase>   `server` 워크스페이스 제공자 지정',
+    `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
     '  --with-backoffice              `backoffice` 워크스페이스 포함',
     '  --root-dir <디렉터리>          `--add`에서 수정할 기존 모노레포 루트 디렉터리',
     '  --output-dir <디렉터리>        생성할 모노레포의 상위 디렉터리',
@@ -195,6 +201,7 @@ export function formatCliHelp() {
     '  create-miniapp --package-manager yarn --name my-miniapp --display-name "내 미니앱"',
     '  create-miniapp --name my-miniapp --display-name "내 미니앱"',
     '  create-miniapp --name my-miniapp --server-provider supabase --with-backoffice',
+    '  create-miniapp --name my-miniapp --server-provider cloudflare',
     '  create-miniapp --add --with-server',
     '  create-miniapp --add --root-dir /path/to/existing-miniapp --with-backoffice',
     '',
@@ -261,10 +268,7 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
         ? null
         : await prompt.select<'none' | ServerProvider>({
             message: '`server` 제공자를 선택하세요.',
-            options: [
-              { label: '생성 안 함', value: 'none' },
-              { label: 'Supabase', value: 'supabase' },
-            ],
+            options: [{ label: '생성 안 함', value: 'none' }, ...SERVER_PROVIDER_OPTIONS],
             initialValue: 'none',
           }))
 
@@ -320,10 +324,7 @@ export async function resolveAddCliOptions(
           ? null
           : await prompt.select<'none' | ServerProvider>({
               message: '`server` 제공자를 선택하세요.',
-              options: [
-                { label: '추가 안 함', value: 'none' },
-                { label: 'Supabase', value: 'supabase' },
-              ],
+              options: [{ label: '추가 안 함', value: 'none' }, ...SERVER_PROVIDER_OPTIONS],
               initialValue: 'none',
             })))
 

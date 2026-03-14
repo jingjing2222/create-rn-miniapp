@@ -6,6 +6,7 @@ import {
   patchBackofficeMainSource,
   patchGraniteConfigSource,
   patchTsconfigModuleSource,
+  patchWranglerConfigSource,
 } from './ast.js'
 import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
 import type { ServerProvider } from './server-provider.js'
@@ -34,6 +35,14 @@ const STATIC_TOOLING_FILES = [
   'prettier.config.mjs',
 ] as const
 
+const CLOUDFLARE_SERVER_LOCAL_FILES = [
+  '.gitignore',
+  '.prettierrc',
+  '.editorconfig',
+  '.vscode',
+  'AGENTS.md',
+] as const
+
 const TOOLING_DEPENDENCIES = [
   '@biomejs/biome',
   '@eslint/js',
@@ -50,6 +59,7 @@ const SUPABASE_JS_VERSION = '^2.57.4'
 const DOTENV_VERSION = '^16.4.7'
 const NODE_TYPES_VERSION = '^24.10.1'
 const FALLBACK_GRANITE_PLUGIN_VERSION = '1.0.7'
+const WRANGLER_PACKAGE_NAME = 'wrangler'
 
 const FRONTEND_SUPABASE_ENV_EXAMPLE = [
   'MINIAPP_SUPABASE_URL=https://your-project.supabase.co',
@@ -256,6 +266,17 @@ function resolveGranitePluginVersion(packageJson: PackageJson) {
   )
 }
 
+function normalizePackageVersionSpec(versionSpec: string | undefined) {
+  const match = versionSpec?.match(/\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?/)
+  return match?.[0] ?? null
+}
+
+function resolveWranglerSchemaUrl(packageJson: PackageJson) {
+  const version =
+    normalizePackageVersionSpec(packageJson.devDependencies?.[WRANGLER_PACKAGE_NAME]) ?? 'latest'
+  return `https://unpkg.com/${WRANGLER_PACKAGE_NAME}@${version}/config-schema.json`
+}
+
 async function removeToolingFiles(workspaceRoot: string, packageManager: PackageManager) {
   const adapter = getPackageManagerAdapter(packageManager)
   await Promise.all(
@@ -342,6 +363,19 @@ async function patchBackofficeEntryFiles(backofficeRoot: string) {
     const next = patchBackofficeAppSource(source)
     await writeFile(appPath, next, 'utf8')
   }
+}
+
+async function patchWranglerConfigSchema(serverRoot: string, packageJson: PackageJson) {
+  const wranglerConfigPath = path.join(serverRoot, 'wrangler.jsonc')
+
+  if (!(await pathExists(wranglerConfigPath))) {
+    return
+  }
+
+  const source = await readFile(wranglerConfigPath, 'utf8')
+  const next = patchWranglerConfigSource(source, resolveWranglerSchemaUrl(packageJson))
+
+  await writeFile(wranglerConfigPath, next, 'utf8')
 }
 
 async function ensureFrontendPackageJsonForWorkspace(
@@ -545,7 +579,7 @@ export async function patchBackofficeWorkspace(
   await applyWorkspaceProjectTemplate(targetRoot, 'backoffice', tokens)
 }
 
-export async function patchServerWorkspace(
+export async function patchSupabaseServerWorkspace(
   targetRoot: string,
   tokens: TemplateTokens,
   options: Pick<WorkspacePatchOptions, 'packageManager'>,
@@ -553,6 +587,41 @@ export async function patchServerWorkspace(
   await applyServerPackageTemplate(targetRoot, tokens)
   await removeToolingFiles(path.join(targetRoot, 'server'), options.packageManager)
   await removeWorkspaceArtifacts(path.join(targetRoot, 'server'), options.packageManager)
+  await applyWorkspaceProjectTemplate(targetRoot, 'server', tokens)
+}
+
+export async function patchCloudflareServerWorkspace(
+  targetRoot: string,
+  tokens: TemplateTokens,
+  options: Pick<WorkspacePatchOptions, 'packageManager'>,
+) {
+  const serverRoot = path.join(targetRoot, 'server')
+  const packageJsonPath = path.join(serverRoot, 'package.json')
+  const packageJson = await readPackageJson(packageJsonPath)
+
+  await patchPackageJsonFile(packageJsonPath, {
+    upsertTopLevel: [
+      {
+        key: 'name',
+        value: 'server',
+      },
+    ],
+    upsertSections: {
+      scripts: {
+        build: 'wrangler deploy --dry-run',
+        typecheck: 'wrangler types && tsc --noEmit',
+      },
+    },
+  })
+  await patchWranglerConfigSchema(serverRoot, packageJson)
+
+  await Promise.all(
+    CLOUDFLARE_SERVER_LOCAL_FILES.map((fileName) =>
+      removePathIfExists(path.join(serverRoot, fileName)),
+    ),
+  )
+  await removeToolingFiles(serverRoot, options.packageManager)
+  await removeWorkspaceArtifacts(serverRoot, options.packageManager)
   await applyWorkspaceProjectTemplate(targetRoot, 'server', tokens)
 }
 

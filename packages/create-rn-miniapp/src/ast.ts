@@ -762,6 +762,18 @@ export function patchTsconfigModuleSource(
   return `${JSON.stringify(next, null, 2)}\n`
 }
 
+export function patchWranglerConfigSource(source: string, schemaUrl: string) {
+  const parsed = parse(source, [], JSONC_PARSE_OPTIONS)
+
+  if (!isRecord(parsed)) {
+    return source
+  }
+
+  const next = { ...parsed, $schema: schemaUrl }
+
+  return `${JSON.stringify(next, null, 2)}\n`
+}
+
 type OrderedJsonEntry = {
   key: string
   value: unknown

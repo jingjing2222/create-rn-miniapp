@@ -3,7 +3,7 @@ import path from 'node:path'
 import { readGraniteConfigMetadata } from './ast.js'
 import { toDefaultDisplayName } from './layout.js'
 import type { PackageManager } from './package-manager.js'
-import type { ServerProvider } from './server-provider.js'
+import { detectServerProvider, type ServerProvider } from './server-provider.js'
 import { pathExists } from './templates.js'
 
 type RootPackageJson = {
@@ -59,6 +59,7 @@ export async function inspectWorkspace(rootDir: string): Promise<WorkspaceInspec
 
   const hasServer = await pathExists(path.join(resolvedRootDir, 'server'))
   const hasBackoffice = await pathExists(path.join(resolvedRootDir, 'backoffice'))
+  const serverProvider = hasServer ? await detectServerProvider(resolvedRootDir) : null
 
   return {
     rootDir: resolvedRootDir,
@@ -67,6 +68,6 @@ export async function inspectWorkspace(rootDir: string): Promise<WorkspaceInspec
     displayName: metadata.displayName ?? toDefaultDisplayName(metadata.appName),
     hasServer,
     hasBackoffice,
-    serverProvider: hasServer ? 'supabase' : null,
+    serverProvider,
   }
 }

@@ -28,6 +28,7 @@ export type PackageManagerAdapter = {
   dlx(packageName: string, args: string[]): PackageManagerCommand
   createGraniteApp(targetDirectory: string): PackageManagerCommand
   createViteApp(targetDirectory: string): PackageManagerCommand
+  createCloudflareApp(targetDirectory: string): PackageManagerCommand
   workspaceRunCommand(workspace: 'frontend' | 'backoffice' | 'server', script: string): string
   runScript(script: string): string
   rootFormatScript(): string
@@ -85,6 +86,20 @@ const pnpmAdapter: PackageManagerAdapter = {
       '--template',
       'react-ts',
       '--no-interactive',
+    ])
+  },
+  createCloudflareApp(targetDirectory) {
+    return withArgs('pnpm', [
+      'create',
+      'cloudflare@latest',
+      targetDirectory,
+      '--type',
+      'hello-world',
+      '--lang',
+      'ts',
+      '--no-deploy',
+      '--no-git',
+      '--accept-defaults',
     ])
   },
   workspaceRunCommand(workspace, script) {
@@ -156,6 +171,20 @@ const yarnAdapter: PackageManagerAdapter = {
       '--template',
       'react-ts',
       '--no-interactive',
+    ])
+  },
+  createCloudflareApp(targetDirectory) {
+    return withArgs('yarn', [
+      'create',
+      'cloudflare@latest',
+      targetDirectory,
+      '--type',
+      'hello-world',
+      '--lang',
+      'ts',
+      '--no-deploy',
+      '--no-git',
+      '--accept-defaults',
     ])
   },
   workspaceRunCommand(workspace, script) {

@@ -1,13 +1,12 @@
 import { spawn } from 'node:child_process'
 import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
-import type { ServerProvider } from './server-provider.js'
+import {
+  getServerProviderAdapter,
+  type ServerProvider,
+  type ServerProviderCommandSpec,
+} from './server-provider.js'
 
-export type CommandSpec = {
-  cwd: string
-  command: string
-  args: string[]
-  label: string
-}
+export type CommandSpec = ServerProviderCommandSpec
 
 export function buildCommandPlan(options: {
   appName: string
@@ -55,12 +54,8 @@ export function buildCommandPlan(options: {
     },
   ]
 
-  if (options.serverProvider === 'supabase') {
-    plan.push({
-      cwd: serverRoot,
-      ...packageManager.dlx('supabase', ['init']),
-      label: 'server Supabase 초기화',
-    })
+  if (options.serverProvider) {
+    plan.push(...getServerProviderAdapter(options.serverProvider).buildCreatePlan(options))
   }
 
   if (options.withBackoffice) {
@@ -81,15 +76,10 @@ export function buildAddCommandPlan(options: {
   withBackoffice: boolean
 }) {
   const packageManager = getPackageManagerAdapter(options.packageManager)
-  const serverRoot = `${options.targetRoot}/server`
   const plan: CommandSpec[] = []
 
-  if (options.serverProvider === 'supabase') {
-    plan.push({
-      cwd: serverRoot,
-      ...packageManager.dlx('supabase', ['init']),
-      label: 'server Supabase 초기화',
-    })
+  if (options.serverProvider) {
+    plan.push(...getServerProviderAdapter(options.serverProvider).buildAddPlan(options))
   }
 
   if (options.withBackoffice) {
