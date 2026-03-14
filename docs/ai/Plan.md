@@ -122,9 +122,9 @@ docs/
    - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates` 둘 다 patch changeset을 추가한다.
 
 ## 현재 CLI UX 개선 작업
-1. `yargs` 기반 CLI 옵션 파싱은 유지하고, 옵션으로 주어지지 않은 값만 `execa` 기반 인터랙티브 입력으로 보완한다.
-2. 누락된 값은 쉘 인터랙션으로 텍스트 입력 또는 선택 입력을 받는다.
-   - 선택 입력은 숫자 입력 대신 방향키로 이동하고, 스페이스바로 선택한 뒤 엔터로 진행한다.
+1. `yargs` 기반 CLI 옵션 파싱은 유지하고, 옵션으로 주어지지 않은 값만 `@clack/prompts` 기반 인터랙티브 입력으로 보완한다.
+2. 누락된 값은 clack 프롬프트로 텍스트 입력 또는 선택 입력을 받는다.
+   - 선택 입력은 Granite와 같은 clack 계열 UI로 렌더링한다.
 3. CLI가 직접 출력하는 도움말, 오류, 진행 메시지는 한국어로 통일한다.
 4. 테스트 범위
    - 옵션 파싱 단위 테스트
@@ -132,6 +132,18 @@ docs/
    - 기존 명령 계획/릴리스 테스트와 함께 `pnpm verify` 통과
 5. 릴리스 후속 작업
    - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates` 둘 다 patch changeset을 추가해 CLI UX 변경을 함께 배포한다.
+
+## 현재 프롬프트 렌더러 정리 작업
+1. 누락 옵션 입력에 쓰던 커스텀 `execa` 프롬프트 렌더러를 제거하고 `@clack/prompts` 기반으로 통일했다.
+2. 텍스트 입력은 `@clack/prompts`의 `text`를 사용하고, 선택 입력은 Granite와 같은 clack 계열 UI로 맞춘다.
+3. 기존 `yargs` 우선, 누락 값만 인터랙티브 fallback이라는 흐름은 유지한다.
+4. 테스트 범위
+   - 누락된 값이 clack 프롬프트에 위임되는지 검증
+   - 도움말/옵션 해석 회귀가 없는지 검증
+   - 커스텀 ANSI 프로그램 생성 함수 제거에 맞춰 단위 테스트를 정리
+5. 완료 기준
+   - 프롬프트 UI가 Granite 계열과 같은 clack 렌더링으로 동작한다.
+   - 더 이상 `execa`에 의존한 프롬프트 렌더링 코드가 남아 있지 않다.
 
 ## 현재 Supabase provider bootstrap 작업
 1. `server` 생성 여부를 단순 boolean이 아니라 provider 개념으로 확장한다.

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import test from 'node:test'
 import {
-  buildSelectPromptProgram,
+  createClackPrompter,
   formatCliHelp,
   parseCliArgs,
   resolveCliOptions,
@@ -192,22 +192,79 @@ test('formatCliHelp renders Korean help text', () => {
   assert.match(help, /버전 보기/)
 })
 
-test('buildSelectPromptProgram uses arrow keys, space to select, and enter to continue', () => {
-  const program = buildSelectPromptProgram({
-    message: '`server` 워크스페이스를 같이 만들까요?',
-    options: [
-      { label: '예', value: 'yes' },
-      { label: '아니오', value: 'no' },
-    ],
-    initialValue: 'no',
+test('createClackPrompter delegates text input and single-choice selection to clack prompts', async () => {
+  const messages: string[] = []
+  const errors: string[] = []
+  const prompter = createClackPrompter({
+    async text(options) {
+      messages.push(`text:${options.message}`)
+      return options.initialValue ?? 'ebook-miniapp'
+    },
+    async multiselect<T extends string>(options: {
+      message: string
+      options: Array<{
+        label: string
+        value: T
+      }>
+      initialValues?: T[]
+      required?: boolean
+    }) {
+      messages.push(`multiselect:${options.message}`)
+
+      if (messages.filter((message) => message.startsWith('multiselect:')).length === 1) {
+        return ['none', 'supabase'] as T[]
+      }
+
+      return ['supabase'] as T[]
+    },
+    isCancel(_value): _value is symbol {
+      return false
+    },
+    logError(message) {
+      errors.push(message)
+    },
   })
 
-  assert.match(program, /↑ ↓로 이동, Space로 선택, Enter로 진행/)
-  assert.match(program, /setRawMode\(true\)/)
-  assert.equal(program.includes(String.raw`\u001b[A`), true)
-  assert.equal(program.includes(String.raw`\u001b[B`), true)
-  assert.match(program, /let selected = payload.initialIndex/)
-  assert.match(program, /selected = cursor/)
-  assert.match(program, /stdout.write\(String\(selected\)\)/)
-  assert.doesNotMatch(program, /1\\. 예/)
+  const textValue = await prompter.text({
+    message: 'appName을 입력하세요',
+    initialValue: 'ebook-miniapp',
+  })
+  const selectValue = await prompter.select({
+    message: '`server` 제공자를 선택하세요.',
+    options: [
+      { label: '생성 안 함', value: 'none' },
+      { label: 'Supabase', value: 'supabase' },
+    ],
+    initialValue: 'none',
+  })
+
+  assert.equal(textValue, 'ebook-miniapp')
+  assert.equal(selectValue, 'supabase')
+  assert.deepEqual(messages, [
+    'text:appName을 입력하세요',
+    'multiselect:`server` 제공자를 선택하세요.',
+    'multiselect:`server` 제공자를 선택하세요.',
+  ])
+  assert.deepEqual(errors, ['하나만 선택하세요.'])
+})
+
+test('createClackPrompter turns prompt cancellation into a user-facing error', async () => {
+  const cancelled = Symbol('cancelled')
+  const prompter = createClackPrompter({
+    async text() {
+      return cancelled
+    },
+    async multiselect<T extends string>() {
+      return [] as T[]
+    },
+    isCancel(value): value is symbol {
+      return value === cancelled
+    },
+    logError() {},
+  })
+
+  await assert.rejects(
+    () => prompter.text({ message: 'appName을 입력하세요' }),
+    /입력을 취소했습니다\./,
+  )
 })

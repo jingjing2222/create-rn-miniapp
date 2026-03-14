@@ -25,7 +25,6 @@
     "@clack/prompts": "^1.1.0",
     "@create-rn-miniapp/scaffold-templates": "workspace:*",
     "@swc/core": "^1.15.18",
-    "execa": "^9.6.1",
     "yargs": "^18.0.0"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { execa } from 'execa'
+import { isCancel, log, multiselect, text } from '@clack/prompts'
 import yargs from 'yargs'
 import { assertValidAppName, toDefaultDisplayName } from './layout.js'
 import { SERVER_PROVIDERS, type ServerProvider } from './server-provider.js'
@@ -36,6 +36,21 @@ export type SelectPromptOptions<T extends string> = {
 export type CliPrompter = {
   text(options: TextPromptOptions): Promise<string>
   select<T extends string>(options: SelectPromptOptions<T>): Promise<T>
+}
+
+type ClackPrompter = {
+  text(options: TextPromptOptions): Promise<string | symbol>
+  multiselect<T extends string>(options: {
+    message: string
+    options: Array<{
+      label: string
+      value: T
+    }>
+    initialValues?: T[]
+    required?: boolean
+  }): Promise<T[] | symbol>
+  isCancel(value: unknown): value is symbol
+  logError(message: string): void
 }
 
 export type ResolvedCliOptions = {
@@ -221,214 +236,90 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
   } satisfies ResolvedCliOptions
 }
 
-export function createExecaPrompter(): CliPrompter {
+const defaultClackPrompter: ClackPrompter = {
+  async text(options: TextPromptOptions) {
+    return text({
+      message: options.message,
+      placeholder: options.placeholder,
+      initialValue: options.initialValue,
+      validate(value) {
+        return options.validate?.(value ?? '')
+      },
+    })
+  },
+  async multiselect<T extends string>(options: {
+    message: string
+    options: Array<{
+      label: string
+      value: T
+    }>
+    initialValues?: T[]
+    required?: boolean
+  }) {
+    const clackOptions: Array<{
+      value: T
+      label?: string
+      hint?: string
+      disabled?: boolean
+    }> = options.options.map((option) => ({
+      value: option.value,
+      label: option.label,
+    }))
+
+    return multiselect<T>({
+      message: options.message,
+      options: clackOptions as never,
+      initialValues: options.initialValues,
+      required: options.required,
+    })
+  },
+  isCancel(value): value is symbol {
+    return isCancel(value)
+  },
+  logError(message) {
+    log.error(message)
+  },
+}
+
+export function createClackPrompter(
+  clackPrompter: ClackPrompter = defaultClackPrompter,
+): CliPrompter {
   return {
     async text(options) {
-      while (true) {
-        const value = await runTextPromptScript(buildTextPromptScript(options))
-        const normalized = value.length === 0 ? (options.initialValue ?? '') : value
-        const validationMessage = options.validate?.(normalized)
+      const value = await clackPrompter.text(options)
 
-        if (!validationMessage) {
-          return normalized
-        }
-
-        console.error(validationMessage)
+      if (clackPrompter.isCancel(value)) {
+        throw new Error('입력을 취소했습니다.')
       }
+
+      return value
     },
     async select<T extends string>(options: SelectPromptOptions<T>) {
-      const selection = await runSelectPromptProgram(buildSelectPromptProgram(options))
-      const index = Number(selection)
-      const picked = options.options[index]
+      let initialValues = options.initialValue ? [options.initialValue] : undefined
 
-      if (!picked) {
-        throw new Error('선택 값을 해석하지 못했습니다.')
+      while (true) {
+        const selection = await clackPrompter.multiselect<T>({
+          message: options.message,
+          options: options.options,
+          initialValues,
+          required: true,
+        })
+
+        if (clackPrompter.isCancel(selection)) {
+          throw new Error('입력을 취소했습니다.')
+        }
+
+        if (selection.length === 1) {
+          const [picked] = selection
+
+          if (picked) {
+            return picked
+          }
+        }
+
+        clackPrompter.logError('하나만 선택하세요.')
+        initialValues = selection
       }
-
-      return picked.value
     },
   }
-}
-
-function buildTextPromptScript(options: TextPromptOptions) {
-  const promptMessage = options.placeholder
-    ? `${options.message} (${options.placeholder})`
-    : options.message
-  const initialValue = options.initialValue ?? ''
-
-  return [
-    `prompt_message=${toShellLiteral(promptMessage)}`,
-    `initial_value=${toShellLiteral(initialValue)}`,
-    'if [ -n "$initial_value" ]; then',
-    '  printf "%s [%s]: " "$prompt_message" "$initial_value" >&2',
-    'else',
-    '  printf "%s: " "$prompt_message" >&2',
-    'fi',
-    'IFS= read -r answer || exit 130',
-    'printf "%s" "$answer"',
-  ].join('\n')
-}
-
-export function buildSelectPromptProgram<T extends string>(options: SelectPromptOptions<T>) {
-  const initialIndex = options.initialValue
-    ? Math.max(
-        0,
-        options.options.findIndex((option) => option.value === options.initialValue),
-      )
-    : 0
-  const payload = JSON.stringify({
-    message: options.message,
-    labels: options.options.map((option) => option.label),
-    initialIndex,
-  })
-
-  return [
-    `const payload = ${payload};`,
-    'const stdin = process.stdin;',
-    'const stdout = process.stdout;',
-    'const stderr = process.stderr;',
-    'const labels = payload.labels;',
-    'let cursor = payload.initialIndex;',
-    'let selected = payload.initialIndex;',
-    'let renderedLines = 0;',
-    "const HIDE_CURSOR = '\\u001b[?25l';",
-    "const SHOW_CURSOR = '\\u001b[?25h';",
-    'function clearFrame() {',
-    '  if (renderedLines > 0) {',
-    '    stderr.write(`\\u001b[${renderedLines}A\\u001b[J`);',
-    '    renderedLines = 0;',
-    '  }',
-    '}',
-    'function render() {',
-    '  clearFrame();',
-    '  const lines = [',
-    '    payload.message,',
-    "    '↑ ↓로 이동, Space로 선택, Enter로 진행, Ctrl+C로 취소',",
-    "    ...labels.map((label, index) => `${index === cursor ? '❯' : ' '} ${index === selected ? '◉' : '○'} ${label}`),",
-    '  ];',
-    "  stderr.write(lines.join('\\n') + '\\n');",
-    '  renderedLines = lines.length;',
-    '}',
-    'function cleanup() {',
-    '  clearFrame();',
-    '  if (stderr.isTTY) {',
-    '    stderr.write(SHOW_CURSOR);',
-    '  }',
-    '  if (stdin.isTTY) {',
-    '    stdin.setRawMode(false);',
-    '  }',
-    '  stdin.pause();',
-    '}',
-    'if (!stdin.isTTY || !stderr.isTTY) {',
-    '  process.exit(64);',
-    '}',
-    'stderr.write(HIDE_CURSOR);',
-    "stdin.setEncoding('utf8');",
-    'stdin.setRawMode(true);',
-    'stdin.resume();',
-    "process.on('exit', () => {",
-    '  if (stderr.isTTY) {',
-    '    stderr.write(SHOW_CURSOR);',
-    '  }',
-    '});',
-    "stdin.on('data', (chunk) => {",
-    "  if (chunk === '\\u0003') {",
-    '    cleanup();',
-    '    process.exit(130);',
-    '  }',
-    "  if (chunk === '\\u001b[A') {",
-    '    cursor = cursor === 0 ? labels.length - 1 : cursor - 1;',
-    '    render();',
-    '    return;',
-    '  }',
-    "  if (chunk === '\\u001b[B') {",
-    '    cursor = cursor === labels.length - 1 ? 0 : cursor + 1;',
-    '    render();',
-    '    return;',
-    '  }',
-    "  if (chunk === ' ') {",
-    '    selected = cursor;',
-    '    render();',
-    '    return;',
-    '  }',
-    "  if (chunk === '\\r' || chunk === '\\n') {",
-    '    cleanup();',
-    '    stdout.write(String(selected));',
-    '    process.exit(0);',
-    '  }',
-    '});',
-    'render();',
-  ].join('\n')
-}
-
-async function runTextPromptScript(script: string) {
-  try {
-    const { stdout } = await execa('bash', ['-lc', script], {
-      stdin: 'inherit',
-      stdout: 'pipe',
-      stderr: 'inherit',
-    })
-
-    return stdout.trimEnd()
-  } catch (error) {
-    if (isPromptCancelled(error)) {
-      throw new Error('입력을 취소했습니다.')
-    }
-
-    throw error
-  }
-}
-
-async function runSelectPromptProgram(program: string) {
-  try {
-    const { stdout } = await execa('node', ['--input-type=module', '-e', program], {
-      stdin: 'inherit',
-      stdout: 'pipe',
-      stderr: 'inherit',
-    })
-
-    return stdout.trimEnd()
-  } catch (error) {
-    if (isPromptCancelled(error)) {
-      throw new Error('입력을 취소했습니다.')
-    }
-
-    if (isNonTtyPrompt(error)) {
-      throw new Error('인터랙티브 선택은 터미널에서만 가능합니다. 관련 옵션을 직접 지정하세요.')
-    }
-
-    throw error
-  }
-}
-
-function toShellLiteral(value: string) {
-  return `'${value.replaceAll("'", "'\\''")}'`
-}
-
-function isPromptCancelled(error: unknown) {
-  if (typeof error !== 'object' || error === null) {
-    return false
-  }
-
-  const candidate = error as {
-    exitCode?: number
-    signal?: string
-    isCanceled?: boolean
-  }
-
-  return (
-    candidate.exitCode === 130 || candidate.signal === 'SIGINT' || candidate.isCanceled === true
-  )
-}
-
-function isNonTtyPrompt(error: unknown) {
-  if (typeof error !== 'object' || error === null) {
-    return false
-  }
-
-  const candidate = error as {
-    exitCode?: number
-  }
-
-  return candidate.exitCode === 64
 }
