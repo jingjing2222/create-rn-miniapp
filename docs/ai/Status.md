@@ -1,3 +1,38 @@
+## 2026-03-14 — GitHub Actions 릴리스 파이프라인 추가
+- 상태
+  - PR과 `main` 검증용 `Verify` 워크플로를 추가했다.
+  - `main` push 시 Changesets가 릴리스 PR 생성 또는 npm publish를 수행하는 `Release` 워크플로를 추가했다.
+- 반영한 변경
+  - `.github/workflows/verify.yml`
+    - `pull_request`, `main`, `codex/**` push에서 `pnpm verify`
+  - `.github/workflows/release.yml`
+    - `main` push에서 `changesets/action`
+    - `NPM_TOKEN` 기반 npm publish
+  - `README.md`
+    - CI / release 동작 문서화
+- 검증
+  - `pnpm format` ✅
+  - `pnpm verify` ✅
+  - `git diff --check` ✅
+
+## 2026-03-14 — Changesets 릴리스 흐름 추가
+- 상태
+  - 공개 npm 배포를 위해 Changesets 기반 버전 관리 흐름을 추가했다.
+  - `create-miniapp`와 `@create-miniapp/scaffold-templates`를 함께 릴리스할 수 있는 초기 patch changeset을 만들었다.
+- 반영한 변경
+  - `package.json`
+    - `changeset`, `version-packages`, `release` 스크립트 추가
+    - `@changesets/cli` devDependency 추가
+  - `.changeset/config.json`
+  - `.changeset/README.md`
+  - `.changeset/slow-dingos-grow.md`
+  - `README.md`
+    - 릴리스 명령 문서화
+- 검증
+  - `pnpm changeset status` ✅
+  - `pnpm verify` ✅
+  - `git diff --check` ✅
+
 ## 2026-03-14 — 하네스 문서 템플릿 이관
 - 상태
   - `bookMiniApp`에서 전자책 도메인 내용만 제외하고, MiniApp 공통 하네스 문서를 템플릿으로 이관했다.

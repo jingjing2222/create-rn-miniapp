@@ -111,6 +111,8 @@ docs/
 
 ## 남은 작업
 1. npm publish 준비
+   - Changesets 설정
+   - GitHub Actions verify / release workflow
    - 버전 전략
    - 릴리스 문서
    - first publish rehearsal
@@ -148,3 +150,5 @@ docs/
 5. 내부 워크스페이스는 자체 lint/format 도구 없이 루트 오케스트레이션만 사용한다. ✅
 6. 생성 직후 루트 `pnpm verify`가 동작한다. ✅
 7. 이 저장소 안에는 source scaffold template가 남아 있지 않다. ✅
+8. 공개 패키지 릴리스용 Changesets 흐름이 설정된다.
+9. PR 검증과 main 릴리스 자동화용 GitHub Actions가 설정된다.

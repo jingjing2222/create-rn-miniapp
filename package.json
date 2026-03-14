@@ -7,12 +7,16 @@
     "build": "nx run-many -t build --all",
     "typecheck": "nx run-many -t typecheck --all",
     "test": "nx run-many -t test --all",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish",
     "format": "pnpm exec biome format . --write",
     "format:check": "pnpm exec biome format .",
     "lint": "pnpm exec biome lint .",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.7",
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^24.10.1",
     "nx": "^22.0.3",
