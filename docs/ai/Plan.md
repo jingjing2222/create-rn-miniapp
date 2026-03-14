@@ -564,3 +564,12 @@ docs/
    - Cloudflare server patch 결과에 `deploy`만 남는지 검증
 3. 완료 기준
    - `pnpm verify` 통과
+
+## 현재 Cloudflare API token 안내 보강
+1. Cloudflare provision 완료 후 `server/.env.local`의 `CLOUDFLARE_API_TOKEN`이 비어 있으면 사용자가 직접 채워야 한다는 안내를 note에 포함한다.
+2. 기존 token이 이미 있으면 불필요한 안내는 생략한다.
+3. 테스트 범위
+   - 성공 note에 token 입력 안내가 포함되는지 검증
+   - 기존 token이 있으면 token 입력 안내가 생략되는지 검증
+4. 완료 기준
+   - `pnpm verify` 통과

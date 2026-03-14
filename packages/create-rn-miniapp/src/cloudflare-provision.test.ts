@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -131,6 +131,8 @@ test('formatCloudflareManualSetupNote includes frontend and backoffice env guida
   assert.match(note.body, /server\/\.env\.local/)
   assert.match(note.body, /MINIAPP_API_BASE_URL=<배포된 Worker URL>/)
   assert.match(note.body, /VITE_API_BASE_URL=<배포된 Worker URL>/)
+  assert.match(note.body, /CLOUDFLARE_API_TOKEN/)
+  assert.match(note.body, /직접 채워/)
 })
 
 test('writeCloudflareLocalEnvFiles writes frontend and backoffice .env.local files', async () => {
@@ -246,6 +248,39 @@ test('finalizeCloudflareProvisioning writes env files when api base url is avail
     assert.equal(notes[0]?.title, 'Cloudflare API URL 작성 완료')
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
     assert.match(notes[0]?.body ?? '', /deploy/)
+    assert.match(notes[0]?.body ?? '', /CLOUDFLARE_API_TOKEN/)
+    assert.match(notes[0]?.body ?? '', /직접 채워/)
+  } finally {
+    await rm(targetRoot, { recursive: true, force: true })
+  }
+})
+
+test('finalizeCloudflareProvisioning skips token guidance when server api token already exists', async () => {
+  const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-cloudflare-token-'))
+
+  try {
+    await mkdir(path.join(targetRoot, 'server'), { recursive: true })
+    await writeFile(
+      path.join(targetRoot, 'server', '.env.local'),
+      [
+        '# Cloudflare Worker metadata for this workspace.',
+        'CLOUDFLARE_API_TOKEN=already-set-token',
+        '',
+      ].join('\n'),
+      'utf8',
+    )
+
+    const notes = await finalizeCloudflareProvisioning({
+      targetRoot,
+      provisionedWorker: {
+        accountId: 'account-123',
+        workerName: 'ebook-miniapp',
+        apiBaseUrl: 'https://ebook-miniapp.team-ebook.workers.dev',
+        mode: 'existing',
+      },
+    })
+
+    assert.doesNotMatch(notes[0]?.body ?? '', /직접 채워/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }

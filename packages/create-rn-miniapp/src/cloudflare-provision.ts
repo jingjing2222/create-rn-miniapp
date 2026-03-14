@@ -98,6 +98,11 @@ function createCloudflareServerEnvValues(options: {
   ].join('\n')
 }
 
+function hasConfiguredCloudflareApiToken(source: string) {
+  const tokenLine = source.match(/^CLOUDFLARE_API_TOKEN=(.*)$/m)?.[1]?.trim() ?? ''
+  return tokenLine.length > 0
+}
+
 function parseWranglerAuthValue(source: string, key: string) {
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = source.match(new RegExp(`^${escapedKey}\\s*=\\s*"([^"]+)"\\s*$`, 'm'))
@@ -473,6 +478,7 @@ export function formatCloudflareManualSetupNote(options: {
     '',
     'server/.env.local 은 현재 Cloudflare Worker 메타데이터를 기록합니다.',
     'server/package.json 의 deploy 는 wrangler.jsonc 기준으로 원격 Worker를 다시 배포합니다.',
+    'server/.env.local 의 CLOUDFLARE_API_TOKEN 은 비어 있으니, 필요하면 직접 채워 넣으세요.',
   )
 
   return {
@@ -712,6 +718,11 @@ export async function finalizeCloudflareProvisioning(options: {
     workerName: options.provisionedWorker.workerName,
     apiBaseUrl: options.provisionedWorker.apiBaseUrl,
   })
+  const serverEnvSource = await readFile(
+    path.join(options.targetRoot, 'server', '.env.local'),
+    'utf8',
+  )
+  const hasApiToken = hasConfiguredCloudflareApiToken(serverEnvSource)
 
   if (options.provisionedWorker.apiBaseUrl) {
     await writeCloudflareLocalEnvFiles({
@@ -729,6 +740,11 @@ export async function finalizeCloudflareProvisioning(options: {
             : 'frontend/.env.local 에 Cloudflare API URL을 작성했습니다.',
           'server/.env.local 에 Cloudflare Worker 메타데이터를 작성했습니다.',
           'server/package.json 의 deploy 로 원격 Worker를 다시 배포할 수 있습니다.',
+          ...(!hasApiToken
+            ? [
+                'server/.env.local 의 CLOUDFLARE_API_TOKEN 은 비어 있으니, 필요하면 직접 채워 넣으세요.',
+              ]
+            : []),
         ].join('\n'),
       },
     ] satisfies ProvisioningNote[]
