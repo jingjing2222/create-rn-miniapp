@@ -1,6 +1,23 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 현재 root README 포지셔닝 보강 작업
+1. 루트 README의 첫 설명을 "MiniApp을 생성하는 CLI" 수준에서 끝내지 않고, Granite, `@apps-in-toss/framework`, TDS를 바로 활용할 수 있도록 컨텍스트를 patch하는 스캐폴딩 도구라는 점까지 드러낸다.
+2. 공식 CLI 우선 원칙과 함께, 이 저장소가 실제로 덧입히는 가치가 무엇인지 README 앞부분에서 설명한다.
+   - 루트 monorepo tooling
+   - AI/engineering/product docs 컨텍스트
+   - provider별 env/bootstrap patch
+   - provider IaC 및 원격 리소스 연결
+3. 생성 결과의 `docs/` 구조를 단순 나열이 아니라 용도 중심으로 설명한다.
+   - `docs/ai`
+   - `docs/engineering`
+   - `docs/product`
+4. Supabase/Cloudflare provider 설명에는 "server 생성"뿐 아니라 인증, 기존 리소스 선택, 새 리소스 생성, `.env.local` 작성까지 포함된 IaC 흐름이라는 점을 README에 명시한다.
+5. 완료 기준
+   - 루트 README만 읽어도 이 도구가 "공식 scaffold 위에 MiniApp 실행 컨텍스트와 provider IaC를 patch하는 도구"라는 점이 이해된다.
+   - `pnpm verify` 통과
+6. README 최상단에는 Cloudflare 생성/연결 흐름을 보여주는 GIF를 raw GitHub URL로 노출한다.
+
 ## 현재 provider 인증 스캐폴드 안정화 작업
 1. `codex/server-provider-adapters-cloudflare` 브랜치 기준으로 Supabase 인증/프로비저닝 흐름을 Cloudflare provider 지원 위에 병합한다.
 2. create 흐름의 실행 순서는 `frontend scaffold -> server scaffold -> provider provisioning -> optional backoffice scaffold -> patch/finalize`로 고정한다.
