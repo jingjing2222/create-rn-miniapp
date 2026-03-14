@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import test from 'node:test'
 import {
+  type CliPrompter,
   createClackPrompter,
   formatCliHelp,
   parseCliArgs,
   resolveCliOptions,
-  type CliPrompter,
 } from './cli.js'
 
 test('parseCliArgs parses long-form CLI options with yargs', async () => {

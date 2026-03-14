@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -108,8 +108,8 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], undefined)
   assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/\.\.'\)/)
   assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
-  assert.match(tsconfigSource, /\/\/ frontend tsconfig comment/)
   assert.match(tsconfigSource, /"module": "esnext"/)
+  assert.doesNotMatch(tsconfigSource, /frontend tsconfig comment/)
   assert.equal(await pathExists(path.join(frontendRoot, '.env.local.example')), false)
   assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'supabase.ts')), false)
 })
@@ -229,13 +229,32 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
     files: [],
     references: [{ path: './tsconfig.app.json' }, { path: './tsconfig.node.json' }],
   })
-  await writeJson(path.join(backofficeRoot, 'tsconfig.app.json'), {
-    compilerOptions: {
-      jsx: 'react-jsx',
-      module: 'commonjs',
-    },
-    include: ['src'],
-  })
+  await writeFile(
+    path.join(backofficeRoot, 'tsconfig.app.json'),
+    [
+      '{',
+      '  "compilerOptions": {',
+      '    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",',
+      '    "target": "ES2022",',
+      '    "useDefineForClassFields": true,',
+      '    "lib": ["ES2022", "DOM", "DOM.Iterable"],',
+      '    "module": "commonjs",',
+      '    "skipLibCheck": true,',
+      '',
+      '    /* Bundler mode */',
+      '    "moduleResolution": "bundler",',
+      '    "allowImportingTsExtensions": true,',
+      '    "verbatimModuleSyntax": true,',
+      '    "moduleDetection": "force",',
+      '    "noEmit": true,',
+      '    "jsx": "react-jsx"',
+      '  },',
+      '  "include": ["src"]',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
   await writeJson(path.join(backofficeRoot, 'tsconfig.node.json'), {
     compilerOptions: {
       composite: true,
@@ -303,6 +322,7 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   assert.match(tsconfigSource, /"module": "esnext"/)
   assert.match(tsconfigAppSource, /"module": "esnext"/)
   assert.match(tsconfigNodeSource, /"module": "esnext"/)
+  assert.doesNotMatch(tsconfigAppSource, /Bundler mode/)
   assert.match(mainSource, /const rootElement = document\.getElementById\('root'\)/)
   assert.match(mainSource, /throw new Error\('Root element not found'\)/)
   assert.match(appSource, /type=["']button["']/)

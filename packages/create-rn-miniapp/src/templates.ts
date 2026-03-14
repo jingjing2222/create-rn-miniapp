@@ -1,5 +1,5 @@
-import { createRequire } from 'node:module'
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 
 export type TemplateTokens = {

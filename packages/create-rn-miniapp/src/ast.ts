@@ -1,5 +1,5 @@
-import { applyEdits, findNodeAtLocation, modify, parseTree } from 'jsonc-parser'
 import { parseSync, printSync } from '@swc/core'
+import { applyEdits, findNodeAtLocation, modify, parse, parseTree } from 'jsonc-parser'
 import type { ServerProvider } from './server-provider.js'
 import type { TemplateTokens } from './templates.js'
 
@@ -680,21 +680,22 @@ export function patchTsconfigModuleSource(source: string) {
   }
 
   const moduleNode = findNodeAtLocation(root, ['compilerOptions', 'module'])
-  if (moduleNode?.type === 'string' && moduleNode.value === 'esnext') {
-    return source
-  }
+  const editedSource =
+    moduleNode?.type === 'string' && moduleNode.value === 'esnext'
+      ? source
+      : applyEdits(
+          source,
+          modify(source, ['compilerOptions', 'module'], 'esnext', {
+            formattingOptions: JSONC_FORMATTING_OPTIONS,
+          }),
+        )
 
-  const next = applyEdits(
-    source,
-    modify(source, ['compilerOptions', 'module'], 'esnext', {
-      formattingOptions: JSONC_FORMATTING_OPTIONS,
-    }),
-  )
-
-  const nextRoot = parseTree(next, [], JSONC_PARSE_OPTIONS)
+  const nextRoot = parseTree(editedSource, [], JSONC_PARSE_OPTIONS)
   if (!nextRoot || nextRoot.type !== 'object') {
     throw new Error('tsconfig를 수정한 뒤 JSONC를 다시 파싱하지 못했습니다.')
   }
 
-  return next.endsWith('\n') ? next : `${next}\n`
+  const normalized = parse(editedSource, [], JSONC_PARSE_OPTIONS)
+
+  return `${JSON.stringify(normalized, null, 2)}\n`
 }

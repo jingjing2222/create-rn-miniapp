@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { createRequire } from 'node:module'
-import { hideBin } from 'yargs/helpers'
 import { cancel, intro, note, outro } from '@clack/prompts'
+import { hideBin } from 'yargs/helpers'
 import { createClackPrompter, formatCliHelp, parseCliArgs, resolveCliOptions } from './cli.js'
 import { generatedWorkspaceLayout } from './layout.js'
 import { scaffoldWorkspace } from './scaffold.js'

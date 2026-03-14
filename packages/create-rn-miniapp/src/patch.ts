@@ -8,11 +8,11 @@ import {
 } from './ast.js'
 import type { ServerProvider } from './server-provider.js'
 import {
+  type TemplateTokens,
   applyServerPackageTemplate,
   applyWorkspaceProjectTemplate,
   pathExists,
   removePathIfExists,
-  type TemplateTokens,
 } from './templates.js'
 
 const TOOLING_FILES = [

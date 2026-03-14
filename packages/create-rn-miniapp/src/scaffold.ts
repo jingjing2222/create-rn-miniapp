@@ -1,15 +1,15 @@
-import path from 'node:path'
 import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
 import { log } from '@clack/prompts'
 import { buildCommandPlan, runCommand } from './commands.js'
 import { patchBackofficeWorkspace, patchFrontendWorkspace, patchServerWorkspace } from './patch.js'
 import type { ServerProvider } from './server-provider.js'
 import {
+  type TemplateTokens,
   applyDocsTemplates,
   applyRootTemplates,
   ensureEmptyDirectory,
   pathExists,
-  type TemplateTokens,
 } from './templates.js'
 
 export type ScaffoldOptions = {
