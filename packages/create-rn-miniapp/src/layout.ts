@@ -12,7 +12,7 @@ export function assertValidAppName(value: string) {
   const normalized = value.trim()
 
   if (!isValidAppName(normalized)) {
-    throw new Error('appName must be kebab-case, for example: my-miniapp')
+    throw new Error('appName은 kebab-case여야 합니다. 예: my-miniapp')
   }
 
   return normalized

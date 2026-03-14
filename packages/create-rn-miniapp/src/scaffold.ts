@@ -58,20 +58,20 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
   }
 
   if (!options.skipInstall) {
-    log.step('root pnpm install')
+    log.step('루트 pnpm install')
     await runCommand({
       cwd: targetRoot,
       command: 'pnpm',
       args: ['install'],
-      label: 'root pnpm install',
+      label: '루트 pnpm install',
     })
 
-    log.step('root biome check --write --unsafe')
+    log.step('루트 biome check --write --unsafe')
     await runCommand({
       cwd: targetRoot,
       command: 'pnpm',
       args: ['exec', 'biome', 'check', '.', '--write', '--unsafe'],
-      label: 'root biome check --write --unsafe',
+      label: '루트 biome check --write --unsafe',
     })
   }
 

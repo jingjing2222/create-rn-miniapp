@@ -21,19 +21,19 @@ export function buildCommandPlan(options: {
       cwd: options.targetRoot,
       command: 'pnpm',
       args: ['create', 'granite-app', 'frontend', '--tools', 'biome'],
-      label: 'frontend granite scaffold',
+      label: 'frontend Granite 생성',
     },
     {
       cwd: frontendRoot,
       command: 'pnpm',
       args: ['install'],
-      label: 'frontend install',
+      label: 'frontend 의존성 설치',
     },
     {
       cwd: frontendRoot,
       command: 'pnpm',
       args: ['add', '@apps-in-toss/framework'],
-      label: 'frontend install appintoss framework',
+      label: 'frontend AppInToss Framework 설치',
     },
     {
       cwd: frontendRoot,
@@ -48,13 +48,13 @@ export function buildCommandPlan(options: {
         options.appName,
         '--skip-input',
       ],
-      label: 'frontend ait init',
+      label: 'frontend ait 초기화',
     },
     {
       cwd: frontendRoot,
       command: 'pnpm',
       args: ['add', '@toss/tds-react-native@2.0.2'],
-      label: 'frontend install tds',
+      label: 'frontend TDS 설치',
     },
   ]
 
@@ -63,7 +63,7 @@ export function buildCommandPlan(options: {
       cwd: serverRoot,
       command: 'pnpm',
       args: ['dlx', 'supabase', 'init'],
-      label: 'server supabase init',
+      label: 'server Supabase 초기화',
     })
   }
 
@@ -72,7 +72,7 @@ export function buildCommandPlan(options: {
       cwd: options.targetRoot,
       command: 'pnpm',
       args: ['dlx', 'create-vite', 'backoffice', '--template', 'react-ts', '--no-interactive'],
-      label: 'backoffice vite scaffold',
+      label: 'backoffice Vite 생성',
     })
   }
 
@@ -94,7 +94,9 @@ export async function runCommand(spec: CommandSpec) {
         return
       }
 
-      reject(new Error(`Failed: ${spec.label} (${spec.command} ${spec.args.join(' ')})`))
+      reject(
+        new Error(`${spec.label} 단계가 실패했습니다. (${spec.command} ${spec.args.join(' ')})`),
+      )
     })
   })
 }

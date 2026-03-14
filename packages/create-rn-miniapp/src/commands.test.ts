@@ -15,13 +15,13 @@ test('buildCommandPlan keeps AppInToss frontend steps first', () => {
   assert.deepEqual(
     plan.map((step) => step.label),
     [
-      'frontend granite scaffold',
-      'frontend install',
-      'frontend install appintoss framework',
-      'frontend ait init',
-      'frontend install tds',
-      'server supabase init',
-      'backoffice vite scaffold',
+      'frontend Granite 생성',
+      'frontend 의존성 설치',
+      'frontend AppInToss Framework 설치',
+      'frontend ait 초기화',
+      'frontend TDS 설치',
+      'server Supabase 초기화',
+      'backoffice Vite 생성',
     ],
   )
 })

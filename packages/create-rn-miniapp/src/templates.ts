@@ -122,7 +122,7 @@ export async function ensureEmptyDirectory(targetRoot: string) {
   const entries = await readdir(targetRoot)
 
   if (entries.length > 0) {
-    throw new Error(`Target directory is not empty: ${targetRoot}`)
+    throw new Error(`대상 디렉터리가 비어 있지 않습니다: ${targetRoot}`)
   }
 }
 
