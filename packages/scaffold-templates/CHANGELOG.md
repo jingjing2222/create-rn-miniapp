@@ -1,5 +1,13 @@
 # @create-rn-miniapp/scaffold-templates
 
+## 0.0.7
+
+### Patch Changes
+
+- 1e0fa08: Improve Yarn PnP scaffolds with package extensions and SDK generation, and clean up frontend Supabase env scaffolding to use `import.meta.env` with Node types configured via tsconfig.
+- 1fb6443: Make root workspace manifests reflect only the workspaces that actually exist during initial scaffold and `--add`.
+- 1a9a6d4: Add `--add` mode so existing workspaces can attach missing `server` and `backoffice` apps after the initial scaffold.
+
 ## 0.0.6
 
 ### Patch Changes
