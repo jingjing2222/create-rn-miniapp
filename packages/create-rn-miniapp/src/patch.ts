@@ -61,18 +61,6 @@ const NODE_TYPES_VERSION = '^24.10.1'
 const FALLBACK_GRANITE_PLUGIN_VERSION = '1.0.7'
 const WRANGLER_PACKAGE_NAME = 'wrangler'
 
-const FRONTEND_SUPABASE_ENV_EXAMPLE = [
-  'MINIAPP_SUPABASE_URL=https://your-project.supabase.co',
-  'MINIAPP_SUPABASE_PUBLISHABLE_KEY=your-publishable-key',
-  '',
-].join('\n')
-
-const BACKOFFICE_SUPABASE_ENV_EXAMPLE = [
-  'VITE_SUPABASE_URL=https://your-project.supabase.co',
-  'VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key',
-  '',
-].join('\n')
-
 const FRONTEND_ENV_TYPES = [
   'interface ImportMetaEnv {',
   '  readonly MINIAPP_SUPABASE_URL: string',
@@ -327,7 +315,6 @@ async function patchWorkspaceTsconfigModules(
 }
 
 async function writeFrontendSupabaseBootstrap(frontendRoot: string) {
-  await writeTextFile(path.join(frontendRoot, '.env.local.example'), FRONTEND_SUPABASE_ENV_EXAMPLE)
   await writeTextFile(path.join(frontendRoot, 'src', 'env.d.ts'), FRONTEND_ENV_TYPES)
   await writeTextFile(
     path.join(frontendRoot, 'src', 'lib', 'supabase.ts'),
@@ -336,10 +323,6 @@ async function writeFrontendSupabaseBootstrap(frontendRoot: string) {
 }
 
 async function writeBackofficeSupabaseBootstrap(backofficeRoot: string) {
-  await writeTextFile(
-    path.join(backofficeRoot, '.env.local.example'),
-    BACKOFFICE_SUPABASE_ENV_EXAMPLE,
-  )
   await writeTextFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), BACKOFFICE_ENV_TYPES)
   await writeTextFile(
     path.join(backofficeRoot, 'src', 'lib', 'supabase.ts'),

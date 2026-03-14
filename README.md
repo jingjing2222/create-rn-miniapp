@@ -81,13 +81,11 @@ pnpm verify
 `--with-server` 또는 `--server-provider supabase`를 쓰면 `server/`뿐 아니라 `frontend`와 optional `backoffice`에도 바로 연결할 수 있는 기본 파일을 생성합니다.
 
 `frontend`:
-- `.env.local.example`
 - `src/env.d.ts`
 - `src/lib/supabase.ts`
 - `granite.config.ts` env plugin 및 monorepo `watchFolders` patch
 
 `backoffice`:
-- `.env.local.example`
 - `src/vite-env.d.ts`
 - `src/lib/supabase.ts`
 

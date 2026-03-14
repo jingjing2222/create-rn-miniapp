@@ -9,11 +9,12 @@
 5. Supabase CLI JSON 파싱은 `pnpm`/`yarn` 로그 노이즈가 섞여도 payload만 추출하도록 보강한다.
 6. Supabase publishable key를 조회할 수 있으면 `create`/`existing`와 관계없이 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동 작성한다.
 7. publishable key 조회에 실패한 경우에만 Supabase 대시보드 API 설정 URL과 `.env.local` 예시를 마지막 안내 메시지로 출력한다.
-8. 테스트 범위
+8. 자동 `.env.local` 작성이 들어간 기준으로 `frontend`/`backoffice` bootstrap에서 `.env.local.example` 생성은 제거한다.
+9. 테스트 범위
    - create/add 실행 순서가 provider provisioning 위치를 보장하는지 검증
    - Cloudflare 선택지가 유지되는지 검증
    - Supabase 프로젝트 목록/생성 응답이 패키지 매니저 로그 노이즈가 있어도 파싱되는지 검증
-9. 완료 기준
+10. 완료 기준
    - `pnpm verify` 통과
    - 변경사항을 PR `#22`에 올릴 수 있는 상태
 

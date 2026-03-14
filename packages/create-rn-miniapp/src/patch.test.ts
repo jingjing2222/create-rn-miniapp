@@ -219,7 +219,6 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
     devDependencies?: Record<string, string>
   }
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
-  const envExample = await readFile(path.join(frontendRoot, '.env.local.example'), 'utf8')
   const envTypes = await readFile(path.join(frontendRoot, 'src', 'env.d.ts'), 'utf8')
   const tsconfig = JSON.parse(await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')) as {
     compilerOptions?: {
@@ -256,8 +255,7 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   assert.match(graniteConfig, /MINIAPP_SUPABASE_URL: miniappSupabaseUrl/)
   assert.equal(tsconfig.compilerOptions?.module, 'esnext')
   assert.deepEqual(tsconfig.compilerOptions?.types, ['node'])
-  assert.match(envExample, /MINIAPP_SUPABASE_URL=https:\/\/your-project\.supabase\.co/)
-  assert.match(envExample, /MINIAPP_SUPABASE_PUBLISHABLE_KEY=your-publishable-key/)
+  assert.equal(await pathExists(path.join(frontendRoot, '.env.local.example')), false)
   assert.match(envTypes, /readonly MINIAPP_SUPABASE_URL: string/)
   assert.match(supabaseClient, /createClient/)
   assert.match(supabaseClient, /import\.meta\.env\.MINIAPP_SUPABASE_URL/)
@@ -376,7 +374,6 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
     scripts?: Record<string, string>
     dependencies?: Record<string, string>
   }
-  const envExample = await readFile(path.join(backofficeRoot, '.env.local.example'), 'utf8')
   const envTypes = await readFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), 'utf8')
   const mainSource = await readFile(path.join(backofficeRoot, 'src', 'main.tsx'), 'utf8')
   const appSource = await readFile(path.join(backofficeRoot, 'src', 'App.tsx'), 'utf8')
@@ -392,8 +389,7 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   assert.equal(packageJson.scripts?.build, 'tsc -b && vite build')
   assert.equal(packageJson.scripts?.typecheck, 'tsc -b --pretty false')
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], '^2.57.4')
-  assert.match(envExample, /VITE_SUPABASE_URL=https:\/\/your-project\.supabase\.co/)
-  assert.match(envExample, /VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key/)
+  assert.equal(await pathExists(path.join(backofficeRoot, '.env.local.example')), false)
   assert.match(envTypes, /readonly VITE_SUPABASE_URL: string/)
   assert.match(tsconfigSource, /"module": "esnext"/)
   assert.match(tsconfigAppSource, /"module": "esnext"/)
