@@ -1,5 +1,11 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import {
+  patchBackofficeAppSource,
+  patchBackofficeMainSource,
+  patchGraniteConfigSource,
+} from './ast.js'
+import type { ServerProvider } from './server-provider.js'
 import {
   applyServerPackageTemplate,
   applyWorkspaceProjectTemplate,
@@ -40,11 +46,161 @@ const TOOLING_DEPENDENCIES = [
 
 const WORKSPACE_ARTIFACTS = ['node_modules'] as const
 
+const SUPABASE_JS_VERSION = '^2.57.4'
+const DOTENV_VERSION = '^16.4.7'
+const FALLBACK_GRANITE_PLUGIN_VERSION = '1.0.7'
+
+const FRONTEND_SUPABASE_ENV_EXAMPLE = [
+  'MINIAPP_SUPABASE_URL=https://your-project.supabase.co',
+  'MINIAPP_SUPABASE_PUBLISHABLE_KEY=your-publishable-key',
+  '',
+].join('\n')
+
+const BACKOFFICE_SUPABASE_ENV_EXAMPLE = [
+  'VITE_SUPABASE_URL=https://your-project.supabase.co',
+  'VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key',
+  '',
+].join('\n')
+
+const FRONTEND_ENV_TYPES = [
+  'interface ImportMetaEnv {',
+  '  readonly MINIAPP_SUPABASE_URL: string',
+  '  readonly MINIAPP_SUPABASE_PUBLISHABLE_KEY: string',
+  '}',
+  '',
+  'interface ImportMeta {',
+  '  readonly env: ImportMetaEnv',
+  '}',
+  '',
+].join('\n')
+
+const BACKOFFICE_ENV_TYPES = [
+  '/// <reference types="vite/client" />',
+  '',
+  'interface ImportMetaEnv {',
+  '  readonly VITE_SUPABASE_URL: string',
+  '  readonly VITE_SUPABASE_PUBLISHABLE_KEY: string',
+  '}',
+  '',
+  'interface ImportMeta {',
+  '  readonly env: ImportMetaEnv',
+  '}',
+  '',
+].join('\n')
+
+const FRONTEND_SUPABASE_CLIENT = [
+  "import { createClient, type SupabaseClient } from '@supabase/supabase-js'",
+  '',
+  'function isSafeHttpUrl(value: string) {',
+  '  try {',
+  '    const parsed = new URL(value)',
+  "    return parsed.protocol === 'http:' || parsed.protocol === 'https:'",
+  '  } catch {',
+  '    return false',
+  '  }',
+  '}',
+  '',
+  'function resolveSupabaseUrl() {',
+  '  const configured =',
+  "    import.meta.env.MINIAPP_SUPABASE_URL?.trim() ?? process.env.MINIAPP_SUPABASE_URL?.trim() ?? ''",
+  '',
+  '  if (!isSafeHttpUrl(configured)) {',
+  '    throw new Error(',
+  "      `[frontend] MINIAPP_SUPABASE_URL must be a valid http(s) URL. Received: ${configured || '<empty>'}`",
+  '    )',
+  '  }',
+  '',
+  '  return configured',
+  '}',
+  '',
+  'function resolveSupabasePublishableKey() {',
+  '  const configured =',
+  '    import.meta.env.MINIAPP_SUPABASE_PUBLISHABLE_KEY?.trim() ??',
+  '    process.env.MINIAPP_SUPABASE_PUBLISHABLE_KEY?.trim() ??',
+  "    ''",
+  '',
+  '  if (!configured) {',
+  "    throw new Error('[frontend] MINIAPP_SUPABASE_PUBLISHABLE_KEY is required.')",
+  '  }',
+  '',
+  '  return configured',
+  '}',
+  '',
+  'export const supabase: SupabaseClient = createClient(',
+  '  resolveSupabaseUrl(),',
+  '  resolveSupabasePublishableKey(),',
+  '  {',
+  '    auth: {',
+  '      persistSession: false,',
+  '      detectSessionInUrl: false,',
+  '    },',
+  '  },',
+  ')',
+  '',
+].join('\n')
+
+const BACKOFFICE_SUPABASE_CLIENT = [
+  "import { createClient, type SupabaseClient } from '@supabase/supabase-js'",
+  '',
+  'function resolveSupabaseUrl() {',
+  "  const value = import.meta.env.VITE_SUPABASE_URL?.trim() ?? ''",
+  '',
+  '  if (!value) {',
+  "    throw new Error('[backoffice] VITE_SUPABASE_URL is required.')",
+  '  }',
+  '',
+  '  return value',
+  '}',
+  '',
+  'function resolveSupabasePublishableKey() {',
+  "  const value = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? ''",
+  '',
+  '  if (!value) {',
+  "    throw new Error('[backoffice] VITE_SUPABASE_PUBLISHABLE_KEY is required.')",
+  '  }',
+  '',
+  '  return value',
+  '}',
+  '',
+  'function isSafeHttpUrl(value: string) {',
+  '  try {',
+  '    const parsed = new URL(value)',
+  "    return parsed.protocol === 'http:' || parsed.protocol === 'https:'",
+  '  } catch {',
+  '    return false',
+  '  }',
+  '}',
+  '',
+  'const supabaseUrl = resolveSupabaseUrl()',
+  'if (!isSafeHttpUrl(supabaseUrl)) {',
+  '  throw new Error(',
+  '    `[backoffice] VITE_SUPABASE_URL must be a valid http(s) URL. Received: ${supabaseUrl}`',
+  '  )',
+  '}',
+  '',
+  'export const supabase: SupabaseClient = createClient(',
+  '  supabaseUrl,',
+  '  resolveSupabasePublishableKey(),',
+  '  {',
+  '    auth: {',
+  '      persistSession: true,',
+  '      autoRefreshToken: true,',
+  '      detectSessionInUrl: false,',
+  '    },',
+  '  },',
+  ')',
+  '',
+].join('\n')
+
 type PackageJson = {
   name?: string
   scripts?: Record<string, string>
   dependencies?: Record<string, string>
   devDependencies?: Record<string, string>
+}
+
+type WorkspacePatchOptions = {
+  serverProvider: ServerProvider | null
 }
 
 async function readPackageJson(packageJsonPath: string) {
@@ -53,6 +209,11 @@ async function readPackageJson(packageJsonPath: string) {
 
 async function writePackageJson(packageJsonPath: string, packageJson: PackageJson) {
   await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8')
+}
+
+async function writeTextFile(filePath: string, contents: string) {
+  await mkdir(path.dirname(filePath), { recursive: true })
+  await writeFile(filePath, contents, 'utf8')
 }
 
 function stripJsonComments(source: string) {
@@ -82,6 +243,26 @@ function stripToolingFromPackageJson(packageJson: PackageJson) {
   return packageJson
 }
 
+function ensureDependency(
+  packageJson: PackageJson,
+  dependencyName: string,
+  version: string,
+  section: 'dependencies' | 'devDependencies',
+) {
+  packageJson[section] ??= {}
+  const target = packageJson[section]
+  target[dependencyName] ??= version
+}
+
+function resolveGranitePluginVersion(packageJson: PackageJson) {
+  return (
+    packageJson.devDependencies?.['@granite-js/plugin-hermes'] ??
+    packageJson.devDependencies?.['@granite-js/plugin-router'] ??
+    packageJson.dependencies?.['@granite-js/react-native'] ??
+    FALLBACK_GRANITE_PLUGIN_VERSION
+  )
+}
+
 async function removeToolingFiles(workspaceRoot: string) {
   await Promise.all(
     TOOLING_FILES.map((fileName) => removePathIfExists(path.join(workspaceRoot, fileName))),
@@ -94,7 +275,11 @@ async function removeWorkspaceArtifacts(workspaceRoot: string) {
   )
 }
 
-async function patchGraniteConfig(frontendRoot: string, tokens: TemplateTokens) {
+async function patchGraniteConfig(
+  frontendRoot: string,
+  tokens: TemplateTokens,
+  serverProvider: ServerProvider | null,
+) {
   const graniteConfigPath = path.join(frontendRoot, 'granite.config.ts')
 
   if (!(await pathExists(graniteConfigPath))) {
@@ -102,20 +287,30 @@ async function patchGraniteConfig(frontendRoot: string, tokens: TemplateTokens) 
   }
 
   const source = await readFile(graniteConfigPath, 'utf8')
-  const next = source
-    .replace(/appName:\s*['"`][^'"`]+['"`]/, `appName: '${tokens.appName}'`)
-    .replace(/displayName:\s*['"`][^'"`]+['"`]/, `displayName: '${tokens.displayName}'`)
-    .replace(
-      /displayName:\s*['"`][^'"`]+['"`],\s*\/\/ 화면에 노출될 앱의 한글 이름으로 바꿔주세요\./,
-      `displayName: '${tokens.displayName}',`,
-    )
-    .replace(
-      /icon:\s*null,?\s*\/\/ 화면에 노출될 앱의 아이콘 이미지 주소로 바꿔주세요\./,
-      `icon: '',`,
-    )
-    .replace(/icon:\s*null/, `icon: ''`)
+  const next = patchGraniteConfigSource(source, tokens, serverProvider)
 
   await writeFile(graniteConfigPath, next, 'utf8')
+}
+
+async function writeFrontendSupabaseBootstrap(frontendRoot: string) {
+  await writeTextFile(path.join(frontendRoot, '.env.local.example'), FRONTEND_SUPABASE_ENV_EXAMPLE)
+  await writeTextFile(path.join(frontendRoot, 'src', 'env.d.ts'), FRONTEND_ENV_TYPES)
+  await writeTextFile(
+    path.join(frontendRoot, 'src', 'lib', 'supabase.ts'),
+    FRONTEND_SUPABASE_CLIENT,
+  )
+}
+
+async function writeBackofficeSupabaseBootstrap(backofficeRoot: string) {
+  await writeTextFile(
+    path.join(backofficeRoot, '.env.local.example'),
+    BACKOFFICE_SUPABASE_ENV_EXAMPLE,
+  )
+  await writeTextFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), BACKOFFICE_ENV_TYPES)
+  await writeTextFile(
+    path.join(backofficeRoot, 'src', 'lib', 'supabase.ts'),
+    BACKOFFICE_SUPABASE_CLIENT,
+  )
 }
 
 async function patchBackofficeEntryFiles(backofficeRoot: string) {
@@ -124,33 +319,23 @@ async function patchBackofficeEntryFiles(backofficeRoot: string) {
 
   if (await pathExists(mainPath)) {
     const source = await readFile(mainPath, 'utf8')
-    const next = source.replace(
-      /createRoot\(document\.getElementById\('root'\)!\)\.render\(/,
-      [
-        "const rootElement = document.getElementById('root')",
-        '',
-        'if (!rootElement) {',
-        "  throw new Error('Root element not found')",
-        '}',
-        '',
-        'createRoot(rootElement).render(',
-      ].join('\n'),
-    )
+    const next = patchBackofficeMainSource(source)
 
     await writeFile(mainPath, next, 'utf8')
   }
 
   if (await pathExists(appPath)) {
     const source = await readFile(appPath, 'utf8')
-    const next = source.replace(
-      /<button\s+className="counter"/,
-      '<button type="button" className="counter"',
-    )
+    const next = patchBackofficeAppSource(source)
     await writeFile(appPath, next, 'utf8')
   }
 }
 
-export async function patchFrontendWorkspace(targetRoot: string, tokens: TemplateTokens) {
+export async function patchFrontendWorkspace(
+  targetRoot: string,
+  tokens: TemplateTokens,
+  options: WorkspacePatchOptions,
+) {
   const frontendRoot = path.join(targetRoot, 'frontend')
   const packageJsonPath = path.join(frontendRoot, 'package.json')
   const packageJson = stripToolingFromPackageJson(await readPackageJson(packageJsonPath))
@@ -160,14 +345,34 @@ export async function patchFrontendWorkspace(targetRoot: string, tokens: Templat
   packageJson.scripts.typecheck ??= 'tsc --noEmit'
   packageJson.scripts.test ??= `node -e "console.log('frontend test placeholder')"`
 
+  if (options.serverProvider === 'supabase') {
+    ensureDependency(packageJson, '@supabase/supabase-js', SUPABASE_JS_VERSION, 'dependencies')
+    ensureDependency(
+      packageJson,
+      '@granite-js/plugin-env',
+      resolveGranitePluginVersion(packageJson),
+      'devDependencies',
+    )
+    ensureDependency(packageJson, 'dotenv', DOTENV_VERSION, 'devDependencies')
+  }
+
   await writePackageJson(packageJsonPath, packageJson)
   await removeToolingFiles(frontendRoot)
   await removeWorkspaceArtifacts(frontendRoot)
-  await patchGraniteConfig(frontendRoot, tokens)
+  await patchGraniteConfig(frontendRoot, tokens, options.serverProvider)
+
+  if (options.serverProvider === 'supabase') {
+    await writeFrontendSupabaseBootstrap(frontendRoot)
+  }
+
   await applyWorkspaceProjectTemplate(targetRoot, 'frontend', tokens)
 }
 
-export async function patchBackofficeWorkspace(targetRoot: string, tokens: TemplateTokens) {
+export async function patchBackofficeWorkspace(
+  targetRoot: string,
+  tokens: TemplateTokens,
+  options: WorkspacePatchOptions,
+) {
   const backofficeRoot = path.join(targetRoot, 'backoffice')
   const packageJsonPath = path.join(backofficeRoot, 'package.json')
   const packageJson = stripToolingFromPackageJson(await readPackageJson(packageJsonPath))
@@ -177,6 +382,10 @@ export async function patchBackofficeWorkspace(targetRoot: string, tokens: Templ
   packageJson.scripts.typecheck = 'tsc -b --pretty false'
   packageJson.scripts.test ??= `node -e "console.log('backoffice test placeholder')"`
 
+  if (options.serverProvider === 'supabase') {
+    ensureDependency(packageJson, '@supabase/supabase-js', SUPABASE_JS_VERSION, 'dependencies')
+  }
+
   await writePackageJson(packageJsonPath, packageJson)
   await normalizeJsonFile(path.join(backofficeRoot, 'tsconfig.json'))
   await normalizeJsonFile(path.join(backofficeRoot, 'tsconfig.app.json'))
@@ -184,6 +393,11 @@ export async function patchBackofficeWorkspace(targetRoot: string, tokens: Templ
   await patchBackofficeEntryFiles(backofficeRoot)
   await removeToolingFiles(backofficeRoot)
   await removeWorkspaceArtifacts(backofficeRoot)
+
+  if (options.serverProvider === 'supabase') {
+    await writeBackofficeSupabaseBootstrap(backofficeRoot)
+  }
+
   await applyWorkspaceProjectTemplate(targetRoot, 'backoffice', tokens)
 }
 

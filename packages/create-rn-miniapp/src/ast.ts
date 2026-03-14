@@ -1,0 +1,607 @@
+import { parseSync, printSync } from '@swc/core'
+import type { ServerProvider } from './server-provider.js'
+import type { TemplateTokens } from './templates.js'
+
+type SwcModule = {
+  body: SwcModuleItem[]
+}
+
+type SwcModuleItem = Record<string, unknown> & {
+  type: string
+}
+
+type SwcExpression = Record<string, unknown> & {
+  type: string
+}
+
+type SwcObjectExpression = SwcExpression & {
+  type: 'ObjectExpression'
+  properties: SwcModuleItem[]
+}
+
+type SwcArrayExpression = SwcExpression & {
+  type: 'ArrayExpression'
+  elements: Array<{ spread: unknown; expression: SwcExpression } | null>
+}
+
+function cloneAstNode<T>(value: T) {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
+function parseTypeScriptModule(source: string, tsx = false) {
+  return parseSync(source, {
+    syntax: 'typescript',
+    tsx,
+  }) as unknown as SwcModule
+}
+
+function printTypeScriptModule(module: SwcModule) {
+  return `${printSync(module as unknown as Parameters<typeof printSync>[0]).code.trimEnd()}\n`
+}
+
+function parseExpression(source: string, tsx = false) {
+  const module = parseTypeScriptModule(`${source};`, tsx)
+  const [statement] = module.body
+
+  if (statement?.type !== 'ExpressionStatement') {
+    throw new Error('표현식을 파싱하지 못했습니다.')
+  }
+
+  return statement.expression as SwcExpression
+}
+
+function parseObjectProperty(source: string) {
+  const objectExpression = parseExpression(`({ ${source} })`) as SwcObjectExpression
+  const [property] = objectExpression.properties
+
+  if (!property) {
+    throw new Error('객체 속성을 파싱하지 못했습니다.')
+  }
+
+  return property
+}
+
+function parseStatements(source: string, tsx = false) {
+  return parseTypeScriptModule(source, tsx).body
+}
+
+function isIdentifier(node: unknown, value?: string): node is { value: string } {
+  if (
+    typeof node !== 'object' ||
+    node === null ||
+    (node as { type?: string }).type !== 'Identifier'
+  ) {
+    return false
+  }
+
+  if (value === undefined) {
+    return true
+  }
+
+  return (node as { value: string }).value === value
+}
+
+function isStringLiteral(node: unknown, value?: string): node is { value: string } {
+  if (
+    typeof node !== 'object' ||
+    node === null ||
+    (node as { type?: string }).type !== 'StringLiteral'
+  ) {
+    return false
+  }
+
+  if (value === undefined) {
+    return true
+  }
+
+  return (node as { value: string }).value === value
+}
+
+function isMemberExpression(
+  node: unknown,
+  objectName?: string,
+  propertyName?: string,
+): node is {
+  object: SwcExpression
+  property: unknown
+} {
+  if (
+    typeof node !== 'object' ||
+    node === null ||
+    (node as { type?: string }).type !== 'MemberExpression'
+  ) {
+    return false
+  }
+
+  const candidate = node as {
+    object: SwcExpression
+    property: unknown
+  }
+
+  if (objectName && !isIdentifier(candidate.object, objectName)) {
+    return false
+  }
+
+  if (propertyName && !isIdentifier(candidate.property, propertyName)) {
+    return false
+  }
+
+  return true
+}
+
+function isCallExpression(node: unknown): node is {
+  callee: unknown
+  arguments: Array<{ spread: unknown; expression: SwcExpression } | null>
+} {
+  return (
+    typeof node === 'object' &&
+    node !== null &&
+    (node as { type?: string }).type === 'CallExpression'
+  )
+}
+
+function getObjectProperty(objectExpression: SwcObjectExpression, propertyName: string) {
+  return objectExpression.properties.find((property) => {
+    if (property.type !== 'KeyValueProperty') {
+      return false
+    }
+
+    const key = property.key as unknown
+    return isIdentifier(key, propertyName) || isStringLiteral(key, propertyName)
+  }) as
+    | (SwcModuleItem & {
+        type: 'KeyValueProperty'
+        value: SwcExpression
+      })
+    | undefined
+}
+
+function getObjectPropertyValue(objectExpression: SwcObjectExpression, propertyName: string) {
+  return getObjectProperty(objectExpression, propertyName)?.value
+}
+
+function upsertObjectProperty(
+  objectExpression: SwcObjectExpression,
+  propertyName: string,
+  expressionSource: string,
+) {
+  const nextExpression = parseExpression(expressionSource)
+  const existingProperty = getObjectProperty(objectExpression, propertyName)
+
+  if (existingProperty) {
+    existingProperty.value = nextExpression
+    return
+  }
+
+  objectExpression.properties.push(parseObjectProperty(`${propertyName}: ${expressionSource}`))
+}
+
+function findLastImportIndex(module: SwcModule) {
+  for (let index = module.body.length - 1; index >= 0; index -= 1) {
+    if (module.body[index]?.type === 'ImportDeclaration') {
+      return index
+    }
+  }
+
+  return -1
+}
+
+function ensureImport(module: SwcModule, importSource: string, statementSource: string) {
+  const alreadyImported = module.body.some((item) => {
+    return (
+      item.type === 'ImportDeclaration' &&
+      (item.source as { value?: string } | undefined)?.value === importSource
+    )
+  })
+
+  if (alreadyImported) {
+    return
+  }
+
+  const [importDeclaration] = parseStatements(statementSource)
+
+  if (!importDeclaration) {
+    throw new Error(`import 문을 만들지 못했습니다: ${statementSource}`)
+  }
+
+  const insertIndex = findLastImportIndex(module) + 1
+  module.body.splice(insertIndex, 0, importDeclaration)
+}
+
+function extractTopLevelStatementKey(statement: SwcModuleItem) {
+  if (statement.type === 'VariableDeclaration') {
+    const identifier = (statement.declarations as Array<{ id?: unknown }> | undefined)?.[0]?.id
+    return isIdentifier(identifier) ? `var:${identifier.value}` : undefined
+  }
+
+  if (statement.type === 'FunctionDeclaration') {
+    const identifier = (statement.identifier ?? undefined) as unknown
+    return isIdentifier(identifier) ? `fn:${identifier.value}` : undefined
+  }
+
+  if (statement.type !== 'ExpressionStatement') {
+    return undefined
+  }
+
+  const expression = statement.expression as unknown
+  if (!isCallExpression(expression) || !isMemberExpression(expression.callee, 'dotenv', 'config')) {
+    return undefined
+  }
+
+  const objectArgument = expression.arguments[0]?.expression
+  if (!objectArgument || objectArgument.type !== 'ObjectExpression') {
+    return undefined
+  }
+
+  const pathExpression = getObjectPropertyValue(objectArgument as SwcObjectExpression, 'path')
+  if (
+    !isCallExpression(pathExpression) ||
+    !isMemberExpression(pathExpression.callee, 'path', 'join')
+  ) {
+    return undefined
+  }
+
+  const pathSuffix = pathExpression.arguments[1]?.expression
+  if (!isStringLiteral(pathSuffix)) {
+    return undefined
+  }
+
+  return `call:dotenv-config:${pathSuffix.value}`
+}
+
+function ensureTopLevelStatementBlock(module: SwcModule, blockSource: string) {
+  const keys = new Set(
+    module.body.map((statement) => extractTopLevelStatementKey(statement)).filter(Boolean),
+  )
+
+  const exportIndex = module.body.findIndex(
+    (statement) => statement.type === 'ExportDefaultExpression',
+  )
+  const insertIndex = exportIndex === -1 ? module.body.length : exportIndex
+  const statements = parseStatements(blockSource)
+  const nextStatements = statements.filter((statement) => {
+    const key = extractTopLevelStatementKey(statement)
+    return key ? !keys.has(key) : true
+  })
+
+  if (nextStatements.length === 0) {
+    return
+  }
+
+  module.body.splice(insertIndex, 0, ...nextStatements)
+}
+
+function getDefineConfigObject(module: SwcModule) {
+  const exportStatement = module.body.find(
+    (statement) => statement.type === 'ExportDefaultExpression',
+  )
+
+  if (!exportStatement) {
+    return null
+  }
+
+  const expression = exportStatement.expression as unknown
+  if (!isCallExpression(expression) || !isIdentifier(expression.callee, 'defineConfig')) {
+    return null
+  }
+
+  const firstArgument = expression.arguments[0]?.expression
+  if (!firstArgument || firstArgument.type !== 'ObjectExpression') {
+    return null
+  }
+
+  return firstArgument as SwcObjectExpression
+}
+
+function getPluginsArrayExpression(configObject: SwcObjectExpression) {
+  const pluginsExpression = getObjectPropertyValue(configObject, 'plugins')
+
+  if (pluginsExpression?.type === 'ArrayExpression') {
+    return pluginsExpression as SwcArrayExpression
+  }
+
+  const nextPluginsExpression = parseExpression('[]') as SwcArrayExpression
+  upsertObjectProperty(configObject, 'plugins', '[]')
+  return nextPluginsExpression
+}
+
+function ensurePluginsArrayExpression(configObject: SwcObjectExpression) {
+  const pluginsProperty = getObjectProperty(configObject, 'plugins')
+
+  if (pluginsProperty?.value.type === 'ArrayExpression') {
+    return pluginsProperty.value as SwcArrayExpression
+  }
+
+  const nextPluginsExpression = parseExpression('[]') as SwcArrayExpression
+  upsertObjectProperty(configObject, 'plugins', '[]')
+
+  const nextPluginsProperty = getObjectProperty(configObject, 'plugins')
+  if (!nextPluginsProperty || nextPluginsProperty.value.type !== 'ArrayExpression') {
+    throw new Error('plugins 배열을 만들지 못했습니다.')
+  }
+
+  nextPluginsProperty.value = nextPluginsExpression
+  return nextPluginsProperty.value as SwcArrayExpression
+}
+
+function findPluginCall(arrayExpression: SwcArrayExpression, pluginName: string) {
+  return arrayExpression.elements.find((element) => {
+    const expression = element?.expression
+    return expression && isCallExpression(expression) && isIdentifier(expression.callee, pluginName)
+  })?.expression as
+    | ({
+        arguments: Array<{ expression: SwcExpression } | null>
+      } & SwcExpression)
+    | undefined
+}
+
+function ensureEnvPlugin(arrayExpression: SwcArrayExpression) {
+  if (findPluginCall(arrayExpression, 'env')) {
+    return
+  }
+
+  arrayExpression.elements.unshift({
+    spread: null,
+    expression: parseExpression(
+      'env({ MINIAPP_SUPABASE_URL: miniappSupabaseUrl, MINIAPP_SUPABASE_PUBLISHABLE_KEY: miniappSupabasePublishableKey }, { dts: false })',
+    ),
+  })
+}
+
+function updateAppsInTossBrand(configObject: SwcObjectExpression, tokens: TemplateTokens) {
+  const pluginsArray = ensurePluginsArrayExpression(configObject)
+  const appsInTossCall = findPluginCall(pluginsArray, 'appsInToss')
+
+  if (!appsInTossCall) {
+    return
+  }
+
+  const appsInTossConfig = appsInTossCall.arguments[0]?.expression
+  if (!appsInTossConfig || appsInTossConfig.type !== 'ObjectExpression') {
+    return
+  }
+
+  const brandExpression = getObjectPropertyValue(appsInTossConfig as SwcObjectExpression, 'brand')
+  if (!brandExpression || brandExpression.type !== 'ObjectExpression') {
+    return
+  }
+
+  upsertObjectProperty(
+    brandExpression as SwcObjectExpression,
+    'displayName',
+    JSON.stringify(tokens.displayName),
+  )
+  upsertObjectProperty(brandExpression as SwcObjectExpression, 'icon', JSON.stringify(''))
+}
+
+const FRONTEND_SUPABASE_PREAMBLE = [
+  'const appRoot = __dirname',
+  '',
+  "dotenv.config({ path: path.join(appRoot, '.env') })",
+  "dotenv.config({ path: path.join(appRoot, '.env.local'), override: true })",
+  '',
+  "function resolveMiniappEnv(name: 'MINIAPP_SUPABASE_URL' | 'MINIAPP_SUPABASE_PUBLISHABLE_KEY') {",
+  '  const value = process.env[name]',
+  '',
+  '  if (!value || value.trim().length === 0) {',
+  '    throw new Error(`[frontend] ${name} is required. Set frontend/.env.local before running dev/build.`)',
+  '  }',
+  '',
+  '  return value.trim()',
+  '}',
+  '',
+  "const miniappSupabaseUrl = resolveMiniappEnv('MINIAPP_SUPABASE_URL')",
+  "const miniappSupabasePublishableKey = resolveMiniappEnv('MINIAPP_SUPABASE_PUBLISHABLE_KEY')",
+  '',
+].join('\n')
+
+export function patchGraniteConfigSource(
+  source: string,
+  tokens: TemplateTokens,
+  serverProvider: ServerProvider | null,
+) {
+  const module = parseTypeScriptModule(source)
+  const configObject = getDefineConfigObject(module)
+
+  if (!configObject) {
+    return source
+  }
+
+  upsertObjectProperty(configObject, 'appName', JSON.stringify(tokens.appName))
+  updateAppsInTossBrand(configObject, tokens)
+
+  if (serverProvider === 'supabase') {
+    ensureImport(module, '@granite-js/plugin-env', `import { env } from '@granite-js/plugin-env'`)
+    ensureImport(module, 'dotenv', `import dotenv from 'dotenv'`)
+    ensureImport(module, 'node:path', `import path from 'node:path'`)
+    ensureTopLevelStatementBlock(module, FRONTEND_SUPABASE_PREAMBLE)
+    ensureEnvPlugin(ensurePluginsArrayExpression(configObject))
+  }
+
+  return printTypeScriptModule(module)
+}
+
+function isDocumentGetElementByIdRoot(expression: SwcExpression | undefined) {
+  const candidate =
+    expression?.type === 'TsNonNullExpression'
+      ? (expression.expression as SwcExpression | undefined)
+      : expression
+
+  if (!candidate || !isCallExpression(candidate)) {
+    return false
+  }
+
+  if (!isMemberExpression(candidate.callee, 'document', 'getElementById')) {
+    return false
+  }
+
+  return isStringLiteral(candidate.arguments[0]?.expression, 'root')
+}
+
+function createRootGuardStatements(renderArgument: SwcExpression) {
+  const statements = parseStatements(
+    [
+      "const rootElement = document.getElementById('root')",
+      '',
+      'if (!rootElement) {',
+      "  throw new Error('Root element not found')",
+      '}',
+      '',
+      'createRoot(rootElement).render(null)',
+    ].join('\n'),
+    true,
+  )
+
+  const renderStatement = statements[2]
+  if (!renderStatement || renderStatement.type !== 'ExpressionStatement') {
+    throw new Error('root render statement를 만들지 못했습니다.')
+  }
+
+  const renderExpression = renderStatement.expression as {
+    arguments: Array<{ spread: unknown; expression: SwcExpression } | null>
+  }
+
+  renderExpression.arguments[0] = {
+    spread: null,
+    expression: cloneAstNode(renderArgument),
+  }
+
+  return statements
+}
+
+export function patchBackofficeMainSource(source: string) {
+  const module = parseTypeScriptModule(source, true)
+  const statementIndex = module.body.findIndex((statement) => {
+    if (statement.type !== 'ExpressionStatement') {
+      return false
+    }
+
+    const expression = statement.expression as SwcExpression
+    if (
+      !isCallExpression(expression) ||
+      !isMemberExpression(expression.callee, undefined, 'render')
+    ) {
+      return false
+    }
+
+    const createRootCall = expression.callee.object as SwcExpression | undefined
+    if (!isCallExpression(createRootCall) || !isIdentifier(createRootCall.callee, 'createRoot')) {
+      return false
+    }
+
+    return isDocumentGetElementByIdRoot(createRootCall.arguments[0]?.expression)
+  })
+
+  if (statementIndex === -1) {
+    return source
+  }
+
+  const statement = module.body[statementIndex]
+  if (statement?.type !== 'ExpressionStatement') {
+    return source
+  }
+
+  const renderExpression = statement.expression as {
+    arguments: Array<{ expression: SwcExpression } | null>
+  }
+  const renderArgument = renderExpression.arguments[0]?.expression
+
+  if (!renderArgument) {
+    return source
+  }
+
+  module.body.splice(statementIndex, 1, ...createRootGuardStatements(renderArgument))
+  return printTypeScriptModule(module)
+}
+
+function hasCounterClassName(openingElement: { attributes: unknown[] }) {
+  return openingElement.attributes.some((attribute) => {
+    if (
+      typeof attribute !== 'object' ||
+      attribute === null ||
+      (attribute as { type?: string }).type !== 'JSXAttribute'
+    ) {
+      return false
+    }
+
+    const candidate = attribute as {
+      name: unknown
+      value: unknown
+    }
+
+    return isIdentifier(candidate.name, 'className') && isStringLiteral(candidate.value, 'counter')
+  })
+}
+
+function createButtonTypeAttribute() {
+  const jsxElement = parseExpression(`<button type="button" />`, true) as {
+    opening: {
+      attributes: unknown[]
+    }
+  } & SwcExpression
+  const [attribute] = jsxElement.opening.attributes
+
+  if (!attribute) {
+    throw new Error('button type 속성을 만들지 못했습니다.')
+  }
+
+  return attribute
+}
+
+function patchCounterButtonAttributes(node: unknown): boolean {
+  if (typeof node !== 'object' || node === null) {
+    return false
+  }
+
+  if ((node as { type?: string }).type === 'JSXOpeningElement') {
+    const openingElement = node as {
+      name: unknown
+      attributes: unknown[]
+    }
+
+    if (isIdentifier(openingElement.name, 'button') && hasCounterClassName(openingElement)) {
+      const existingTypeAttribute = openingElement.attributes.find((attribute) => {
+        if (
+          typeof attribute !== 'object' ||
+          attribute === null ||
+          (attribute as { type?: string }).type !== 'JSXAttribute'
+        ) {
+          return false
+        }
+
+        return isIdentifier((attribute as { name: unknown }).name, 'type')
+      }) as { value?: unknown } | undefined
+
+      if (existingTypeAttribute) {
+        existingTypeAttribute.value = cloneAstNode(parseExpression(`"button"`))
+      } else {
+        openingElement.attributes.push(createButtonTypeAttribute())
+      }
+
+      return true
+    }
+  }
+
+  for (const value of Object.values(node)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (patchCounterButtonAttributes(item)) {
+          return true
+        }
+      }
+      continue
+    }
+
+    if (patchCounterButtonAttributes(value)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+export function patchBackofficeAppSource(source: string) {
+  const module = parseTypeScriptModule(source, true)
+  patchCounterButtonAttributes(module)
+  return printTypeScriptModule(module)
+}

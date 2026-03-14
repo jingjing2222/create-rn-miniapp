@@ -17,6 +17,8 @@ test('parseCliArgs parses long-form CLI options with yargs', async () => {
       '--display-name',
       '전자책 미니앱',
       '--with-server',
+      '--server-provider',
+      'supabase',
       '--with-backoffice',
       '--output-dir',
       '/tmp/create-miniapp',
@@ -28,6 +30,7 @@ test('parseCliArgs parses long-form CLI options with yargs', async () => {
   assert.equal(argv.name, 'ebook-miniapp')
   assert.equal(argv.displayName, '전자책 미니앱')
   assert.equal(argv.withServer, true)
+  assert.equal(argv.serverProvider, 'supabase')
   assert.equal(argv.withBackoffice, true)
   assert.equal(argv.outputDir, '/tmp/create-miniapp')
   assert.equal(argv.skipInstall, true)
@@ -38,7 +41,7 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   const textMessages: string[] = []
   const selectMessages: string[] = []
   const promptValues = ['ebook-miniapp', '전자책 미니앱']
-  const promptSelections: Array<'yes' | 'no'> = ['yes', 'no']
+  const promptSelections: Array<'supabase' | 'yes' | 'no'> = ['supabase', 'no']
 
   const prompts: CliPrompter = {
     async text(options) {
@@ -77,12 +80,13 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   assert.equal(resolved.appName, 'ebook-miniapp')
   assert.equal(resolved.displayName, '전자책 미니앱')
   assert.equal(resolved.withServer, true)
+  assert.equal(resolved.serverProvider, 'supabase')
   assert.equal(resolved.withBackoffice, false)
   assert.equal(resolved.skipInstall, false)
   assert.equal(resolved.outputDir, path.resolve('/tmp/workspace'))
   assert.deepEqual(textMessages, ['appName을 입력하세요', 'displayName을 입력하세요'])
   assert.deepEqual(selectMessages, [
-    '`server` 워크스페이스를 같이 만들까요?',
+    '`server` 제공자를 선택하세요.',
     '`backoffice` 워크스페이스를 같이 만들까요?',
   ])
 })
@@ -121,8 +125,61 @@ test('resolveCliOptions keeps prompts optional when yes flag is set', async () =
   assert.equal(promptCalled, false)
   assert.equal(resolved.displayName, 'Ebook Miniapp')
   assert.equal(resolved.withServer, false)
+  assert.equal(resolved.serverProvider, null)
   assert.equal(resolved.withBackoffice, false)
   assert.equal(resolved.skipInstall, true)
+})
+
+test('resolveCliOptions keeps with-server compatibility by defaulting provider to supabase', async () => {
+  const resolved = await resolveCliOptions(
+    {
+      name: 'ebook-miniapp',
+      withServer: true,
+      outputDir: '/tmp/workspace',
+      skipInstall: false,
+      yes: true,
+      help: false,
+      version: false,
+    },
+    {
+      async text() {
+        throw new Error('text prompt should not be called')
+      },
+      async select() {
+        throw new Error('select prompt should not be called')
+      },
+    },
+  )
+
+  assert.equal(resolved.withServer, true)
+  assert.equal(resolved.serverProvider, 'supabase')
+})
+
+test('resolveCliOptions rejects conflicting server flags', async () => {
+  await assert.rejects(
+    () =>
+      resolveCliOptions(
+        {
+          name: 'ebook-miniapp',
+          withServer: false,
+          serverProvider: 'supabase',
+          outputDir: '/tmp/workspace',
+          skipInstall: false,
+          yes: true,
+          help: false,
+          version: false,
+        },
+        {
+          async text() {
+            throw new Error('text prompt should not be called')
+          },
+          async select() {
+            throw new Error('select prompt should not be called')
+          },
+        },
+      ),
+    /`--with-server` 없이 `--server-provider`를 사용할 수 없습니다\./,
+  )
 })
 
 test('formatCliHelp renders Korean help text', () => {
@@ -130,6 +187,7 @@ test('formatCliHelp renders Korean help text', () => {
 
   assert.match(help, /사용법/)
   assert.match(help, /옵션/)
+  assert.match(help, /--server-provider <supabase>/)
   assert.match(help, /도움말 보기/)
   assert.match(help, /버전 보기/)
 })

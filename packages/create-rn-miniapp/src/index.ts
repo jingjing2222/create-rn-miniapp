@@ -35,6 +35,7 @@ export async function main() {
         `생성 위치: ${resolved.outputDir}/${resolved.appName}`,
         `생성 구조: ${generatedWorkspaceLayout.join(', ')}`,
         `server 포함: ${String(resolved.withServer)}`,
+        `server 제공자: ${resolved.serverProvider ?? '없음'}`,
         `backoffice 포함: ${String(resolved.withBackoffice)}`,
       ].join('\n'),
       '생성 설정',

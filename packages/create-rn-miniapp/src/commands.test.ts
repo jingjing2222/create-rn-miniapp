@@ -8,7 +8,7 @@ test('buildCommandPlan keeps AppInToss frontend steps first', () => {
   const plan = buildCommandPlan({
     appName: 'ebook',
     targetRoot,
-    withServer: true,
+    serverProvider: 'supabase',
     withBackoffice: true,
   })
 
@@ -31,7 +31,7 @@ test('buildCommandPlan makes ait init non-interactive', () => {
   const plan = buildCommandPlan({
     appName: 'ebook',
     targetRoot,
-    withServer: false,
+    serverProvider: null,
     withBackoffice: false,
   })
 
@@ -45,4 +45,26 @@ test('buildCommandPlan makes ait init non-interactive', () => {
     'ebook',
     '--skip-input',
   ])
+})
+
+test('buildCommandPlan only adds server step when a provider is selected', () => {
+  const targetRoot = path.join('/tmp', 'ebook')
+  const plan = buildCommandPlan({
+    appName: 'ebook',
+    targetRoot,
+    serverProvider: null,
+    withBackoffice: true,
+  })
+
+  assert.deepEqual(
+    plan.map((step) => step.label),
+    [
+      'frontend Granite 생성',
+      'frontend 의존성 설치',
+      'frontend AppInToss Framework 설치',
+      'frontend ait 초기화',
+      'frontend TDS 설치',
+      'backoffice Vite 생성',
+    ],
+  )
 })

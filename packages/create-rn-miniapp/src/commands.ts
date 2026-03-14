@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import type { ServerProvider } from './server-provider.js'
 
 export type CommandSpec = {
   cwd: string
@@ -10,7 +11,7 @@ export type CommandSpec = {
 export function buildCommandPlan(options: {
   appName: string
   targetRoot: string
-  withServer: boolean
+  serverProvider: ServerProvider | null
   withBackoffice: boolean
 }) {
   const frontendRoot = `${options.targetRoot}/frontend`
@@ -58,7 +59,7 @@ export function buildCommandPlan(options: {
     },
   ]
 
-  if (options.withServer) {
+  if (options.serverProvider === 'supabase') {
     plan.push({
       cwd: serverRoot,
       command: 'pnpm',

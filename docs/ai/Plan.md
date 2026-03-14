@@ -133,6 +133,29 @@ docs/
 5. 릴리스 후속 작업
    - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates` 둘 다 patch changeset을 추가해 CLI UX 변경을 함께 배포한다.
 
+## 현재 Supabase provider bootstrap 작업
+1. `server` 생성 여부를 단순 boolean이 아니라 provider 개념으로 확장한다.
+   - 현재 provider는 `supabase` 하나만 지원한다.
+   - 기존 `--with-server` 옵션은 유지하고, provider가 명시되지 않으면 `supabase`로 연결한다.
+2. 인터랙티브 입력에서는 향후 provider 확장을 염두에 두고 `server` 미생성 또는 `supabase` 선택으로 해석 가능한 구조를 만든다.
+3. `supabase` provider가 선택되면 `frontend`와 optional `backoffice`에 Supabase bootstrap을 같이 생성한다.
+   - `.env.local.example` 파일 생성
+   - Supabase client 파일 생성
+   - env 타입 선언 파일 생성
+4. `frontend`는 `dotenv`, `@granite-js/plugin-env`, `@supabase/supabase-js`를 설치하고 Granite dev/build/runtime에서 env가 주입되도록 patch한다.
+   - 기준 구현은 `bookMiniApp`의 `apps/miniapp/granite.config.ts` 흐름을 따른다.
+5. `backoffice`는 Vite env 규칙에 맞춰 `@supabase/supabase-js`, env 타입 선언, client bootstrap만 추가한다.
+6. 테스트 범위
+   - CLI가 provider를 해석하고 기존 `--with-server` 호환을 유지하는지 검증
+   - command plan이 `supabase init`를 provider 선택 시에만 넣는지 검증
+   - patch가 frontend/backoffice에 Supabase env/client bootstrap 파일과 의존성을 넣는지 검증
+7. 완료 기준
+   - `pnpm verify` 통과
+   - 실제 scaffold 결과물에서 `frontend`와 `backoffice`가 Supabase env/client bootstrap을 바로 사용할 수 있는 상태
+8. 후속 안정화
+   - `granite.config.ts`, `backoffice/src/main.tsx`, `backoffice/src/App.tsx`의 문자열 `replace` patch를 SWC AST 기반 수정으로 교체한다.
+   - 포맷과 quote style이 달라도 patch가 유지되도록 테스트를 보강한다.
+
 ## 남은 작업
 1. npm publish 준비
    - Changesets 설정

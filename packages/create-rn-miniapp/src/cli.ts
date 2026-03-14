@@ -2,11 +2,13 @@ import path from 'node:path'
 import { execa } from 'execa'
 import yargs from 'yargs'
 import { assertValidAppName, toDefaultDisplayName } from './layout.js'
+import { SERVER_PROVIDERS, type ServerProvider } from './server-provider.js'
 
 export type ParsedCliArgs = {
   name?: string
   displayName?: string
   withServer?: boolean
+  serverProvider?: ServerProvider
   withBackoffice?: boolean
   outputDir: string
   skipInstall: boolean
@@ -39,6 +41,7 @@ export type CliPrompter = {
 export type ResolvedCliOptions = {
   appName: string
   displayName: string
+  serverProvider: ServerProvider | null
   withServer: boolean
   withBackoffice: boolean
   outputDir: string
@@ -65,7 +68,11 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     })
     .option('with-server', {
       type: 'boolean',
-      describe: '`server` 워크스페이스 포함',
+      describe: '`server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
+    })
+    .option('server-provider', {
+      choices: SERVER_PROVIDERS,
+      describe: '`server` 워크스페이스 제공자 지정',
     })
     .option('with-backoffice', {
       type: 'boolean',
@@ -102,6 +109,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     name: argv.name,
     displayName: argv.displayName,
     withServer: argv.withServer,
+    serverProvider: argv.serverProvider,
     withBackoffice: argv.withBackoffice,
     outputDir: argv.outputDir,
     skipInstall: argv.skipInstall,
@@ -119,7 +127,8 @@ export function formatCliHelp() {
     '옵션',
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
-    '  --with-server                  `server` 워크스페이스 포함',
+    '  --with-server                  `server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
+    '  --server-provider <supabase>   `server` 워크스페이스 제공자 지정',
     '  --with-backoffice              `backoffice` 워크스페이스 포함',
     '  --output-dir <디렉터리>        생성할 모노레포의 상위 디렉터리',
     '  --skip-install                 마지막 루트 `pnpm install` 생략',
@@ -129,13 +138,17 @@ export function formatCliHelp() {
     '',
     '예시',
     '  create-miniapp --name my-miniapp --display-name "내 미니앱"',
-    '  create-miniapp --name my-miniapp --with-server --with-backoffice',
+    '  create-miniapp --name my-miniapp --server-provider supabase --with-backoffice',
     '',
     '옵션으로 주어지지 않은 값은 인터랙티브 입력으로 이어집니다.',
   ].join('\n')
 }
 
 export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter) {
+  if (argv.withServer === false && argv.serverProvider) {
+    throw new Error('`--with-server` 없이 `--server-provider`를 사용할 수 없습니다.')
+  }
+
   const rawName =
     argv.name ??
     (argv.yes
@@ -166,18 +179,23 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
           initialValue: toDefaultDisplayName(appName),
         }))
 
-  const withServer =
-    argv.withServer ??
-    (argv.yes
-      ? false
-      : (await prompt.select({
-          message: '`server` 워크스페이스를 같이 만들까요?',
-          options: [
-            { label: '예', value: 'yes' },
-            { label: '아니오', value: 'no' },
-          ],
-          initialValue: 'no',
-        })) === 'yes')
+  const serverProvider =
+    argv.serverProvider ??
+    (argv.withServer
+      ? 'supabase'
+      : argv.withServer === false || argv.yes
+        ? null
+        : await prompt.select<'none' | ServerProvider>({
+            message: '`server` 제공자를 선택하세요.',
+            options: [
+              { label: '생성 안 함', value: 'none' },
+              { label: 'Supabase', value: 'supabase' },
+            ],
+            initialValue: 'none',
+          }))
+
+  const normalizedServerProvider = serverProvider === 'none' ? null : serverProvider
+  const withServer = normalizedServerProvider !== null
 
   const withBackoffice =
     argv.withBackoffice ??
@@ -195,6 +213,7 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
   return {
     appName,
     displayName,
+    serverProvider: normalizedServerProvider,
     withServer,
     withBackoffice,
     outputDir: path.resolve(argv.outputDir),
