@@ -259,6 +259,15 @@ docs/
 8. 테스트 범위
    - CLI가 `--package-manager`를 파싱하고, 프롬프트 첫 단계에서 선택을 받는지 검증
 
+## 현재 package.json 구조 patch 정리 작업
+1. `package.json` 계열은 문자열 치환 대신 공용 구조 patch helper로 통일한다.
+2. `granite.config.ts`처럼 TS/TSX AST가 필요한 파일과 달리, `package.json`은 JSON 구조 patch로 처리한다.
+3. 루트 `package.json`과 각 workspace `package.json`이 같은 helper를 사용하게 맞춘다.
+4. workspace patch에서는 객체 parse는 읽기/판단용으로만 쓰고, 최종 파일 write는 구조 patch helper를 거친다.
+5. 테스트 범위
+   - root `package.json`의 packageManager/workspaces/script merge 회귀가 없는지 검증
+   - frontend/backoffice package patch 후 기존 의존성이 유지되는지 검증
+
 ## 현재 add mode 작업
 1. 목표
    - 이미 생성된 miniapp 모노레포에 `server`나 `backoffice`를 나중에 추가할 수 있는 CLI 흐름을 만든다.

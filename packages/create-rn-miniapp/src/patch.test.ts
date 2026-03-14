@@ -118,7 +118,10 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   }
 
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], undefined)
+  assert.equal(packageJson.dependencies?.['@apps-in-toss/framework'], '^2.0.5')
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], undefined)
+  assert.equal(packageJson.devDependencies?.['@granite-js/plugin-router'], '1.0.7')
+  assert.equal(packageJson.devDependencies?.typescript, '^5.8.3')
   assert.equal(packageJson.devDependencies?.['@types/node'], '^24.10.1')
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
   assert.match(graniteConfig, /import path from 'node:path';\n\nconst repoRoot = path\.resolve/)
@@ -226,7 +229,10 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   )
 
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], '^2.57.4')
+  assert.equal(packageJson.dependencies?.['@apps-in-toss/framework'], '^2.0.5')
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
+  assert.equal(packageJson.devDependencies?.['@granite-js/plugin-router'], '1.0.7')
+  assert.equal(packageJson.devDependencies?.typescript, '^5.8.3')
   assert.equal(packageJson.devDependencies?.['@types/node'], '^24.10.1')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
@@ -363,6 +369,7 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   const packageJson = JSON.parse(
     await readFile(path.join(backofficeRoot, 'package.json'), 'utf8'),
   ) as {
+    scripts?: Record<string, string>
     dependencies?: Record<string, string>
   }
   const envExample = await readFile(path.join(backofficeRoot, '.env.local.example'), 'utf8')
@@ -377,6 +384,9 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
     'utf8',
   )
 
+  assert.equal(packageJson.scripts?.dev, 'vite')
+  assert.equal(packageJson.scripts?.build, 'tsc -b && vite build')
+  assert.equal(packageJson.scripts?.typecheck, 'tsc -b --pretty false')
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], '^2.57.4')
   assert.match(envExample, /VITE_SUPABASE_URL=https:\/\/your-project\.supabase\.co/)
   assert.match(envExample, /VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key/)
