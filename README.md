@@ -75,3 +75,11 @@ docs/
 pnpm install
 pnpm verify
 ```
+
+## Release
+
+```bash
+pnpm changeset
+pnpm version-packages
+pnpm release
+```
