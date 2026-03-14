@@ -27,6 +27,12 @@
 대화형으로 생성:
 
 ```bash
+npm create rn-miniapp
+```
+
+또는
+
+```bash
 pnpm create rn-miniapp
 ```
 
@@ -35,6 +41,10 @@ pnpm create rn-miniapp
 ```bash
 yarn create rn-miniapp
 ```
+
+- `npm create rn-miniapp`로 시작하면 `pnpm` 또는 `yarn`을 고르는 프롬프트가 떠요.
+- `pnpm create rn-miniapp`로 시작하면 package manager는 `pnpm`으로 바로 맞춰져요.
+- `yarn create rn-miniapp`로 시작하면 package manager는 `yarn`으로 바로 맞춰져요.
 
 옵션으로 한 번에 생성:
 
@@ -93,7 +103,7 @@ pnpm verify
 
 ## CLI 옵션
 
-- `--package-manager <pnpm|yarn>`: 생성과 루트 monorepo에 사용할 package manager를 고를 수 있어요.
+- `--package-manager <pnpm|yarn>`: 생성과 루트 monorepo에 사용할 package manager를 명시할 수 있어요.
 - `--add`: 이미 생성된 워크스페이스에 빠진 `server`/`backoffice`를 추가할 수 있어요.
 - `--name`: Granite `appName`이자 생성 디렉터리 이름이에요.
 - `--display-name`: 사용자에게 보이는 앱 이름이에요.
@@ -103,12 +113,13 @@ pnpm verify
 - `--with-backoffice`: `backoffice` 워크스페이스를 포함해요.
 - `--root-dir <dir>`: `--add`에서 수정할 기존 모노레포 루트예요. 기본값은 현재 디렉터리예요.
 - `--output-dir <dir>`: 생성할 모노레포의 상위 디렉터리예요.
+- `--no-git`: 생성 완료 후 루트 `git init`을 생략해요.
 - `--skip-install`: 마지막 루트 package manager install과 Biome 정리를 생략해요.
 - `--yes`: 선택형 질문을 기본값으로 진행해요.
 - `--help`: 도움말을 출력해요.
 - `--version`: 버전을 출력해요.
 
-옵션으로 주지 않은 값은 한국어 프롬프트로 이어지고, package manager 선택이 가장 먼저 나와요. `server-provider`를 선택하면 provider의 기존 원격 리소스 목록을 먼저 보여주고, 마지막 항목에서 새로 만들기도 바로 선택할 수 있어요. `--yes`를 쓰면 원격 연결은 건너뛰고 로컬 scaffold만 진행해요.
+옵션으로 주지 않은 값은 한국어 프롬프트로 이어져요. package manager는 `npm create`처럼 호출한 package manager를 알 수 없을 때만 선택 프롬프트가 뜨고, `pnpm create`나 `yarn create`로 시작했으면 그 값을 그대로 사용해요. `server-provider`를 선택하면 provider의 기존 원격 리소스 목록을 먼저 보여주고, 마지막 항목에서 새로 만들기도 바로 선택할 수 있어요. `--yes`를 쓰면 원격 연결은 건너뛰고 로컬 scaffold만 진행해요.
 
 ## Provider IaC
 

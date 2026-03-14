@@ -169,6 +169,16 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     })),
   )
 
+  if (!options.noGit) {
+    log.step('루트 git init')
+    await runCommand({
+      cwd: targetRoot,
+      command: 'git',
+      args: ['init'],
+      label: '루트 git init',
+    })
+  }
+
   if (!options.skipInstall) {
     for (const command of buildRootFinalizePlan({
       targetRoot,

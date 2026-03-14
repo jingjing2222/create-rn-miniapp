@@ -1,6 +1,46 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: CLI `--no-git` 옵션 추가
+1. 문제
+   - 현재는 새 스캐폴드가 항상 루트 `git init`까지 진행한다.
+   - 외부 템플릿 소비나 임시 출력처럼 루트 저장소 초기화를 원하지 않는 경우에는 끌 수 있는 CLI 옵션이 필요하다.
+2. 방향
+   - create 흐름에 `--no-git` 옵션을 추가한다.
+   - `--no-git`이면 루트 `git init` 단계를 건너뛴다.
+   - 도움말, README, 생성 설정 요약에도 반영한다.
+3. 완료 기준
+   - `--no-git`이 parse/help/README에 노출된다.
+   - create 흐름에서만 루트 `git init`을 생략할 수 있다.
+   - `pnpm verify` 통과
+
+## 다음 작업: 새 스캐폴드 루트에 git init 추가
+1. 문제
+   - 현재는 공식 scaffold와 템플릿 적용까지 끝나도 생성된 루트 모노레포에 `.git`이 자동으로 생기지 않는다.
+   - 그래서 생성 직후 바로 변경 이력을 관리하거나 첫 커밋을 만들려면 사용자가 직접 `git init`을 해야 한다.
+2. 방향
+   - create 흐름에서만 루트에 `git init` 단계를 추가한다.
+   - `--add`에는 넣지 않고, 새 모노레포를 만들 때만 동작하게 한다.
+   - `--skip-install`과 무관하게 항상 루트 저장소가 초기화되도록 한다.
+3. 완료 기준
+   - 새 스캐폴드 결과물 루트에 `.git`이 생성된다.
+   - 실행 순서 테스트가 `루트 git init` 단계를 포함한다.
+   - `pnpm verify` 통과
+
+## 다음 작업: 호출 package manager 기반 기본 선택
+1. 문제
+   - 현재는 `create-miniapp` 실행 시 package manager를 명시하지 않으면 항상 prompt로 고르거나 `--yes`일 때 `pnpm`으로 고정된다.
+   - 하지만 `pnpm create rn-miniapp`로 들어왔으면 `pnpm`, `yarn create rn-miniapp`로 들어왔으면 `yarn`을 바로 쓰는 게 자연스럽다.
+   - 반대로 `npm create rn-miniapp`에서는 `pnpm`/`yarn` 선택 프롬프트를 유지하는 편이 맞다.
+2. 방향
+   - `npm_config_user_agent`와 관련 env를 기준으로 호출한 package manager를 추론한다.
+   - `pnpm`/`yarn`으로 추론되면 package manager prompt를 생략하고 그대로 사용한다.
+   - `npm` 또는 미확인인 경우에만 기존 prompt를 유지한다.
+3. 완료 기준
+   - `pnpm create`면 `pnpm`, `yarn create`면 `yarn`이 자동 선택된다.
+   - `npm create`면 package manager 선택 prompt가 유지된다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: README에 기능명세서 우선 흐름 추가
 1. 문제
    - 현재 README는 생성 결과물과 provider 흐름은 설명하지만, 생성 직후 사용자가 어떤 순서로 작업을 시작하면 좋은지는 약하다.

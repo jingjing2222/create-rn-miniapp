@@ -36,6 +36,7 @@ type CreateOrderOptions = {
   appName: string
   targetRoot: string
   packageManager: PackageManager
+  noGit?: boolean
   serverProvider: ServerProvider | null
   withBackoffice: boolean
 }
@@ -71,6 +72,10 @@ export function buildCreateLifecycleOrder(options: CreateOrderOptions) {
 
   if (options.withBackoffice) {
     labels.push('루트 workspace manifest 동기화')
+  }
+
+  if (!options.noGit) {
+    labels.push('루트 git init')
   }
 
   return labels

@@ -16,6 +16,7 @@ export type ParsedCliArgs = {
   packageManager?: PackageManager
   name?: string
   displayName?: string
+  noGit?: boolean
   withServer?: boolean
   serverProvider?: ServerProvider
   serverProjectMode?: ServerProjectMode
@@ -68,6 +69,7 @@ export type ResolvedCliOptions = {
   packageManager: PackageManager
   appName: string
   displayName: string
+  noGit: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
@@ -92,6 +94,8 @@ export type ResolvedAddCliOptions = {
   withBackoffice: boolean
   skipInstall: boolean
 }
+
+type CliEnvironment = Partial<Pick<NodeJS.ProcessEnv, 'npm_config_user_agent' | 'npm_execpath'>>
 
 export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
   const argv = await yargs(rawArgs)
@@ -119,6 +123,11 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     .option('display-name', {
       type: 'string',
       describe: '사용자에게 보이는 앱 이름',
+    })
+    .option('git', {
+      type: 'boolean',
+      default: true,
+      describe: '생성 완료 후 루트 git init 수행',
     })
     .option('with-server', {
       type: 'boolean',
@@ -173,6 +182,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     packageManager: argv.packageManager,
     name: argv.name,
     displayName: argv.displayName,
+    noGit: argv.git === false,
     withServer: argv.withServer,
     serverProvider: argv.serverProvider,
     serverProjectMode: argv.serverProjectMode,
@@ -198,6 +208,7 @@ export function formatCliHelp() {
     '  --package-manager <pnpm|yarn> package manager 지정',
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
+    '  --no-git                       생성 완료 후 루트 git init 생략',
     '  --with-server                  `server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
     `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
     '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
@@ -240,7 +251,41 @@ function resolveServerProjectModeInput(serverProvider: ServerProvider | null, ar
   return Promise.resolve(argv.serverProjectMode ?? null)
 }
 
-export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter) {
+export function detectInvocationPackageManager(
+  env: CliEnvironment = process.env,
+): PackageManager | null {
+  const userAgent = env.npm_config_user_agent?.toLowerCase()
+
+  if (userAgent?.startsWith('pnpm/')) {
+    return 'pnpm'
+  }
+
+  if (userAgent?.startsWith('yarn/')) {
+    return 'yarn'
+  }
+
+  if (userAgent?.startsWith('npm/')) {
+    return null
+  }
+
+  const execPath = env.npm_execpath?.toLowerCase() ?? ''
+
+  if (execPath.includes('pnpm')) {
+    return 'pnpm'
+  }
+
+  if (execPath.includes('yarn')) {
+    return 'yarn'
+  }
+
+  return null
+}
+
+export async function resolveCliOptions(
+  argv: ParsedCliArgs,
+  prompt: CliPrompter,
+  env: CliEnvironment = process.env,
+) {
   if (argv.withServer === false && argv.serverProvider) {
     throw new Error('`--with-server` 없이 `--server-provider`를 사용할 수 없습니다.')
   }
@@ -249,8 +294,10 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
     throw new Error('`--with-server` 없이 `--server-project-mode`를 사용할 수 없습니다.')
   }
 
+  const invocationPackageManager = detectInvocationPackageManager(env)
   const packageManager =
     argv.packageManager ??
+    invocationPackageManager ??
     (argv.yes
       ? 'pnpm'
       : await prompt.select<PackageManager>({
@@ -334,6 +381,7 @@ export async function resolveCliOptions(argv: ParsedCliArgs, prompt: CliPrompter
     packageManager,
     appName,
     displayName,
+    noGit: argv.noGit ?? false,
     serverProvider: normalizedServerProvider,
     serverProjectMode,
     skipServerProvisioning,
