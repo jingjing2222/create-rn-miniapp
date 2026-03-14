@@ -2,10 +2,7 @@
   "name": "@create-miniapp/scaffold-templates",
   "private": false,
   "version": "0.0.1",
-  "files": [
-    "base",
-    "root"
-  ],
+  "files": ["base", "root"],
   "publishConfig": {
     "access": "public"
   },
