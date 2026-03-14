@@ -1,3 +1,20 @@
+## 2026-03-14 — GitHub Actions 릴리스 파이프라인 추가
+- 상태
+  - PR과 `main` 검증용 `Verify` 워크플로를 추가했다.
+  - `main` push 시 Changesets가 릴리스 PR 생성 또는 npm publish를 수행하는 `Release` 워크플로를 추가했다.
+- 반영한 변경
+  - `.github/workflows/verify.yml`
+    - `pull_request`, `main`, `codex/**` push에서 `pnpm verify`
+  - `.github/workflows/release.yml`
+    - `main` push에서 `changesets/action`
+    - `NPM_TOKEN` 기반 npm publish
+  - `README.md`
+    - CI / release 동작 문서화
+- 검증
+  - `pnpm format` ✅
+  - `pnpm verify` ✅
+  - `git diff --check` ✅
+
 ## 2026-03-14 — Changesets 릴리스 흐름 추가
 - 상태
   - 공개 npm 배포를 위해 Changesets 기반 버전 관리 흐름을 추가했다.

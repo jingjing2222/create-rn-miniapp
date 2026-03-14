@@ -83,3 +83,8 @@ pnpm changeset
 pnpm version-packages
 pnpm release
 ```
+
+GitHub Actions:
+- PR / `main` / `codex/**` push: `Verify` 워크플로에서 `pnpm verify`
+- `main` push: `Release` 워크플로에서 Changesets가 릴리스 PR 생성 또는 npm publish 수행
+- npm publish는 저장소 secret `NPM_TOKEN`을 사용
