@@ -17,7 +17,6 @@ export type ParsedCliArgs = {
   name?: string
   displayName?: string
   noGit?: boolean
-  withServer?: boolean
   serverProvider?: ServerProvider
   serverProjectMode?: ServerProjectMode
   withBackoffice?: boolean
@@ -129,10 +128,6 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
       default: true,
       describe: '생성 완료 후 루트 git init 수행',
     })
-    .option('with-server', {
-      type: 'boolean',
-      describe: '`server` 워크스페이스 포함 (provider는 옵션 또는 인터랙티브에서 선택)',
-    })
     .option('server-provider', {
       choices: SERVER_PROVIDERS,
       describe: '`server` 워크스페이스 제공자 지정',
@@ -183,7 +178,6 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     name: argv.name,
     displayName: argv.displayName,
     noGit: argv.git === false,
-    withServer: argv.withServer,
     serverProvider: argv.serverProvider,
     serverProjectMode: argv.serverProjectMode,
     withBackoffice: argv.withBackoffice,
@@ -209,7 +203,6 @@ export function formatCliHelp() {
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
     '  --no-git                       생성 완료 후 루트 git init 생략',
-    '  --with-server                  `server` 워크스페이스 포함 (provider는 옵션 또는 인터랙티브에서 선택)',
     `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
     '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
     '  --with-backoffice              `backoffice` 워크스페이스 포함',
@@ -226,9 +219,9 @@ export function formatCliHelp() {
     '  create-miniapp --name my-miniapp --server-provider supabase --with-backoffice',
     '  create-miniapp --name my-miniapp --server-provider cloudflare',
     '  create-miniapp --name my-miniapp --server-provider firebase',
-    '  create-miniapp --name my-miniapp --with-server --server-provider supabase --server-project-mode existing',
+    '  create-miniapp --name my-miniapp --server-provider supabase --server-project-mode existing',
     '  create-miniapp --name my-miniapp --server-provider cloudflare --server-project-mode existing',
-    '  create-miniapp --add --with-server',
+    '  create-miniapp --add --server-provider supabase',
     '  create-miniapp --add --root-dir /path/to/existing-miniapp --with-backoffice',
     '',
     '옵션으로 주어지지 않은 값은 인터랙티브 입력으로 이어집니다.',
@@ -263,20 +256,7 @@ async function resolveServerProviderInput(
     return argv.serverProvider
   }
 
-  if (argv.withServer) {
-    if (argv.yes) {
-      throw new Error(
-        '`--with-server`를 `--yes`와 함께 사용할 때는 `--server-provider`를 명시해야 합니다.',
-      )
-    }
-
-    return await prompt.select<ServerProvider>({
-      message: options.promptMessage,
-      options: SERVER_PROVIDER_OPTIONS,
-    })
-  }
-
-  if (argv.withServer === false || argv.yes) {
+  if (argv.yes) {
     return null
   }
 
@@ -334,14 +314,6 @@ export async function resolveCliOptions(
   prompt: CliPrompter,
   env: CliEnvironment = process.env,
 ) {
-  if (argv.withServer === false && argv.serverProvider) {
-    throw new Error('`--with-server` 없이 `--server-provider`를 사용할 수 없습니다.')
-  }
-
-  if (argv.withServer === false && argv.serverProjectMode) {
-    throw new Error('`--with-server` 없이 `--server-project-mode`를 사용할 수 없습니다.')
-  }
-
   const invocationPackageManager = detectInvocationPackageManager(env)
   const packageManager = argv.packageManager ?? invocationPackageManager
 
@@ -394,10 +366,6 @@ export async function resolveCliOptions(
   const serverProjectMode = await resolveServerProjectModeInput(normalizedServerProvider, argv)
   const skipServerProvisioning = argv.yes && !serverProjectMode
 
-  if (!withServer && argv.serverProjectMode) {
-    throw new Error('`--server-project-mode`는 `server` 워크스페이스와 함께 사용해야 합니다.')
-  }
-
   const withBackoffice =
     argv.withBackoffice ??
     (argv.yes
@@ -434,14 +402,6 @@ export async function resolveAddCliOptions(
 ) {
   if (argv.packageManager && argv.packageManager !== inspection.packageManager) {
     throw new Error('`--add`에서는 기존 루트의 package manager와 다른 값을 사용할 수 없습니다.')
-  }
-
-  if (argv.withServer === false && argv.serverProvider) {
-    throw new Error('`--with-server` 없이 `--server-provider`를 사용할 수 없습니다.')
-  }
-
-  if (argv.withServer === false && argv.serverProjectMode) {
-    throw new Error('`--with-server` 없이 `--server-project-mode`를 사용할 수 없습니다.')
   }
 
   const rootDir = path.resolve(argv.rootDir)

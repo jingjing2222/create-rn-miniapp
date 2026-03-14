@@ -1,22 +1,25 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
-## 다음 작업: `--with-server` implicit supabase 기본값 제거
+## 다음 작업: `--with-server` 제거하고 `--server-provider`로 단일화
 1. 문제
-   - 현재 CLI는 `--with-server`만 주면 provider를 묻지 않고 `supabase`로 기본값을 잡는다.
-   - 그래서 사용자가 Cloudflare나 Firebase를 의도해도 flag 조합에 따라 실제 patch/provision은 `supabase`로 흘러갈 수 있다.
+   - 현재 CLI에는 `--with-server`와 `--server-provider`가 같이 있어서 `server` 생성 책임이 중복된다.
+   - 이 중복 때문에 `--with-server` 기본값, `--yes` 조합, provider 선택 예외 처리가 계속 생긴다.
 2. 방향
-   - `--with-server`는 더 이상 `supabase` 축약형으로 취급하지 않는다.
-   - 인터랙티브에서는 `--with-server`가 있으면 provider만 바로 고르게 하고, `--with-server`가 없을 때만 `none + providers` 선택을 보여준다.
-   - `--yes`와 `--with-server`를 같이 쓰면 `--server-provider`를 명시하도록 에러를 낸다.
+   - `--with-server`는 CLI에서 완전히 제거한다.
+   - `server` 생성은 `--server-provider <supabase|cloudflare|firebase>` 하나로만 표현한다.
+   - 인터랙티브에서는 `server-provider`가 없을 때만 `none + providers` 선택을 보여준다.
+   - `--yes`에서는 `--server-provider`가 없으면 `server`를 만들지 않는다.
+   - `--server-project-mode`는 `--server-provider`가 있을 때만 허용한다.
    - `--add`도 같은 규칙으로 맞춘다.
 3. 테스트
-   - `--with-server` + interactive에서 provider prompt가 뜨는지 검증
-   - `--with-server` + `--yes` + no provider면 에러를 내는지 검증
+   - `--server-provider`만으로 `server`가 포함되는지 검증
+   - `--yes` + no `--server-provider`면 `server` 없이 진행하는지 검증
+   - `--server-project-mode` without `--server-provider`면 에러를 내는지 검증
    - `--add`에서도 같은 규칙을 검증
 4. 완료 기준
-   - `--with-server`만으로 `supabase`가 자동 선택되지 않는다.
-   - Cloudflare/Firebase 의도와 실제 generated patch/provider가 어긋나지 않는다.
+   - `--with-server` 관련 파싱/문구/테스트가 사라진다.
+   - `server` 생성 여부는 `--server-provider` 유무와 인터랙티브 선택으로만 결정된다.
    - `pnpm verify` 통과
 
 ## 다음 작업: granite.config.ts unused optional env helper 제거
