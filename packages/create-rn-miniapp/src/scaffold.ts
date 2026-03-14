@@ -1,9 +1,15 @@
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { log } from '@clack/prompts'
-import { buildCommandPlan, runCommand, type CommandSpec } from './commands.js'
+import { buildAddCommandPlan, buildCommandPlan, runCommand, type CommandSpec } from './commands.js'
 import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
-import { patchBackofficeWorkspace, patchFrontendWorkspace, patchServerWorkspace } from './patch.js'
+import {
+  ensureBackofficeSupabaseBootstrap,
+  ensureFrontendSupabaseBootstrap,
+  patchBackofficeWorkspace,
+  patchFrontendWorkspace,
+  patchServerWorkspace,
+} from './patch.js'
 import type { ServerProvider } from './server-provider.js'
 import {
   type TemplateTokens,
@@ -19,6 +25,19 @@ export type ScaffoldOptions = {
   displayName: string
   outputDir: string
   serverProvider: ServerProvider | null
+  withBackoffice: boolean
+  skipInstall: boolean
+}
+
+export type AddWorkspaceOptions = {
+  rootDir: string
+  packageManager: PackageManager
+  appName: string
+  displayName: string
+  existingServerProvider: ServerProvider | null
+  existingHasBackoffice: boolean
+  serverProvider: ServerProvider | null
+  withServer: boolean
   withBackoffice: boolean
   skipInstall: boolean
 }
@@ -102,6 +121,69 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     await patchServerWorkspace(targetRoot, tokens, {
       packageManager: options.packageManager,
     })
+  }
+
+  if (!options.skipInstall) {
+    for (const command of buildRootFinalizePlan({
+      targetRoot,
+      packageManager: options.packageManager,
+    })) {
+      log.step(command.label)
+      await runCommand(command)
+    }
+  }
+
+  return { targetRoot }
+}
+
+export async function addWorkspaces(options: AddWorkspaceOptions) {
+  const targetRoot = path.resolve(options.rootDir)
+  const packageManager = getPackageManagerAdapter(options.packageManager)
+  const tokens: TemplateTokens = {
+    appName: options.appName,
+    displayName: options.displayName,
+    packageManager: options.packageManager,
+    packageManagerCommand: options.packageManager,
+    packageManagerExecCommand: `${options.packageManager} exec`,
+    verifyCommand: packageManager.verifyCommand(),
+  }
+
+  if (options.withServer) {
+    await mkdir(path.join(targetRoot, 'server'), { recursive: true })
+  }
+
+  const plan = buildAddCommandPlan({
+    targetRoot,
+    packageManager: options.packageManager,
+    serverProvider: options.serverProvider,
+    withBackoffice: options.withBackoffice,
+  })
+
+  for (const command of plan) {
+    log.step(command.label)
+    await runCommand(command)
+  }
+
+  const finalServerProvider = options.existingServerProvider ?? options.serverProvider
+
+  if (options.withServer && (await pathExists(path.join(targetRoot, 'server')))) {
+    await patchServerWorkspace(targetRoot, tokens, {
+      packageManager: options.packageManager,
+    })
+    await ensureFrontendSupabaseBootstrap(targetRoot, tokens)
+  }
+
+  if (options.withBackoffice && (await pathExists(path.join(targetRoot, 'backoffice')))) {
+    await patchBackofficeWorkspace(targetRoot, tokens, {
+      packageManager: options.packageManager,
+      serverProvider: finalServerProvider,
+    })
+  } else if (
+    options.withServer &&
+    options.existingHasBackoffice &&
+    (await pathExists(path.join(targetRoot, 'backoffice')))
+  ) {
+    await ensureBackofficeSupabaseBootstrap(targetRoot, tokens)
   }
 
   if (!options.skipInstall) {

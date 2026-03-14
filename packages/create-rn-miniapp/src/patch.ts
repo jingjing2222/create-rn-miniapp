@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import {
+  patchPackageJsonSource,
   patchBackofficeAppSource,
   patchBackofficeMainSource,
   patchGraniteConfigSource,
@@ -204,10 +205,6 @@ async function readPackageJson(packageJsonPath: string) {
   return JSON.parse(await readFile(packageJsonPath, 'utf8')) as PackageJson
 }
 
-async function writePackageJson(packageJsonPath: string, packageJson: PackageJson) {
-  await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8')
-}
-
 async function writeTextFile(filePath: string, contents: string) {
   await mkdir(path.dirname(filePath), { recursive: true })
   await writeFile(filePath, contents, 'utf8')
@@ -241,15 +238,13 @@ function stripToolingFromPackageJson(packageJson: PackageJson) {
   return packageJson
 }
 
-function ensureDependency(
-  packageJson: PackageJson,
-  dependencyName: string,
-  version: string,
-  section: 'dependencies' | 'devDependencies',
+async function patchPackageJsonFile(
+  packageJsonPath: string,
+  patch: Parameters<typeof patchPackageJsonSource>[1],
 ) {
-  packageJson[section] ??= {}
-  const target = packageJson[section]
-  target[dependencyName] ??= version
+  const source = await readFile(packageJsonPath, 'utf8')
+  const next = patchPackageJsonSource(source, patch)
+  await writeFile(packageJsonPath, next, 'utf8')
 }
 
 function resolveGranitePluginVersion(packageJson: PackageJson) {
@@ -349,6 +344,126 @@ async function patchBackofficeEntryFiles(backofficeRoot: string) {
   }
 }
 
+async function ensureFrontendPackageJsonForWorkspace(
+  frontendRoot: string,
+  packageJson: PackageJson,
+  serverProvider: ServerProvider | null,
+) {
+  const scripts: Record<string, string> = {}
+  const dependencies: Record<string, string> = {}
+  const devDependencies: Record<string, string> = {}
+
+  if (!packageJson.scripts?.typecheck) {
+    scripts.typecheck = 'tsc --noEmit'
+  }
+
+  if (!packageJson.scripts?.test) {
+    scripts.test = `node -e "console.log('frontend test placeholder')"`
+  }
+
+  if (!packageJson.devDependencies?.['@types/node']) {
+    devDependencies['@types/node'] = NODE_TYPES_VERSION
+  }
+
+  if (serverProvider === 'supabase') {
+    if (!packageJson.dependencies?.['@supabase/supabase-js']) {
+      dependencies['@supabase/supabase-js'] = SUPABASE_JS_VERSION
+    }
+
+    if (!packageJson.devDependencies?.['@granite-js/plugin-env']) {
+      devDependencies['@granite-js/plugin-env'] = resolveGranitePluginVersion(packageJson)
+    }
+
+    if (!packageJson.devDependencies?.dotenv) {
+      devDependencies.dotenv = DOTENV_VERSION
+    }
+  }
+
+  await patchPackageJsonFile(path.join(frontendRoot, 'package.json'), {
+    upsertTopLevel: [
+      {
+        key: 'name',
+        value: packageJson.name,
+      },
+    ],
+    upsertSections: {
+      scripts,
+      dependencies,
+      devDependencies,
+    },
+  })
+}
+
+async function ensureBackofficePackageJsonForWorkspace(
+  backofficeRoot: string,
+  packageJson: PackageJson,
+  serverProvider: ServerProvider | null,
+) {
+  const scripts: Record<string, string> = {
+    typecheck: 'tsc -b --pretty false',
+  }
+  const dependencies: Record<string, string> = {}
+
+  if (!packageJson.scripts?.test) {
+    scripts.test = `node -e "console.log('backoffice test placeholder')"`
+  }
+
+  if (serverProvider === 'supabase') {
+    if (!packageJson.dependencies?.['@supabase/supabase-js']) {
+      dependencies['@supabase/supabase-js'] = SUPABASE_JS_VERSION
+    }
+  }
+
+  await patchPackageJsonFile(path.join(backofficeRoot, 'package.json'), {
+    upsertTopLevel: [
+      {
+        key: 'name',
+        value: packageJson.name,
+      },
+    ],
+    upsertSections: {
+      scripts,
+      dependencies,
+    },
+  })
+}
+
+export async function ensureFrontendSupabaseBootstrap(targetRoot: string, tokens: TemplateTokens) {
+  const frontendRoot = path.join(targetRoot, 'frontend')
+  const packageJsonPath = path.join(frontendRoot, 'package.json')
+  const packageJson = await readPackageJson(packageJsonPath)
+
+  await ensureFrontendPackageJsonForWorkspace(frontendRoot, packageJson, 'supabase')
+  await patchGraniteConfig(frontendRoot, tokens, 'supabase')
+  await patchWorkspaceTsconfigModules(frontendRoot, [
+    {
+      fileName: 'tsconfig.json',
+      includeNodeTypes: true,
+    },
+  ])
+  await writeFrontendSupabaseBootstrap(frontendRoot)
+  await applyWorkspaceProjectTemplate(targetRoot, 'frontend', tokens)
+}
+
+export async function ensureBackofficeSupabaseBootstrap(
+  targetRoot: string,
+  tokens: TemplateTokens,
+) {
+  const backofficeRoot = path.join(targetRoot, 'backoffice')
+  const packageJsonPath = path.join(backofficeRoot, 'package.json')
+  const packageJson = await readPackageJson(packageJsonPath)
+
+  await ensureBackofficePackageJsonForWorkspace(backofficeRoot, packageJson, 'supabase')
+  await patchWorkspaceTsconfigModules(backofficeRoot, [
+    { fileName: 'tsconfig.json' },
+    { fileName: 'tsconfig.app.json' },
+    { fileName: 'tsconfig.node.json' },
+  ])
+  await patchBackofficeEntryFiles(backofficeRoot)
+  await writeBackofficeSupabaseBootstrap(backofficeRoot)
+  await applyWorkspaceProjectTemplate(targetRoot, 'backoffice', tokens)
+}
+
 export async function patchFrontendWorkspace(
   targetRoot: string,
   tokens: TemplateTokens,
@@ -359,23 +474,20 @@ export async function patchFrontendWorkspace(
   const packageJson = stripToolingFromPackageJson(await readPackageJson(packageJsonPath))
 
   packageJson.name = 'frontend'
-  packageJson.scripts ??= {}
-  packageJson.scripts.typecheck ??= 'tsc --noEmit'
-  packageJson.scripts.test ??= `node -e "console.log('frontend test placeholder')"`
-  ensureDependency(packageJson, '@types/node', NODE_TYPES_VERSION, 'devDependencies')
-
-  if (options.serverProvider === 'supabase') {
-    ensureDependency(packageJson, '@supabase/supabase-js', SUPABASE_JS_VERSION, 'dependencies')
-    ensureDependency(
-      packageJson,
-      '@granite-js/plugin-env',
-      resolveGranitePluginVersion(packageJson),
-      'devDependencies',
-    )
-    ensureDependency(packageJson, 'dotenv', DOTENV_VERSION, 'devDependencies')
-  }
-
-  await writePackageJson(packageJsonPath, packageJson)
+  await patchPackageJsonFile(packageJsonPath, {
+    upsertTopLevel: [
+      {
+        key: 'name',
+        value: packageJson.name,
+      },
+    ],
+    removeFromSections: {
+      scripts: ['lint', 'lint:fix', 'format', 'format:check'],
+      dependencies: [...TOOLING_DEPENDENCIES],
+      devDependencies: [...TOOLING_DEPENDENCIES],
+    },
+  })
+  await ensureFrontendPackageJsonForWorkspace(frontendRoot, packageJson, options.serverProvider)
   await removeToolingFiles(frontendRoot, options.packageManager)
   await removeWorkspaceArtifacts(frontendRoot, options.packageManager)
   await patchGraniteConfig(frontendRoot, tokens, options.serverProvider)
@@ -403,15 +515,20 @@ export async function patchBackofficeWorkspace(
   const packageJson = stripToolingFromPackageJson(await readPackageJson(packageJsonPath))
 
   packageJson.name = 'backoffice'
-  packageJson.scripts ??= {}
-  packageJson.scripts.typecheck = 'tsc -b --pretty false'
-  packageJson.scripts.test ??= `node -e "console.log('backoffice test placeholder')"`
-
-  if (options.serverProvider === 'supabase') {
-    ensureDependency(packageJson, '@supabase/supabase-js', SUPABASE_JS_VERSION, 'dependencies')
-  }
-
-  await writePackageJson(packageJsonPath, packageJson)
+  await patchPackageJsonFile(packageJsonPath, {
+    upsertTopLevel: [
+      {
+        key: 'name',
+        value: packageJson.name,
+      },
+    ],
+    removeFromSections: {
+      scripts: ['lint', 'lint:fix', 'format', 'format:check'],
+      dependencies: [...TOOLING_DEPENDENCIES],
+      devDependencies: [...TOOLING_DEPENDENCIES],
+    },
+  })
+  await ensureBackofficePackageJsonForWorkspace(backofficeRoot, packageJson, options.serverProvider)
   await patchWorkspaceTsconfigModules(backofficeRoot, [
     { fileName: 'tsconfig.json' },
     { fileName: 'tsconfig.app.json' },

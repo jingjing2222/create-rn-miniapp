@@ -74,6 +74,35 @@ export function buildCommandPlan(options: {
   return plan
 }
 
+export function buildAddCommandPlan(options: {
+  targetRoot: string
+  packageManager: PackageManager
+  serverProvider: ServerProvider | null
+  withBackoffice: boolean
+}) {
+  const packageManager = getPackageManagerAdapter(options.packageManager)
+  const serverRoot = `${options.targetRoot}/server`
+  const plan: CommandSpec[] = []
+
+  if (options.serverProvider === 'supabase') {
+    plan.push({
+      cwd: serverRoot,
+      ...packageManager.dlx('supabase', ['init']),
+      label: 'server Supabase 초기화',
+    })
+  }
+
+  if (options.withBackoffice) {
+    plan.push({
+      cwd: options.targetRoot,
+      ...packageManager.createViteApp('backoffice'),
+      label: 'backoffice Vite 생성',
+    })
+  }
+
+  return plan
+}
+
 export async function runCommand(spec: CommandSpec) {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(spec.command, spec.args, {

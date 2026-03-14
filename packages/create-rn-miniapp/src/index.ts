@@ -3,9 +3,16 @@
 import { createRequire } from 'node:module'
 import { cancel, intro, note, outro } from '@clack/prompts'
 import { hideBin } from 'yargs/helpers'
-import { createClackPrompter, formatCliHelp, parseCliArgs, resolveCliOptions } from './cli.js'
+import {
+  createClackPrompter,
+  formatCliHelp,
+  parseCliArgs,
+  resolveAddCliOptions,
+  resolveCliOptions,
+} from './cli.js'
 import { generatedWorkspaceLayout } from './layout.js'
-import { scaffoldWorkspace } from './scaffold.js'
+import { addWorkspaces, scaffoldWorkspace } from './scaffold.js'
+import { inspectWorkspace } from './workspace-inspector.js'
 
 const require = createRequire(import.meta.url)
 const packageJson = require('../package.json') as { version: string }
@@ -26,7 +33,32 @@ export async function main() {
 
     intro('create-miniapp 시작')
 
-    const resolved = await resolveCliOptions(argv, createClackPrompter())
+    const prompt = createClackPrompter()
+
+    if (argv.add) {
+      const inspection = await inspectWorkspace(argv.rootDir)
+      const resolved = await resolveAddCliOptions(argv, prompt, inspection)
+
+      note(
+        [
+          `package manager: ${resolved.packageManager}`,
+          `앱 이름(appName): ${resolved.appName}`,
+          `표시 이름(displayName): ${resolved.displayName}`,
+          `수정 위치: ${resolved.rootDir}`,
+          `server 추가: ${String(resolved.withServer)}`,
+          `server 제공자: ${resolved.serverProvider ?? '없음'}`,
+          `backoffice 추가: ${String(resolved.withBackoffice)}`,
+        ].join('\n'),
+        '수정 설정',
+      )
+
+      const result = await addWorkspaces(resolved)
+
+      outro(`${result.targetRoot} 수정 완료`)
+      return
+    }
+
+    const resolved = await resolveCliOptions(argv, prompt)
 
     note(
       [

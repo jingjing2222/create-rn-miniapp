@@ -506,6 +506,39 @@ export function patchGraniteConfigSource(
   return formatGraniteConfigSource(printTypeScriptModule(module))
 }
 
+export function readGraniteConfigMetadata(source: string) {
+  const module = parseTypeScriptModule(source)
+  const configObject = getDefineConfigObject(module)
+
+  if (!configObject) {
+    return {
+      appName: null,
+      displayName: null,
+    }
+  }
+
+  const appNameExpression = getObjectPropertyValue(configObject, 'appName')
+  const appName = isStringLiteral(appNameExpression) ? appNameExpression.value : null
+
+  const pluginsArray = ensurePluginsArrayExpression(configObject)
+  const appsInTossCall = findPluginCall(pluginsArray, 'appsInToss')
+  const appsInTossConfig = appsInTossCall?.arguments[0]?.expression
+  const brandExpression =
+    appsInTossConfig?.type === 'ObjectExpression'
+      ? getObjectPropertyValue(appsInTossConfig as SwcObjectExpression, 'brand')
+      : null
+  const displayNameExpression =
+    brandExpression?.type === 'ObjectExpression'
+      ? getObjectPropertyValue(brandExpression as SwcObjectExpression, 'displayName')
+      : null
+  const displayName = isStringLiteral(displayNameExpression) ? displayNameExpression.value : null
+
+  return {
+    appName,
+    displayName,
+  }
+}
+
 function isDocumentGetElementByIdRoot(expression: SwcExpression | undefined) {
   const candidate =
     expression?.type === 'TsNonNullExpression'
@@ -734,6 +767,8 @@ type OrderedJsonEntry = {
   value: unknown
 }
 
+type PackageJsonSectionName = 'scripts' | 'dependencies' | 'devDependencies'
+
 function parseOrderedJsonObjectEntries(source: string) {
   const parsed = parse(source, [], JSONC_PARSE_OPTIONS)
 
@@ -794,6 +829,62 @@ function stringifyOrderedJsonEntries(entries: OrderedJsonEntry[]) {
   return `${JSON.stringify(object, null, 2)}\n`
 }
 
+function readStringMapSection(entries: OrderedJsonEntry[], key: PackageJsonSectionName) {
+  const value = entries.find((entry) => entry.key === key)?.value
+
+  if (!isRecord(value)) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(([, candidate]) => typeof candidate === 'string'),
+  ) as Record<string, string>
+}
+
+export function patchPackageJsonSource(
+  source: string,
+  patch: {
+    upsertTopLevel?: Array<{
+      key: string
+      value: unknown
+      afterKey?: string
+    }>
+    removeTopLevel?: string[]
+    upsertSections?: Partial<Record<PackageJsonSectionName, Record<string, string>>>
+    removeFromSections?: Partial<Record<PackageJsonSectionName, string[]>>
+  },
+) {
+  const entries = parseOrderedJsonObjectEntries(source)
+
+  for (const key of patch.removeTopLevel ?? []) {
+    removeOrderedJsonEntry(entries, key)
+  }
+
+  for (const sectionName of ['scripts', 'dependencies', 'devDependencies'] as const) {
+    const existingSection = readStringMapSection(entries, sectionName)
+    const nextSection = { ...existingSection }
+
+    for (const key of patch.removeFromSections?.[sectionName] ?? []) {
+      delete nextSection[key]
+    }
+
+    Object.assign(nextSection, patch.upsertSections?.[sectionName] ?? {})
+
+    const hadSection = entries.some((entry) => entry.key === sectionName)
+    if (hadSection || Object.keys(nextSection).length > 0) {
+      upsertOrderedJsonEntry(entries, sectionName, nextSection)
+    }
+  }
+
+  for (const entry of patch.upsertTopLevel ?? []) {
+    upsertOrderedJsonEntry(entries, entry.key, entry.value, {
+      afterKey: entry.afterKey,
+    })
+  }
+
+  return stringifyOrderedJsonEntries(entries)
+}
+
 export function patchRootPackageJsonSource(
   source: string,
   patch: {
@@ -802,23 +893,25 @@ export function patchRootPackageJsonSource(
     workspaces: string[] | null
   },
 ) {
-  const entries = parseOrderedJsonObjectEntries(source)
-  const existingScripts = entries.find((entry) => entry.key === 'scripts')?.value
-  const scripts =
-    existingScripts && typeof existingScripts === 'object' && !Array.isArray(existingScripts)
-      ? { ...(existingScripts as Record<string, string>), ...patch.scripts }
-      : patch.scripts
-
-  upsertOrderedJsonEntry(entries, 'packageManager', patch.packageManagerField)
-  upsertOrderedJsonEntry(entries, 'scripts', scripts)
-
-  if (patch.workspaces) {
-    upsertOrderedJsonEntry(entries, 'workspaces', patch.workspaces, {
-      afterKey: 'packageManager',
-    })
-  } else {
-    removeOrderedJsonEntry(entries, 'workspaces')
-  }
-
-  return stringifyOrderedJsonEntries(entries)
+  return patchPackageJsonSource(source, {
+    upsertTopLevel: [
+      {
+        key: 'packageManager',
+        value: patch.packageManagerField,
+      },
+      ...(patch.workspaces
+        ? [
+            {
+              key: 'workspaces',
+              value: patch.workspaces,
+              afterKey: 'packageManager',
+            },
+          ]
+        : []),
+    ],
+    removeTopLevel: patch.workspaces ? [] : ['workspaces'],
+    upsertSections: {
+      scripts: patch.scripts,
+    },
+  })
 }

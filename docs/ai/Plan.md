@@ -258,6 +258,75 @@ docs/
    - 루트 `LICENSE.md`를 MIT 텍스트로 추가해 저장소와 배포 패키지의 라이선스 문서를 명시한다.
 8. 테스트 범위
    - CLI가 `--package-manager`를 파싱하고, 프롬프트 첫 단계에서 선택을 받는지 검증
+
+## 현재 package.json 구조 patch 정리 작업
+1. `package.json` 계열은 문자열 치환 대신 공용 구조 patch helper로 통일한다.
+2. `granite.config.ts`처럼 TS/TSX AST가 필요한 파일과 달리, `package.json`은 JSON 구조 patch로 처리한다.
+3. 루트 `package.json`과 각 workspace `package.json`이 같은 helper를 사용하게 맞춘다.
+4. workspace patch에서는 객체 parse는 읽기/판단용으로만 쓰고, 최종 파일 write는 구조 patch helper를 거친다.
+5. 테스트 범위
+   - root `package.json`의 packageManager/workspaces/script merge 회귀가 없는지 검증
+   - frontend/backoffice package patch 후 기존 의존성이 유지되는지 검증
+
+## 현재 add mode 작업
+1. 목표
+   - 이미 생성된 miniapp 모노레포에 `server`나 `backoffice`를 나중에 추가할 수 있는 CLI 흐름을 만든다.
+   - 새 리포 생성과 달리, 기존 루트 설정과 문서를 다시 덮어쓰지 않고 필요한 워크스페이스만 증설한다.
+2. 지원 범위
+   - 대상은 이 CLI가 만든 루트 구조이거나 그와 호환되는 monorepo로 한정한다.
+   - `frontend/`가 이미 존재해야 한다.
+   - 이번 범위에서는 `server`와 `backoffice` 추가만 지원한다.
+   - `frontend` 재생성이나 임의 루트 마이그레이션은 범위 밖으로 둔다.
+3. CLI 형태
+   - 기존 기본 동작은 그대로 새 워크스페이스 생성으로 유지한다.
+   - 새 옵션 `--add`를 추가한다.
+   - `--add`와 함께 `--root-dir`를 추가하고 기본값은 현재 디렉터리로 둔다.
+   - `--add`에서 `--with-server`, `--server-provider`, `--with-backoffice`는 “없으면 추가” 의미로 재해석한다.
+4. add mode 입력 수집
+   - package manager는 root `package.json.packageManager`에서 자동 감지한다.
+   - `appName`은 `frontend/granite.config.ts`의 `defineConfig.appName`에서 읽는다.
+   - `displayName`은 `frontend/granite.config.ts`의 `appsInToss.brand.displayName`에서 읽고, 없을 때만 프롬프트 fallback을 둔다.
+   - 현재 포함된 워크스페이스 상태를 감지해 이미 존재하는 선택지는 기본적으로 비활성화하거나 skip한다.
+5. 구현 경계
+   - `cli.ts`
+     - `mode`, `rootDir` 파싱 추가
+     - `add` mode 전용 질문 흐름 추가
+   - `workspace-inspector.ts` 신규
+     - 기존 루트의 package manager, appName, displayName, server/backoffice 존재 여부를 읽는다.
+     - `granite.config.ts`는 SWC AST로 읽는다.
+   - `commands.ts`
+     - 기존 create plan과 별도로 add plan builder를 추가한다.
+     - 선택한 워크스페이스만 공식 CLI로 생성한다.
+   - `scaffold.ts`
+     - create path와 add path를 분리한다.
+     - add path는 `ensureEmptyDirectory()`를 사용하지 않는다.
+     - root install / yarn sdk / biome 단계는 기존과 같은 finalize plan을 재사용한다.
+   - `patch.ts`
+     - `server` 추가 시 `frontend`에 Supabase bootstrap이 없으면 같이 보강한다.
+     - 기존에 `server`가 있는 상태에서 `backoffice`를 추가하면 backoffice에도 Supabase bootstrap을 넣는다.
+   - `templates.ts`
+     - root 템플릿 전체 재적용은 하지 않는다.
+     - 필요한 `project.json`, `server/package.json`만 additive로 생성한다.
+6. 핵심 판단
+   - `pnpm-workspace.yaml`과 Yarn `workspaces`는 이미 `frontend`, `server`, `backoffice`를 모두 포함하도록 생성되므로 add mode에서 root workspace manifest를 수정할 필요는 없다.
+   - `nx.json`, `biome.json`, `tsconfig.base.json`, `docs/`, `AGENTS.md`는 add mode에서 기본적으로 건드리지 않는다.
+   - add mode는 “새 워크스페이스 추가”이지 “전체 루트 재동기화”가 아니다.
+7. 작업 순서
+   - 기존 루트 검사기 추가
+   - CLI mode 분기 추가
+   - add command plan / 실행기 추가
+   - server 추가 시 frontend bootstrap 보강
+   - backoffice 추가 시 existing server provider 연동
+   - 테스트와 README 갱신
+8. 테스트 범위
+   - CLI가 `--add`, `--root-dir`를 해석하는지 검증
+   - 루트 검사기가 package manager, appName, displayName, 기존 workspace 상태를 읽는지 검증
+   - add plan이 이미 존재하는 workspace는 건너뛰고, 빠진 workspace만 생성하는지 검증
+   - temp fixture 기준으로 `frontend-only -> add server`, `frontend-only -> add backoffice`, `frontend+server -> add backoffice` 흐름 검증
+9. 완료 기준
+   - 기존 생성물 루트에서 `create-miniapp --add --with-server` 또는 `--with-backoffice`가 동작한다.
+   - 이미 존재하는 workspace를 다시 생성하려고 하지 않는다.
+   - `pnpm verify` 통과
    - command plan이 `pnpm`과 `yarn`에서 각각 다른 명령을 생성하는지 검증
    - root template 결과물이 manager별로 올바른 파일 집합과 명령 문자열을 가지는지 검증
    - patch 단계가 manager별 lockfile과 artifact를 올바르게 정리하는지 검증

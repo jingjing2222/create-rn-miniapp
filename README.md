@@ -60,11 +60,13 @@ pnpm verify
 ## CLI 옵션
 
 - `--package-manager <pnpm|yarn>`: 생성과 루트 monorepo에 사용할 package manager
+- `--add`: 이미 생성된 워크스페이스에 빠진 `server`/`backoffice` 추가
 - `--name`: Granite `appName`이자 생성 디렉터리 이름
 - `--display-name`: 사용자에게 보이는 앱 이름
 - `--with-server`: `server` 워크스페이스 포함. 현재는 `supabase`로 연결됩니다.
 - `--server-provider <supabase>`: `server` 제공자 명시
 - `--with-backoffice`: `backoffice` 워크스페이스 포함
+- `--root-dir <dir>`: `--add`에서 수정할 기존 모노레포 루트. 기본값은 현재 디렉터리
 - `--output-dir <dir>`: 생성할 모노레포의 상위 디렉터리
 - `--skip-install`: 마지막 루트 package manager install과 Biome 정리를 생략
 - `--yes`: 선택형 질문을 기본값으로 진행
@@ -91,6 +93,25 @@ pnpm verify
 `yarn`을 선택하면 root에는 `.yarnrc.yml`과 `package.json.workspaces`가 생성되고, `pnpm-workspace.yaml`은 생성되지 않습니다.
 
 생성 후에는 예시 파일을 참고해서 실제 `.env.local`을 채우면 됩니다.
+
+## 기존 워크스페이스에 추가하기
+
+이미 생성된 루트에서 `server`나 `backoffice`만 나중에 붙이고 싶으면 `--add`를 사용합니다.
+
+현재 디렉터리 기준:
+
+```bash
+create-miniapp --add --with-server
+create-miniapp --add --with-backoffice
+```
+
+다른 경로의 기존 루트를 수정하려면:
+
+```bash
+create-miniapp --add --root-dir /path/to/existing-miniapp --with-server --with-backoffice
+```
+
+`--add`는 root `package.json.packageManager`와 `frontend/granite.config.ts`를 읽어 기존 워크스페이스 정보를 감지한 뒤, 아직 없는 워크스페이스만 추가합니다.
 
 ## 생성 기준
 

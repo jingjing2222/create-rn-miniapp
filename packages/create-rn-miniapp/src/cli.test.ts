@@ -6,6 +6,7 @@ import {
   createClackPrompter,
   formatCliHelp,
   parseCliArgs,
+  resolveAddCliOptions,
   resolveCliOptions,
 } from './cli.js'
 
@@ -38,6 +39,13 @@ test('parseCliArgs parses long-form CLI options with yargs', async () => {
   assert.equal(argv.outputDir, '/tmp/create-miniapp')
   assert.equal(argv.skipInstall, true)
   assert.equal(argv.yes, false)
+})
+
+test('parseCliArgs parses add mode flags', async () => {
+  const argv = await parseCliArgs(['--add', '--root-dir', '/tmp/existing-miniapp'], '/workspace')
+
+  assert.equal(argv.add, true)
+  assert.equal(argv.rootDir, '/tmp/existing-miniapp')
 })
 
 test('resolveCliOptions asks for missing values when interactive input is needed', async () => {
@@ -83,6 +91,8 @@ test('resolveCliOptions asks for missing values when interactive input is needed
 
   const resolved = await resolveCliOptions(
     {
+      add: false,
+      rootDir: '/tmp/workspace',
       outputDir: '/tmp/workspace',
       skipInstall: false,
       yes: false,
@@ -140,7 +150,9 @@ test('resolveCliOptions keeps prompts optional when yes flag is set', async () =
 
   const resolved = await resolveCliOptions(
     {
+      add: false,
       name: 'ebook-miniapp',
+      rootDir: '/tmp/workspace',
       outputDir: '/tmp/workspace',
       skipInstall: true,
       yes: true,
@@ -162,8 +174,10 @@ test('resolveCliOptions keeps prompts optional when yes flag is set', async () =
 test('resolveCliOptions keeps with-server compatibility by defaulting provider to supabase', async () => {
   const resolved = await resolveCliOptions(
     {
+      add: false,
       name: 'ebook-miniapp',
       withServer: true,
+      rootDir: '/tmp/workspace',
       outputDir: '/tmp/workspace',
       skipInstall: false,
       yes: true,
@@ -189,9 +203,11 @@ test('resolveCliOptions rejects conflicting server flags', async () => {
     () =>
       resolveCliOptions(
         {
+          add: false,
           name: 'ebook-miniapp',
           withServer: false,
           serverProvider: 'supabase',
+          rootDir: '/tmp/workspace',
           outputDir: '/tmp/workspace',
           skipInstall: false,
           yes: true,
@@ -211,12 +227,75 @@ test('resolveCliOptions rejects conflicting server flags', async () => {
   )
 })
 
+test('resolveAddCliOptions detects additive targets from an existing workspace', async () => {
+  const selectMessages: string[] = []
+  const promptSelections: Array<'supabase' | 'yes' | 'no'> = ['supabase', 'yes']
+
+  const resolved = await resolveAddCliOptions(
+    {
+      add: true,
+      rootDir: '/tmp/existing-miniapp',
+      outputDir: '/tmp/workspace',
+      skipInstall: false,
+      yes: false,
+      help: false,
+      version: false,
+    },
+    {
+      async text() {
+        throw new Error('text prompt should not be called')
+      },
+      async select(options) {
+        selectMessages.push(options.message)
+        const fallback = options.options[0]
+
+        if (!fallback) {
+          throw new Error('선택지가 없습니다.')
+        }
+
+        const nextSelection = promptSelections.shift()
+
+        if (nextSelection && options.options.some((option) => option.value === nextSelection)) {
+          return nextSelection as typeof fallback.value
+        }
+
+        return fallback.value
+      },
+    },
+    {
+      rootDir: '/tmp/existing-miniapp',
+      packageManager: 'pnpm',
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      hasServer: false,
+      hasBackoffice: false,
+      serverProvider: null,
+    },
+  )
+
+  assert.equal(resolved.packageManager, 'pnpm')
+  assert.equal(resolved.appName, 'ebook-miniapp')
+  assert.equal(resolved.displayName, '전자책 미니앱')
+  assert.equal(resolved.rootDir, path.resolve('/tmp/existing-miniapp'))
+  assert.equal(resolved.withServer, true)
+  assert.equal(resolved.serverProvider, 'supabase')
+  assert.equal(resolved.withBackoffice, true)
+  assert.equal(resolved.existingServerProvider, null)
+  assert.equal(resolved.existingHasBackoffice, false)
+  assert.deepEqual(selectMessages, [
+    '`server` 제공자를 선택하세요.',
+    '`backoffice` 워크스페이스를 추가할까요?',
+  ])
+})
+
 test('formatCliHelp renders Korean help text', () => {
   const help = formatCliHelp()
 
   assert.match(help, /사용법/)
   assert.match(help, /옵션/)
   assert.match(help, /--package-manager <pnpm\|yarn>/)
+  assert.match(help, /--add/)
+  assert.match(help, /--root-dir <디렉터리>/)
   assert.match(help, /--server-provider <supabase>/)
   assert.match(help, /도움말 보기/)
   assert.match(help, /버전 보기/)

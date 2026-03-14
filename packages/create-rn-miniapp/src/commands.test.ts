@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import test from 'node:test'
-import { buildCommandPlan } from './commands.js'
+import { buildAddCommandPlan, buildCommandPlan } from './commands.js'
 
 test('buildCommandPlan keeps AppInToss frontend steps first', () => {
   const targetRoot = path.join('/tmp', 'ebook')
@@ -98,6 +98,30 @@ test('buildCommandPlan emits yarn commands when yarn is selected', () => {
   ])
   assert.deepEqual(plan[5]?.args, ['dlx', 'supabase', 'init'])
   assert.deepEqual(plan[6]?.args, [
+    'dlx',
+    'create-vite',
+    'backoffice',
+    '--template',
+    'react-ts',
+    '--no-interactive',
+  ])
+})
+
+test('buildAddCommandPlan only includes requested missing workspaces', () => {
+  const targetRoot = path.join('/tmp', 'ebook')
+  const plan = buildAddCommandPlan({
+    targetRoot,
+    packageManager: 'pnpm',
+    serverProvider: 'supabase',
+    withBackoffice: true,
+  })
+
+  assert.deepEqual(
+    plan.map((step) => step.label),
+    ['server Supabase 초기화', 'backoffice Vite 생성'],
+  )
+  assert.deepEqual(plan[0]?.args, ['dlx', 'supabase', 'init'])
+  assert.deepEqual(plan[1]?.args, [
     'dlx',
     'create-vite',
     'backoffice',
