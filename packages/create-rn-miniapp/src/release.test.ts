@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import test from 'node:test'
@@ -33,4 +34,20 @@ test('published package names match the released npm packages', () => {
     'workspace:*',
   )
   assert.equal(templatesPackageJson.name, '@create-rn-miniapp/scaffold-templates')
+})
+
+test('scaffold templates tarball keeps the root gitignore template', () => {
+  const packJson = execFileSync('npm', ['pack', '--dry-run', '--json'], {
+    cwd: path.join(repoRoot, 'packages/scaffold-templates'),
+    encoding: 'utf8',
+  })
+  const [packResult] = JSON.parse(packJson) as Array<{
+    files: Array<{ path: string }>
+  }>
+
+  assert.ok(packResult)
+  assert.equal(
+    packResult.files.some((file) => file.path === 'root/gitignore'),
+    true,
+  )
 })

@@ -109,6 +109,16 @@ docs/
    - `server` wrapper package/project 생성 완료
    - 루트 `biome check --write --unsafe` 자동 실행 완료
 
+## 현재 버그 수정 작업
+1. 퍼블릭 npm 배포본에서 `@create-rn-miniapp/scaffold-templates`의 `root/.gitignore`가 tarball에 포함되지 않아 생성이 마지막 overlay 단계에서 실패한다.
+2. 재현 절차
+   - `pnpm dlx create-rn-miniapp --name smoke-miniapp --display-name "Smoke Miniapp" --yes --output-dir <tmp> --skip-install`
+   - 기대 결과: root template overlay까지 완료되어 생성이 끝나야 한다.
+   - 실제 결과: `ENOENT ... scaffold-templates/root/.gitignore`
+3. 수정 방향
+   - npm pack 결과에서도 유지되는 템플릿 파일명으로 변경한다.
+   - root template copy 로직과 테스트를 함께 보강한다.
+
 ## 남은 작업
 1. npm publish 준비
    - Changesets 설정

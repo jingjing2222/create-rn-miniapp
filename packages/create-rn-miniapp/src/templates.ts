@@ -53,7 +53,7 @@ export async function applyRootTemplates(targetRoot: string, tokens: TemplateTok
   const rootTemplateDir = path.join(templatesRoot, 'root')
 
   const fileMappings = [
-    ['.gitignore', '.gitignore'],
+    ['gitignore', '.gitignore'],
     ['package.json', 'package.json'],
     ['pnpm-workspace.yaml', 'pnpm-workspace.yaml'],
     ['nx.json', 'nx.json'],
