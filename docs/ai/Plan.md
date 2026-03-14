@@ -1,6 +1,18 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: 사용하지 않는 Granite optional env helper 제거
+1. 문제
+   - 현재 `granite.config.ts` patch는 provider와 무관하게 `resolveOptionalMiniappEnv()` helper를 함께 만들고 있다.
+   - 하지만 Supabase나 Cloudflare처럼 optional env가 없는 경우에는 helper가 실제로 쓰이지 않아 생성 결과가 지저분해진다.
+2. 방향
+   - frontend Granite env preamble 생성 시 optional binding이 있을 때만 `resolveOptionalMiniappEnv()`를 넣는다.
+   - Firebase처럼 optional measurement ID가 있는 경우에만 helper를 유지한다.
+3. 완료 기준
+   - Supabase/Cloudflare `granite.config.ts`에는 unused optional helper가 생성되지 않는다.
+   - Firebase `granite.config.ts`에는 기존 optional helper가 유지된다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: CLI `--no-git` 옵션 추가
 1. 문제
    - 현재는 새 스캐폴드가 항상 루트 `git init`까지 진행한다.

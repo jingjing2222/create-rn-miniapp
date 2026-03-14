@@ -173,6 +173,7 @@ function createFrontendEnvPreamble(
   bindings: Array<{ envName: string; identifierName: string; required?: boolean }>,
 ) {
   const envNameUnion = bindings.map((binding) => `'${binding.envName}'`).join(' | ')
+  const needsOptionalHelper = bindings.some((binding) => binding.required === false)
   const envStatements = bindings.map(
     (binding) =>
       `const ${binding.identifierName} = ${binding.required === false ? 'resolveOptionalMiniappEnv' : 'resolveMiniappEnv'}('${binding.envName}')`,
@@ -194,10 +195,14 @@ function createFrontendEnvPreamble(
     '  return value.trim()',
     '}',
     '',
-    `function resolveOptionalMiniappEnv(name: ${envNameUnion}) {`,
-    '  return process.env[name]?.trim() ?? ""',
-    '}',
-    '',
+    ...(needsOptionalHelper
+      ? [
+          `function resolveOptionalMiniappEnv(name: ${envNameUnion}) {`,
+          '  return process.env[name]?.trim() ?? ""',
+          '}',
+          '',
+        ]
+      : []),
     ...envStatements,
     '',
   ].join('\n')

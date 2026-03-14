@@ -249,6 +249,7 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   assert.match(graniteConfig, /const appRoot = __dirname/)
   assert.match(graniteConfig, /const appRoot = __dirname;\n\ndotenv\.config/)
   assert.match(graniteConfig, /path\.join\(appRoot, '\.env'\)/)
+  assert.doesNotMatch(graniteConfig, /function resolveOptionalMiniappEnv/)
   assert.match(graniteConfig, /\}\n\nconst miniappSupabaseUrl = resolveMiniappEnv/)
   assert.match(
     graniteConfig,
@@ -351,6 +352,7 @@ test('patchFrontendWorkspace adds cloudflare API bootstrap when cloudflare serve
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], undefined)
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
+  assert.doesNotMatch(graniteConfig, /function resolveOptionalMiniappEnv/)
   assert.match(graniteConfig, /MINIAPP_API_BASE_URL: miniappApiBaseUrl/)
   assert.match(
     graniteConfig,
