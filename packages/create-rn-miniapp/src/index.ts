@@ -75,6 +75,7 @@ export async function main() {
         `표시 이름(displayName): ${resolved.displayName}`,
         `생성 위치: ${resolved.outputDir}/${resolved.appName}`,
         `생성 구조: ${generatedWorkspaceLayout.join(', ')}`,
+        `루트 git 초기화: ${String(!resolved.noGit)}`,
         `server 포함: ${String(resolved.withServer)}`,
         `server 제공자: ${resolved.serverProvider ?? '없음'}`,
         `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '건너뜀' : (resolved.serverProjectMode ?? '목록에서 선택')) : '해당 없음'}`,

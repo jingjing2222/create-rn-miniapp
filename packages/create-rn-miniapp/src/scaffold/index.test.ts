@@ -87,5 +87,19 @@ test('buildCreateLifecycleOrder applies root templates and server patch before f
     'server provisioning',
     'backoffice Vite 생성',
     '루트 workspace manifest 동기화',
+    '루트 git init',
   ])
+})
+
+test('buildCreateLifecycleOrder omits root git init when no-git is enabled', () => {
+  const labels = buildCreateLifecycleOrder({
+    appName: 'ebook',
+    targetRoot: path.join('/tmp', 'ebook'),
+    packageManager: 'pnpm',
+    noGit: true,
+    serverProvider: null,
+    withBackoffice: false,
+  })
+
+  assert.doesNotMatch(labels.join('\n'), /루트 git init/)
 })

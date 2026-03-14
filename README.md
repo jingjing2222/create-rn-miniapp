@@ -113,6 +113,7 @@ pnpm verify
 - `--with-backoffice`: `backoffice` 워크스페이스를 포함해요.
 - `--root-dir <dir>`: `--add`에서 수정할 기존 모노레포 루트예요. 기본값은 현재 디렉터리예요.
 - `--output-dir <dir>`: 생성할 모노레포의 상위 디렉터리예요.
+- `--no-git`: 생성 완료 후 루트 `git init`을 생략해요.
 - `--skip-install`: 마지막 루트 package manager install과 Biome 정리를 생략해요.
 - `--yes`: 선택형 질문을 기본값으로 진행해요.
 - `--help`: 도움말을 출력해요.

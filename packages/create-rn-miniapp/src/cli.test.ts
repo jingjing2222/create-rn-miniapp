@@ -21,6 +21,7 @@ test('parseCliArgs parses long-form CLI options with yargs', async () => {
       'ebook-miniapp',
       '--display-name',
       '전자책 미니앱',
+      '--no-git',
       '--with-server',
       '--server-provider',
       'supabase',
@@ -37,6 +38,7 @@ test('parseCliArgs parses long-form CLI options with yargs', async () => {
   assert.equal(argv.packageManager, 'yarn')
   assert.equal(argv.name, 'ebook-miniapp')
   assert.equal(argv.displayName, '전자책 미니앱')
+  assert.equal(argv.noGit, true)
   assert.equal(argv.withServer, true)
   assert.equal(argv.serverProvider, 'supabase')
   assert.equal(argv.serverProjectMode, 'existing')
@@ -128,6 +130,7 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   assert.equal(resolved.serverProjectMode, null)
   assert.equal(resolved.withBackoffice, false)
   assert.equal(resolved.skipInstall, false)
+  assert.equal(resolved.noGit, false)
   assert.equal(resolved.outputDir, path.resolve('/tmp/workspace'))
   assert.deepEqual(textCalls, [
     {
@@ -244,6 +247,7 @@ test('resolveCliOptions keeps prompts optional when yes flag is set', async () =
   assert.equal(resolved.serverProjectMode, null)
   assert.equal(resolved.withBackoffice, false)
   assert.equal(resolved.skipInstall, true)
+  assert.equal(resolved.noGit, false)
 })
 
 test('resolveCliOptions keeps with-server compatibility by defaulting provider to supabase', async () => {
@@ -430,6 +434,41 @@ test('resolveCliOptions skips package-manager prompt when yarn create invoked th
     '`server` 제공자를 선택하세요.',
     '`backoffice` 워크스페이스를 같이 만들까요?',
   ])
+})
+
+test('resolveCliOptions keeps no-git when explicitly requested', async () => {
+  const resolved = await resolveCliOptions(
+    {
+      add: false,
+      name: 'ebook-miniapp',
+      noGit: true,
+      rootDir: '/tmp/workspace',
+      outputDir: '/tmp/workspace',
+      skipInstall: false,
+      yes: true,
+      help: false,
+      version: false,
+    },
+    {
+      async text() {
+        throw new Error('text prompt should not be called')
+      },
+      async select(options) {
+        const fallback = options.options[0]
+
+        if (!fallback) {
+          throw new Error('선택지가 없습니다.')
+        }
+
+        return fallback.value
+      },
+    },
+    {
+      npm_config_user_agent: 'pnpm/10.32.1 npm/? node/v25.6.1 darwin arm64',
+    },
+  )
+
+  assert.equal(resolved.noGit, true)
 })
 
 test('resolveAddCliOptions detects additive targets from an existing workspace', async () => {

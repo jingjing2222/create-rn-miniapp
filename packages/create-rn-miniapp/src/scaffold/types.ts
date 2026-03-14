@@ -9,6 +9,7 @@ export type ScaffoldOptions = {
   appName: string
   displayName: string
   outputDir: string
+  noGit: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean

@@ -16,6 +16,7 @@ export type ParsedCliArgs = {
   packageManager?: PackageManager
   name?: string
   displayName?: string
+  noGit?: boolean
   withServer?: boolean
   serverProvider?: ServerProvider
   serverProjectMode?: ServerProjectMode
@@ -68,6 +69,7 @@ export type ResolvedCliOptions = {
   packageManager: PackageManager
   appName: string
   displayName: string
+  noGit: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
@@ -122,6 +124,11 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
       type: 'string',
       describe: '사용자에게 보이는 앱 이름',
     })
+    .option('git', {
+      type: 'boolean',
+      default: true,
+      describe: '생성 완료 후 루트 git init 수행',
+    })
     .option('with-server', {
       type: 'boolean',
       describe: '`server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
@@ -175,6 +182,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     packageManager: argv.packageManager,
     name: argv.name,
     displayName: argv.displayName,
+    noGit: argv.git === false,
     withServer: argv.withServer,
     serverProvider: argv.serverProvider,
     serverProjectMode: argv.serverProjectMode,
@@ -200,6 +208,7 @@ export function formatCliHelp() {
     '  --package-manager <pnpm|yarn> package manager 지정',
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
+    '  --no-git                       생성 완료 후 루트 git init 생략',
     '  --with-server                  `server` 워크스페이스 포함 (`--server-provider supabase`의 축약형)',
     `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
     '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
@@ -372,6 +381,7 @@ export async function resolveCliOptions(
     packageManager,
     appName,
     displayName,
+    noGit: argv.noGit ?? false,
     serverProvider: normalizedServerProvider,
     serverProjectMode,
     skipServerProvisioning,
