@@ -1,5 +1,27 @@
 # create-rn-miniapp
 
+## 0.0.10
+
+### Patch Changes
+
+- d33c640: Add npm and bun package manager support to the generator and detect the invoking package manager automatically for `npm create`, `pnpm create`, `yarn create`, and `bun create`.
+
+  Improve Firebase provisioning by automating more Google Cloud setup steps, handling Cloud Build API and default build service account detection, and making Firebase Functions scaffolding work more reliably across package managers.
+
+  Generate npm-specific `.npmrc` files for root and workspace packages so npm installs and Firebase Functions nested installs can consistently use `legacy-peer-deps` without command-specific flags.
+
+  Add `publish:dev` support for timestamped prerelease publishes and update generated provider docs and README guidance to match the new package manager and provisioning flows.
+
+- 5fefa4d: Stop generating an unused `resolveOptionalMiniappEnv()` helper in
+  `frontend/granite.config.ts` for providers that only need required env values.
+
+  Supabase and Cloudflare scaffolds now emit a cleaner Granite config, while
+  Firebase keeps the optional helper for `MINIAPP_FIREBASE_MEASUREMENT_ID`.
+
+- Updated dependencies [d33c640]
+- Updated dependencies [5fefa4d]
+  - @create-rn-miniapp/scaffold-templates@0.0.10
+
 ## 0.0.9
 
 ### Patch Changes
