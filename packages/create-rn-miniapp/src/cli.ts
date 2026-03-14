@@ -206,7 +206,7 @@ export function createExecaPrompter(): CliPrompter {
   return {
     async text(options) {
       while (true) {
-        const value = await runPromptScript(buildTextPromptScript(options))
+        const value = await runTextPromptScript(buildTextPromptScript(options))
         const normalized = value.length === 0 ? (options.initialValue ?? '') : value
         const validationMessage = options.validate?.(normalized)
 
@@ -218,9 +218,9 @@ export function createExecaPrompter(): CliPrompter {
       }
     },
     async select<T extends string>(options: SelectPromptOptions<T>) {
-      const selection = await runPromptScript(buildSelectPromptScript(options))
+      const selection = await runSelectPromptProgram(buildSelectPromptProgram(options))
       const index = Number(selection)
-      const picked = options.options[index - 1]
+      const picked = options.options[index]
 
       if (!picked) {
         throw new Error('선택 값을 해석하지 못했습니다.')
@@ -250,34 +250,99 @@ function buildTextPromptScript(options: TextPromptOptions) {
   ].join('\n')
 }
 
-function buildSelectPromptScript<T extends string>(options: SelectPromptOptions<T>) {
-  const defaultIndex = options.initialValue
-    ? options.options.findIndex((option) => option.value === options.initialValue) + 1
+export function buildSelectPromptProgram<T extends string>(options: SelectPromptOptions<T>) {
+  const initialIndex = options.initialValue
+    ? Math.max(
+        0,
+        options.options.findIndex((option) => option.value === options.initialValue),
+      )
     : 0
+  const payload = JSON.stringify({
+    message: options.message,
+    labels: options.options.map((option) => option.label),
+    initialIndex,
+  })
 
   return [
-    ...options.options.map(
-      (option, index) => `printf "%s\\n" ${toShellLiteral(`${index + 1}. ${option.label}`)} >&2`,
-    ),
-    'while true; do',
-    defaultIndex > 0
-      ? `  printf "%s [기본값: ${defaultIndex}]: " ${toShellLiteral(options.message)} >&2`
-      : `  printf "%s: " ${toShellLiteral(options.message)} >&2`,
-    '  IFS= read -r answer || exit 130',
-    defaultIndex > 0 ? `  if [ -z "$answer" ]; then answer=${defaultIndex}; fi` : '',
-    '  case "$answer" in',
-    ...options.options.map(
-      (option, index) => `    ${index + 1}) printf "%s" "${index + 1}"; exit 0 ;;`,
-    ),
-    '    *) printf "올바른 번호를 입력하세요.\\n" >&2 ;;',
-    '  esac',
-    'done',
-  ]
-    .filter(Boolean)
-    .join('\n')
+    `const payload = ${payload};`,
+    'const stdin = process.stdin;',
+    'const stdout = process.stdout;',
+    'const stderr = process.stderr;',
+    'const labels = payload.labels;',
+    'let cursor = payload.initialIndex;',
+    'let selected = payload.initialIndex;',
+    'let renderedLines = 0;',
+    "const HIDE_CURSOR = '\\u001b[?25l';",
+    "const SHOW_CURSOR = '\\u001b[?25h';",
+    'function clearFrame() {',
+    '  if (renderedLines > 0) {',
+    '    stderr.write(`\\u001b[${renderedLines}A\\u001b[J`);',
+    '    renderedLines = 0;',
+    '  }',
+    '}',
+    'function render() {',
+    '  clearFrame();',
+    '  const lines = [',
+    '    payload.message,',
+    "    '↑ ↓로 이동, Space로 선택, Enter로 진행, Ctrl+C로 취소',",
+    "    ...labels.map((label, index) => `${index === cursor ? '❯' : ' '} ${index === selected ? '◉' : '○'} ${label}`),",
+    '  ];',
+    "  stderr.write(lines.join('\\n') + '\\n');",
+    '  renderedLines = lines.length;',
+    '}',
+    'function cleanup() {',
+    '  clearFrame();',
+    '  if (stderr.isTTY) {',
+    '    stderr.write(SHOW_CURSOR);',
+    '  }',
+    '  if (stdin.isTTY) {',
+    '    stdin.setRawMode(false);',
+    '  }',
+    '  stdin.pause();',
+    '}',
+    'if (!stdin.isTTY || !stderr.isTTY) {',
+    '  process.exit(64);',
+    '}',
+    'stderr.write(HIDE_CURSOR);',
+    "stdin.setEncoding('utf8');",
+    'stdin.setRawMode(true);',
+    'stdin.resume();',
+    "process.on('exit', () => {",
+    '  if (stderr.isTTY) {',
+    '    stderr.write(SHOW_CURSOR);',
+    '  }',
+    '});',
+    "stdin.on('data', (chunk) => {",
+    "  if (chunk === '\\u0003') {",
+    '    cleanup();',
+    '    process.exit(130);',
+    '  }',
+    "  if (chunk === '\\u001b[A') {",
+    '    cursor = cursor === 0 ? labels.length - 1 : cursor - 1;',
+    '    render();',
+    '    return;',
+    '  }',
+    "  if (chunk === '\\u001b[B') {",
+    '    cursor = cursor === labels.length - 1 ? 0 : cursor + 1;',
+    '    render();',
+    '    return;',
+    '  }',
+    "  if (chunk === ' ') {",
+    '    selected = cursor;',
+    '    render();',
+    '    return;',
+    '  }',
+    "  if (chunk === '\\r' || chunk === '\\n') {",
+    '    cleanup();',
+    '    stdout.write(String(selected));',
+    '    process.exit(0);',
+    '  }',
+    '});',
+    'render();',
+  ].join('\n')
 }
 
-async function runPromptScript(script: string) {
+async function runTextPromptScript(script: string) {
   try {
     const { stdout } = await execa('bash', ['-lc', script], {
       stdin: 'inherit',
@@ -289,6 +354,28 @@ async function runPromptScript(script: string) {
   } catch (error) {
     if (isPromptCancelled(error)) {
       throw new Error('입력을 취소했습니다.')
+    }
+
+    throw error
+  }
+}
+
+async function runSelectPromptProgram(program: string) {
+  try {
+    const { stdout } = await execa('node', ['--input-type=module', '-e', program], {
+      stdin: 'inherit',
+      stdout: 'pipe',
+      stderr: 'inherit',
+    })
+
+    return stdout.trimEnd()
+  } catch (error) {
+    if (isPromptCancelled(error)) {
+      throw new Error('입력을 취소했습니다.')
+    }
+
+    if (isNonTtyPrompt(error)) {
+      throw new Error('인터랙티브 선택은 터미널에서만 가능합니다. 관련 옵션을 직접 지정하세요.')
     }
 
     throw error
@@ -313,4 +400,16 @@ function isPromptCancelled(error: unknown) {
   return (
     candidate.exitCode === 130 || candidate.signal === 'SIGINT' || candidate.isCanceled === true
   )
+}
+
+function isNonTtyPrompt(error: unknown) {
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+
+  const candidate = error as {
+    exitCode?: number
+  }
+
+  return candidate.exitCode === 64
 }

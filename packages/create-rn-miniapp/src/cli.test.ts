@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import test from 'node:test'
-import { formatCliHelp, parseCliArgs, resolveCliOptions, type CliPrompter } from './cli.js'
+import {
+  buildSelectPromptProgram,
+  formatCliHelp,
+  parseCliArgs,
+  resolveCliOptions,
+  type CliPrompter,
+} from './cli.js'
 
 test('parseCliArgs parses long-form CLI options with yargs', async () => {
   const argv = await parseCliArgs(
@@ -126,4 +132,24 @@ test('formatCliHelp renders Korean help text', () => {
   assert.match(help, /옵션/)
   assert.match(help, /도움말 보기/)
   assert.match(help, /버전 보기/)
+})
+
+test('buildSelectPromptProgram uses arrow keys, space to select, and enter to continue', () => {
+  const program = buildSelectPromptProgram({
+    message: '`server` 워크스페이스를 같이 만들까요?',
+    options: [
+      { label: '예', value: 'yes' },
+      { label: '아니오', value: 'no' },
+    ],
+    initialValue: 'no',
+  })
+
+  assert.match(program, /↑ ↓로 이동, Space로 선택, Enter로 진행/)
+  assert.match(program, /setRawMode\(true\)/)
+  assert.equal(program.includes(String.raw`\u001b[A`), true)
+  assert.equal(program.includes(String.raw`\u001b[B`), true)
+  assert.match(program, /let selected = payload.initialIndex/)
+  assert.match(program, /selected = cursor/)
+  assert.match(program, /stdout.write\(String\(selected\)\)/)
+  assert.doesNotMatch(program, /1\\. 예/)
 })
