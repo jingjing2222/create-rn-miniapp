@@ -651,7 +651,10 @@ test('finalizeFirebaseProvisioning writes env files when sdk config is available
     assert.equal(notes[0]?.title, 'Firebase 환경 변수 작성 완료')
     assert.match(notes[0]?.body ?? '', /server\/package\.json 의 deploy/)
     assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
+    assert.match(notes[0]?.body ?? '', /firebase login:ci/)
+    assert.match(notes[0]?.body ?? '', /firebase\.google\.com\/docs\/cli/)
     assert.match(notes[0]?.body ?? '', /GOOGLE_APPLICATION_CREDENTIALS 는 비어 있으니/)
+    assert.match(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }
@@ -693,6 +696,8 @@ test('finalizeFirebaseProvisioning falls back to manual setup guidance when sdk 
     assert.match(serverEnv, /^FIREBASE_TOKEN=$/m)
     assert.match(serverEnv, /^GOOGLE_APPLICATION_CREDENTIALS=\/tmp\/firebase\.json$/m)
     assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
+    assert.match(notes[0]?.body ?? '', /firebase login:ci/)
+    assert.match(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }

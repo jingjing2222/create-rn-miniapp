@@ -1,6 +1,20 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: Firebase deploy auth 안내에 발급 경로 추가
+1. 문제
+   - 현재 Firebase provisioning 완료 note는 `FIREBASE_TOKEN` 과 `GOOGLE_APPLICATION_CREDENTIALS`가 비어 있으니 필요할 때 채우라고만 안내한다.
+   - 하지만 어디서 발급받는지와 어떤 명령이나 콘솔 페이지를 써야 하는지 빠져 있어서, 처음 보는 사용자는 바로 막힌다.
+2. 방향
+   - `FIREBASE_TOKEN` 안내에는 `firebase login:ci`와 Firebase CLI 공식 문서 URL을 포함한다.
+   - `GOOGLE_APPLICATION_CREDENTIALS` 안내에는 Firebase/Google 공식 문서와 Google Cloud Service Accounts 콘솔 URL을 포함한다.
+   - 자동 작성 완료 note와 수동 안내 note 모두 같은 수준으로 친절하게 맞춘다.
+3. 테스트
+   - Firebase finalize/manual note 테스트에 `firebase login:ci`와 Service Accounts URL이 포함되는지 검증한다.
+4. 완료 기준
+   - Firebase deploy auth 관련 note만 읽어도 발급 위치와 다음 행동을 바로 알 수 있다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Cloudflare OAuth scope 축소로 인한 D1/R2 인증 오류 복구
 1. 문제
    - 현재 Cloudflare provider는 `wrangler login --scopes ...`로 OAuth scope를 좁혀서 발급받는다.

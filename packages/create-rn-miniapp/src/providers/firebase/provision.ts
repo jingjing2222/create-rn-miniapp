@@ -82,6 +82,8 @@ const CREATE_FIREBASE_PROJECT_SENTINEL = '__create_firebase_project__'
 const CREATE_FIREBASE_APP_SENTINEL = '__create_firebase_app__'
 const FIREBASE_CONSOLE_SETTINGS_URL = (projectId: string) =>
   `https://console.firebase.google.com/project/${projectId}/settings/general/`
+const FIREBASE_CLI_DOC_URL = 'https://firebase.google.com/docs/cli'
+const FIREBASE_ADMIN_SETUP_URL = 'https://firebase.google.com/docs/admin/setup'
 const FIREBASE_EXISTING_GCP_PROJECTS_DOC_URL =
   'https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project'
 const FIREBASE_PRICING_URL = 'https://firebase.google.com/pricing'
@@ -102,6 +104,8 @@ const CLOUD_BUILD_API_SERVICE = 'cloudbuild.googleapis.com'
 
 const GOOGLE_CLOUD_PROJECT_BILLING_URL = (projectId: string) =>
   `https://console.cloud.google.com/billing/linkedaccount?project=${projectId}`
+const GOOGLE_CLOUD_SERVICE_ACCOUNTS_URL = (projectId: string) =>
+  `https://console.cloud.google.com/iam-admin/serviceaccounts?project=${projectId}`
 
 const LOCAL_GOOGLE_CLOUD_CLI_ROOT = path.join(
   os.homedir(),
@@ -1440,11 +1444,20 @@ export function formatFirebaseManualSetupNote(options: {
   )
 
   if (!options.hasConfiguredToken) {
-    lines.push('FIREBASE_TOKEN 은 CI나 비대화형 Firebase CLI 배포가 필요할 때만 채우면 됩니다.')
+    lines.push(
+      'FIREBASE_TOKEN 은 CI나 비대화형 Firebase CLI 배포가 필요할 때만 채우면 됩니다.',
+      '`firebase login:ci`로 토큰을 발급받아 server/.env.local 의 FIREBASE_TOKEN 에 넣으세요.',
+      FIREBASE_CLI_DOC_URL,
+    )
   }
 
   if (!options.hasConfiguredCredentials) {
-    lines.push('GOOGLE_APPLICATION_CREDENTIALS 는 CI나 비대화형 배포가 필요할 때만 채우면 됩니다.')
+    lines.push(
+      'GOOGLE_APPLICATION_CREDENTIALS 는 CI나 비대화형 배포가 필요할 때만 채우면 됩니다.',
+      'Google Cloud Service Accounts 페이지에서 서비스 계정 JSON 키를 발급받아 파일 경로를 server/.env.local 에 넣으세요.',
+      GOOGLE_CLOUD_SERVICE_ACCOUNTS_URL(options.projectId),
+      FIREBASE_ADMIN_SETUP_URL,
+    )
   }
 
   return {
@@ -1609,10 +1622,19 @@ export async function finalizeFirebaseProvisioning(options: {
           'server/package.json 의 deploy 로 Firebase Functions를 다시 배포할 수 있습니다.',
           serverEnv.hasConfiguredToken
             ? 'server/.env.local 의 FIREBASE_TOKEN 은 기존 값을 유지했습니다.'
-            : 'server/.env.local 의 FIREBASE_TOKEN 은 비어 있으니, CI나 비대화형 배포가 필요할 때만 채워 넣으세요.',
+            : [
+                'server/.env.local 의 FIREBASE_TOKEN 은 비어 있어요.',
+                '`firebase login:ci`로 토큰을 발급받아 필요할 때만 채워 넣으세요.',
+                FIREBASE_CLI_DOC_URL,
+              ].join('\n'),
           serverEnv.hasConfiguredCredentials
             ? 'server/.env.local 의 GOOGLE_APPLICATION_CREDENTIALS 는 기존 값을 유지했습니다.'
-            : 'server/.env.local 의 GOOGLE_APPLICATION_CREDENTIALS 는 비어 있으니, CI나 비대화형 배포가 필요할 때만 채워 넣으세요.',
+            : [
+                'server/.env.local 의 GOOGLE_APPLICATION_CREDENTIALS 는 비어 있어요.',
+                'Google Cloud Service Accounts 페이지에서 서비스 계정 JSON 키를 발급받아 파일 경로를 채워 넣으세요.',
+                GOOGLE_CLOUD_SERVICE_ACCOUNTS_URL(options.provisionedProject.projectId),
+                FIREBASE_ADMIN_SETUP_URL,
+              ].join('\n'),
           '',
           'Firebase 설정을 다시 확인해야 하면 아래 URL을 보세요.',
           FIREBASE_CONSOLE_SETTINGS_URL(options.provisionedProject.projectId),
