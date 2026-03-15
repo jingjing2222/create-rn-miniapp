@@ -1,6 +1,19 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: README 상단 소개와 빠른 시작 축약
+1. 문제
+   - 현재 README 상단은 같은 의미를 반복해서 설명하고, package manager별 문장을 길게 늘어놓고 있다.
+   - 생성 구조에서도 내부 workspace manifest와 lockfile 설명이 너무 앞단에 나와 제품 설명 집중도가 떨어진다.
+2. 방향
+   - 소개 문장을 에이전트가 Granite, `@apps-in-toss/framework`, TDS를 바로 활용할 수 있는 실행 컨텍스트 patch 도구라는 관점으로 다시 쓴다.
+   - `npm/pnpm/yarn/bun create` 예시는 한 코드 블록으로 묶고, package manager 자동 선택은 한 문장으로 압축한다.
+   - 생성 구조에서는 꼭 필요한 루트 파일만 남기고 package-manager별 manifest/lockfile 상세는 제거한다.
+3. 완료 기준
+   - README 상단이 반복 없이 더 짧고 제품 중심으로 읽힌다.
+   - 빠른 시작 설명이 중복 없이 정리된다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: watch 모드 `vitest` 스크립트 정규화
 1. 문제
    - 생성물 workspace가 `test: "vitest"`를 그대로 가지면 루트 `nx test`에서 watch 모드로 붙잡혀 종료되지 않는다.
