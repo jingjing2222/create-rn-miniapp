@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import {
+  buildWranglerLoginArgs,
   buildCloudflareWorkersDevUrl,
   buildCloudflareProvisionExecutionOrder,
   canRecoverCloudflareDeployFailure,
@@ -11,6 +12,7 @@ import {
   formatCloudflareDeployFailureMessage,
   formatCloudflareManualSetupNote,
   getWranglerConfigCandidates,
+  isCloudflareAuthenticationErrorMessage,
   writeCloudflareServerLocalEnvFile,
   writeCloudflareLocalEnvFiles,
 } from './provision.js'
@@ -34,6 +36,21 @@ test('getWranglerConfigCandidates includes the macOS preferences path', () => {
     '/Users/tester/Library/Application Support/.wrangler/config/default.toml',
     '/Users/tester/Library/Preferences/.wrangler/config/default.toml',
   ])
+})
+
+test('buildWranglerLoginArgs requests the default Wrangler scope set', () => {
+  assert.deepEqual(buildWranglerLoginArgs(), ['login'])
+})
+
+test('isCloudflareAuthenticationErrorMessage detects Cloudflare auth failures', () => {
+  assert.equal(isCloudflareAuthenticationErrorMessage('Authentication error'), true)
+  assert.equal(
+    isCloudflareAuthenticationErrorMessage(
+      'failed: Invalid access token while requesting Cloudflare API',
+    ),
+    true,
+  )
+  assert.equal(isCloudflareAuthenticationErrorMessage('workers.dev onboarding required'), false)
 })
 
 test('buildCloudflareProvisionExecutionOrder ensures workers.dev onboarding before deploy', () => {

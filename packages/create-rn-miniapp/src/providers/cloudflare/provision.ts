@@ -108,6 +108,20 @@ function buildWranglerCommand(
   }
 }
 
+export function buildWranglerLoginArgs() {
+  return ['login']
+}
+
+export function isCloudflareAuthenticationErrorMessage(message: string) {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes('authentication error') ||
+    normalized.includes('invalid access token') ||
+    normalized.includes('not authorized') ||
+    normalized.includes('unauthorized')
+  )
+}
+
 function createCloudflareEnvValues(apiBaseUrl: string) {
   return {
     frontend: [`MINIAPP_API_BASE_URL=${apiBaseUrl}`, ''].join('\n'),
@@ -204,16 +218,18 @@ async function ensureWranglerAuth(packageManager: PackageManager, cwd: string) {
     return existingAuth
   }
 
+  return await refreshWranglerAuth(packageManager, cwd)
+}
+
+async function refreshWranglerAuth(packageManager: PackageManager, cwd: string) {
   log.step('Cloudflare Wrangler 로그인')
   await runCommand(
-    buildWranglerCommand(packageManager, cwd, 'Cloudflare Wrangler 로그인', [
-      'login',
-      '--scopes',
-      'account:read',
-      'user:read',
-      'workers:write',
-      'workers_scripts:write',
-    ]),
+    buildWranglerCommand(
+      packageManager,
+      cwd,
+      'Cloudflare Wrangler 로그인',
+      buildWranglerLoginArgs(),
+    ),
   )
 
   const nextAuth = await readWranglerAuthToken()
@@ -897,10 +913,27 @@ export async function provisionCloudflareWorker(
   options: ProvisionCloudflareWorkerOptions,
 ): Promise<ProvisionedCloudflareWorker | null> {
   const serverRoot = path.join(options.targetRoot, 'server')
-  const auth = await ensureWranglerAuth(options.packageManager, options.targetRoot)
-  const accounts = await listCloudflareAccounts(auth.oauthToken)
+  let auth = await ensureWranglerAuth(options.packageManager, options.targetRoot)
+  const withAuthRetry = async <T>(operation: (authToken: string) => Promise<T>) => {
+    try {
+      return await operation(auth.oauthToken)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+
+      if (!isCloudflareAuthenticationErrorMessage(message)) {
+        throw error
+      }
+
+      auth = await refreshWranglerAuth(options.packageManager, options.targetRoot)
+      return await operation(auth.oauthToken)
+    }
+  }
+
+  const accounts = await withAuthRetry((authToken) => listCloudflareAccounts(authToken))
   const accountId = await selectCloudflareAccount(options.prompt, accounts)
-  const existingWorkerNames = await listCloudflareWorkers(auth.oauthToken, accountId)
+  const existingWorkerNames = await withAuthRetry((authToken) =>
+    listCloudflareWorkers(authToken, accountId),
+  )
 
   let resolvedProjectMode = options.projectMode
   let workerName: string | null = null
@@ -939,7 +972,9 @@ export async function provisionCloudflareWorker(
     throw new Error('연결할 Cloudflare Worker를 결정하지 못했습니다.')
   }
 
-  const existingD1Databases = await listCloudflareD1Databases(auth.oauthToken, accountId)
+  const existingD1Databases = await withAuthRetry((authToken) =>
+    listCloudflareD1Databases(authToken, accountId),
+  )
   const selectedD1Database = await selectCloudflareD1Database(options.prompt, existingD1Databases, {
     includeCreateOption: true,
     message: '사용할 Cloudflare D1 database를 선택하세요. 새 database 생성도 바로 할 수 있습니다.',
@@ -967,7 +1002,9 @@ export async function provisionCloudflareWorker(
     throw new Error('연결할 Cloudflare D1 database를 결정하지 못했습니다.')
   }
 
-  const existingR2Buckets = await listCloudflareR2Buckets(auth.oauthToken, accountId)
+  const existingR2Buckets = await withAuthRetry((authToken) =>
+    listCloudflareR2Buckets(authToken, accountId),
+  )
   const selectedR2Bucket = await selectCloudflareR2Bucket(options.prompt, existingR2Buckets, {
     includeCreateOption: true,
     message: '사용할 Cloudflare R2 bucket을 선택하세요. 새 bucket 생성도 바로 할 수 있습니다.',
@@ -1007,12 +1044,14 @@ export async function provisionCloudflareWorker(
 
   for (const step of executionOrder) {
     if (step === 'ensure-account-subdomain') {
-      accountSubdomain = await ensureAccountSubdomain({
-        authToken: auth.oauthToken,
-        accountId,
-        prompt: options.prompt,
-        appName: options.appName,
-      })
+      accountSubdomain = await withAuthRetry((authToken) =>
+        ensureAccountSubdomain({
+          authToken,
+          accountId,
+          prompt: options.prompt,
+          appName: options.appName,
+        }),
+      )
       continue
     }
 
@@ -1023,7 +1062,9 @@ export async function provisionCloudflareWorker(
         const message = error instanceof Error ? error.message : String(error)
 
         try {
-          const currentWorkerNames = await listCloudflareWorkers(auth.oauthToken, accountId)
+          const currentWorkerNames = await withAuthRetry((authToken) =>
+            listCloudflareWorkers(authToken, accountId),
+          )
 
           if (
             canRecoverCloudflareDeployFailure({
@@ -1048,7 +1089,9 @@ export async function provisionCloudflareWorker(
     }
 
     try {
-      await ensureWorkerSubdomainEnabled(auth.oauthToken, accountId, workerName)
+      await withAuthRetry((authToken) =>
+        ensureWorkerSubdomainEnabled(authToken, accountId, workerName),
+      )
     } catch {
       return {
         accountId,

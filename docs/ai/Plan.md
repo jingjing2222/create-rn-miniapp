@@ -1,6 +1,23 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: Cloudflare OAuth scope 축소로 인한 D1/R2 인증 오류 복구
+1. 문제
+   - 현재 Cloudflare provider는 `wrangler login --scopes ...`로 OAuth scope를 좁혀서 발급받는다.
+   - 예전 scope로 남아 있는 Wrangler 로그인 토큰은 Worker 관련 API는 통과해도 D1 / R2 조회 단계에서 `Authentication error`로 실패할 수 있다.
+   - 사용자는 Worker 이름까지 입력한 뒤 D1 / R2 단계에서 원인 설명 없이 중단되는 흐름을 겪게 된다.
+2. 방향
+   - Wrangler 로그인은 더 이상 `--scopes`를 강제하지 않고, Cloudflare 기본 full scope 발급 경로를 사용한다.
+   - Cloudflare REST API 호출이 `Authentication error`류 응답으로 실패하면 scope가 부족한 토큰으로 보고 `wrangler login`을 한 번 더 실행한 뒤 같은 호출을 재시도한다.
+   - 관련 helper를 테스트 가능한 함수로 분리해서 login args와 auth retry 분기를 고정한다.
+3. 테스트
+   - Wrangler login args가 더 이상 `--scopes`를 포함하지 않는지 검증
+   - `Authentication error` 메시지를 auth retry 대상으로 인식하는지 검증
+4. 완료 기준
+   - 새 Cloudflare 로그인은 scope 축소 없이 발급된다.
+   - 기존 제한된 Wrangler 토큰으로 시작해도 D1 / R2 단계에서 자동 재로그인 후 복구할 수 있다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Cloudflare D1/R2 IaC와 Cloudflare/Firebase 재배포 토큰 경로 정리
 1. 문제
    - 현재 `cloudflare` provider는 Worker deploy와 API URL 작성까지만 하고, D1 database나 R2 bucket은 선택/생성하지 않는다.
