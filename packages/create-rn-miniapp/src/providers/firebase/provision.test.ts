@@ -143,7 +143,7 @@ test('formatFirebaseAddFirebaseFailureMessage explains permission-denied failure
     ].join('\n'),
   })
 
-  assert.match(message, /Firebase 리소스 연결 단계가 실패했습니다/)
+  assert.match(message, /Firebase 리소스를 붙이는 중에 실패했어요/)
   assert.match(message, /PERMISSION_DENIED/)
   assert.match(message, /Firebase Terms of Service/)
   assert.match(message, /Owner 또는 Editor/)
@@ -448,6 +448,94 @@ test('ensureFirebaseBuildServiceAccountPermissions stops with a clear error when
   )
 })
 
+test('ensureFirebaseBuildServiceAccountPermissions retries build service account checks and shows attempt progress before succeeding', async () => {
+  const attempts: string[] = []
+  const waits: number[] = []
+  let serviceAccountExistsAttempt = 0
+
+  await ensureFirebaseBuildServiceAccountPermissions({
+    cwd: '/tmp/ebook',
+    projectId: 'miniapp-8000b',
+    ensureGcloudInstalled: async () => '/tmp/google-cloud-sdk/bin/gcloud',
+    getDefaultBuildServiceAccount: async () => '563134134914@cloudbuild.gserviceaccount.com',
+    ensureBuildServiceAccountExists: async () => {
+      serviceAccountExistsAttempt += 1
+      return serviceAccountExistsAttempt >= 3
+    },
+    getProjectIamPolicy: async () => ({
+      bindings: [
+        {
+          role: 'roles/cloudbuild.builds.builder',
+          members: ['serviceAccount:563134134914@cloudbuild.gserviceaccount.com'],
+        },
+        {
+          role: 'roles/run.builder',
+          members: ['serviceAccount:563134134914@cloudbuild.gserviceaccount.com'],
+        },
+      ],
+    }),
+    addProjectIamBinding: async () => {
+      throw new Error('addProjectIamBinding should not be called')
+    },
+    logMessage: (message) => {
+      attempts.push(message)
+    },
+    wait: async (ms) => {
+      waits.push(ms)
+    },
+  })
+
+  assert.equal(serviceAccountExistsAttempt, 3)
+  assert.deepEqual(waits, [750, 750])
+  assert.deepEqual(attempts, [
+    'Cloud Build 기본 service account를 확인하는 중이에요. (1/5)',
+    'Cloud Build 기본 service account를 확인하는 중이에요. (2/5)',
+    'Cloud Build 기본 service account를 확인하는 중이에요. (3/5)',
+  ])
+})
+
+test('ensureFirebaseBuildServiceAccountPermissions retries build service account checks five times before failing', async () => {
+  const attempts: string[] = []
+  const waits: number[] = []
+  let serviceAccountExistsAttempt = 0
+
+  await assert.rejects(
+    ensureFirebaseBuildServiceAccountPermissions({
+      cwd: '/tmp/ebook',
+      projectId: 'miniapp-8000b',
+      ensureGcloudInstalled: async () => '/tmp/google-cloud-sdk/bin/gcloud',
+      getDefaultBuildServiceAccount: async () => '563134134914@cloudbuild.gserviceaccount.com',
+      ensureBuildServiceAccountExists: async () => {
+        serviceAccountExistsAttempt += 1
+        return false
+      },
+      getProjectIamPolicy: async () => {
+        throw new Error('getProjectIamPolicy should not be called')
+      },
+      addProjectIamBinding: async () => {
+        throw new Error('addProjectIamBinding should not be called')
+      },
+      logMessage: (message) => {
+        attempts.push(message)
+      },
+      wait: async (ms) => {
+        waits.push(ms)
+      },
+    }),
+    /Cloud Build 기본 service account .* 존재하지 않습니다/,
+  )
+
+  assert.equal(serviceAccountExistsAttempt, 5)
+  assert.deepEqual(waits, [750, 750, 750, 750])
+  assert.deepEqual(attempts, [
+    'Cloud Build 기본 service account를 확인하는 중이에요. (1/5)',
+    'Cloud Build 기본 service account를 확인하는 중이에요. (2/5)',
+    'Cloud Build 기본 service account를 확인하는 중이에요. (3/5)',
+    'Cloud Build 기본 service account를 확인하는 중이에요. (4/5)',
+    'Cloud Build 기본 service account를 확인하는 중이에요. (5/5)',
+  ])
+})
+
 test('isFirebaseFunctionsBuildServiceAccountPermissionError detects Cloud Build IAM failures', () => {
   assert.equal(
     isFirebaseFunctionsBuildServiceAccountPermissionError(
@@ -653,7 +741,7 @@ test('finalizeFirebaseProvisioning writes env files when sdk config is available
     assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
     assert.match(notes[0]?.body ?? '', /firebase login:ci/)
     assert.match(notes[0]?.body ?? '', /firebase\.google\.com\/docs\/cli/)
-    assert.match(notes[0]?.body ?? '', /GOOGLE_APPLICATION_CREDENTIALS 는 비어 있으니/)
+    assert.match(notes[0]?.body ?? '', /GOOGLE_APPLICATION_CREDENTIALS 는 비어 있어요/)
     assert.match(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
@@ -697,7 +785,7 @@ test('finalizeFirebaseProvisioning falls back to manual setup guidance when sdk 
     assert.match(serverEnv, /^GOOGLE_APPLICATION_CREDENTIALS=\/tmp\/firebase\.json$/m)
     assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
     assert.match(notes[0]?.body ?? '', /firebase login:ci/)
-    assert.match(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
+    assert.doesNotMatch(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }

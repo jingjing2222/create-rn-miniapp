@@ -101,6 +101,8 @@ const FIREBASE_REQUIRED_BUILD_SERVICE_ACCOUNT_ROLES = [
   'roles/run.builder',
 ] as const
 const CLOUD_BUILD_API_SERVICE = 'cloudbuild.googleapis.com'
+const FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_ATTEMPTS = 5
+const FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_DELAY_MS = 750
 
 const GOOGLE_CLOUD_PROJECT_BILLING_URL = (projectId: string) =>
   `https://console.cloud.google.com/billing/linkedaccount?project=${projectId}`
@@ -822,11 +824,19 @@ export async function ensureFirebaseBuildServiceAccountPermissions(options: {
     member: string,
     role: string,
   ) => Promise<void>
+  logMessage?: (message: string) => void
+  wait?: (ms: number) => Promise<void>
 }) {
   const gcloudCommand = await (options.ensureGcloudInstalled ?? ensureGcloudCliInstalled)(
     options.cwd,
   )
   const ensureAuth = options.ensureGcloudAuth ?? ensureGcloudAuth
+  const logMessage = options.logMessage ?? ((message: string) => log.message(message))
+  const wait =
+    options.wait ??
+    (async (ms: number) => {
+      await new Promise((resolve) => setTimeout(resolve, ms))
+    })
   const getDefaultBuildServiceAccount =
     options.getDefaultBuildServiceAccount ??
     (async (cwd: string, projectId: string) =>
@@ -854,23 +864,43 @@ export async function ensureFirebaseBuildServiceAccountPermissions(options: {
       await addGoogleCloudProjectIamBinding(cwd, projectId, member, role, gcloudCommand))
 
   while (true) {
-    let buildServiceAccountEmail: string
-    let policy: GoogleCloudIamPolicy
+    let buildServiceAccountEmail: string | null = null
+    let policy: GoogleCloudIamPolicy | null = null
 
     try {
-      buildServiceAccountEmail = await getDefaultBuildServiceAccount(options.cwd, options.projectId)
+      for (
+        let attempt = 1;
+        attempt <= FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_ATTEMPTS;
+        attempt += 1
+      ) {
+        logMessage(
+          `Cloud Build 기본 service account를 확인하는 중이에요. (${attempt}/${FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_ATTEMPTS})`,
+        )
+        buildServiceAccountEmail = await getDefaultBuildServiceAccount(
+          options.cwd,
+          options.projectId,
+        )
 
-      const buildServiceAccountExists = await ensureBuildServiceAccountExists(
-        options.cwd,
-        options.projectId,
-        buildServiceAccountEmail,
-      )
+        const buildServiceAccountExists = await ensureBuildServiceAccountExists(
+          options.cwd,
+          options.projectId,
+          buildServiceAccountEmail,
+        )
 
-      if (!buildServiceAccountExists) {
+        if (buildServiceAccountExists) {
+          break
+        }
+
+        if (attempt < FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_ATTEMPTS) {
+          await wait(FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_DELAY_MS)
+          continue
+        }
+
         throw new Error(
           [
             `Cloud Build 기본 service account \`${buildServiceAccountEmail}\` 가 존재하지 않습니다.`,
-            '이 계정이 삭제된 상태면 복구하거나, Cloud Build 기본 service account 설정을 다시 확인해야 합니다.',
+            '이 계정이 막 만들어지는 중이면 잠깐 뒤에 다시 확인해 보는 게 좋아요.',
+            '계속 보이지 않으면 이 계정이 삭제된 상태일 수 있어서 복구하거나 Cloud Build 기본 service account 설정을 다시 확인해야 해요.',
             '참고 문서: https://cloud.google.com/build/docs/cloud-build-service-account-updates',
           ].join('\n'),
         )
@@ -891,6 +921,10 @@ export async function ensureFirebaseBuildServiceAccountPermissions(options: {
 
       await ensureAuth(options.cwd, gcloudCommand)
       continue
+    }
+
+    if (!buildServiceAccountEmail || !policy) {
+      throw new Error('Cloud Build 기본 service account 확인 결과를 정리하지 못했어요.')
     }
 
     const buildServiceAccountMember = `serviceAccount:${buildServiceAccountEmail}`

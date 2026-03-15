@@ -1,6 +1,24 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: Firebase build service account 확인 타이밍 재시도
+1. 문제
+   - Firebase에서 Blaze 플랜을 올리거나 Cloud Build API를 켠 직후에는 기본 build service account가 아직 보이지 않을 때가 있다.
+   - 지금은 그 순간 바로 권한 보정으로 들어가서, 계정이 아직 생기기 전 상태를 곧바로 실패로 처리할 수 있다.
+2. 방향
+   - Firebase build service account 확인 단계는 최소 5번까지 재시도한다.
+   - 각 시도 사이에는 750ms씩 기다려서 총 대기 시간이 최소 3초가 되게 한다.
+   - TUI에는 `Cloud Build 기본 service account를 확인하는 중이에요. (1/5)`처럼 현재 시도 횟수를 보여준다.
+   - build service account가 실제로 보일 때만 IAM 권한 보정으로 넘어간다.
+3. 테스트
+   - build service account가 몇 번 뒤에 생기는 경우 재시도 후 성공하는지 검증한다.
+   - 5번 모두 준비되지 않으면 최종적으로 기존 에러를 내는지 검증한다.
+   - 시도 로그와 wait 횟수를 함께 검증한다.
+4. 완료 기준
+   - Blaze/Cloud Build 설정 직후의 eventual consistency 때문에 바로 실패하지 않는다.
+   - 사용자는 TUI에서 현재 몇 번째 재시도인지 볼 수 있다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: TUI 말투를 README 톤으로 정리
 1. 문제
    - 현재 CLI/TUI 문구는 기능은 맞지만, 전체적으로 딱딱하고 설명조 표현이 많다.
