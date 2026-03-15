@@ -134,8 +134,8 @@ function buildCloudflareR2OverviewUrl(accountId: string) {
 
 export function formatCloudflareR2EnableMessage(accountId: string) {
   return [
-    'Cloudflare account에서 R2를 먼저 활성화해야 이 흐름을 계속할 수 있습니다.',
-    '아래 URL에서 R2를 켠 뒤 같은 화면에서 다시 확인하세요.',
+    'Cloudflare account에서 R2를 먼저 켜야 이 흐름을 계속할 수 있어요.',
+    '아래 URL에서 R2를 켠 뒤, 같은 화면에서 다시 확인해 주세요.',
     buildCloudflareR2OverviewUrl(accountId),
   ].join('\n')
 }
@@ -240,7 +240,7 @@ async function ensureWranglerAuth(packageManager: PackageManager, cwd: string) {
 }
 
 async function refreshWranglerAuth(packageManager: PackageManager, cwd: string) {
-  log.step('Cloudflare Wrangler 로그인')
+  log.step('Cloudflare Wrangler에 로그인할게요')
   await runCommand(
     buildWranglerCommand(
       packageManager,
@@ -253,7 +253,7 @@ async function refreshWranglerAuth(packageManager: PackageManager, cwd: string) 
   const nextAuth = await readWranglerAuthToken()
 
   if (!nextAuth) {
-    throw new Error('`wrangler login` 후 인증 토큰을 찾지 못했습니다.')
+    throw new Error('`wrangler login` 뒤에 인증 토큰을 찾지 못했어요.')
   }
 
   return nextAuth
@@ -372,10 +372,10 @@ async function ensureAccountSubdomain(options: {
   }
 
   const nextSubdomain = await options.prompt.text({
-    message: 'Cloudflare account workers.dev 서브도메인을 입력하세요.',
+    message: 'Cloudflare account workers.dev 서브도메인을 입력해 주세요.',
     initialValue: options.appName,
     validate(value) {
-      return value.trim().length === 0 ? 'workers.dev 서브도메인을 입력하세요.' : undefined
+      return value.trim().length === 0 ? 'workers.dev 서브도메인을 입력해 주세요.' : undefined
     },
   })
 
@@ -402,11 +402,11 @@ async function ensureWorkerSubdomainEnabled(
 
 async function selectCloudflareAccount(prompt: CliPrompter, accounts: CloudflareAccount[]) {
   if (accounts.length === 0) {
-    throw new Error('사용 가능한 Cloudflare account가 없습니다.')
+    throw new Error('지금 바로 쓸 수 있는 Cloudflare account가 없어요.')
   }
 
   return await prompt.select({
-    message: '사용할 Cloudflare account를 선택하세요.',
+    message: '사용할 Cloudflare account를 골라 주세요.',
     options: accounts.map((account) => ({
       value: account.id,
       label: `${account.name} (${account.id})`,
@@ -424,7 +424,9 @@ async function selectCloudflareWorker(
   },
 ) {
   if (workerNames.length === 0 && !options?.includeCreateOption) {
-    throw new Error('사용 가능한 Cloudflare Worker가 없습니다. 새 Worker를 먼저 배포하세요.')
+    throw new Error(
+      '지금 바로 쓸 수 있는 Cloudflare Worker가 없어요. 새 Worker를 먼저 만들어 주세요.',
+    )
   }
 
   const workerOptions = workerNames.map((workerName) => ({
@@ -436,7 +438,7 @@ async function selectCloudflareWorker(
         ...workerOptions,
         {
           value: CREATE_CLOUDFLARE_WORKER_SENTINEL,
-          label: '+ 새 Cloudflare Worker 생성',
+          label: '+ 새 Cloudflare Worker 만들기',
         },
       ]
     : workerOptions
@@ -446,7 +448,7 @@ async function selectCloudflareWorker(
     CREATE_CLOUDFLARE_WORKER_SENTINEL
 
   return await prompt.select({
-    message: options?.message ?? '사용할 Cloudflare Worker를 선택하세요.',
+    message: options?.message ?? '사용할 Cloudflare Worker를 골라 주세요.',
     options: selectOptions,
     initialValue,
   })
@@ -461,7 +463,9 @@ async function selectCloudflareD1Database(
   },
 ) {
   if (databases.length === 0 && !options?.includeCreateOption) {
-    throw new Error('사용 가능한 Cloudflare D1 database가 없습니다. 새 database를 먼저 생성하세요.')
+    throw new Error(
+      '지금 바로 쓸 수 있는 Cloudflare D1 database가 없어요. 새 database를 먼저 만들어 주세요.',
+    )
   }
 
   const databaseOptions = databases.map((database) => ({
@@ -473,7 +477,7 @@ async function selectCloudflareD1Database(
         ...databaseOptions,
         {
           value: CREATE_CLOUDFLARE_D1_DATABASE_SENTINEL,
-          label: '+ 새 Cloudflare D1 database 생성',
+          label: '+ 새 Cloudflare D1 database 만들기',
         },
       ]
     : databaseOptions
@@ -482,7 +486,7 @@ async function selectCloudflareD1Database(
       ?.value ?? CREATE_CLOUDFLARE_D1_DATABASE_SENTINEL
 
   return await prompt.select({
-    message: options?.message ?? '사용할 Cloudflare D1 database를 선택하세요.',
+    message: options?.message ?? '사용할 Cloudflare D1 database를 골라 주세요.',
     options: selectOptions,
     initialValue,
   })
@@ -497,7 +501,9 @@ async function selectCloudflareR2Bucket(
   },
 ) {
   if (bucketNames.length === 0 && !options?.includeCreateOption) {
-    throw new Error('사용 가능한 Cloudflare R2 bucket이 없습니다. 새 bucket을 먼저 생성하세요.')
+    throw new Error(
+      '지금 바로 쓸 수 있는 Cloudflare R2 bucket이 없어요. 새 bucket을 먼저 만들어 주세요.',
+    )
   }
 
   const bucketOptions = bucketNames.map((bucketName) => ({
@@ -509,7 +515,7 @@ async function selectCloudflareR2Bucket(
         ...bucketOptions,
         {
           value: CREATE_CLOUDFLARE_R2_BUCKET_SENTINEL,
-          label: '+ 새 Cloudflare R2 bucket 생성',
+          label: '+ 새 Cloudflare R2 bucket 만들기',
         },
       ]
     : bucketOptions
@@ -518,7 +524,7 @@ async function selectCloudflareR2Bucket(
     CREATE_CLOUDFLARE_R2_BUCKET_SENTINEL
 
   return await prompt.select({
-    message: options?.message ?? '사용할 Cloudflare R2 bucket을 선택하세요.',
+    message: options?.message ?? '사용할 Cloudflare R2 bucket을 골라 주세요.',
     options: selectOptions,
     initialValue,
   })
@@ -604,7 +610,7 @@ async function createCloudflareD1Database(
   serverRoot: string,
   databaseName: string,
 ) {
-  log.step('Cloudflare D1 database 생성')
+  log.step('Cloudflare D1 database를 만들게요')
   await runCommand(
     buildWranglerCommand(packageManager, serverRoot, 'Cloudflare D1 database 생성', [
       'd1',
@@ -635,7 +641,7 @@ async function createCloudflareR2Bucket(
   serverRoot: string,
   bucketName: string,
 ) {
-  log.step('Cloudflare R2 bucket 생성')
+  log.step('Cloudflare R2 bucket을 만들게요')
   await runCommand(
     buildWranglerCommand(packageManager, serverRoot, 'Cloudflare R2 bucket 생성', [
       'r2',
@@ -677,10 +683,10 @@ async function withCloudflareR2EnableRetry<T>(
       log.message(formatCloudflareR2EnableMessage(accountId))
 
       const nextStep = await prompt.select({
-        message: 'Cloudflare R2를 활성화한 뒤 다시 확인할까요?',
+        message: 'Cloudflare R2를 켠 뒤 다시 확인할까요?',
         options: [
-          { label: '네, 다시 확인', value: CLOUDFLARE_R2_RETRY_SENTINEL },
-          { label: '아니오, 중단', value: CLOUDFLARE_R2_CANCEL_SENTINEL },
+          { label: '네, 다시 확인할게요', value: CLOUDFLARE_R2_RETRY_SENTINEL },
+          { label: '아니요, 여기서 멈출게요', value: CLOUDFLARE_R2_CANCEL_SENTINEL },
         ],
         initialValue: CLOUDFLARE_R2_RETRY_SENTINEL,
       })
@@ -699,7 +705,7 @@ async function deployCloudflareWorker(
   serverRoot: string,
   workerName: string,
 ) {
-  log.step('Cloudflare Worker 배포')
+  log.step('Cloudflare Worker를 배포할게요')
 
   try {
     const output = await runCommandWithOutput(
@@ -734,9 +740,9 @@ function isCloudflareWorkersDevOnboardingError(message: string) {
 export function formatCloudflareDeployFailureMessage(message: string) {
   if (message.includes('[code: 10034]') || message.includes('verify your email address')) {
     return [
-      'Cloudflare 계정 이메일 인증이 필요해서 Worker 배포를 계속할 수 없습니다.',
+      'Cloudflare 계정 이메일 인증이 필요해서 Worker 배포를 계속할 수 없어요.',
       '',
-      '아래 문서에 따라 이메일 인증을 마친 뒤 다시 실행하세요.',
+      '아래 문서를 보고 이메일 인증을 마친 뒤 다시 실행해 주세요.',
       CLOUDFLARE_VERIFY_EMAIL_URL,
     ].join('\n')
   }
@@ -749,9 +755,9 @@ export function formatCloudflareDeployFailureMessage(message: string) {
       onboardingUrlMatch?.[0] ?? 'https://dash.cloudflare.com/?to=/:account/workers/onboarding'
 
     return [
-      'Cloudflare account의 workers.dev 서브도메인 등록이 필요해서 Worker 배포를 계속할 수 없습니다.',
+      'Cloudflare account의 workers.dev 서브도메인 등록이 필요해서 Worker 배포를 계속할 수 없어요.',
       '',
-      '아래 URL에서 workers.dev onboarding을 마친 뒤 다시 실행하세요.',
+      '아래 URL에서 workers.dev onboarding을 마친 뒤 다시 실행해 주세요.',
       onboardingUrl,
     ].join('\n')
   }
@@ -792,7 +798,7 @@ export function formatCloudflareManualSetupNote(options: {
   r2BucketName: string
 }): ProvisioningNote {
   const lines = [
-    `Cloudflare Worker \`${options.workerName}\`의 배포 URL을 확인한 뒤 아래 파일에 직접 넣어주세요.`,
+    `Cloudflare Worker \`${options.workerName}\`의 배포 URL을 확인한 뒤 아래 파일에 직접 넣어 주세요.`,
     '',
     path.join(options.targetRoot, 'frontend', '.env.local'),
     'MINIAPP_API_BASE_URL=<배포된 Worker URL>',
@@ -819,13 +825,13 @@ export function formatCloudflareManualSetupNote(options: {
       apiToken: '<optional api token>',
     }).trimEnd(),
     '',
-    'server/.env.local 은 Cloudflare Worker, D1, R2 메타데이터를 기록합니다.',
-    'server/package.json 의 deploy 는 server/.env.local 의 auth 값을 읽고 wrangler.jsonc 기준으로 원격 Worker를 다시 배포합니다.',
-    'server/.env.local 의 CLOUDFLARE_API_TOKEN 은 비어 있으니, 필요하면 직접 채워 넣으세요.',
+    'server/.env.local 에는 Cloudflare Worker, D1, R2 메타데이터를 적어둬요.',
+    'server/package.json 의 deploy 는 server/.env.local 의 auth 값을 읽고 wrangler.jsonc 기준으로 원격 Worker를 다시 배포해요.',
+    'server/.env.local 의 CLOUDFLARE_API_TOKEN 은 비어 있어요. 필요할 때만 직접 채워 넣으면 돼요.',
   )
 
   return {
-    title: 'Cloudflare API URL 안내',
+    title: 'Cloudflare API URL을 이렇게 넣어 주세요',
     body: lines.join('\n'),
   }
 }
@@ -994,7 +1000,7 @@ export async function provisionCloudflareWorker(
   if (resolvedProjectMode === null) {
     const selectedWorker = await selectCloudflareWorker(options.prompt, existingWorkerNames, {
       includeCreateOption: true,
-      message: '사용할 Cloudflare Worker를 선택하세요. 새 Worker 생성도 바로 할 수 있습니다.',
+      message: '사용할 Cloudflare Worker를 골라 주세요. 새 Worker도 바로 만들 수 있어요.',
     })
 
     if (selectedWorker === CREATE_CLOUDFLARE_WORKER_SENTINEL) {
@@ -1012,17 +1018,17 @@ export async function provisionCloudflareWorker(
   if (resolvedProjectMode === 'create') {
     workerName = (
       await options.prompt.text({
-        message: '배포할 Cloudflare Worker 이름을 입력하세요.',
+        message: '배포할 Cloudflare Worker 이름을 입력해 주세요.',
         initialValue: options.appName,
         validate(value) {
-          return value.trim().length === 0 ? 'Cloudflare Worker 이름을 입력하세요.' : undefined
+          return value.trim().length === 0 ? 'Cloudflare Worker 이름을 입력해 주세요.' : undefined
         },
       })
     ).trim()
   }
 
   if (!workerName || !resolvedProjectMode) {
-    throw new Error('연결할 Cloudflare Worker를 결정하지 못했습니다.')
+    throw new Error('연결할 Cloudflare Worker를 정하지 못했어요.')
   }
 
   const existingD1Databases = await withAuthRetry((authToken) =>
@@ -1030,7 +1036,7 @@ export async function provisionCloudflareWorker(
   )
   const selectedD1Database = await selectCloudflareD1Database(options.prompt, existingD1Databases, {
     includeCreateOption: true,
-    message: '사용할 Cloudflare D1 database를 선택하세요. 새 database 생성도 바로 할 수 있습니다.',
+    message: '사용할 Cloudflare D1 database를 골라 주세요. 새 database도 바로 만들 수 있어요.',
   })
   const d1Database =
     selectedD1Database === CREATE_CLOUDFLARE_D1_DATABASE_SENTINEL
@@ -1039,11 +1045,11 @@ export async function provisionCloudflareWorker(
           serverRoot,
           (
             await options.prompt.text({
-              message: '생성할 Cloudflare D1 database 이름을 입력하세요.',
+              message: '생성할 Cloudflare D1 database 이름을 입력해 주세요.',
               initialValue: `${options.appName}-db`,
               validate(value) {
                 return value.trim().length === 0
-                  ? 'Cloudflare D1 database 이름을 입력하세요.'
+                  ? 'Cloudflare D1 database 이름을 입력해 주세요.'
                   : undefined
               },
             })
@@ -1052,7 +1058,7 @@ export async function provisionCloudflareWorker(
       : (existingD1Databases.find((database) => database.id === selectedD1Database) ?? null)
 
   if (!d1Database) {
-    throw new Error('연결할 Cloudflare D1 database를 결정하지 못했습니다.')
+    throw new Error('연결할 Cloudflare D1 database를 정하지 못했어요.')
   }
 
   const existingR2Buckets = await withCloudflareR2EnableRetry(options.prompt, accountId, () =>
@@ -1060,7 +1066,7 @@ export async function provisionCloudflareWorker(
   )
   const selectedR2Bucket = await selectCloudflareR2Bucket(options.prompt, existingR2Buckets, {
     includeCreateOption: true,
-    message: '사용할 Cloudflare R2 bucket을 선택하세요. 새 bucket 생성도 바로 할 수 있습니다.',
+    message: '사용할 Cloudflare R2 bucket을 골라 주세요. 새 bucket도 바로 만들 수 있어요.',
   })
   const r2BucketName =
     selectedR2Bucket === CREATE_CLOUDFLARE_R2_BUCKET_SENTINEL
@@ -1073,11 +1079,11 @@ export async function provisionCloudflareWorker(
               serverRoot,
               (
                 await options.prompt.text({
-                  message: '생성할 Cloudflare R2 bucket 이름을 입력하세요.',
+                  message: '생성할 Cloudflare R2 bucket 이름을 입력해 주세요.',
                   initialValue: `${options.appName}-storage`,
                   validate(value) {
                     return value.trim().length === 0
-                      ? 'Cloudflare R2 bucket 이름을 입력하세요.'
+                      ? 'Cloudflare R2 bucket 이름을 입력해 주세요.'
                       : undefined
                   },
                 })
@@ -1087,7 +1093,7 @@ export async function provisionCloudflareWorker(
       : selectedR2Bucket
 
   if (!r2BucketName) {
-    throw new Error('연결할 Cloudflare R2 bucket을 결정하지 못했습니다.')
+    throw new Error('연결할 Cloudflare R2 bucket을 정하지 못했어요.')
   }
 
   await patchWranglerCloudflareBindings(serverRoot, {
@@ -1133,7 +1139,7 @@ export async function provisionCloudflareWorker(
             })
           ) {
             log.message(
-              'Cloudflare deploy가 workers.dev onboarding을 잘못 감지했지만 account subdomain과 업로드된 Worker를 확인해서 계속 진행합니다.',
+              'Cloudflare deploy가 workers.dev onboarding을 잘못 감지했지만, account subdomain과 업로드된 Worker를 확인해서 그대로 이어갈게요.',
             )
             continue
           }
@@ -1183,8 +1189,8 @@ export async function finalizeCloudflareProvisioning(options: {
   if (!options.provisionedWorker) {
     return [
       {
-        title: 'Cloudflare Worker 연결 건너뜀',
-        body: '현재 실행에서는 원격 Cloudflare Worker 연결을 건너뛰었습니다. 필요하면 `--server-project-mode`를 지정하거나 인터랙티브 모드에서 기존/새 Worker를 선택하세요.',
+        title: 'Cloudflare Worker 연결은 이번엔 건너뛸게요',
+        body: '이번 실행에서는 원격 Cloudflare Worker 연결을 건너뛰었어요. 필요하면 `--server-project-mode`를 주거나 인터랙티브 모드에서 기존 Worker나 새 Worker를 골라 주세요.',
       },
     ] satisfies ProvisioningNote[]
   }
@@ -1214,17 +1220,17 @@ export async function finalizeCloudflareProvisioning(options: {
 
     return [
       {
-        title: 'Cloudflare API URL 작성 완료',
+        title: 'Cloudflare API URL을 적어뒀어요',
         body: [
           hasBackoffice
-            ? 'frontend/.env.local 과 backoffice/.env.local 에 Cloudflare API URL을 작성했습니다.'
-            : 'frontend/.env.local 에 Cloudflare API URL을 작성했습니다.',
-          'server/.env.local 에 Cloudflare Worker, D1, R2 메타데이터를 작성했습니다.',
-          'server/package.json 의 deploy 로 원격 Worker를 다시 배포할 수 있습니다.',
-          `Cloudflare D1 binding은 ${CLOUDFLARE_D1_BINDING_NAME}, R2 binding은 ${CLOUDFLARE_R2_BINDING_NAME} 을 사용합니다.`,
+            ? 'frontend/.env.local 과 backoffice/.env.local 에 Cloudflare API URL을 적어뒀어요.'
+            : 'frontend/.env.local 에 Cloudflare API URL을 적어뒀어요.',
+          'server/.env.local 에는 Cloudflare Worker, D1, R2 메타데이터를 적어뒀어요.',
+          'server/package.json 의 deploy 로 원격 Worker를 다시 배포할 수 있어요.',
+          `Cloudflare D1 binding은 ${CLOUDFLARE_D1_BINDING_NAME}, R2 binding은 ${CLOUDFLARE_R2_BINDING_NAME} 을 써요.`,
           ...(!hasApiToken
             ? [
-                'server/.env.local 의 CLOUDFLARE_API_TOKEN 은 비어 있으니, 필요하면 직접 채워 넣으세요.',
+                'server/.env.local 의 CLOUDFLARE_API_TOKEN 은 비어 있어요. 필요할 때만 직접 채워 넣으면 돼요.',
               ]
             : []),
         ].join('\n'),

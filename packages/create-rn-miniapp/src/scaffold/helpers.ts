@@ -66,7 +66,7 @@ export async function maybePrepareServerWorkspace(options: {
     return
   }
 
-  log.step(`server ${adapter.label} 워크스페이스 준비`)
+  log.step(`server ${adapter.label} 워크스페이스를 준비할게요`)
   await adapter.prepareServerWorkspace({
     targetRoot: options.targetRoot,
     tokens: options.tokens,

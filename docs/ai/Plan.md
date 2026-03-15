@@ -1,6 +1,21 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: TUI 말투를 README 톤으로 정리
+1. 문제
+   - 현재 CLI/TUI 문구는 기능은 맞지만, 전체적으로 딱딱하고 설명조 표현이 많다.
+   - 같은 흐름 안에서도 prompt, step label, 완료 note, 수동 안내 note의 말투가 제각각이라 사용자 경험이 조금 거칠다.
+2. 방향
+   - runtime에서 보이는 prompt, step label, 완료/수동 note를 README의 `~요` 톤으로 맞춘다.
+   - 단순히 존댓말만 바꾸지 않고, "안내", "작성 완료" 같은 딱딱한 제목도 "이렇게 넣어 주세요", "적어뒀어요"처럼 더 자연스럽게 바꾼다.
+   - provider별 note 제목과 주요 입력 프롬프트를 우선 정리하고, 테스트 기대값도 같이 갱신한다.
+3. 테스트
+   - provider별 provisioning note 테스트에 바뀐 제목을 반영한다.
+   - CLI prompt 테스트에 바뀐 문구를 반영한다.
+4. 완료 기준
+   - 사용자가 생성 중에 보게 되는 주요 TUI 문구가 README와 같은 톤으로 읽힌다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Firebase deploy auth 안내에 발급 경로 추가
 1. 문제
    - 현재 Firebase provisioning 완료 note는 `FIREBASE_TOKEN` 과 `GOOGLE_APPLICATION_CREDENTIALS`가 비어 있으니 필요할 때 채우라고만 안내한다.

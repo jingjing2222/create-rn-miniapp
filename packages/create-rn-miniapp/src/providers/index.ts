@@ -56,7 +56,7 @@ function buildSupabasePlan(options: ProviderPlanOptions): ServerProviderCommandS
     {
       cwd: serverRoot,
       ...packageManager.dlx('supabase', ['init']),
-      label: 'server Supabase 초기화',
+      label: 'server Supabase 준비하기',
     },
     {
       cwd: serverRoot,
@@ -68,7 +68,7 @@ function buildSupabasePlan(options: ProviderPlanOptions): ServerProviderCommandS
         '.',
         '--yes',
       ]),
-      label: 'server Supabase Edge Function 생성',
+      label: 'server Supabase Edge Function 만들기',
     },
   ]
 }
@@ -105,7 +105,7 @@ function buildCloudflarePlan(options: ProviderPlanOptions): ServerProviderComman
     {
       cwd: options.targetRoot,
       ...packageManager.createCloudflareApp('server'),
-      label: 'server Cloudflare Workers 초기화',
+      label: 'server Cloudflare Workers 준비하기',
     },
   ]
 }

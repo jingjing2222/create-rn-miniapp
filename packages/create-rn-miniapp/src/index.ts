@@ -31,7 +31,7 @@ export async function main() {
       return
     }
 
-    intro('create-miniapp 시작')
+    intro('create-miniapp으로 시작할게요')
 
     const prompt = createClackPrompter()
 
@@ -44,13 +44,13 @@ export async function main() {
           `package manager: ${resolved.packageManager}`,
           `앱 이름(appName): ${resolved.appName}`,
           `표시 이름(displayName): ${resolved.displayName}`,
-          `수정 위치: ${resolved.rootDir}`,
+          `수정할 위치: ${resolved.rootDir}`,
           `server 추가: ${String(resolved.withServer)}`,
-          `server 제공자: ${resolved.serverProvider ?? '없음'}`,
-          `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '건너뜀' : (resolved.serverProjectMode ?? '목록에서 선택')) : '해당 없음'}`,
+          `server 제공자: ${resolved.serverProvider ?? '이번엔 안 만들어요'}`,
+          `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '이번엔 건너뛸게요' : (resolved.serverProjectMode ?? '목록에서 고를게요')) : '해당 없어요'}`,
           `backoffice 추가: ${String(resolved.withBackoffice)}`,
         ].join('\n'),
-        '수정 설정',
+        '이렇게 반영할게요',
       )
 
       const result = await addWorkspaces({
@@ -62,7 +62,7 @@ export async function main() {
         note(item.body, item.title)
       }
 
-      outro(`${result.targetRoot} 수정 완료`)
+      outro(`${result.targetRoot}까지 반영했어요`)
       return
     }
 
@@ -73,15 +73,15 @@ export async function main() {
         `package manager: ${resolved.packageManager}`,
         `앱 이름(appName): ${resolved.appName}`,
         `표시 이름(displayName): ${resolved.displayName}`,
-        `생성 위치: ${resolved.outputDir}/${resolved.appName}`,
-        `생성 구조: ${generatedWorkspaceLayout.join(', ')}`,
+        `만들 위치: ${resolved.outputDir}/${resolved.appName}`,
+        `만들 구조: ${generatedWorkspaceLayout.join(', ')}`,
         `루트 git 초기화: ${String(!resolved.noGit)}`,
         `server 포함: ${String(resolved.withServer)}`,
-        `server 제공자: ${resolved.serverProvider ?? '없음'}`,
-        `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '건너뜀' : (resolved.serverProjectMode ?? '목록에서 선택')) : '해당 없음'}`,
+        `server 제공자: ${resolved.serverProvider ?? '이번엔 안 만들어요'}`,
+        `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '이번엔 건너뛸게요' : (resolved.serverProjectMode ?? '목록에서 고를게요')) : '해당 없어요'}`,
         `backoffice 포함: ${String(resolved.withBackoffice)}`,
       ].join('\n'),
-      '생성 설정',
+      '이렇게 만들게요',
     )
 
     const result = await scaffoldWorkspace({
@@ -93,9 +93,9 @@ export async function main() {
       note(item.body, item.title)
     }
 
-    outro(`${resolved.appName} 생성 완료: ${result.targetRoot}`)
+    outro(`${resolved.appName}을 만들었어요: ${result.targetRoot}`)
   } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 있었어요.'
     cancel(message)
     process.exit(1)
   }

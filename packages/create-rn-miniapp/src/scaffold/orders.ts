@@ -11,7 +11,7 @@ export function buildRootFinalizePlan(options: {
     {
       cwd: options.targetRoot,
       ...packageManager.install(),
-      label: `루트 ${options.packageManager} install`,
+      label: `루트 ${options.packageManager} 설치하기`,
     },
   ]
 
@@ -19,14 +19,14 @@ export function buildRootFinalizePlan(options: {
     plan.push({
       cwd: options.targetRoot,
       ...packageManager.dlx('@yarnpkg/sdks', ['base']),
-      label: '루트 yarn sdks 생성',
+      label: '루트 yarn SDK 만들기',
     })
   }
 
   plan.push({
     cwd: options.targetRoot,
     ...packageManager.exec('biome', ['check', '.', '--write', '--unsafe']),
-    label: '루트 biome check --write --unsafe',
+    label: '루트 biome로 코드 정리하기',
   })
 
   return plan
@@ -59,23 +59,23 @@ export function buildCreateLifecycleOrder(options: CreateOrderOptions) {
   ]
 
   if (options.serverProvider) {
-    labels.push('server 워크스페이스 준비')
+    labels.push('server 워크스페이스 준비하기')
   }
 
-  labels.push('루트 템플릿 적용')
+  labels.push('루트 템플릿 적용하기')
 
   if (options.serverProvider) {
-    labels.push('server 워크스페이스 patch', 'server provisioning')
+    labels.push('server 워크스페이스 다듬기', 'server provisioning 하기')
   }
 
   labels.push(...phases.backoffice.map((command) => command.label))
 
   if (options.withBackoffice) {
-    labels.push('루트 workspace manifest 동기화')
+    labels.push('루트 workspace manifest 맞추기')
   }
 
   if (!options.noGit) {
-    labels.push('루트 git init')
+    labels.push('루트 git 저장소 만들기')
   }
 
   return labels

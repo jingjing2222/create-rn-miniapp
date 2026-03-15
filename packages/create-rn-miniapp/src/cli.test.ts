@@ -60,7 +60,7 @@ test('parseCliArgs accepts firebase as a server provider', async () => {
 test('parseCliArgs rejects the removed with-server flag', async () => {
   await assert.rejects(
     () => parseCliArgs(['--with-server'], '/workspace'),
-    /옵션을 해석하지 못했습니다\./,
+    /옵션을 읽지 못했어요\./,
   )
 })
 
@@ -139,19 +139,19 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   assert.equal(resolved.outputDir, path.resolve('/tmp/workspace'))
   assert.deepEqual(textCalls, [
     {
-      message: 'appName을 입력하세요',
+      message: 'appName을 입력해 주세요',
       guide: undefined,
       initialValue: undefined,
     },
     {
-      message: 'displayName을 입력하세요',
-      guide: '보여지는 이름이니 한글로 해주세요.',
+      message: 'displayName을 입력해 주세요',
+      guide: '앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
       initialValue: undefined,
     },
   ])
   assert.deepEqual(selectMessages, [
-    '`server` 제공자를 선택하세요.',
-    '`backoffice` 워크스페이스를 같이 만들까요?',
+    '`server` 제공자를 골라 주세요.',
+    '`backoffice`도 같이 만들까요?',
   ])
 })
 
@@ -202,8 +202,8 @@ test('resolveCliOptions does not ask for a cloudflare worker mode when cloudflar
   assert.equal(resolved.serverProvider, 'cloudflare')
   assert.equal(resolved.serverProjectMode, null)
   assert.deepEqual(selectMessages, [
-    '`server` 제공자를 선택하세요.',
-    '`backoffice` 워크스페이스를 같이 만들까요?',
+    '`server` 제공자를 골라 주세요.',
+    '`backoffice`도 같이 만들까요?',
   ])
 })
 
@@ -231,7 +231,7 @@ test('resolveCliOptions rejects execution when the invoking package manager cann
         },
         {},
       ),
-    /호출한 package manager를 감지하지 못했습니다\./,
+    /어떤 package manager로 시작했는지 감지하지 못했어요\./,
   )
 })
 
@@ -320,7 +320,7 @@ test('resolveCliOptions accepts an explicit server-provider without extra server
   assert.equal(resolved.withServer, true)
   assert.equal(resolved.serverProvider, 'cloudflare')
   assert.equal(resolved.serverProjectMode, null)
-  assert.deepEqual(selectMessages, ['`backoffice` 워크스페이스를 같이 만들까요?'])
+  assert.deepEqual(selectMessages, ['`backoffice`도 같이 만들까요?'])
 })
 
 test('resolveCliOptions rejects server-project-mode without server-provider', async () => {
@@ -501,8 +501,8 @@ test('resolveCliOptions skips package-manager prompt when pnpm create invoked th
 
   assert.equal(resolved.packageManager, 'pnpm')
   assert.deepEqual(selectMessages, [
-    '`server` 제공자를 선택하세요.',
-    '`backoffice` 워크스페이스를 같이 만들까요?',
+    '`server` 제공자를 골라 주세요.',
+    '`backoffice`도 같이 만들까요?',
   ])
 })
 
@@ -552,8 +552,8 @@ test('resolveCliOptions skips package-manager prompt when yarn create invoked th
 
   assert.equal(resolved.packageManager, 'yarn')
   assert.deepEqual(selectMessages, [
-    '`server` 제공자를 선택하세요.',
-    '`backoffice` 워크스페이스를 같이 만들까요?',
+    '`server` 제공자를 골라 주세요.',
+    '`backoffice`도 같이 만들까요?',
   ])
 })
 
@@ -603,8 +603,8 @@ test('resolveCliOptions skips package-manager prompt when npm create invoked the
 
   assert.equal(resolved.packageManager, 'npm')
   assert.deepEqual(selectMessages, [
-    '`server` 제공자를 선택하세요.',
-    '`backoffice` 워크스페이스를 같이 만들까요?',
+    '`server` 제공자를 골라 주세요.',
+    '`backoffice`도 같이 만들까요?',
   ])
 })
 
@@ -654,8 +654,8 @@ test('resolveCliOptions skips package-manager prompt when bun create invoked the
 
   assert.equal(resolved.packageManager, 'bun')
   assert.deepEqual(selectMessages, [
-    '`server` 제공자를 선택하세요.',
-    '`backoffice` 워크스페이스를 같이 만들까요?',
+    '`server` 제공자를 골라 주세요.',
+    '`backoffice`도 같이 만들까요?',
   ])
 })
 
@@ -754,8 +754,8 @@ test('resolveAddCliOptions detects additive targets from an existing workspace',
   assert.equal(resolved.existingServerProvider, null)
   assert.equal(resolved.existingHasBackoffice, false)
   assert.deepEqual(selectMessages, [
-    '`server` 제공자를 선택하세요.',
-    '`backoffice` 워크스페이스를 추가할까요?',
+    '`server` 제공자를 골라 주세요.',
+    '`backoffice`도 같이 추가할까요?',
   ])
 })
 
@@ -892,15 +892,15 @@ test('createClackPrompter delegates text input and single-choice selection to cl
   })
 
   const textValue = await prompter.text({
-    message: 'appName을 입력하세요',
+    message: 'appName을 입력해 주세요',
     initialValue: 'ebook-miniapp',
   })
   await prompter.text({
-    message: 'displayName을 입력하세요',
-    guide: '보여지는 이름이니 한글로 해주세요.',
+    message: 'displayName을 입력해 주세요',
+    guide: '앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
   })
   const selectValue = await prompter.select({
-    message: '`server` 제공자를 선택하세요.',
+    message: '`server` 제공자를 골라 주세요.',
     options: [
       { label: '생성 안 함', value: 'none' },
       { label: 'Firebase', value: 'firebase' },
@@ -911,10 +911,10 @@ test('createClackPrompter delegates text input and single-choice selection to cl
   assert.equal(textValue, 'ebook-miniapp')
   assert.equal(selectValue, 'firebase')
   assert.deepEqual(messages, [
-    'text:appName을 입력하세요',
-    'guide:보여지는 이름이니 한글로 해주세요.',
-    'text:displayName을 입력하세요',
-    'select:`server` 제공자를 선택하세요.',
+    'text:appName을 입력해 주세요',
+    'guide:앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
+    'text:displayName을 입력해 주세요',
+    'select:`server` 제공자를 골라 주세요.',
   ])
 })
 
@@ -940,7 +940,7 @@ test('createClackPrompter turns prompt cancellation into a user-facing error', a
   })
 
   await assert.rejects(
-    () => prompter.text({ message: 'appName을 입력하세요' }),
-    /입력을 취소했습니다\./,
+    () => prompter.text({ message: 'appName을 입력해 주세요' }),
+    /입력을 취소했어요\./,
   )
 })

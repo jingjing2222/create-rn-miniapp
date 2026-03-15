@@ -163,7 +163,7 @@ test('formatCloudflareManualSetupNote includes frontend and backoffice env guida
     r2BucketName: 'ebook-storage',
   })
 
-  assert.equal(note.title, 'Cloudflare API URL 안내')
+  assert.equal(note.title, 'Cloudflare API URL을 이렇게 넣어 주세요')
   assert.match(note.body, /frontend\/\.env\.local/)
   assert.match(note.body, /backoffice\/\.env\.local/)
   assert.match(note.body, /server\/\.env\.local/)
@@ -305,7 +305,7 @@ test('finalizeCloudflareProvisioning writes env files when api base url is avail
     assert.match(serverEnv, /^CLOUDFLARE_WORKER_NAME=ebook-miniapp$/m)
     assert.match(serverEnv, /^CLOUDFLARE_D1_DATABASE_ID=database-123$/m)
     assert.match(serverEnv, /^CLOUDFLARE_R2_BUCKET_NAME=ebook-storage$/m)
-    assert.equal(notes[0]?.title, 'Cloudflare API URL 작성 완료')
+    assert.equal(notes[0]?.title, 'Cloudflare API URL을 적어뒀어요')
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
     assert.match(notes[0]?.body ?? '', /deploy/)
     assert.match(notes[0]?.body ?? '', /D1/)
@@ -373,7 +373,7 @@ test('finalizeCloudflareProvisioning falls back to manual setup guidance when ap
 
     const serverEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
 
-    assert.equal(notes[0]?.title, 'Cloudflare API URL 안내')
+    assert.equal(notes[0]?.title, 'Cloudflare API URL을 이렇게 넣어 주세요')
     assert.match(notes[0]?.body ?? '', /ebook-miniapp/)
     assert.match(notes[0]?.body ?? '', /frontend\/\.env\.local/)
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)

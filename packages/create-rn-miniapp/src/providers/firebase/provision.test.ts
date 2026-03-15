@@ -498,7 +498,7 @@ test('formatFirebaseManualSetupNote includes frontend, backoffice, and server gu
     hasConfiguredCredentials: false,
   })
 
-  assert.equal(note.title, 'Firebase 환경 변수 안내')
+  assert.equal(note.title, 'Firebase 연결 값을 이렇게 넣어 주세요')
   assert.match(
     note.body,
     /console\.firebase\.google\.com\/project\/ebook-firebase\/settings\/general/,
@@ -648,7 +648,7 @@ test('finalizeFirebaseProvisioning writes env files when sdk config is available
     assert.match(serverEnv, /^FIREBASE_PROJECT_ID=ebook-firebase$/m)
     assert.match(serverEnv, /^FIREBASE_FUNCTION_REGION=asia-northeast3$/m)
     assert.match(serverEnv, /^FIREBASE_TOKEN=$/m)
-    assert.equal(notes[0]?.title, 'Firebase 환경 변수 작성 완료')
+    assert.equal(notes[0]?.title, 'Firebase 연결 값을 적어뒀어요')
     assert.match(notes[0]?.body ?? '', /server\/package\.json 의 deploy/)
     assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
     assert.match(notes[0]?.body ?? '', /firebase login:ci/)
@@ -688,7 +688,7 @@ test('finalizeFirebaseProvisioning falls back to manual setup guidance when sdk 
 
     const serverEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
 
-    assert.equal(notes[0]?.title, 'Firebase 환경 변수 안내')
+    assert.equal(notes[0]?.title, 'Firebase 연결 값을 이렇게 넣어 주세요')
     assert.match(notes[0]?.body ?? '', /frontend\/\.env\.local/)
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
     assert.doesNotMatch(notes[0]?.body ?? '', /CI나 비대화형 배포가 필요할 때만 채우면 됩니다/)

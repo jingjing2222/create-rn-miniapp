@@ -39,7 +39,7 @@ test('formatSupabaseManualSetupNote includes frontend and backoffice env guidanc
     hasDbPassword: false,
   })
 
-  assert.equal(note.title, 'Supabase 환경 변수 안내')
+  assert.equal(note.title, 'Supabase 연결 값을 이렇게 넣어 주세요')
   assert.match(note.body, /https:\/\/supabase\.com\/dashboard\/project\/abc123\/settings\/api/)
   assert.match(note.body, /frontend\/\.env\.local/)
   assert.match(note.body, /backoffice\/\.env\.local/)
@@ -176,7 +176,7 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
     )
     assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
     assert.match(serverEnv, /^SUPABASE_DB_PASSWORD=$/m)
-    assert.equal(notes[0]?.title, 'Supabase 환경 변수 작성 완료')
+    assert.equal(notes[0]?.title, 'Supabase 연결 값을 적어뒀어요')
     assert.match(
       notes[0]?.body ?? '',
       /https:\/\/supabase\.com\/dashboard\/project\/abc123\/settings\/api/,
@@ -243,7 +243,7 @@ test('finalizeSupabaseProvisioning falls back to manual setup guidance when publ
 
     const serverEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
 
-    assert.equal(notes[0]?.title, 'Supabase 환경 변수 안내')
+    assert.equal(notes[0]?.title, 'Supabase 연결 값을 이렇게 넣어 주세요')
     assert.match(notes[0]?.body ?? '', /settings\/api/)
     assert.match(notes[0]?.body ?? '', /frontend\/\.env\.local/)
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)

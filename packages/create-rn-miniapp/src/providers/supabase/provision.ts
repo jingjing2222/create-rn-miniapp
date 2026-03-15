@@ -191,7 +191,7 @@ export function formatSupabaseManualSetupNote(options: {
 
   if (!options.hasDbPassword) {
     lines.push(
-      'server/.env.local 의 SUPABASE_DB_PASSWORD 는 비어 있으니, 프로젝트 생성 시 사용한 DB password를 직접 채워 넣으세요.',
+      'server/.env.local 의 SUPABASE_DB_PASSWORD 는 비어 있어요. 프로젝트를 만들 때 쓴 DB password를 직접 채워 넣으면 돼요.',
     )
   }
 
@@ -200,7 +200,7 @@ export function formatSupabaseManualSetupNote(options: {
   )
 
   return {
-    title: 'Supabase 환경 변수 안내',
+    title: 'Supabase 연결 값을 이렇게 넣어 주세요',
     body: lines.join('\n'),
   }
 }
@@ -304,8 +304,8 @@ async function ensureSupabaseProjects(packageManager: PackageManager, cwd: strin
   try {
     return await listSupabaseProjects(packageManager, cwd)
   } catch {
-    log.step('Supabase 로그인')
-    await runCommand(buildSupabaseCommand(packageManager, cwd, 'Supabase 로그인', ['login']))
+    log.step('Supabase에 로그인할게요')
+    await runCommand(buildSupabaseCommand(packageManager, cwd, 'Supabase 로그인하기', ['login']))
     return await listSupabaseProjects(packageManager, cwd)
   }
 }
@@ -319,7 +319,9 @@ async function selectSupabaseProject(
   },
 ) {
   if (projects.length === 0 && !options?.includeCreateOption) {
-    throw new Error('사용 가능한 Supabase 프로젝트가 없습니다. 먼저 새 프로젝트를 만들어주세요.')
+    throw new Error(
+      '지금 바로 연결할 Supabase 프로젝트가 없어요. 새 프로젝트를 먼저 만들어 주세요.',
+    )
   }
 
   const projectOptions = projects.map((project) => ({
@@ -331,7 +333,7 @@ async function selectSupabaseProject(
         ...projectOptions,
         {
           value: CREATE_SUPABASE_PROJECT_SENTINEL,
-          label: '+ 새 Supabase 프로젝트 생성',
+          label: '+ 새 Supabase 프로젝트 만들기',
         },
       ]
     : projectOptions
@@ -341,16 +343,16 @@ async function selectSupabaseProject(
     CREATE_SUPABASE_PROJECT_SENTINEL
 
   return await prompt.select({
-    message: options?.message ?? '사용할 Supabase 프로젝트를 선택하세요.',
+    message: options?.message ?? '사용할 Supabase 프로젝트를 골라 주세요.',
     options: selectOptions,
     initialValue,
   })
 }
 
 async function createSupabaseProject(packageManager: PackageManager, cwd: string) {
-  log.step('Supabase 새 프로젝트 생성')
+  log.step('Supabase 프로젝트를 새로 만들게요')
   await runCommand(
-    buildSupabaseCommand(packageManager, cwd, 'Supabase 새 프로젝트 생성', ['projects', 'create']),
+    buildSupabaseCommand(packageManager, cwd, 'Supabase 프로젝트 만들기', ['projects', 'create']),
   )
 }
 
@@ -387,7 +389,7 @@ async function linkSupabaseProject(
   serverRoot: string,
   projectRef: string,
 ) {
-  log.step('server Supabase 연결')
+  log.step('server를 Supabase 프로젝트에 연결할게요')
   await runCommand(
     buildSupabaseCommand(packageManager, serverRoot, 'server Supabase link', [
       'link',
@@ -398,7 +400,7 @@ async function linkSupabaseProject(
 }
 
 async function pushSupabaseDatabase(packageManager: PackageManager, serverRoot: string) {
-  log.step('server Supabase db push')
+  log.step('server DB 변경을 반영할게요')
   await runCommand(
     buildSupabaseCommand(packageManager, serverRoot, 'server Supabase db push', [
       'db',
@@ -413,7 +415,7 @@ async function deploySupabaseFunctions(
   serverRoot: string,
   projectRef: string,
 ) {
-  log.step('server Supabase Edge Functions 배포')
+  log.step('server Edge Functions를 배포할게요')
   await runCommand(
     buildSupabaseCommand(packageManager, serverRoot, 'server Supabase Edge Functions 배포', [
       'functions',
@@ -439,7 +441,7 @@ export async function provisionSupabaseProject(
   if (resolvedProjectMode === null) {
     const selectedProject = await selectSupabaseProject(options.prompt, projects, {
       includeCreateOption: true,
-      message: '사용할 Supabase 프로젝트를 선택하세요. 새 프로젝트 생성도 바로 할 수 있습니다.',
+      message: '사용할 Supabase 프로젝트를 골라 주세요. 새 프로젝트도 바로 만들 수 있어요.',
     })
 
     if (selectedProject === CREATE_SUPABASE_PROJECT_SENTINEL) {
@@ -466,7 +468,7 @@ export async function provisionSupabaseProject(
       selectedProjectId = newlyCreatedProjects[0].id
     } else {
       selectedProjectId = await selectSupabaseProject(options.prompt, refreshedProjects, {
-        message: '연결할 Supabase 프로젝트를 선택하세요.',
+        message: '연결할 Supabase 프로젝트를 골라 주세요.',
       })
     }
   } else if (resolvedProjectMode === 'existing' && !selectedProjectId) {
@@ -474,7 +476,7 @@ export async function provisionSupabaseProject(
   }
 
   if (!selectedProjectId || !resolvedProjectMode) {
-    throw new Error('연결할 Supabase 프로젝트를 결정하지 못했습니다.')
+    throw new Error('연결할 Supabase 프로젝트를 정하지 못했어요.')
   }
 
   const publishableKey = await tryGetSupabasePublishableKey(
@@ -501,8 +503,8 @@ export async function finalizeSupabaseProvisioning(options: {
   if (!options.provisionedProject) {
     return [
       {
-        title: 'Supabase 프로젝트 연결 건너뜀',
-        body: '현재 실행에서는 원격 Supabase 프로젝트 연결을 건너뛰었습니다. 필요하면 `--server-project-mode`를 지정하거나 인터랙티브 모드에서 기존/새 프로젝트를 선택하세요.',
+        title: 'Supabase 프로젝트 연결은 이번엔 건너뛸게요',
+        body: '이번 실행에서는 원격 Supabase 프로젝트 연결을 건너뛰었어요. 필요하면 `--server-project-mode`를 주거나 인터랙티브 모드에서 기존 프로젝트나 새 프로젝트를 골라 주세요.',
       },
     ] satisfies ProvisioningNote[]
   }
@@ -523,23 +525,23 @@ export async function finalizeSupabaseProvisioning(options: {
 
     return [
       {
-        title: 'Supabase 환경 변수 작성 완료',
+        title: 'Supabase 연결 값을 적어뒀어요',
         body: [
           hasBackoffice
-            ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 작성했습니다.'
-            : 'frontend/.env.local 에 Supabase 연결 값을 작성했습니다.',
-          'server/.env.local 에 Supabase 원격 db push / Edge Functions deploy 설정을 작성했습니다.',
+            ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 적어뒀어요.'
+            : 'frontend/.env.local 에 Supabase 연결 값을 적어뒀어요.',
+          'server/.env.local 에는 원격 DB 반영과 Edge Functions 배포에 필요한 값을 적어뒀어요.',
           serverEnv.hasDbPassword
-            ? 'server/package.json 의 db:apply 와 functions:deploy 로 원격 SQL push와 Edge Function 배포를 계속 진행할 수 있습니다.'
-            : 'server/.env.local 의 SUPABASE_DB_PASSWORD 는 비어 있으니, 프로젝트 생성 시 사용한 DB password를 직접 채워 넣으세요.',
+            ? 'server/package.json 의 db:apply 와 functions:deploy 로 다음 배포도 바로 이어갈 수 있어요.'
+            : 'server/.env.local 의 SUPABASE_DB_PASSWORD 는 비어 있어요. 프로젝트를 만들 때 쓴 DB password를 직접 넣어 주세요.',
           ...(!serverEnv.hasDbPassword
             ? [
-                'SUPABASE_DB_PASSWORD 를 채운 뒤 server/package.json 의 db:apply 와 functions:deploy 로 원격 SQL push와 Edge Function 배포를 계속 진행할 수 있습니다.',
+                'SUPABASE_DB_PASSWORD 를 넣고 나면 server/package.json 의 db:apply 와 functions:deploy 로 바로 이어서 반영할 수 있어요.',
               ]
             : []),
-          `기본 Edge Function은 \`supabase/functions/${SUPABASE_DEFAULT_FUNCTION_NAME}/index.ts\`에 생성되어 있습니다.`,
+          `기본 Edge Function은 \`supabase/functions/${SUPABASE_DEFAULT_FUNCTION_NAME}/index.ts\`에 만들어뒀어요.`,
           '',
-          '키를 다시 확인해야 하면 아래 URL을 보세요.',
+          '키를 다시 확인해야 하면 아래 URL을 보면 돼요.',
           getSupabaseApiSettingsUrl(options.provisionedProject.projectRef),
         ].join('\n'),
       },

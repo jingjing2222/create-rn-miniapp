@@ -104,7 +104,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     .exitProcess(false)
     .strict()
     .fail(() => {
-      throw new Error('옵션을 해석하지 못했습니다. `--help`로 사용법을 확인하세요.')
+      throw new Error('옵션을 읽지 못했어요. `--help`로 사용법을 확인해 주세요.')
     })
     .option('name', {
       type: 'string',
@@ -319,7 +319,7 @@ export async function resolveCliOptions(
 
   if (!packageManager) {
     throw new Error(
-      '호출한 package manager를 감지하지 못했습니다. `--package-manager <pnpm|yarn|npm|bun>`을 명시하세요.',
+      '어떤 package manager로 시작했는지 감지하지 못했어요. `--package-manager <pnpm|yarn|npm|bun>`를 직접 넣어 주세요.',
     )
   }
 
@@ -328,19 +328,19 @@ export async function resolveCliOptions(
     (argv.yes
       ? undefined
       : await prompt.text({
-          message: 'appName을 입력하세요',
+          message: 'appName을 입력해 주세요',
           placeholder: 'my-miniapp',
           validate(value) {
             const candidate = value?.trim() ?? ''
 
             return candidate.length === 0 || candidate.includes(' ')
-              ? 'kebab-case appName이 필요합니다.'
+              ? 'kebab-case appName이 필요해요.'
               : undefined
           },
         }))
 
   if (!rawName) {
-    throw new Error('appName은 필수입니다. `--name` 옵션을 주거나 입력에서 작성하세요.')
+    throw new Error('appName은 꼭 필요해요. `--name` 옵션으로 주거나 입력해 주세요.')
   }
 
   const appName = assertValidAppName(rawName)
@@ -349,16 +349,16 @@ export async function resolveCliOptions(
     (argv.yes
       ? toDefaultDisplayName(appName)
       : await prompt.text({
-          guide: '보여지는 이름이니 한글로 해주세요.',
-          message: 'displayName을 입력하세요',
+          guide: '앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
+          message: 'displayName을 입력해 주세요',
           validate(value) {
-            return value.trim().length === 0 ? 'displayName을 입력하세요.' : undefined
+            return value.trim().length === 0 ? 'displayName을 입력해 주세요.' : undefined
           },
         }))
 
   const serverProvider = await resolveServerProviderInput(argv, prompt, {
-    promptMessage: '`server` 제공자를 선택하세요.',
-    noneLabel: '생성 안 함',
+    promptMessage: '`server` 제공자를 골라 주세요.',
+    noneLabel: '이번엔 안 만들게요',
   })
 
   const normalizedServerProvider = serverProvider === 'none' ? null : serverProvider
@@ -371,10 +371,10 @@ export async function resolveCliOptions(
     (argv.yes
       ? false
       : (await prompt.select({
-          message: '`backoffice` 워크스페이스를 같이 만들까요?',
+          message: '`backoffice`도 같이 만들까요?',
           options: [
-            { label: '예', value: 'yes' },
-            { label: '아니오', value: 'no' },
+            { label: '네, 같이 만들게요', value: 'yes' },
+            { label: '아니요, 지금은 안 만들게요', value: 'no' },
           ],
           initialValue: 'no',
         })) === 'yes')
@@ -401,15 +401,15 @@ export async function resolveAddCliOptions(
   inspection: WorkspaceInspection,
 ) {
   if (argv.packageManager && argv.packageManager !== inspection.packageManager) {
-    throw new Error('`--add`에서는 기존 루트의 package manager와 다른 값을 사용할 수 없습니다.')
+    throw new Error('`--add`에서는 기존 루트와 다른 package manager를 쓸 수 없어요.')
   }
 
   const rootDir = path.resolve(argv.rootDir)
   const addServerProvider = inspection.hasServer
     ? null
     : await resolveServerProviderInput(argv, prompt, {
-        promptMessage: '`server` 제공자를 선택하세요.',
-        noneLabel: '추가 안 함',
+        promptMessage: '`server` 제공자를 골라 주세요.',
+        noneLabel: '이번엔 추가하지 않을게요',
       })
 
   const normalizedServerProvider = addServerProvider === 'none' ? null : addServerProvider
@@ -423,16 +423,16 @@ export async function resolveAddCliOptions(
       (argv.yes
         ? false
         : (await prompt.select({
-            message: '`backoffice` 워크스페이스를 추가할까요?',
+            message: '`backoffice`도 같이 추가할까요?',
             options: [
-              { label: '예', value: 'yes' },
-              { label: '아니오', value: 'no' },
+              { label: '네, 같이 추가할게요', value: 'yes' },
+              { label: '아니요, 지금은 안 할게요', value: 'no' },
             ],
             initialValue: 'no',
           })) === 'yes'))
 
   if (!withServer && !withBackoffice) {
-    throw new Error('추가할 워크스페이스가 없습니다. 이미 모두 존재하거나 선택하지 않았습니다.')
+    throw new Error('추가할 워크스페이스가 없어요. 이미 모두 있거나 이번엔 선택하지 않았어요.')
   }
 
   return {
@@ -497,7 +497,7 @@ export function createClackPrompter(
       const value = await clackPrompter.text(options)
 
       if (clackPrompter.isCancel(value)) {
-        throw new Error('입력을 취소했습니다.')
+        throw new Error('입력을 취소했어요.')
       }
 
       return value
@@ -510,7 +510,7 @@ export function createClackPrompter(
       })
 
       if (clackPrompter.isCancel(value)) {
-        throw new Error('입력을 취소했습니다.')
+        throw new Error('입력을 취소했어요.')
       }
 
       return value

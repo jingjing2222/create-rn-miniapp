@@ -36,17 +36,17 @@ export function buildCreateCommandPhases(options: CreatePlanOptions) {
     {
       cwd: options.targetRoot,
       ...packageManager.createGraniteApp('frontend'),
-      label: 'frontend Granite 생성',
+      label: 'frontend Granite 만들기',
     },
     {
       cwd: frontendRoot,
       ...packageManager.install(),
-      label: 'frontend 의존성 설치',
+      label: 'frontend 의존성 설치하기',
     },
     {
       cwd: frontendRoot,
       ...packageManager.add(['@apps-in-toss/framework']),
-      label: 'frontend AppInToss Framework 설치',
+      label: 'frontend AppInToss Framework 설치하기',
     },
     {
       cwd: frontendRoot,
@@ -58,12 +58,12 @@ export function buildCreateCommandPhases(options: CreatePlanOptions) {
         options.appName,
         '--skip-input',
       ]),
-      label: 'frontend ait 초기화',
+      label: 'frontend ait 초기화하기',
     },
     {
       cwd: frontendRoot,
       ...packageManager.add(['@toss/tds-react-native@2.0.2']),
-      label: 'frontend TDS 설치',
+      label: 'frontend TDS 설치하기',
     },
   ]
 
@@ -76,7 +76,7 @@ export function buildCreateCommandPhases(options: CreatePlanOptions) {
         {
           cwd: options.targetRoot,
           ...packageManager.createViteApp('backoffice'),
-          label: 'backoffice Vite 생성',
+          label: 'backoffice Vite 만들기',
         },
       ]
     : []
@@ -105,7 +105,7 @@ export function buildAddCommandPhases(options: AddPlanOptions) {
         {
           cwd: options.targetRoot,
           ...packageManager.createViteApp('backoffice'),
-          label: 'backoffice Vite 생성',
+          label: 'backoffice Vite 만들기',
         },
       ]
     : []
@@ -152,7 +152,7 @@ async function executeCommand(spec: CommandSpec, captureOutput: boolean) {
 
       reject(
         new Error(
-          `${spec.label} 단계가 실패했습니다. (${spec.command} ${spec.args.join(' ')})${captureOutput && combinedOutput ? `\n${combinedOutput}` : ''}`,
+          `${spec.label} 중에 실패했어요. (${spec.command} ${spec.args.join(' ')})${captureOutput && combinedOutput ? `\n${combinedOutput}` : ''}`,
         ),
       )
     })

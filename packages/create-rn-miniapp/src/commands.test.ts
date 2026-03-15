@@ -16,14 +16,14 @@ test('buildCommandPlan keeps AppInToss frontend steps first', () => {
   assert.deepEqual(
     plan.map((step) => step.label),
     [
-      'frontend Granite 생성',
-      'frontend 의존성 설치',
-      'frontend AppInToss Framework 설치',
-      'frontend ait 초기화',
-      'frontend TDS 설치',
-      'server Supabase 초기화',
-      'server Supabase Edge Function 생성',
-      'backoffice Vite 생성',
+      'frontend Granite 만들기',
+      'frontend 의존성 설치하기',
+      'frontend AppInToss Framework 설치하기',
+      'frontend ait 초기화하기',
+      'frontend TDS 설치하기',
+      'server Supabase 준비하기',
+      'server Supabase Edge Function 만들기',
+      'backoffice Vite 만들기',
     ],
   )
 })
@@ -63,12 +63,12 @@ test('buildCommandPlan only adds server step when a provider is selected', () =>
   assert.deepEqual(
     plan.map((step) => step.label),
     [
-      'frontend Granite 생성',
-      'frontend 의존성 설치',
-      'frontend AppInToss Framework 설치',
-      'frontend ait 초기화',
-      'frontend TDS 설치',
-      'backoffice Vite 생성',
+      'frontend Granite 만들기',
+      'frontend 의존성 설치하기',
+      'frontend AppInToss Framework 설치하기',
+      'frontend ait 초기화하기',
+      'frontend TDS 설치하기',
+      'backoffice Vite 만들기',
     ],
   )
 })
@@ -147,12 +147,12 @@ test('buildCommandPlan emits Cloudflare C3 commands when cloudflare is selected'
   assert.deepEqual(
     plan.map((step) => step.label),
     [
-      'frontend Granite 생성',
-      'frontend 의존성 설치',
-      'frontend AppInToss Framework 설치',
-      'frontend ait 초기화',
-      'frontend TDS 설치',
-      'server Cloudflare Workers 초기화',
+      'frontend Granite 만들기',
+      'frontend 의존성 설치하기',
+      'frontend AppInToss Framework 설치하기',
+      'frontend ait 초기화하기',
+      'frontend TDS 설치하기',
+      'server Cloudflare Workers 준비하기',
     ],
   )
   assert.deepEqual(plan[5]?.args, [
@@ -182,11 +182,11 @@ test('buildCommandPlan keeps firebase server preparation out of external command
   assert.deepEqual(
     plan.map((step) => step.label),
     [
-      'frontend Granite 생성',
-      'frontend 의존성 설치',
-      'frontend AppInToss Framework 설치',
-      'frontend ait 초기화',
-      'frontend TDS 설치',
+      'frontend Granite 만들기',
+      'frontend 의존성 설치하기',
+      'frontend AppInToss Framework 설치하기',
+      'frontend ait 초기화하기',
+      'frontend TDS 설치하기',
     ],
   )
 })
@@ -202,7 +202,7 @@ test('buildAddCommandPlan only includes requested missing workspaces', () => {
 
   assert.deepEqual(
     plan.map((step) => step.label),
-    ['server Supabase 초기화', 'server Supabase Edge Function 생성', 'backoffice Vite 생성'],
+    ['server Supabase 준비하기', 'server Supabase Edge Function 만들기', 'backoffice Vite 만들기'],
   )
   assert.deepEqual(plan[0]?.args, ['dlx', 'supabase', 'init'])
   assert.deepEqual(plan[1]?.args, [
@@ -236,7 +236,7 @@ test('buildAddCommandPlan emits cloudflare add step when requested', () => {
 
   assert.deepEqual(
     plan.map((step) => step.label),
-    ['server Cloudflare Workers 초기화'],
+    ['server Cloudflare Workers 준비하기'],
   )
   assert.deepEqual(plan[0]?.args, [
     'create',
