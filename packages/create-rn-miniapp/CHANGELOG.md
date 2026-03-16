@@ -1,5 +1,40 @@
 # create-rn-miniapp
 
+## 0.0.13
+
+### Patch Changes
+
+- c20302b: Improve provider auth guidance for Supabase and Firebase.
+
+  - Add clearer Supabase and Firebase deploy auth guidance to generated notes and `server/README.md`
+  - Add `SUPABASE_ACCESS_TOKEN` to generated `server/.env.local` so non-interactive redeploy setup is visible
+  - Copy Supabase and Firebase auth guide screenshots into generated server workspaces when those providers are selected
+
+- 61252ef: Add an optional tRPC overlay for Supabase and Cloudflare server providers.
+
+  - Prompt for optional tRPC setup when `supabase` or `cloudflare` is selected, and support the same flow with `--trpc`
+  - Generate a shared `packages/trpc` workspace so clients import `AppRouter` types from a workspace package instead of reaching into `server` with relative paths
+  - Wire Cloudflare Workers to import `@workspace/trpc` directly at runtime and connect Supabase Edge Functions through function-local `deno.json` import aliases instead of a sync step
+  - Generate provider-specific `src/lib/trpc.ts` clients for `frontend` and `backoffice`
+  - When tRPC is enabled, let Granite frontend workspaces typecheck shared source exports by enabling `allowImportingTsExtensions`
+  - When Cloudflare tRPC is enabled, treat `src/lib/trpc.ts` as the primary client and avoid generating `src/lib/api.ts`; in `--add --trpc`, ask whether existing Cloudflare API helpers should be removed
+  - Generate Cloudflare `wrangler.vitest.jsonc` and `vitest.config.mts` so Worker tests use local D1/R2 bindings instead of deploy-time remote bindings
+  - Only add tRPC API source-of-truth guidance to generated `AGENTS.md` and `server/README.md` when tRPC is actually scaffolded
+  - Normalize generated root workspace manifests to use `packages/*` so future shared packages can be added without changing the root workspace shape
+  - Update generated server guides and root README to explain the new tRPC workspace and provider-specific behavior
+
+- 485b298: Improve generated Cloudflare server guidance and simplify the generated root TypeScript setup.
+
+  - stop generating a root `tsconfig.base.json` in scaffolded workspaces and remove related root template references
+  - add clearer Cloudflare token guidance to the generated TUI notes and `server/README.md`
+  - copy the Cloudflare token guide image into generated Cloudflare server workspaces and render it in the generated README when available
+  - clarify README coverage for generated `.env.local` files and Cloudflare Worker + D1 + R2 provisioning
+
+- Updated dependencies [c20302b]
+- Updated dependencies [61252ef]
+- Updated dependencies [485b298]
+  - @create-rn-miniapp/scaffold-templates@0.0.13
+
 ## 0.0.12
 
 ### Patch Changes
