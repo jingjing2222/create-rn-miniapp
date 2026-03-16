@@ -1,6 +1,38 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: 제공받은 Cloudflare token guide 이미지 반영
+1. 문제
+   - Cloudflare token guide 이미지를 생성물 `server/README.md`에 노출할 수 있게 패치했지만, 실제 이미지 파일은 아직 template asset 경로에 들어가 있지 않다.
+2. 방향
+   - 사용자가 전달한 이미지를 `packages/scaffold-templates/optional/server-cloudflare/assets/cloudflare-api-token-guide.png`로 복사한다.
+3. 완료 기준
+   - template asset 경로에 실제 이미지 파일이 존재하고, 다음 Cloudflare scaffold부터 `server/README.md`에서 그대로 보일 수 있다.
+
+## 다음 작업: Cloudflare token 안내를 note/README 공통 섹션으로 정리
+1. 문제
+   - 현재 Cloudflare token 안내는 provisioning note와 `server/README.md`에 흩어진 짧은 문장으로만 들어가 있다.
+   - 그래서 어디서 토큰을 만들고, 어떤 권한이 필요한지, `server/.env.local` 어디에 넣는지 한 번에 읽기 어렵다.
+2. 방향
+   - provisioning note 본문에 `Cloudflare API token` 섹션을 따로 만든다.
+   - generated `server/README.md`에도 같은 주제의 별도 섹션을 추가한다.
+   - Dashboard URL, 공식 문서, 권장 권한, `CLOUDFLARE_API_TOKEN=`에 secret을 붙여 넣는 방법을 함께 적는다.
+3. 완료 기준
+   - TUI note와 `server/README.md`만 읽어도 토큰 발급 경로, 필요한 권한, 붙여 넣을 위치를 바로 알 수 있다.
+
+## 다음 작업: generated root `tsconfig.base.json` 제거
+1. 문제
+   - 현재 generated repo 루트에는 `tsconfig.base.json`이 항상 생성되지만, 실제 `frontend` / `backoffice` / `server`는 각 workspace가 자기 tsconfig를 들고 있고 루트 base를 공통 상속하지 않는다.
+   - 그런데 루트 템플릿과 README에는 이 파일이 공통 TS 기준처럼 남아 있어서, `NodeNext` 같은 설정이 생성물 전체에 적용되는 것처럼 보인다.
+2. 방향
+   - `packages/scaffold-templates/root/tsconfig.base.json` 템플릿을 제거한다.
+   - root template copy 경로와 `nx.json`의 `sharedGlobals`에서 `tsconfig.base.json` 참조를 제거한다.
+   - 관련 README / 템플릿 README 설명과 테스트를 함께 갱신한다.
+3. 완료 기준
+   - 새 생성물 루트에는 `tsconfig.base.json`이 생기지 않는다.
+   - 루트 README와 scaffold-templates README에도 더 이상 이 파일을 공통 생성물로 설명하지 않는다.
+   - `pnpm verify`가 통과한다.
+
 ## 다음 작업: README Cloudflare 설명을 Worker + D1 + R2 기준으로 정리
 1. 문제
    - 현재 README의 Cloudflare 섹션 첫 문장이 `Worker only + TypeScript scaffold`로 남아 있어서, 지금 구현된 D1 / R2 provisioning 범위가 바로 드러나지 않는다.
@@ -1029,16 +1061,15 @@ docs/
 5. `packages/scaffold-templates/root/pnpm.biome.json`
 6. `packages/scaffold-templates/root/yarn.biome.json`
 7. `packages/scaffold-templates/root/nx.json`
-8. `packages/scaffold-templates/root/tsconfig.base.json`
-9. `packages/scaffold-templates/root/*.project.json`
-10. `packages/scaffold-templates/base/AGENTS.md`
-11. `packages/scaffold-templates/base/docs/ai/Plan.md`
-12. `packages/scaffold-templates/base/docs/ai/Status.md`
-13. `packages/scaffold-templates/base/docs/ai/Implement.md`
-14. `packages/scaffold-templates/base/docs/ai/Decisions.md`
-15. `packages/scaffold-templates/base/docs/ai/Prompt.md`
-16. `packages/scaffold-templates/base/docs/product/기능명세서.md`
-17. Granite/TDS 참조 안내 문서
+8. `packages/scaffold-templates/root/*.project.json`
+9. `packages/scaffold-templates/base/AGENTS.md`
+10. `packages/scaffold-templates/base/docs/ai/Plan.md`
+11. `packages/scaffold-templates/base/docs/ai/Status.md`
+12. `packages/scaffold-templates/base/docs/ai/Implement.md`
+13. `packages/scaffold-templates/base/docs/ai/Decisions.md`
+14. `packages/scaffold-templates/base/docs/ai/Prompt.md`
+15. `packages/scaffold-templates/base/docs/product/기능명세서.md`
+16. Granite/TDS 참조 안내 문서
 
 ## CLI 책임
 1. 입력 수집
@@ -1059,7 +1090,7 @@ docs/
 3. 후처리
    - package name / appName / displayName patch
    - 필요한 패키지 설치/추가
-   - `packages/scaffold-templates/root/*` 기반으로 root `package.json`, `pnpm-workspace.yaml`, `nx.json`, `biome.json`, `tsconfig.base.json` 생성
+   - `packages/scaffold-templates/root/*` 기반으로 root `package.json`, `pnpm-workspace.yaml`, `nx.json`, `biome.json` 생성
    - `packages/scaffold-templates/root/*.project.json` 기반으로 workspace `project.json` 생성
    - 내부 워크스페이스의 lint/formatter 관련 설정 제거
    - 하네스 문서 템플릿 복사
@@ -1275,7 +1306,7 @@ docs/
      - 필요한 `project.json`, `server/package.json`만 additive로 생성한다.
 6. 핵심 판단
    - `pnpm-workspace.yaml`과 Yarn `workspaces`는 이미 `frontend`, `server`, `backoffice`를 모두 포함하도록 생성되므로 add mode에서 root workspace manifest를 수정할 필요는 없다.
-   - `nx.json`, `biome.json`, `tsconfig.base.json`, `docs/`, `AGENTS.md`는 add mode에서 기본적으로 건드리지 않는다.
+   - `nx.json`, `biome.json`, `docs/`, `AGENTS.md`는 add mode에서 기본적으로 건드리지 않는다.
    - add mode는 “새 워크스페이스 추가”이지 “전체 루트 재동기화”가 아니다.
 7. 작업 순서
    - 기존 루트 검사기 추가

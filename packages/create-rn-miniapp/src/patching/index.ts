@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import {
   patchBackofficeAppSource,
@@ -63,6 +64,11 @@ const DOTENV_VERSION = '^16.4.7'
 const NODE_TYPES_VERSION = '^24.10.1'
 const FALLBACK_GRANITE_PLUGIN_VERSION = '1.0.7'
 const WRANGLER_PACKAGE_NAME = 'wrangler'
+const CLOUDFLARE_API_TOKENS_DASHBOARD_URL = 'https://dash.cloudflare.com/profile/api-tokens'
+const CLOUDFLARE_CREATE_TOKEN_DOC_URL =
+  'https://developers.cloudflare.com/fundamentals/api/get-started/create-token/'
+const CLOUDFLARE_WORKERS_AUTH_DOC_URL =
+  'https://developers.cloudflare.com/workers/wrangler/migration/v1-to-v2/wrangler-legacy/authentication/'
 const CLOUDFLARE_ROOT_GITIGNORE_ENTRY = 'server/worker-configuration.d.ts'
 const CLOUDFLARE_ROOT_BIOME_IGNORE_ENTRY = '**/server/worker-configuration.d.ts'
 const CLOUDFLARE_D1_BINDING_NAME = 'DB'
@@ -75,6 +81,16 @@ const FIREBASE_YARN_PACKAGE_EXTENSION_BLOCK = [
   '    dependencies:',
   '      yaml: "^2.4.1"',
 ].join('\n')
+const CLOUDFLARE_TOKEN_GUIDE_ASSET_CANDIDATES = [
+  'optional/server-cloudflare/assets/cloudflare-api-token-guide.png',
+  'optional/server-cloudflare/assets/cloudflare-api-token-guide.jpg',
+  'optional/server-cloudflare/assets/cloudflare-api-token-guide.jpeg',
+  'optional/server-cloudflare/assets/cloudflare-api-token-guide.webp',
+  'optional/server-cloudflare/assets/cloudflare-api-token-guide.gif',
+] as const
+const CLOUDFLARE_TOKEN_GUIDE_TARGET_DIR = 'assets'
+
+const require = createRequire(import.meta.url)
 
 const FRONTEND_ENV_TYPES = [
   'interface ImportMetaEnv {',
@@ -423,6 +439,38 @@ async function writeTextFile(filePath: string, contents: string) {
   await writeFile(filePath, contents, 'utf8')
 }
 
+function resolveTemplatesPackageRoot() {
+  const packageJsonPath = require.resolve('@create-rn-miniapp/scaffold-templates/package.json')
+  return path.dirname(packageJsonPath)
+}
+
+async function copyCloudflareTokenGuideAsset(
+  serverRoot: string,
+  sourcePathOverride?: string | null,
+) {
+  const assetCandidates = sourcePathOverride
+    ? [sourcePathOverride]
+    : CLOUDFLARE_TOKEN_GUIDE_ASSET_CANDIDATES.map((relativePath) =>
+        path.join(resolveTemplatesPackageRoot(), relativePath),
+      )
+
+  for (const sourcePath of assetCandidates) {
+    if (!(await pathExists(sourcePath))) {
+      continue
+    }
+
+    const targetFileName = path.basename(sourcePath)
+    const targetPath = path.join(serverRoot, CLOUDFLARE_TOKEN_GUIDE_TARGET_DIR, targetFileName)
+
+    await mkdir(path.dirname(targetPath), { recursive: true })
+    await copyFile(sourcePath, targetPath)
+
+    return `./${CLOUDFLARE_TOKEN_GUIDE_TARGET_DIR}/${targetFileName}`
+  }
+
+  return null
+}
+
 function renderCloudflareDeployScript(tokens: TemplateTokens) {
   const packageManager = getPackageManagerAdapter(tokens.packageManager)
   const command = packageManager.dlx('wrangler', ['deploy'])
@@ -561,7 +609,12 @@ function renderSupabaseServerReadme(tokens: TemplateTokens) {
   ].join('\n')
 }
 
-function renderCloudflareServerReadme(tokens: TemplateTokens) {
+function renderCloudflareServerReadme(
+  tokens: TemplateTokens,
+  options?: {
+    tokenGuideImagePath?: string | null
+  },
+) {
   return [
     '# server',
     '',
@@ -599,7 +652,25 @@ function renderCloudflareServerReadme(tokens: TemplateTokens) {
     '',
     '- `worker-configuration.d.ts`는 `wrangler types`가 생성하는 파일이에요.',
     '- `server/.env.local`은 Cloudflare account/worker/D1/R2 메타데이터를 기록해요.',
-    '- 후속 자동화나 비대화형 재배포가 필요하면 `server/.env.local`의 `CLOUDFLARE_API_TOKEN`을 채워주세요.',
+    '',
+    '## Cloudflare API token',
+    '',
+    '- 브라우저 로그인 없이 다시 배포하거나 CI에서 쓸 때만 필요해요.',
+    '- Cloudflare Dashboard > My Profile > API Tokens 에서 만들어 주세요.',
+    '- 가장 빠른 방법은 `Edit Cloudflare Workers` 템플릿으로 시작하는 거예요.',
+    '- 권한은 최소한 `Account > Workers Scripts > Write`, `Account > D1 > Write`, `Account > Workers R2 Storage > Write`를 포함해 주세요.',
+    '- 발급된 secret은 `server/.env.local`의 `CLOUDFLARE_API_TOKEN=` 뒤에 붙여 넣으면 돼요.',
+    `- ${CLOUDFLARE_API_TOKENS_DASHBOARD_URL}`,
+    `- ${CLOUDFLARE_CREATE_TOKEN_DOC_URL}`,
+    `- ${CLOUDFLARE_WORKERS_AUTH_DOC_URL}`,
+    ...(options?.tokenGuideImagePath
+      ? [
+          '',
+          '### 발급 화면 예시',
+          '',
+          `![Cloudflare API token 발급 화면](${options.tokenGuideImagePath})`,
+        ]
+      : []),
     '',
   ].join('\n')
 }
@@ -1271,11 +1342,17 @@ export async function patchSupabaseServerWorkspace(
 export async function patchCloudflareServerWorkspace(
   targetRoot: string,
   tokens: TemplateTokens,
-  options: Pick<WorkspacePatchOptions, 'packageManager'>,
+  options: Pick<WorkspacePatchOptions, 'packageManager'> & {
+    tokenGuideImageSourcePath?: string | null
+  },
 ) {
   const serverRoot = path.join(targetRoot, 'server')
   const packageJsonPath = path.join(serverRoot, 'package.json')
   const packageJson = await readPackageJson(packageJsonPath)
+  const tokenGuideImagePath = await copyCloudflareTokenGuideAsset(
+    serverRoot,
+    options.tokenGuideImageSourcePath,
+  )
 
   await patchPackageJsonFile(packageJsonPath, {
     upsertTopLevel: [
@@ -1301,7 +1378,12 @@ export async function patchCloudflareServerWorkspace(
     },
   })
   await patchWranglerConfigSchema(serverRoot, packageJson)
-  await writeTextFile(path.join(serverRoot, 'README.md'), renderCloudflareServerReadme(tokens))
+  await writeTextFile(
+    path.join(serverRoot, 'README.md'),
+    renderCloudflareServerReadme(tokens, {
+      tokenGuideImagePath,
+    }),
+  )
   await writeTextFile(
     path.join(serverRoot, 'scripts', 'cloudflare-deploy.mjs'),
     renderCloudflareDeployScript(tokens),

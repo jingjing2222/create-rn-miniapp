@@ -171,8 +171,12 @@ test('formatCloudflareManualSetupNote includes frontend and backoffice env guida
   assert.match(note.body, /CLOUDFLARE_R2_BUCKET_NAME=ebook-storage/)
   assert.match(note.body, /MINIAPP_API_BASE_URL=<배포된 Worker URL>/)
   assert.match(note.body, /VITE_API_BASE_URL=<배포된 Worker URL>/)
-  assert.match(note.body, /CLOUDFLARE_API_TOKEN/)
+  assert.match(note.body, /## Cloudflare API token/)
+  assert.match(note.body, /CLOUDFLARE_API_TOKEN=/)
   assert.match(note.body, /Edit Cloudflare Workers/)
+  assert.match(note.body, /Workers Scripts > Write/)
+  assert.match(note.body, /D1 > Write/)
+  assert.match(note.body, /Workers R2 Storage > Write/)
   assert.match(note.body, /dash\.cloudflare\.com\/profile\/api-tokens/)
   assert.match(
     note.body,
@@ -316,8 +320,10 @@ test('finalizeCloudflareProvisioning writes env files when api base url is avail
     assert.match(notes[0]?.body ?? '', /deploy/)
     assert.match(notes[0]?.body ?? '', /D1/)
     assert.match(notes[0]?.body ?? '', /R2/)
-    assert.match(notes[0]?.body ?? '', /CLOUDFLARE_API_TOKEN/)
+    assert.match(notes[0]?.body ?? '', /## Cloudflare API token/)
+    assert.match(notes[0]?.body ?? '', /CLOUDFLARE_API_TOKEN=/)
     assert.match(notes[0]?.body ?? '', /Edit Cloudflare Workers/)
+    assert.match(notes[0]?.body ?? '', /Workers Scripts > Write/)
     assert.match(notes[0]?.body ?? '', /dash\.cloudflare\.com\/profile\/api-tokens/)
     assert.match(
       notes[0]?.body ?? '',

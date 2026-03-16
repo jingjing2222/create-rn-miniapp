@@ -161,7 +161,6 @@
     - `pnpm-workspace.yaml`
     - `nx.json`
     - `biome.json`
-    - `tsconfig.base.json`
     - `.gitignore`
     - `AGENTS.md`
     - `README.md`
@@ -174,7 +173,7 @@
     - `packages/scaffold-templates`
     - generic `AGENTS.md`, `docs/ai/*`, `docs/product/기능명세서.md`, Granite/TDS index placeholder 추가
     - source scaffold template가 아니라 문서/하네스 overlay 전용이라는 원칙 반영
-    - generated repo 루트용 `package.json`, manager별 workspace/ignore/biome, `nx.json`, `tsconfig.base.json`, `*.project.json` 템플릿 추가
+    - generated repo 루트용 `package.json`, manager별 workspace/ignore/biome, `nx.json`, `*.project.json` 템플릿 추가
   - 기준선 고정
     - MiniApp frontend는 AppInToss React Native 튜토리얼 기준으로 생성
     - `pnpm create granite-app -> pnpm install -> pnpm install @apps-in-toss/framework -> pnpm ait init -> TDS 설치` 순서를 source of truth로 명시

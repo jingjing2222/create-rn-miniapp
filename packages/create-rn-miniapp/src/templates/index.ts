@@ -783,10 +783,7 @@ export async function applyRootTemplates(
   const packageManager = getPackageManagerAdapter(tokens.packageManager)
   const normalizedWorkspaces = normalizeRootWorkspaces(workspaces)
 
-  const fileMappings = [
-    ['nx.json', 'nx.json'],
-    ['tsconfig.base.json', 'tsconfig.base.json'],
-  ] as const
+  const fileMappings = [['nx.json', 'nx.json']] as const
 
   for (const [sourceName, targetName] of fileMappings) {
     await copyFileWithTokens(

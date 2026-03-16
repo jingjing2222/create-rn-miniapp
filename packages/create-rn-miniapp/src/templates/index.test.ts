@@ -57,6 +57,9 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   }
   const nxJson = JSON.parse(await readFile(path.join(targetRoot, 'nx.json'), 'utf8')) as {
     $schema?: string
+    namedInputs?: {
+      sharedGlobals?: string[]
+    }
   }
   const gitignore = await readFile(path.join(targetRoot, '.gitignore'), 'utf8')
   const biomeJson = await readFile(path.join(targetRoot, 'biome.json'), 'utf8')
@@ -65,6 +68,7 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   assert.equal(packageJson.workspaces, undefined)
   assert.equal(await pathExists(path.join(targetRoot, 'pnpm-workspace.yaml')), true)
   assert.equal(await pathExists(path.join(targetRoot, '.yarnrc.yml')), false)
+  assert.equal(await pathExists(path.join(targetRoot, 'tsconfig.base.json')), false)
   assert.equal(
     packageJson.scripts?.verify,
     'pnpm format:check && pnpm lint && pnpm typecheck && pnpm test',
@@ -73,6 +77,7 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   assert.equal(packageJson.devDependencies?.typescript, '^5.9.3')
   assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^1.9.4')
   assert.equal(nxJson.$schema, NX_ROOT_SCHEMA_URL)
+  assert.deepEqual(nxJson.namedInputs?.sharedGlobals, ['{workspaceRoot}/biome.json'])
   assert.doesNotMatch(gitignore, /^\.yarn\/?$/m)
   assert.doesNotMatch(gitignore, /^\.pnp\.\*$/m)
   assert.doesNotMatch(gitignore, /^server\/worker-configuration\.d\.ts$/m)

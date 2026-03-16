@@ -11,7 +11,6 @@
 - `root/yarn.biome.json`
 - `root/yarnrc.yml`
 - `root/nx.json`
-- `root/tsconfig.base.json`
 - `root/*.project.json`
 - `base/AGENTS.md`
 - `base/docs/ai/*`

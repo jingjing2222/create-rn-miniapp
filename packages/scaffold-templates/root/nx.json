@@ -7,7 +7,7 @@
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": ["default", "!{projectRoot}/**/*.test.*", "!{projectRoot}/**/*.spec.*"],
-    "sharedGlobals": ["{workspaceRoot}/biome.json", "{workspaceRoot}/tsconfig.base.json"]
+    "sharedGlobals": ["{workspaceRoot}/biome.json"]
   },
   "targetDefaults": {
     "build": {

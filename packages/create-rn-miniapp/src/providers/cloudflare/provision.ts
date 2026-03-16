@@ -174,6 +174,20 @@ function createCloudflareServerEnvValues(options: {
   ].join('\n')
 }
 
+function buildCloudflareApiTokenGuideLines() {
+  return [
+    '## Cloudflare API token',
+    '브라우저 로그인 없이 다시 배포하거나 CI에서 쓸 때만 필요해요.',
+    'Cloudflare Dashboard > My Profile > API Tokens 에서 토큰을 만들어 주세요.',
+    '가장 빠른 방법은 `Edit Cloudflare Workers` 템플릿으로 시작하는 거예요.',
+    '권한은 최소한 `Account > Workers Scripts > Write`, `Account > D1 > Write`, `Account > Workers R2 Storage > Write`를 포함해 주세요.',
+    '토큰을 만들고 한 번만 보여주는 secret을 복사해서 `server/.env.local`의 `CLOUDFLARE_API_TOKEN=` 뒤에 붙여 넣으면 돼요.',
+    CLOUDFLARE_API_TOKENS_DASHBOARD_URL,
+    CLOUDFLARE_CREATE_TOKEN_DOC_URL,
+    CLOUDFLARE_WORKERS_AUTH_DOC_URL,
+  ]
+}
+
 function hasConfiguredCloudflareApiToken(source: string) {
   const tokenLine = source.match(/^CLOUDFLARE_API_TOKEN=(.*)$/m)?.[1]?.trim() ?? ''
   return tokenLine.length > 0
@@ -832,13 +846,8 @@ export function formatCloudflareManualSetupNote(options: {
     '',
     'server/.env.local 에는 Cloudflare Worker, D1, R2 메타데이터를 적어둬요.',
     'server/package.json 의 deploy 는 server/.env.local 의 auth 값을 읽고 wrangler.jsonc 기준으로 원격 Worker를 다시 배포해요.',
-    'server/.env.local 의 CLOUDFLARE_API_TOKEN 은 비어 있어요.',
-    '브라우저 로그인 없이 다시 배포하거나 CI에서 쓸 거면 Cloudflare Dashboard > My Profile > API Tokens 에서 토큰을 만들어 주세요.',
-    '가장 빠른 방법은 `Edit Cloudflare Workers` 템플릿으로 시작하는 거예요.',
-    '토큰을 만들고 한 번만 보여주는 secret을 복사해서 `server/.env.local`의 `CLOUDFLARE_API_TOKEN=` 뒤에 붙여 넣으면 돼요.',
-    CLOUDFLARE_API_TOKENS_DASHBOARD_URL,
-    CLOUDFLARE_CREATE_TOKEN_DOC_URL,
-    CLOUDFLARE_WORKERS_AUTH_DOC_URL,
+    '',
+    ...buildCloudflareApiTokenGuideLines(),
   )
 
   return {
@@ -1239,17 +1248,7 @@ export async function finalizeCloudflareProvisioning(options: {
           'server/.env.local 에는 Cloudflare Worker, D1, R2 메타데이터를 적어뒀어요.',
           'server/package.json 의 deploy 로 원격 Worker를 다시 배포할 수 있어요.',
           `Cloudflare D1 binding은 ${CLOUDFLARE_D1_BINDING_NAME}, R2 binding은 ${CLOUDFLARE_R2_BINDING_NAME} 을 써요.`,
-          ...(!hasApiToken
-            ? [
-                'server/.env.local 의 CLOUDFLARE_API_TOKEN 은 비어 있어요.',
-                '브라우저 로그인 없이 다시 배포하거나 CI에서 쓸 거면 Cloudflare Dashboard > My Profile > API Tokens 에서 토큰을 만들어 주세요.',
-                '가장 빠른 방법은 `Edit Cloudflare Workers` 템플릿으로 시작하는 거예요.',
-                '토큰을 만들고 한 번만 보여주는 secret을 복사해서 `server/.env.local`의 `CLOUDFLARE_API_TOKEN=` 뒤에 붙여 넣으면 돼요.',
-                CLOUDFLARE_API_TOKENS_DASHBOARD_URL,
-                CLOUDFLARE_CREATE_TOKEN_DOC_URL,
-                CLOUDFLARE_WORKERS_AUTH_DOC_URL,
-              ]
-            : []),
+          ...(!hasApiToken ? ['', ...buildCloudflareApiTokenGuideLines()] : []),
         ].join('\n'),
       },
     ] satisfies ProvisioningNote[]

@@ -66,7 +66,6 @@ pnpm verify
   package.json
   nx.json
   biome.json
-  tsconfig.base.json
 ```
 
 `docs/`는 단순 샘플 문서가 아니라, 생성 직후부터 작업 기준을 맞추기 위한 컨텍스트 문서예요.

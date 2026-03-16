@@ -818,9 +818,15 @@ test('patchBackofficeWorkspace adds firebase bootstrap when firebase server prov
 test('patchCloudflareServerWorkspace keeps worker scripts and removes local tooling files', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const serverRoot = path.join(targetRoot, 'server')
+  const tokenGuideImageSourcePath = path.join(
+    targetRoot,
+    'fixtures',
+    'cloudflare-api-token-guide.png',
+  )
 
   await mkdir(path.join(serverRoot, '.vscode'), { recursive: true })
   await mkdir(path.join(serverRoot, 'src'), { recursive: true })
+  await mkdir(path.dirname(tokenGuideImageSourcePath), { recursive: true })
   await writeJson(path.join(serverRoot, 'package.json'), {
     name: 'my-worker',
     private: true,
@@ -866,6 +872,7 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
     '{\n  "$schema": "node_modules/wrangler/config-schema.json",\n  "name": "server"\n}\n',
     'utf8',
   )
+  await writeFile(tokenGuideImageSourcePath, 'fake-image', 'utf8')
 
   await patchCloudflareServerWorkspace(
     targetRoot,
@@ -878,7 +885,7 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
       packageManagerExecCommand: 'pnpm exec',
       verifyCommand: 'pnpm verify',
     },
-    { packageManager: 'pnpm' },
+    { packageManager: 'pnpm', tokenGuideImageSourcePath },
   )
 
   const packageJson = JSON.parse(await readFile(path.join(serverRoot, 'package.json'), 'utf8')) as {
@@ -904,6 +911,7 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
     path.join(serverRoot, 'scripts', 'cloudflare-deploy.mjs'),
     'utf8',
   )
+  const copiedTokenGuide = path.join(serverRoot, 'assets', 'cloudflare-api-token-guide.png')
 
   assert.equal(packageJson.name, 'server')
   assert.equal(packageJson.scripts?.dev, 'wrangler dev')
@@ -933,8 +941,19 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
   assert.match(readme, /MINIAPP_API_BASE_URL/)
   assert.match(readme, /backoffice\/\.env\.local/)
   assert.match(readme, /VITE_API_BASE_URL/)
+  assert.match(readme, /## Cloudflare API token/)
+  assert.match(readme, /CLOUDFLARE_API_TOKEN=/)
+  assert.match(readme, /Workers Scripts > Write/)
+  assert.match(readme, /Workers R2 Storage > Write/)
+  assert.match(readme, /D1 > Write/)
+  assert.match(readme, /dash\.cloudflare\.com\/profile\/api-tokens/)
+  assert.match(
+    readme,
+    /!\[Cloudflare API token 발급 화면\]\(\.\/assets\/cloudflare-api-token-guide\.png\)/,
+  )
   assert.match(deployScript, /CLOUDFLARE_API_TOKEN/)
   assert.match(deployScript, /CLOUDFLARE_ACCOUNT_ID/)
+  assert.equal(await pathExists(copiedTokenGuide), true)
   assert.equal(await pathExists(path.join(serverRoot, '.gitignore')), false)
   assert.equal(await pathExists(path.join(serverRoot, '.prettierrc')), false)
   assert.equal(await pathExists(path.join(serverRoot, '.editorconfig')), false)

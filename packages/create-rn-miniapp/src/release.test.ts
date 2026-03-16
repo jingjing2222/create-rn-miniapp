@@ -134,6 +134,10 @@ test('scaffold templates tarball keeps the root gitignore template', () => {
     true,
   )
   assert.equal(
+    packResult.files.some((file) => file.path === 'root/tsconfig.base.json'),
+    false,
+  )
+  assert.equal(
     packResult.files.some(
       (file) =>
         file.path === 'optional/backoffice/docs/engineering/backoffice-react-best-practices.md',
