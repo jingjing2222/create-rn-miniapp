@@ -1,5 +1,25 @@
 # create-rn-miniapp
 
+## 0.0.15
+
+### Patch Changes
+
+- 06338fc: Refactor the optional tRPC overlay to separate shared contracts from the shared router package.
+
+  - Replace the single `packages/trpc` workspace with `packages/contracts` and `packages/app-router`
+  - Wire Supabase and Cloudflare tRPC scaffolds to the new shared package layout
+  - Rewrite generated README and engineering docs so API schema and `AppRouter` responsibilities stay clear
+
+- 40d4236: Add the tRPC boundary type rule to generated AGENTS files only when tRPC is scaffolded.
+
+  - Inject Golden Rule 8 into `AGENTS.md` only for repos that include `packages/trpc`
+  - Keep non-tRPC repos free of the extra boundary type rule
+  - Cover both marker-based and legacy AGENTS patching paths in template tests
+
+- Updated dependencies [06338fc]
+- Updated dependencies [40d4236]
+  - @create-rn-miniapp/scaffold-templates@0.0.15
+
 ## 0.0.14
 
 ### Patch Changes
