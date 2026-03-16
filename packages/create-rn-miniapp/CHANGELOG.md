@@ -1,5 +1,18 @@
 # create-rn-miniapp
 
+## 0.0.14
+
+### Patch Changes
+
+- 5db058d: Finish the generated frontend TypeScript config for tRPC overlays.
+
+  - Add `moduleResolution: "bundler"` and `noEmit: true` alongside `allowImportingTsExtensions`
+  - Keep the fix scoped to `supabase` and `cloudflare` frontends when tRPC is enabled
+  - Cover the full tsconfig combination in patching tests
+
+- Updated dependencies [5db058d]
+  - @create-rn-miniapp/scaffold-templates@0.0.14
+
 ## 0.0.13
 
 ### Patch Changes
