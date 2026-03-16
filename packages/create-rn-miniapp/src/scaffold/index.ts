@@ -119,19 +119,6 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     )
   }
 
-  if (
-    options.withTrpc &&
-    (await pathExists(path.join(targetRoot, 'server', 'scripts', 'trpc-sync.mjs')))
-  ) {
-    log.step('server tRPC 코드를 먼저 맞춰둘게요')
-    await runCommand({
-      cwd: path.join(targetRoot, 'server'),
-      command: 'node',
-      args: ['./scripts/trpc-sync.mjs'],
-      label: 'server tRPC 코드를 먼저 맞춰둘게요',
-    })
-  }
-
   if (options.serverProvider === 'cloudflare' && options.withTrpc) {
     const packageManager = getPackageManagerAdapter(options.packageManager)
     log.step('루트 tRPC workspace 의존성을 먼저 설치할게요')
@@ -191,11 +178,13 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     hasBackoffice:
       options.withBackoffice && (await pathExists(path.join(targetRoot, 'backoffice'))),
     serverProvider: options.serverProvider,
+    hasTrpc: options.withTrpc,
   })
   await patchFrontendWorkspace(targetRoot, tokens, {
     packageManager: options.packageManager,
     serverProvider: options.serverProvider,
     trpc: options.withTrpc,
+    removeCloudflareApiClientHelpers: options.serverProvider === 'cloudflare' && options.withTrpc,
   })
 
   if (options.withBackoffice && (await pathExists(path.join(targetRoot, 'backoffice')))) {
@@ -203,6 +192,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
       packageManager: options.packageManager,
       serverProvider: options.serverProvider,
       trpc: options.withTrpc,
+      removeCloudflareApiClientHelpers: options.serverProvider === 'cloudflare' && options.withTrpc,
     })
   }
 
@@ -310,19 +300,6 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     )
   }
 
-  if (
-    options.withTrpc &&
-    (await pathExists(path.join(targetRoot, 'server', 'scripts', 'trpc-sync.mjs')))
-  ) {
-    log.step('server tRPC 코드를 먼저 맞춰둘게요')
-    await runCommand({
-      cwd: path.join(targetRoot, 'server'),
-      command: 'node',
-      args: ['./scripts/trpc-sync.mjs'],
-      label: 'server tRPC 코드를 먼저 맞춰둘게요',
-    })
-  }
-
   if (options.withServer && options.serverProvider === 'cloudflare' && options.withTrpc) {
     const packageManager = getPackageManagerAdapter(options.packageManager)
     log.step('루트 tRPC workspace 의존성을 먼저 설치할게요')
@@ -386,6 +363,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
   await syncOptionalDocsTemplates(targetRoot, tokens, {
     hasBackoffice: await pathExists(path.join(targetRoot, 'backoffice')),
     serverProvider: finalServerProvider,
+    hasTrpc: options.withTrpc,
   })
 
   if (
@@ -396,6 +374,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
       packageManager: options.packageManager,
       serverProvider: finalServerProvider,
       trpc: options.withTrpc,
+      removeCloudflareApiClientHelpers: options.removeCloudflareApiClientHelpers,
     })
   }
 
@@ -407,6 +386,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
       packageManager: options.packageManager,
       serverProvider: finalServerProvider,
       trpc: options.withTrpc,
+      removeCloudflareApiClientHelpers: options.removeCloudflareApiClientHelpers,
     })
   }
 

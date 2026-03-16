@@ -33,7 +33,7 @@ DB schema와 Edge Functions를 server workspace에서 관리하고, 앱은 publi
 
 ## tRPC를 같이 골랐다면
 - `packages/trpc`가 router와 `AppRouter` 타입의 canonical source예요.
-- `server/scripts/trpc-sync.mjs`가 shared router를 `server/supabase/functions/_shared/trpc`로 sync해요.
+- `server/supabase/functions/api/deno.json`의 `imports`가 `@workspace/trpc`를 `packages/trpc/src/index.ts`로 직접 연결해요.
 - `frontend/src/lib/trpc.ts`, `backoffice/src/lib/trpc.ts`가 같은 `AppRouter` 타입을 기준으로 Edge Function `/api/trpc` endpoint를 호출해요.
 - `server/supabase/functions/api/index.ts`는 Supabase Edge Functions fetch adapter로 tRPC handler를 연결해요.
 

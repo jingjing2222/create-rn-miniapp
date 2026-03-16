@@ -61,6 +61,11 @@ export async function main() {
           `server 제공자: ${resolved.serverProvider ?? '이번엔 안 만들어요'}`,
           `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '이번엔 건너뛸게요' : (resolved.serverProjectMode ?? '목록에서 고를게요')) : '해당 없어요'}`,
           `tRPC 추가: ${String(resolved.withTrpc)}`,
+          ...(resolved.withTrpc && resolved.existingServerProvider === 'cloudflare'
+            ? [
+                `기존 Cloudflare API helper 정리: ${resolved.removeCloudflareApiClientHelpers ? '같이 지워둘게요' : '이번엔 남겨둘게요'}`,
+              ]
+            : []),
           `backoffice 추가: ${String(resolved.withBackoffice)}`,
         ].join('\n'),
         '이렇게 반영할게요',

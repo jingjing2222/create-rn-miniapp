@@ -66,6 +66,8 @@ function renderTrpcWorkspaceTsconfig() {
       moduleResolution: 'Bundler',
       strict: true,
       skipLibCheck: true,
+      allowImportingTsExtensions: true,
+      rewriteRelativeImportExtensions: true,
       declaration: true,
       outDir: 'dist',
       rootDir: 'src',
@@ -104,7 +106,13 @@ function renderTrpcWorkspaceReadme(options: ApplyTrpcWorkspaceTemplateOptions) {
     '이 워크스페이스는 tRPC router와 `AppRouter` 타입의 source of truth예요.',
     '',
     '- `frontend`와 `backoffice`는 server를 직접 참조하지 않아요. 여기서 타입만 가져와요.',
-    `- 지금 선택한 provider는 \`${options.serverProvider}\`라서, server runtime에서는 이 내용을 provider별 mirror 경로로 sync해서 써요.`,
+    ...(options.serverProvider === 'supabase'
+      ? [
+          '- 지금 선택한 provider는 `supabase`라서, function-local `deno.json`의 `imports`가 이 워크스페이스를 직접 가리켜요.',
+        ]
+      : [
+          '- 지금 선택한 provider는 `cloudflare`라서, Worker runtime이 이 워크스페이스를 직접 import해요.',
+        ]),
     '- 그래서 generated repo에서 `../../server/...` import나 tsconfig path alias를 강제로 만들지 않아도 돼요.',
     '',
     '## 구조',
@@ -122,6 +130,7 @@ function renderTrpcWorkspaceReadme(options: ApplyTrpcWorkspaceTemplateOptions) {
     '',
     '- 이 패키지는 router 정의와 타입만 canonical로 관리해요.',
     '- Cloudflare / Supabase runtime adapter는 각 provider server workspace 안에서 따로 가져가요.',
+    '- Supabase가 이 패키지를 직접 볼 수 있게 상대 import에는 `.ts` 확장자를 명시해요.',
     '',
   ].join('\n')
 }
@@ -133,7 +142,7 @@ function renderTrpcContextSource() {
 function renderTrpcInitSource() {
   return [
     "import { initTRPC } from '@trpc/server'",
-    "import type { AppTrpcContext } from './context'",
+    "import type { AppTrpcContext } from './context.ts'",
     '',
     'const t = initTRPC.context<AppTrpcContext>().create()',
     '',
@@ -146,7 +155,7 @@ function renderTrpcInitSource() {
 function renderTrpcExampleRouterSource() {
   return [
     "import { z } from 'zod'",
-    "import { createTRPCRouter, publicProcedure } from '../init'",
+    "import { createTRPCRouter, publicProcedure } from '../init.ts'",
     '',
     'export const exampleRouter = createTRPCRouter({',
     '  ping: publicProcedure.query(() => ({',
@@ -170,8 +179,8 @@ function renderTrpcExampleRouterSource() {
 
 function renderTrpcRootSource() {
   return [
-    "import { createTRPCRouter } from './init'",
-    "import { exampleRouter } from './routers/example'",
+    "import { createTRPCRouter } from './init.ts'",
+    "import { exampleRouter } from './routers/example.ts'",
     '',
     'export const appRouter = createTRPCRouter({',
     '  example: exampleRouter,',
@@ -184,9 +193,9 @@ function renderTrpcRootSource() {
 
 function renderTrpcIndexSource() {
   return [
-    "export { appRouter } from './root'",
-    "export type { AppRouter } from './root'",
-    "export type { AppTrpcContext } from './context'",
+    "export { appRouter } from './root.ts'",
+    "export type { AppRouter } from './root.ts'",
+    "export type { AppTrpcContext } from './context.ts'",
     '',
   ].join('\n')
 }

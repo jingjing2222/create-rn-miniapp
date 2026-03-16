@@ -1,6 +1,85 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: root workspace manifest의 `packages/trpc`를 `packages/*`로 일반화
+1. 문제
+   - 지금 generated root workspace manifest는 optional package workspace가 생기면 `packages/trpc`를 그대로 등록한다.
+   - 이 표현은 현재 구조엔 맞지만, 앞으로 `packages/*` 아래에 다른 shared package가 생겨도 root manifest를 다시 바꿔야 해서 확장성이 떨어진다.
+2. 방향
+   - 내부 source of truth 경로는 계속 `packages/trpc`로 유지한다.
+   - 다만 root `pnpm-workspace.yaml`과 `package.json.workspaces`에는 `packages/*`를 등록한다.
+   - 즉 실제 생성/감지 로직은 `packages/trpc`를 보되, manifest에 쓸 때만 `packages/*`로 normalize 한다.
+3. 테스트
+   - root workspace manifest 테스트에서 `packages/trpc`를 넘겨도 최종 manifest는 `packages/*`를 쓰는지 검증한다.
+   - pnpm, yarn/npm/bun 공통 기대값을 함께 갱신한다.
+4. 완료 기준
+   - generated root manifest는 optional package workspace가 있으면 `packages/*`를 쓴다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Cloudflare + tRPC일 때 `api.ts`는 만들지 않고 `--add`에서는 삭제 여부를 고르게
+1. 문제
+   - 지금 Cloudflare에 tRPC overlay를 켜도 `frontend/src/lib/api.ts`, `backoffice/src/lib/api.ts`가 그대로 남는다.
+   - 이 상태에선 generated repo에 `api.ts`와 `trpc.ts`가 같이 있어서 어떤 client를 써야 하는지 애매하다.
+   - 특히 `--add --trpc`로 기존 Cloudflare workspace에 overlay만 붙일 때는 이미 만들어진 `api.ts`를 우리가 알아서 지울지, 사용자가 유지할지 선택할 수 있어야 한다.
+2. 방향
+   - create 경로에서 Cloudflare + tRPC를 고르면 `api.ts`를 새로 만들지 않는다.
+   - Cloudflare용 `trpc.ts`는 더 이상 `./api`를 import하지 않고, 각 workspace env를 직접 읽어 URL을 만든다.
+   - `--add --trpc`에서 기존 provider가 Cloudflare이고 기존 `api.ts`가 있으면, 지워둘지 직접 남길지 select prompt로 고른다.
+   - `--yes`에서는 비파괴가 기본이라 기존 `api.ts`를 유지한다.
+   - README도 Cloudflare + tRPC일 때는 `api.ts`가 아니라 `trpc.ts`가 기본 client라는 점만 보여준다.
+3. 테스트
+   - `resolveAddCliOptions` 테스트에서 기존 Cloudflare repo + `api.ts` 존재 시 삭제 여부를 묻는지 검증한다.
+   - Cloudflare frontend/backoffice patch 테스트에서 tRPC일 때 `api.ts`가 생성되지 않는지 검증한다.
+   - 기존 `api.ts`가 있는 상태에서 제거 옵션을 주면 실제로 삭제되는지도 검증한다.
+4. 완료 기준
+   - Cloudflare + tRPC 생성물에는 `api.ts`가 기본 생성되지 않는다.
+   - `--add --trpc`는 기존 `api.ts`가 있을 때만 삭제 여부를 고를 수 있다.
+   - `pnpm verify` 통과
+
+## 다음 작업: tRPC일 때만 AGENTS / server README에 API SSOT 추가
+1. 문제
+   - 현재 tRPC 관련 설명은 provider README나 shared workspace README에는 있지만, root `AGENTS.md`와 generated `server/README.md`에 “server API의 source of truth가 `packages/trpc`다”라는 신호가 항상 일관되게 드러나지 않는다.
+   - 이 문구를 base template에 고정으로 넣으면 tRPC를 만들지 않은 repo에도 불필요한 설명이 남는다.
+2. 방향
+   - `AGENTS.md`에는 optional docs 주입 경로를 이용해서, tRPC를 만들었을 때만 `docs/engineering/server-api-ssot-trpc.md` 링크를 추가한다.
+   - generated `server/README.md`도 provider plain mode에는 넣지 않고, tRPC가 켜졌을 때만 `## API SSOT` 섹션을 렌더링한다.
+   - 즉 base template에 고정하지 않고 create/add 옵션 결과에 따라 동적으로 생성한다.
+3. 테스트
+   - optional docs sync 테스트에서 `hasTrpc`가 true일 때만 AGENTS/index와 engineering doc이 생기는지 검증한다.
+   - Supabase/Cloudflare server README 테스트에서 tRPC일 때만 `API SSOT` 문구가 생기는지 검증한다.
+4. 완료 기준
+   - tRPC를 만들지 않은 repo에는 API SSOT 문구가 없다.
+   - tRPC를 만든 repo에는 AGENTS와 server README에서 `packages/trpc`가 server API의 source of truth라는 점이 분명히 보인다.
+
+## 다음 작업: Supabase tRPC를 sync 없이 `deno.json` alias로 연결
+1. 문제
+   - 현재 Supabase tRPC overlay는 `server/scripts/trpc-sync.mjs`로 `packages/trpc`를 `server/supabase/functions/_shared/trpc`에 mirror하는 구조다.
+   - 이 방식은 안전하지만, Cloudflare와 mental model이 달라지고 사용자가 `packages/trpc`를 수정한 뒤 왜 sync를 거쳐야 하는지 이해하기 어렵다.
+   - `packages/trpc`를 canonical source of truth로 둔다는 메시지와 실제 runtime 연결 방식이 어긋난다.
+2. 기준
+   - `packages/trpc`는 계속 canonical source of truth로 유지한다.
+   - Supabase Edge Functions runtime도 `_shared` mirror 대신 `@workspace/trpc`를 직접 보게 만든다.
+   - 단, Deno runtime이라 npm workspace resolution을 그대로 기대하지 않고 function-local `deno.json`의 `imports`로 alias를 명시한다.
+   - `@workspace/trpc`뿐 아니라 shared package 내부에서 쓰는 `@trpc/server`, `zod`도 Deno에서 풀 수 있게 `npm:` mapping을 같이 둔다.
+3. 방향
+   - `server/supabase/functions/api/deno.json`를 생성한다.
+   - `imports`에는 아래를 넣는다.
+     - `@workspace/trpc`: `../../../../packages/trpc/src/index.ts`
+     - `@trpc/server`: `npm:@trpc/server@^11.13.4`
+     - `zod`: `npm:zod@^4.3.6`
+   - `server/supabase/functions/api/index.ts`는 `_shared/trpc` 대신 `@workspace/trpc`를 직접 import 한다.
+   - `server/scripts/trpc-sync.mjs`는 더 이상 생성하지 않는다.
+   - `functions:serve`, `functions:deploy`도 sync prefix 없이 원래 명령만 유지한다.
+   - `README`와 provider engineering docs에서도 `_shared` / `trpc:sync` 설명을 제거하고, function-local `deno.json` alias 설명으로 바꾼다.
+4. 테스트
+   - Supabase tRPC patch 테스트는 `trpc:sync`가 없고 `functions/api/deno.json`이 생기는지 검증한다.
+   - handler source가 `@workspace/trpc`를 직접 import 하는지 검증한다.
+   - README / docs 기대값도 `deno.json` alias 설명 기준으로 갱신한다.
+5. 완료 기준
+   - Supabase tRPC overlay는 `packages/trpc` 수정이 별도 sync 없이 바로 source of truth가 된다.
+   - Supabase generated repo에는 `_shared/trpc`와 `trpc:sync`가 더 이상 없다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Supabase / Cloudflare 선택 시 optional tRPC overlay 추가
 1. 문제
    - 지금 `server` provider는 `supabase`, `cloudflare`, `firebase` 중 하나를 고르면 provider별 기본 연결만 만들어 준다.
@@ -51,13 +130,13 @@
      - `cloudflare`
        - `server/src/trpc/context.ts`와 `server/src/index.ts`만 provider-specific entry로 둔다.
        - Worker fetch handler는 `packages/trpc`의 router를 직접 받아 `fetchRequestHandler`에 연결한다.
-       - Cloudflare는 Node/Workers 번들러가 workspace package import를 처리할 수 있으니, `trpc:sync` mirror는 두지 않는다.
+       - Cloudflare는 Node/Workers 번들러가 workspace package import를 처리할 수 있으니, 별도 mirror/sync는 두지 않는다.
      - `supabase`
        - tRPC 공식 `fetch` adapter는 Cloudflare Worker와 Deno를 둘 다 지원하므로, handler 패턴 자체는 Cloudflare와 크게 다르지 않다.
-       - 다만 Supabase Edge Functions에서는 monorepo workspace package를 runtime에서 그대로 물리기 어렵다.
-       - 그래서 `server/supabase/functions/_shared/trpc/` 아래에 `packages/trpc` 내용을 mirror하는 sync target을 두고, `functions/api/index.ts`는 그 로컬 mirror를 본다.
-       - 1차에는 `server/package.json`에 `trpc:sync` 같은 스크립트를 추가해서 `packages/trpc` -> `server/supabase/functions/_shared/trpc` 복사를 자동화한다.
-       - `functions:serve`, `functions:deploy`는 이 sync를 선행해서 source of truth와 Edge Function 코드를 맞춘다.
+       - 다만 Supabase Edge Functions는 Deno runtime이라 npm workspace resolution을 그대로 기대하지 않는다.
+       - 그래서 `server/supabase/functions/api/deno.json`의 `imports`로 `@workspace/trpc`를 `../../../../packages/trpc/src/index.ts`에 alias한다.
+       - shared package 내부 의존성도 Deno가 풀 수 있게 `@trpc/server`, `zod`를 `npm:` specifier로 함께 매핑한다.
+       - `functions/api/index.ts`는 `_shared` mirror 없이 `@workspace/trpc`를 직접 import 한다.
      - 공통 원칙
        - canonical router/type은 `packages/trpc`
        - runtime handler entry는 provider-specific
@@ -90,14 +169,14 @@
    - patch / template
      - `packages/trpc` workspace 생성, workspace registration, Nx project 등록 검증
      - Cloudflare tRPC server files, client files, shared package deps 생성 검증
-     - Supabase tRPC Edge Function files, `trpc:sync` 스크립트, shared package deps 생성 검증
+     - Supabase tRPC Edge Function files, function-local `deno.json` alias, shared package deps 생성 검증
      - 기존 plain provider 생성물에는 tRPC 파일이 안 생기는지 검증
    - add mode
      - 기존 `cloudflare` / `supabase` workspace에 tRPC overlay만 추가 가능한지 검증
 5. 리스크
-   - Supabase Edge Functions는 Deno runtime이라 `packages/trpc`를 runtime에서 직접 참조하기 어렵다.
+   - Supabase Edge Functions는 Deno runtime이라 `deno.json` alias가 정확하지 않으면 `packages/trpc`를 runtime에서 직접 참조하지 못한다.
    - Granite/React Native가 workspace package runtime import까지 자연스럽게 먹는지는 별도 확인이 필요하다.
-   - 그래서 client는 type-only import, server는 provider별 runtime adapter, Supabase는 sync mirror 전략으로 간다.
+   - 그래서 client는 type-only import, server는 provider별 runtime adapter, Supabase는 `deno.json imports` alias 전략으로 간다.
    - Supabase tRPC client는 anon key/session header를 어떻게 실어 보낼지 먼저 정리해야 한다.
    - `AppRouter` shared package는 내부 alias import나 불완전한 TS 설정이 있으면 client에서 `any`로 무너질 수 있다. 이건 공식 docs보다는 community issue에서 반복적으로 보이는 문제라, 구현 때 예방적으로 피한다.
 6. 완료 기준

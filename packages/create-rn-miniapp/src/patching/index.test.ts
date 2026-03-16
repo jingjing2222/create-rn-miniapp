@@ -433,9 +433,79 @@ test('patchFrontendWorkspace adds cloudflare trpc client when trpc overlay is se
 
   assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
   assert.equal(packageJson.devDependencies?.['@workspace/trpc'], 'workspace:*')
+  assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'api.ts')), false)
   assert.match(trpcClient, /createTRPCProxyClient/)
   assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/trpc'/)
-  assert.match(trpcClient, /resolveApiUrl\('trpc'\)/)
+  assert.match(trpcClient, /import\.meta\.env\.MINIAPP_API_BASE_URL/)
+  assert.doesNotMatch(trpcClient, /from '\.\/api'/)
+})
+
+test('patchFrontendWorkspace removes existing cloudflare api helper when trpc cleanup is requested', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const frontendRoot = path.join(targetRoot, 'frontend')
+
+  await mkdir(path.join(frontendRoot, 'src', 'lib'), { recursive: true })
+  await writeJson(path.join(frontendRoot, 'package.json'), {
+    name: 'ebook-miniapp',
+    private: true,
+    scripts: {
+      dev: 'granite dev',
+      build: 'ait build',
+    },
+    dependencies: {
+      '@apps-in-toss/framework': '^2.0.5',
+    },
+    devDependencies: {
+      '@granite-js/plugin-hermes': '1.0.7',
+      '@granite-js/plugin-router': '1.0.7',
+      typescript: '^5.8.3',
+    },
+  })
+  await writeFile(
+    path.join(frontendRoot, 'tsconfig.json'),
+    ['{', '  "compilerOptions": {', '    "module": "commonjs"', '  }', '}', ''].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [appsInToss({ brand: { displayName: "전자책 미니앱" } })],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'src', 'lib', 'api.ts'),
+    'export function apiFetch() { return Promise.resolve(null) }\n',
+    'utf8',
+  )
+
+  await patchFrontendWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    {
+      packageManager: 'pnpm',
+      serverProvider: 'cloudflare',
+      trpc: true,
+      removeCloudflareApiClientHelpers: true,
+    },
+  )
+
+  assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'api.ts')), false)
 })
 
 test('patchFrontendWorkspace adds firebase bootstrap when firebase server provider is selected', async (t) => {
@@ -970,6 +1040,172 @@ test('patchBackofficeWorkspace adds supabase trpc client when trpc overlay is se
   assert.match(trpcClient, /functions\/v1\/api\/trpc/)
 })
 
+test('patchBackofficeWorkspace adds cloudflare trpc client without api helper when trpc overlay is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const backofficeRoot = path.join(targetRoot, 'backoffice')
+
+  await mkdir(path.join(backofficeRoot, 'src'), { recursive: true })
+  await writeJson(path.join(backofficeRoot, 'package.json'), {
+    name: 'backoffice',
+    private: true,
+    version: '0.0.0',
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'tsc -b && vite build',
+    },
+    dependencies: {
+      react: '^19.2.4',
+      'react-dom': '^19.2.4',
+    },
+    devDependencies: {
+      vite: '^8.0.0',
+      typescript: '~5.9.3',
+    },
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.json'), {
+    compilerOptions: { module: 'commonjs' },
+    files: [],
+    references: [{ path: './tsconfig.app.json' }, { path: './tsconfig.node.json' }],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.app.json'), {
+    compilerOptions: { module: 'commonjs' },
+    include: ['src'],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.node.json'), {
+    compilerOptions: { composite: true, module: 'commonjs' },
+    include: ['vite.config.ts'],
+  })
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'main.tsx'),
+    [
+      "import { StrictMode } from 'react'",
+      "import { createRoot } from 'react-dom/client'",
+      "import App from './App.tsx'",
+      '',
+      "createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)",
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'App.tsx'),
+    'export default function App() { return null }\n',
+    'utf8',
+  )
+
+  await patchBackofficeWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'cloudflare', trpc: true },
+  )
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(backofficeRoot, 'package.json'), 'utf8'),
+  ) as {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
+  const trpcClient = await readFile(path.join(backofficeRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
+
+  assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
+  assert.equal(packageJson.devDependencies?.['@workspace/trpc'], 'workspace:*')
+  assert.equal(await pathExists(path.join(backofficeRoot, 'src', 'lib', 'api.ts')), false)
+  assert.match(trpcClient, /createTRPCProxyClient/)
+  assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/trpc'/)
+  assert.match(trpcClient, /import\.meta\.env\.VITE_API_BASE_URL/)
+  assert.doesNotMatch(trpcClient, /from '\.\/api'/)
+})
+
+test('patchBackofficeWorkspace removes existing cloudflare api helper when trpc cleanup is requested', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const backofficeRoot = path.join(targetRoot, 'backoffice')
+
+  await mkdir(path.join(backofficeRoot, 'src', 'lib'), { recursive: true })
+  await writeJson(path.join(backofficeRoot, 'package.json'), {
+    name: 'backoffice',
+    private: true,
+    version: '0.0.0',
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'tsc -b && vite build',
+    },
+    dependencies: {
+      react: '^19.2.4',
+      'react-dom': '^19.2.4',
+    },
+    devDependencies: {
+      vite: '^8.0.0',
+      typescript: '~5.9.3',
+    },
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.json'), {
+    compilerOptions: { module: 'commonjs' },
+    files: [],
+    references: [{ path: './tsconfig.app.json' }, { path: './tsconfig.node.json' }],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.app.json'), {
+    compilerOptions: { module: 'commonjs' },
+    include: ['src'],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.node.json'), {
+    compilerOptions: { composite: true, module: 'commonjs' },
+    include: ['vite.config.ts'],
+  })
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'main.tsx'),
+    [
+      "import { StrictMode } from 'react'",
+      "import { createRoot } from 'react-dom/client'",
+      "import App from './App.tsx'",
+      '',
+      "createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)",
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'App.tsx'),
+    'export default function App() { return null }\n',
+    'utf8',
+  )
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'lib', 'api.ts'),
+    'export function apiFetch() { return Promise.resolve(null) }\n',
+    'utf8',
+  )
+
+  await patchBackofficeWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    {
+      packageManager: 'pnpm',
+      serverProvider: 'cloudflare',
+      trpc: true,
+      removeCloudflareApiClientHelpers: true,
+    },
+  )
+
+  assert.equal(await pathExists(path.join(backofficeRoot, 'src', 'lib', 'api.ts')), false)
+})
+
 test('patchCloudflareServerWorkspace keeps worker scripts and removes local tooling files', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const serverRoot = path.join(targetRoot, 'server')
@@ -1175,6 +1411,8 @@ test('patchCloudflareServerWorkspace wires trpc sync and worker handler when trp
   assert.match(contextSource, /export type CloudflareTrpcContext/)
   assert.match(readme, /packages\/trpc/)
   assert.match(readme, /frontend\/src\/lib\/trpc\.ts/)
+  assert.match(readme, /API SSOT/)
+  assert.match(readme, /server API의 source of truth/)
   assert.doesNotMatch(readme, /trpc:sync/)
 })
 
@@ -1240,6 +1478,7 @@ test('patchSupabaseServerWorkspace creates a server README with remote and local
   assert.match(readme, /MINIAPP_SUPABASE_URL/)
   assert.match(readme, /backoffice\/src\/lib\/supabase\.ts/)
   assert.match(readme, /VITE_SUPABASE_URL/)
+  assert.doesNotMatch(readme, /API SSOT/)
   assert.match(readme, /## Supabase access token/)
   assert.match(readme, /SUPABASE_ACCESS_TOKEN=/)
   assert.match(readme, /dashboard\/account\/tokens/)
@@ -1255,7 +1494,7 @@ test('patchSupabaseServerWorkspace creates a server README with remote and local
   assert.equal(await readFile(copiedGuide2, 'utf8'), 'fake-image-2')
 })
 
-test('patchSupabaseServerWorkspace wires trpc sync and edge function handler when trpc overlay is selected', async (t) => {
+test('patchSupabaseServerWorkspace wires tRPC through function-local deno.json aliases when tRPC overlay is selected', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const serverRoot = path.join(targetRoot, 'server')
 
@@ -1284,26 +1523,29 @@ test('patchSupabaseServerWorkspace wires trpc sync and edge function handler whe
     path.join(serverRoot, 'supabase', 'functions', 'api', 'index.ts'),
     'utf8',
   )
-  const syncScript = await readFile(path.join(serverRoot, 'scripts', 'trpc-sync.mjs'), 'utf8')
+  const denoConfig = JSON.parse(
+    await readFile(path.join(serverRoot, 'supabase', 'functions', 'api', 'deno.json'), 'utf8'),
+  ) as {
+    imports?: Record<string, string>
+  }
   const readme = await readFile(path.join(serverRoot, 'README.md'), 'utf8')
 
-  assert.equal(serverPackageJson.scripts?.['trpc:sync'], 'node ./scripts/trpc-sync.mjs')
-  assert.match(
-    serverPackageJson.scripts?.['functions:serve'] ?? '',
-    /^node \.\/scripts\/trpc-sync\.mjs && /,
-  )
-  assert.match(
-    serverPackageJson.scripts?.['functions:deploy'] ?? '',
-    /^node \.\/scripts\/trpc-sync\.mjs && /,
-  )
+  assert.equal(serverPackageJson.scripts?.['trpc:sync'], undefined)
+  assert.doesNotMatch(serverPackageJson.scripts?.['functions:serve'] ?? '', /trpc:sync/)
+  assert.doesNotMatch(serverPackageJson.scripts?.['functions:deploy'] ?? '', /trpc:sync/)
   assert.match(functionSource, /fetchRequestHandler/)
   assert.match(functionSource, /npm:@trpc\/server\/adapters\/fetch/)
-  assert.match(functionSource, /from '\.\.\/_shared\/trpc\/index.ts'/)
-  assert.match(syncScript, /npm:@trpc\/server/)
-  assert.match(syncScript, /supabase\/functions\/_shared\/trpc/)
+  assert.match(functionSource, /from '@workspace\/trpc'/)
+  assert.equal(denoConfig.imports?.['@workspace/trpc'], '../../../../packages/trpc/src/index.ts')
+  assert.equal(denoConfig.imports?.['@trpc/server'], 'npm:@trpc/server@^11.13.4')
+  assert.equal(denoConfig.imports?.zod, 'npm:zod@^4.3.6')
   assert.match(readme, /packages\/trpc/)
   assert.match(readme, /frontend\/src\/lib\/trpc\.ts/)
-  assert.match(readme, /trpc:sync/)
+  assert.match(readme, /functions\/api\/deno\.json/)
+  assert.match(readme, /@workspace\/trpc/)
+  assert.match(readme, /API SSOT/)
+  assert.match(readme, /server API의 source of truth/)
+  assert.doesNotMatch(readme, /trpc:sync/)
   assert.doesNotMatch(readme, /supabase\.functions\.invoke\('api'\)/)
 })
 

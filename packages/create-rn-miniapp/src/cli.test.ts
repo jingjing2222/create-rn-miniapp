@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import {
@@ -965,6 +967,119 @@ test('resolveAddCliOptions can add trpc to an existing cloudflare server workspa
     '`tRPC`도 같이 이어드릴까요?',
     '`backoffice`도 같이 추가할까요?',
   ])
+})
+
+test('resolveAddCliOptions asks whether to remove existing cloudflare api helpers when adding trpc', async () => {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'create-miniapp-cloudflare-add-'))
+  const frontendApiPath = path.join(rootDir, 'frontend', 'src', 'lib', 'api.ts')
+  const backofficeApiPath = path.join(rootDir, 'backoffice', 'src', 'lib', 'api.ts')
+  const selectMessages: string[] = []
+  const promptSelections: Array<'yes' | 'no' | 'remove'> = ['yes', 'remove', 'no']
+
+  await mkdir(path.dirname(frontendApiPath), { recursive: true })
+  await mkdir(path.dirname(backofficeApiPath), { recursive: true })
+  await writeFile(frontendApiPath, 'export function apiFetch() {}\n', 'utf8')
+  await writeFile(backofficeApiPath, 'export function apiFetch() {}\n', 'utf8')
+
+  try {
+    const resolved = await resolveAddCliOptions(
+      {
+        add: true,
+        rootDir,
+        outputDir: '/tmp/workspace',
+        skipInstall: false,
+        yes: false,
+        help: false,
+        version: false,
+      },
+      {
+        async text() {
+          throw new Error('text prompt should not be called')
+        },
+        async select(options) {
+          selectMessages.push(options.message)
+          const fallback = options.options[0]
+
+          if (!fallback) {
+            throw new Error('선택지가 없습니다.')
+          }
+
+          const nextSelection = promptSelections.shift()
+
+          if (nextSelection && options.options.some((option) => option.value === nextSelection)) {
+            return nextSelection as typeof fallback.value
+          }
+
+          return fallback.value
+        },
+      },
+      {
+        rootDir,
+        packageManager: 'pnpm',
+        appName: 'ebook-miniapp',
+        displayName: '전자책 미니앱',
+        hasServer: true,
+        hasBackoffice: true,
+        hasTrpc: false,
+        serverProvider: 'cloudflare',
+      },
+    )
+
+    assert.equal(resolved.withTrpc, true)
+    assert.equal(resolved.removeCloudflareApiClientHelpers, true)
+    assert.deepEqual(selectMessages, [
+      '`tRPC`도 같이 이어드릴까요?',
+      '기존 Cloudflare API helper를 같이 정리할까요?',
+    ])
+  } finally {
+    await rm(rootDir, { recursive: true, force: true })
+  }
+})
+
+test('resolveAddCliOptions keeps existing cloudflare api helpers in yes mode', async () => {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'create-miniapp-cloudflare-add-'))
+  const frontendApiPath = path.join(rootDir, 'frontend', 'src', 'lib', 'api.ts')
+
+  await mkdir(path.dirname(frontendApiPath), { recursive: true })
+  await writeFile(frontendApiPath, 'export function apiFetch() {}\n', 'utf8')
+
+  try {
+    const resolved = await resolveAddCliOptions(
+      {
+        add: true,
+        trpc: true,
+        rootDir,
+        outputDir: '/tmp/workspace',
+        skipInstall: false,
+        yes: true,
+        help: false,
+        version: false,
+      },
+      {
+        async text() {
+          throw new Error('text prompt should not be called')
+        },
+        async select() {
+          throw new Error('select prompt should not be called')
+        },
+      },
+      {
+        rootDir,
+        packageManager: 'pnpm',
+        appName: 'ebook-miniapp',
+        displayName: '전자책 미니앱',
+        hasServer: true,
+        hasBackoffice: false,
+        hasTrpc: false,
+        serverProvider: 'cloudflare',
+      },
+    )
+
+    assert.equal(resolved.withTrpc, true)
+    assert.equal(resolved.removeCloudflareApiClientHelpers, false)
+  } finally {
+    await rm(rootDir, { recursive: true, force: true })
+  }
 })
 
 test('resolveAddCliOptions rejects server-project-mode without server-provider', async () => {

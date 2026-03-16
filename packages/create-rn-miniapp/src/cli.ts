@@ -10,6 +10,7 @@ import {
   serverProviderSupportsTrpc,
   type ServerProvider,
 } from './providers/index.js'
+import { pathExists } from './templates/index.js'
 import type { WorkspaceInspection } from './workspace-inspector.js'
 
 export type ParsedCliArgs = {
@@ -95,6 +96,7 @@ export type ResolvedAddCliOptions = {
   skipServerProvisioning: boolean
   withServer: boolean
   withTrpc: boolean
+  removeCloudflareApiClientHelpers: boolean
   withBackoffice: boolean
   skipInstall: boolean
 }
@@ -318,6 +320,41 @@ async function resolveTrpcInput(
   )
 }
 
+async function resolveCloudflareApiClientCleanupInput(
+  argv: ParsedCliArgs,
+  prompt: CliPrompter,
+  rootDir: string,
+  serverProvider: ServerProvider | null,
+  withTrpc: boolean,
+) {
+  if (!withTrpc || serverProvider !== 'cloudflare') {
+    return false
+  }
+
+  const existingApiClientPaths = [
+    path.join(rootDir, 'frontend', 'src', 'lib', 'api.ts'),
+    path.join(rootDir, 'backoffice', 'src', 'lib', 'api.ts'),
+  ]
+  const hasExistingApiClientHelpers = (
+    await Promise.all(existingApiClientPaths.map((filePath) => pathExists(filePath)))
+  ).some(Boolean)
+
+  if (!hasExistingApiClientHelpers || argv.yes) {
+    return false
+  }
+
+  return (
+    (await prompt.select({
+      message: '기존 Cloudflare API helper를 같이 정리할까요?',
+      options: [
+        { label: '네, 같이 지워둘게요', value: 'remove' },
+        { label: '아니요, 제가 직접 정리할게요', value: 'keep' },
+      ],
+      initialValue: 'keep',
+    })) === 'remove'
+  )
+}
+
 export function detectInvocationPackageManager(
   env: CliEnvironment = process.env,
 ): PackageManager | null {
@@ -471,6 +508,13 @@ export async function resolveAddCliOptions(
   const skipServerProvisioning = argv.yes && !serverProjectMode
   const trpcProvider = normalizedServerProvider ?? inspection.serverProvider
   const withTrpc = inspection.hasTrpc ? false : await resolveTrpcInput(argv, prompt, trpcProvider)
+  const removeCloudflareApiClientHelpers = await resolveCloudflareApiClientCleanupInput(
+    argv,
+    prompt,
+    rootDir,
+    trpcProvider,
+    withTrpc,
+  )
 
   const withBackoffice = inspection.hasBackoffice
     ? false
@@ -504,6 +548,7 @@ export async function resolveAddCliOptions(
     skipServerProvisioning,
     withServer,
     withTrpc,
+    removeCloudflareApiClientHelpers,
     withBackoffice,
     skipInstall: argv.skipInstall,
   } satisfies ResolvedAddCliOptions

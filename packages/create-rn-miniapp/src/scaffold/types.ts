@@ -32,6 +32,7 @@ export type AddWorkspaceOptions = {
   skipServerProvisioning: boolean
   withServer: boolean
   withTrpc: boolean
+  removeCloudflareApiClientHelpers: boolean
   withBackoffice: boolean
   skipInstall: boolean
 }

@@ -4,18 +4,26 @@ export const TRPC_WORKSPACE_DEPENDENCY = 'workspace:*'
 export const ZOD_VERSION = '^4.3.6'
 
 export function renderCloudflareTrpcClientSource(options: {
-  envImportPath: string
-  envResolverName: string
+  urlExpression: string
 }) {
   return [
     "import { createTRPCProxyClient, httpBatchLink } from '@trpc/client'",
     "import type { AppRouter } from '@workspace/trpc'",
-    `import { ${options.envResolverName} } from '${options.envImportPath}'`,
+    '',
+    'function resolveTrpcUrl() {',
+    `  const baseUrl = ${options.urlExpression}.trim()`,
+    '',
+    '  if (!baseUrl) {',
+    "    throw new Error('Cloudflare API base URL이 비어 있어요. .env.local을 먼저 확인해 주세요.')",
+    '  }',
+    '',
+    "  return `${baseUrl.replace(/\\/$/, '')}/trpc`",
+    '}',
     '',
     'export const trpc = createTRPCProxyClient<AppRouter>({',
     '  links: [',
     '    httpBatchLink({',
-    `      url: ${options.envResolverName}('trpc'),`,
+    '      url: resolveTrpcUrl(),',
     '    }),',
     '  ],',
     '})',
@@ -112,7 +120,7 @@ export function renderCloudflareServerIndexSource() {
 export function renderSupabaseEdgeFunctionTrpcSource() {
   return [
     "import { fetchRequestHandler } from 'npm:@trpc/server/adapters/fetch'",
-    "import { appRouter } from '../_shared/trpc/index.ts'",
+    "import { appRouter } from '@workspace/trpc'",
     '',
     'Deno.serve((request) =>',
     '  fetchRequestHandler({',
@@ -128,50 +136,16 @@ export function renderSupabaseEdgeFunctionTrpcSource() {
   ].join('\n')
 }
 
-export function renderSupabaseTrpcSyncScript() {
-  return [
-    "import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'",
-    "import path from 'node:path'",
-    "import { fileURLToPath } from 'node:url'",
-    '',
-    "const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')",
-    "const repoRoot = path.resolve(serverRoot, '..')",
-    "const sourceDir = path.resolve(repoRoot, 'packages/trpc/src')",
-    "const targetDir = path.resolve(serverRoot, 'supabase/functions/_shared/trpc')",
-    '',
-    'async function rewriteImports(targetRoot) {',
-    '  const entries = await readdir(targetRoot, { withFileTypes: true })',
-    '',
-    '  for (const entry of entries) {',
-    '    const targetPath = path.join(targetRoot, entry.name)',
-    '',
-    '    if (entry.isDirectory()) {',
-    '      await rewriteImports(targetPath)',
-    '      continue',
-    '    }',
-    '',
-    "    if (!entry.name.endsWith('.ts')) {",
-    '      continue',
-    '    }',
-    '',
-    "    let source = await readFile(targetPath, 'utf8')",
-    '    source = source.replaceAll("\'@trpc/server\'", "\'npm:@trpc/server\'")',
-    '    source = source.replaceAll(\'"@trpc/server"\', \'"npm:@trpc/server"\')',
-    '    source = source.replaceAll("\'zod\'", "\'npm:zod\'")',
-    '    source = source.replaceAll(\'"zod"\', \'"npm:zod"\')',
-    "    source = source.replaceAll(/from '([^']+)'/g, (match, specifier) => {",
-    "      return specifier.startsWith('.') && !specifier.endsWith('.ts') ? `from '${specifier}.ts'` : match",
-    '    })',
-    '    source = source.replaceAll(/from "([^"]+)"/g, (match, specifier) => {',
-    "      return specifier.startsWith('.') && !specifier.endsWith('.ts') ? `from \\\"${specifier}.ts\\\"` : match",
-    '    })',
-    "    await writeFile(targetPath, source, 'utf8')",
-    '  }',
-    '}',
-    '',
-    'await mkdir(targetDir, { recursive: true })',
-    'await cp(sourceDir, targetDir, { recursive: true, force: true })',
-    'await rewriteImports(targetDir)',
-    '',
-  ].join('\n')
+export function renderSupabaseTrpcDenoConfig() {
+  return `${JSON.stringify(
+    {
+      imports: {
+        '@workspace/trpc': '../../../../packages/trpc/src/index.ts',
+        '@trpc/server': `npm:@trpc/server@${TRPC_SERVER_VERSION}`,
+        zod: `npm:zod@${ZOD_VERSION}`,
+      },
+    },
+    null,
+    2,
+  )}\n`
 }
