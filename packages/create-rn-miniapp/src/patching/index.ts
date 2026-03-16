@@ -1,6 +1,18 @@
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import type { ServerProvider } from '../providers/index.js'
+import {
+  applyServerPackageTemplate,
+  applyWorkspaceProjectTemplate,
+  getFirebaseWebSdkVersion,
+  pathExists,
+  removePathIfExists,
+  SUPABASE_DEFAULT_FUNCTION_NAME,
+  type TemplateTokens,
+  writeWorkspaceNpmrc,
+} from '../templates/index.js'
 import {
   patchBackofficeAppSource,
   patchBackofficeMainSource,
@@ -14,28 +26,16 @@ import {
 import { patchPackageJsonSource } from './package-json.js'
 import {
   APP_ROUTER_WORKSPACE_DEPENDENCY,
+  CONTRACTS_WORKSPACE_DEPENDENCY,
   renderCloudflareServerIndexSource,
   renderCloudflareServerTrpcContextSource,
   renderCloudflareTrpcClientSource,
-  CONTRACTS_WORKSPACE_DEPENDENCY,
   renderSupabaseEdgeFunctionTrpcSource,
-  renderSupabaseTrpcDenoConfig,
   renderSupabaseTrpcClientSource,
+  renderSupabaseTrpcDenoConfig,
   TRPC_CLIENT_VERSION,
   TRPC_SERVER_VERSION,
 } from './trpc.js'
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
-import type { ServerProvider } from '../providers/index.js'
-import {
-  type TemplateTokens,
-  applyServerPackageTemplate,
-  applyWorkspaceProjectTemplate,
-  getFirebaseWebSdkVersion,
-  pathExists,
-  removePathIfExists,
-  SUPABASE_DEFAULT_FUNCTION_NAME,
-  writeWorkspaceNpmrc,
-} from '../templates/index.js'
 
 const STATIC_TOOLING_FILES = [
   'biome.json',
@@ -117,6 +117,9 @@ const FIREBASE_SERVICE_ACCOUNT_GUIDE_ASSET_CANDIDATES = [
   'optional/server-firebase/assets/firebase-service-account-guide1.png',
   'optional/server-firebase/assets/firebase-service-account-guide2.png',
 ] as const
+const FRONTEND_STARTER_HERO_ASSET_RELATIVE_PATH =
+  'root/assets/frontend/miniapp-starter-hero.lottie.json'
+const FRONTEND_STARTER_HERO_ASSET_FILE_NAME = 'miniapp-starter-hero.lottie.json'
 const SERVER_GUIDE_ASSET_TARGET_DIR = 'assets'
 const FIREBASE_CLI_DOC_URL = 'https://firebase.google.com/docs/cli'
 const FIREBASE_ADMIN_SETUP_URL = 'https://firebase.google.com/docs/admin/setup'
@@ -289,6 +292,208 @@ const FRONTEND_CLOUDFLARE_API_CLIENT = [
   '',
   'export async function apiFetch(pathname: string, init?: RequestInit) {',
   '  return fetch(resolveApiUrl(pathname), init)',
+  '}',
+  '',
+].join('\n')
+
+const FRONTEND_SAFE_STARTER_INDEX_PAGE = [
+  "import LottieView from '@granite-js/native/lottie-react-native'",
+  "import { createRoute } from '@granite-js/react-native'",
+  "import { Button, Txt } from '@toss/tds-react-native'",
+  "import starterHeroLottie from '../assets/miniapp-starter-hero.lottie.json'",
+  "import { StyleSheet, View } from 'react-native'",
+  '',
+  "export const Route = createRoute('/', {",
+  '  component: Page,',
+  '})',
+  '',
+  'function Page() {',
+  '  const navigation = Route.useNavigation()',
+  '',
+  '  return (',
+  '    <View style={styles.container}>',
+  '      <View style={styles.heroCard}>',
+  '        <View style={styles.heroAnimation}>',
+  '          <LottieView',
+  '            source={starterHeroLottie}',
+  '            autoPlay={true}',
+  '            loop={true}',
+  '            style={styles.heroAnimationView}',
+  '          />',
+  '        </View>',
+  '        <View style={styles.heroCopy}>',
+  '          <Txt typography="t4" fontWeight="bold" style={styles.title}>',
+  '            MiniApp 준비가 끝났어요.',
+  '          </Txt>',
+  '          <Txt typography="t6" color="#4A5568" style={styles.description}>',
+  '            이제 `frontend/src/pages`에서 화면을 만들고 AppInToss framework, TDS, provider SDK를 붙이면 돼요.',
+  '          </Txt>',
+  '        </View>',
+  '      </View>',
+  '      <View style={styles.guideCard}>',
+  '        <Txt typography="t6" fontWeight="bold" style={styles.guideTitle}>',
+  '          먼저 이 순서로 보면 돼요',
+  '        </Txt>',
+  '        <Txt typography="t7" color="#4A5568" style={styles.guideItem}>',
+  '          1. `docs/product`에 기능 명세를 적어요.',
+  '        </Txt>',
+  '        <Txt typography="t7" color="#4A5568" style={styles.guideItem}>',
+  '          2. `AGENTS.md`와 `docs/engineering`을 먼저 읽어요.',
+  '        </Txt>',
+  '        <Txt typography="t7" color="#4A5568" style={styles.guideItem}>',
+  '          3. 필요한 화면부터 `frontend/src/pages`에서 만들어요.',
+  '        </Txt>',
+  '      </View>',
+  '      <Button',
+  '        type="light"',
+  '        style="weak"',
+  '        size="medium"',
+  '        display="block"',
+  "        onPress={() => navigation.navigate('/about')}",
+  '      >',
+  '        안내 페이지 보기',
+  '      </Button>',
+  '    </View>',
+  '  )',
+  '}',
+  '',
+  'const styles = StyleSheet.create({',
+  '  container: {',
+  '    flex: 1,',
+  '    paddingHorizontal: 24,',
+  '    paddingVertical: 32,',
+  '    backgroundColor: "#F4F8FF",',
+  '    gap: 16,',
+  '    justifyContent: "center",',
+  '  },',
+  '  heroCard: {',
+  '    backgroundColor: "#FFFFFF",',
+  '    borderRadius: 28,',
+  '    paddingHorizontal: 20,',
+  '    paddingVertical: 24,',
+  '    shadowColor: "#3182F6",',
+  '    shadowOpacity: 0.08,',
+  '    shadowRadius: 20,',
+  '    shadowOffset: { width: 0, height: 12 },',
+  '    elevation: 8,',
+  '  },',
+  '  heroAnimation: {',
+  '    alignItems: "center",',
+  '    marginBottom: 12,',
+  '  },',
+  '  heroAnimationView: {',
+  '    width: 160,',
+  '    height: 160,',
+  '  },',
+  '  heroCopy: {',
+  '    gap: 6,',
+  '  },',
+  '  title: {',
+  '    color: "#1A202C",',
+  '  },',
+  '  description: {',
+  '    marginTop: 2,',
+  '  },',
+  '  guideCard: {',
+  '    backgroundColor: "#FFFFFF",',
+  '    borderRadius: 24,',
+  '    paddingHorizontal: 20,',
+  '    paddingVertical: 18,',
+  '    gap: 8,',
+  '  },',
+  '  guideTitle: {',
+  '    color: "#1A202C",',
+  '  },',
+  '  guideItem: {',
+  '    lineHeight: 22,',
+  '  },',
+  '})',
+  '',
+].join('\n')
+
+const FRONTEND_SAFE_STARTER_ABOUT_PAGE = [
+  "import { createRoute } from '@granite-js/react-native'",
+  "import { Button, Txt } from '@toss/tds-react-native'",
+  "import { StyleSheet, View } from 'react-native'",
+  '',
+  "export const Route = createRoute('/about', {",
+  '  component: Page,',
+  '})',
+  '',
+  'function Page() {',
+  '  const navigation = Route.useNavigation()',
+  '',
+  '  return (',
+  '    <View style={styles.container}>',
+  '      <View style={styles.card}>',
+  '        <Txt typography="t4" fontWeight="bold" style={styles.title}>',
+  '          이 starter는 이렇게 쓰면 돼요',
+  '        </Txt>',
+  '        <Txt typography="t6" color="#334155" style={styles.description}>',
+  '          이 페이지는 starter route라서 자유롭게 지워도 돼요.',
+  '        </Txt>',
+  '        <Txt typography="t7" color="#64748B" style={styles.caption}>',
+  '          먼저 `AGENTS.md`와 `docs/engineering`을 보고, 필요한 화면과 데이터 흐름으로 바꿔 주세요.',
+  '        </Txt>',
+  '      </View>',
+  '      <Button',
+  '        type="light"',
+  '        style="weak"',
+  '        size="medium"',
+  '        display="block"',
+  '        onPress={() => navigation.goBack()}',
+  '      >',
+  '        홈으로 돌아가기',
+  '      </Button>',
+  '    </View>',
+  '  )',
+  '}',
+  '',
+  'const styles = StyleSheet.create({',
+  '  container: {',
+  '    flex: 1,',
+  '    paddingHorizontal: 24,',
+  '    paddingVertical: 32,',
+  '    backgroundColor: "#F8FAFC",',
+  '    gap: 16,',
+  '    justifyContent: "center",',
+  '  },',
+  '  card: {',
+  '    backgroundColor: "#FFFFFF",',
+  '    borderRadius: 24,',
+  '    paddingHorizontal: 20,',
+  '    paddingVertical: 20,',
+  '    gap: 8,',
+  '  },',
+  '  title: {',
+  '    color: "#1A202C",',
+  '  },',
+  '  description: {',
+  '    lineHeight: 24,',
+  '  },',
+  '  caption: {',
+  '    lineHeight: 22,',
+  '  },',
+  '})',
+  '',
+].join('\n')
+
+const FRONTEND_SAFE_NOT_FOUND_PAGE = [
+  "import { Txt } from '@toss/tds-react-native'",
+  "import { View } from 'react-native'",
+  '',
+  'export default function NotFoundPage() {',
+  '  return (',
+  '    <View',
+  '      style={{',
+  '        flex: 1,',
+  "        alignItems: 'center',",
+  "        justifyContent: 'center',",
+  '      }}',
+  '    >',
+  '      <Txt>404 Not Found</Txt>',
+  '    </View>',
+  '  )',
   '}',
   '',
 ].join('\n')
@@ -474,9 +679,90 @@ async function writeTextFile(filePath: string, contents: string) {
   await writeFile(filePath, contents, 'utf8')
 }
 
+function isGraniteStarterIndexPage(source: string) {
+  return (
+    source.includes("createRoute('/', {") &&
+    source.includes('This is a demo page for the') &&
+    source.includes('Granite</Text> Framework.') &&
+    source.includes('TouchableOpacity')
+  )
+}
+
+function isGraniteStarterAboutPage(source: string) {
+  return (
+    source.includes("createRoute('/about', {") &&
+    source.includes('About Granite') &&
+    source.includes('Go Back') &&
+    source.includes('TouchableOpacity')
+  )
+}
+
+function isGraniteStarterNotFoundPage(source: string) {
+  return (
+    source.includes("import { Text, View } from 'react-native'") &&
+    source.includes('export default function NotFoundPage()') &&
+    source.includes('<Text>404 Not Found</Text>')
+  )
+}
+
+async function maybeReplaceGraniteStarterPage(
+  filePath: string,
+  matcher: (source: string) => boolean,
+  replacementSource: string,
+) {
+  if (!(await pathExists(filePath))) {
+    return
+  }
+
+  const source = await readFile(filePath, 'utf8')
+
+  if (!matcher(source)) {
+    return
+  }
+
+  await writeTextFile(filePath, replacementSource)
+}
+
+async function patchGraniteStarterPages(frontendRoot: string) {
+  await maybeReplaceGraniteStarterPage(
+    path.join(frontendRoot, 'src', 'pages', 'index.tsx'),
+    isGraniteStarterIndexPage,
+    FRONTEND_SAFE_STARTER_INDEX_PAGE,
+  )
+  await maybeReplaceGraniteStarterPage(
+    path.join(frontendRoot, 'src', 'pages', 'about.tsx'),
+    isGraniteStarterAboutPage,
+    FRONTEND_SAFE_STARTER_ABOUT_PAGE,
+  )
+  await maybeReplaceGraniteStarterPage(
+    path.join(frontendRoot, 'pages', '_404.tsx'),
+    isGraniteStarterNotFoundPage,
+    FRONTEND_SAFE_NOT_FOUND_PAGE,
+  )
+}
+
 function resolveTemplatesPackageRoot() {
   const packageJsonPath = require.resolve('@create-rn-miniapp/scaffold-templates/package.json')
   return path.dirname(packageJsonPath)
+}
+
+async function ensureFrontendStarterHeroAsset(frontendRoot: string) {
+  const sourcePath = path.join(
+    resolveTemplatesPackageRoot(),
+    FRONTEND_STARTER_HERO_ASSET_RELATIVE_PATH,
+  )
+  const targetPath = path.join(frontendRoot, 'src', 'assets', FRONTEND_STARTER_HERO_ASSET_FILE_NAME)
+
+  if (await pathExists(targetPath)) {
+    return
+  }
+
+  if (!(await pathExists(sourcePath))) {
+    return
+  }
+
+  await mkdir(path.dirname(targetPath), { recursive: true })
+  await copyFile(sourcePath, targetPath)
 }
 
 async function copyGuideAssets(
@@ -1583,6 +1869,8 @@ export async function patchFrontendWorkspace(
   await removeToolingFiles(frontendRoot, options.packageManager)
   await removeWorkspaceArtifacts(frontendRoot, options.packageManager)
   await patchGraniteConfig(frontendRoot, tokens, options.serverProvider)
+  await ensureFrontendStarterHeroAsset(frontendRoot)
+  await patchGraniteStarterPages(frontendRoot)
   await patchWorkspaceTsconfigModules(frontendRoot, [
     {
       fileName: 'tsconfig.json',

@@ -132,13 +132,215 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   assert.equal(packageJson.devDependencies?.['@types/node'], '^24.10.1')
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
   assert.match(graniteConfig, /import path from 'node:path';\n\nconst repoRoot = path\.resolve/)
-  assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/\.\.'\)/)
+  assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/'\)/)
   assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
   assert.equal(tsconfig.compilerOptions?.module, 'esnext')
   assert.deepEqual(tsconfig.compilerOptions?.types, ['node'])
   assert.doesNotMatch(tsconfigSource, /frontend tsconfig comment/)
   assert.equal(await pathExists(path.join(frontendRoot, '.env.local.example')), false)
   assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'supabase.ts')), false)
+})
+
+test('patchFrontendWorkspace replaces Granite starter pages that use touchables', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const frontendRoot = path.join(targetRoot, 'frontend')
+
+  await mkdir(path.join(frontendRoot, 'src', 'pages'), { recursive: true })
+  await writeJson(path.join(frontendRoot, 'package.json'), {
+    name: 'ebook-miniapp',
+    private: true,
+    scripts: {
+      dev: 'granite dev',
+      build: 'ait build',
+    },
+    dependencies: {
+      '@apps-in-toss/framework': '^2.0.5',
+    },
+    devDependencies: {
+      '@granite-js/plugin-hermes': '1.0.7',
+      '@granite-js/plugin-router': '1.0.7',
+      typescript: '^5.8.3',
+    },
+  })
+  await writeFile(
+    path.join(frontendRoot, 'tsconfig.json'),
+    ['{', '  "compilerOptions": {', '    "module": "commonjs"', '  }', '}', ''].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [appsInToss({ brand: { displayName: "전자책 미니앱" } })],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'src', 'pages', 'index.tsx'),
+    [
+      "import { createRoute } from '@granite-js/react-native'",
+      "import type React from 'react'",
+      "import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'",
+      '',
+      "export const Route = createRoute('/', {",
+      '  component: Page,',
+      '})',
+      '',
+      'function Page() {',
+      '  const navigation = Route.useNavigation()',
+      '',
+      '  const goToAboutPage = () => {',
+      "    navigation.navigate('/about')",
+      '  }',
+      '',
+      '  return (',
+      '    <Container>',
+      '      <Text style={styles.title}>🎉 Welcome! 🎉</Text>',
+      '      <Text style={styles.subtitle}>',
+      '        This is a demo page for the <Text style={styles.brandText}>Granite</Text> Framework.',
+      '      </Text>',
+      '      <TouchableOpacity style={styles.button} onPress={goToAboutPage}>',
+      '        <Text style={styles.buttonText}>Go to About Page</Text>',
+      '      </TouchableOpacity>',
+      '    </Container>',
+      '  )',
+      '}',
+      '',
+      'function Container({ children }: { children: React.ReactNode }) {',
+      '  return <View style={styles.container}>{children}</View>',
+      '}',
+      '',
+      'const styles = StyleSheet.create({',
+      '  container: { flex: 1 },',
+      '  brandText: { color: "#0064FF" },',
+      '  title: { fontSize: 32 },',
+      '  subtitle: { fontSize: 18 },',
+      '  button: { paddingVertical: 12 },',
+      '  buttonText: { fontSize: 16 },',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'src', 'pages', 'about.tsx'),
+    [
+      "import { createRoute } from '@granite-js/react-native'",
+      "import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'",
+      '',
+      "export const Route = createRoute('/about', {",
+      '  component: Page,',
+      '})',
+      '',
+      'function Page() {',
+      '  const navigation = Route.useNavigation()',
+      '',
+      '  const handleGoBack = () => {',
+      '    navigation.goBack()',
+      '  }',
+      '',
+      '  return (',
+      '    <View style={styles.container}>',
+      '      <Text style={styles.title}>About Granite</Text>',
+      '      <TouchableOpacity style={styles.button} onPress={handleGoBack}>',
+      '        <Text style={styles.buttonText}>Go Back</Text>',
+      '      </TouchableOpacity>',
+      '    </View>',
+      '  )',
+      '}',
+      '',
+      'const styles = StyleSheet.create({',
+      '  container: { flex: 1 },',
+      '  title: { fontSize: 28 },',
+      '  button: { marginTop: 24 },',
+      '  buttonText: { fontSize: 16 },',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await mkdir(path.join(frontendRoot, 'pages'), { recursive: true })
+  await writeFile(
+    path.join(frontendRoot, 'pages', '_404.tsx'),
+    [
+      "import { Text, View } from 'react-native'",
+      '',
+      'export default function NotFoundPage() {',
+      '  return (',
+      '    <View',
+      '      style={{',
+      '        flex: 1,',
+      "        alignItems: 'center',",
+      "        justifyContent: 'center',",
+      '      }}',
+      '    >',
+      '      <Text>404 Not Found</Text>',
+      '    </View>',
+      '  )',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+
+  await patchFrontendWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: null },
+  )
+
+  const indexPage = await readFile(path.join(frontendRoot, 'src', 'pages', 'index.tsx'), 'utf8')
+  const aboutPage = await readFile(path.join(frontendRoot, 'src', 'pages', 'about.tsx'), 'utf8')
+  const notFoundPage = await readFile(path.join(frontendRoot, 'pages', '_404.tsx'), 'utf8')
+  const starterHeroAssetPath = path.join(
+    frontendRoot,
+    'src',
+    'assets',
+    'miniapp-starter-hero.lottie.json',
+  )
+
+  assert.doesNotMatch(indexPage, /TouchableOpacity/)
+  assert.doesNotMatch(aboutPage, /TouchableOpacity/)
+  assert.doesNotMatch(notFoundPage, /import \{ Text, View \} from 'react-native'/)
+  assert.doesNotMatch(indexPage, /import \{ StyleSheet, Text, View \} from 'react-native'/)
+  assert.doesNotMatch(aboutPage, /import \{ StyleSheet, Text, View \} from 'react-native'/)
+  assert.match(indexPage, /import LottieView from '@granite-js\/native\/lottie-react-native'/)
+  assert.match(indexPage, /import \{ createRoute \} from '@granite-js\/react-native'/)
+  assert.match(indexPage, /import \{ Button, Txt \} from '@toss\/tds-react-native'/)
+  assert.match(
+    indexPage,
+    /import starterHeroLottie from '\.\.\/assets\/miniapp-starter-hero\.lottie\.json'/,
+  )
+  assert.match(indexPage, /<LottieView/)
+  assert.match(indexPage, /source=\{starterHeroLottie\}/)
+  assert.match(indexPage, /style=\{styles\.heroAnimationView\}/)
+  assert.doesNotMatch(indexPage, /const STARTER_HERO_LOTTIE = \{/)
+  assert.doesNotMatch(indexPage, /AppInToss MiniApp starter/)
+  assert.match(indexPage, /안내 페이지 보기/)
+  assert.match(indexPage, /먼저 이 순서로 보면 돼요/)
+  assert.match(aboutPage, /import \{ Button, Txt \} from '@toss\/tds-react-native'/)
+  assert.match(aboutPage, /홈으로 돌아가기/)
+  assert.match(indexPage, /MiniApp 준비가 끝났어요/)
+  assert.match(aboutPage, /이 페이지는 starter route라서 자유롭게 지워도 돼요/)
+  assert.match(notFoundPage, /import \{ Txt \} from '@toss\/tds-react-native'/)
+  assert.match(notFoundPage, /import \{ View \} from 'react-native'/)
+  assert.match(notFoundPage, /<Txt>404 Not Found<\/Txt>/)
+  assert.equal(await pathExists(starterHeroAssetPath), true)
+  assert.match(await readFile(starterHeroAssetPath, 'utf8'), /"nm":"Marketing"|"nm": "Marketing"/)
 })
 
 test('patchFrontendWorkspace adds supabase bootstrap when supabase server provider is selected', async (t) => {
@@ -244,7 +446,7 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
   assert.match(graniteConfig, /import dotenv from 'dotenv';\n\nconst repoRoot = path\.resolve/)
-  assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/\.\.'\)/)
+  assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/'\)/)
   assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
   assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
   assert.match(graniteConfig, /import dotenv from 'dotenv'/)
