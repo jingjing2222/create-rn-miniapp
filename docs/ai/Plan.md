@@ -1,6 +1,21 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: tRPC frontend tsconfig 조합을 TypeScript 제약에 맞게 보정
+1. 문제
+   - `allowImportingTsExtensions`만 켜면 TypeScript가 바로 통과하지 않는다.
+   - 공식 제약상 같은 tsconfig에 `moduleResolution: "bundler"`와 `noEmit: true` 또는 `emitDeclarationOnly: true`가 함께 필요하다.
+   - 현재 generated `frontend/tsconfig.json`에는 이 조합이 완전히 들어가지 않아, tRPC를 켠 생성물에서 TS 에러가 난다.
+2. 방향
+   - tRPC를 고른 `frontend` workspace에는 `allowImportingTsExtensions`, `moduleResolution: "bundler"`, `noEmit: true`를 같이 넣는다.
+   - 이 보정은 `supabase` / `cloudflare` + tRPC일 때만 적용한다.
+3. 테스트
+   - `patchTsconfigModuleSource` 테스트에서 세 옵션이 함께 들어가는지 검증한다.
+   - `patchFrontendWorkspace`의 `supabase` / `cloudflare` + tRPC 테스트에서 generated `tsconfig.json`이 세 옵션을 모두 가지는지 검증한다.
+4. 완료 기준
+   - tRPC를 켠 frontend 생성물은 TypeScript 제약을 만족하는 tsconfig 조합을 가진다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: tRPC overlay가 필요한 frontend / Cloudflare test config를 같이 생성
 1. 문제
    - `packages/trpc`는 source export(`src/index.ts`)와 `.ts` 확장자 import를 쓰는데, generated `frontend/tsconfig.json`은 `allowImportingTsExtensions`를 켜지 않아 Granite frontend typecheck가 깨질 수 있다.

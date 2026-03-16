@@ -432,6 +432,8 @@ test('patchFrontendWorkspace adds cloudflare trpc client when trpc overlay is se
   const tsconfig = JSON.parse(await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')) as {
     compilerOptions?: {
       allowImportingTsExtensions?: boolean
+      moduleResolution?: string
+      noEmit?: boolean
     }
   }
   const trpcClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
@@ -439,6 +441,8 @@ test('patchFrontendWorkspace adds cloudflare trpc client when trpc overlay is se
   assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
   assert.equal(packageJson.devDependencies?.['@workspace/trpc'], 'workspace:*')
   assert.equal(tsconfig.compilerOptions?.allowImportingTsExtensions, true)
+  assert.equal(tsconfig.compilerOptions?.moduleResolution, 'bundler')
+  assert.equal(tsconfig.compilerOptions?.noEmit, true)
   assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'api.ts')), false)
   assert.match(trpcClient, /createTRPCProxyClient/)
   assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/trpc'/)
@@ -510,6 +514,8 @@ test('patchFrontendWorkspace adds supabase trpc client and ts extension support 
   const tsconfig = JSON.parse(await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')) as {
     compilerOptions?: {
       allowImportingTsExtensions?: boolean
+      moduleResolution?: string
+      noEmit?: boolean
     }
   }
   const trpcClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
@@ -517,6 +523,8 @@ test('patchFrontendWorkspace adds supabase trpc client and ts extension support 
   assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
   assert.equal(packageJson.devDependencies?.['@workspace/trpc'], 'workspace:*')
   assert.equal(tsconfig.compilerOptions?.allowImportingTsExtensions, true)
+  assert.equal(tsconfig.compilerOptions?.moduleResolution, 'bundler')
+  assert.equal(tsconfig.compilerOptions?.noEmit, true)
   assert.match(trpcClient, /createTRPCProxyClient/)
   assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/trpc'/)
   assert.match(trpcClient, /functions\/v1\/api\/trpc/)

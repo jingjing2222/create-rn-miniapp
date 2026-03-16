@@ -59,6 +59,8 @@ export function patchTsconfigModuleSource(
 
   if (options?.allowImportingTsExtensions) {
     compilerOptions.allowImportingTsExtensions = true
+    compilerOptions.moduleResolution = 'bundler'
+    compilerOptions.noEmit = true
   }
 
   next.compilerOptions = compilerOptions

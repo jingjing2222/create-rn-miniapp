@@ -19,11 +19,15 @@ test('patchTsconfigModuleSource can enable allowImportingTsExtensions for source
     compilerOptions?: {
       module?: string
       allowImportingTsExtensions?: boolean
+      moduleResolution?: string
+      noEmit?: boolean
     }
   }
 
   assert.equal(parsed.compilerOptions?.module, 'esnext')
   assert.equal(parsed.compilerOptions?.allowImportingTsExtensions, true)
+  assert.equal(parsed.compilerOptions?.moduleResolution, 'bundler')
+  assert.equal(parsed.compilerOptions?.noEmit, true)
 })
 
 test('patchWranglerConfigSource can upsert Cloudflare account, D1, and R2 bindings', () => {
