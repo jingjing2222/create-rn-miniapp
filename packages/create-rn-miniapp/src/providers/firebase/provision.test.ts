@@ -596,7 +596,11 @@ test('formatFirebaseManualSetupNote includes frontend, backoffice, and server gu
   assert.match(note.body, /server\/\.env\.local/)
   assert.match(note.body, /MINIAPP_FIREBASE_API_KEY=<Firebase Web API key>/)
   assert.match(note.body, /VITE_FIREBASE_APP_ID=<appId>/)
+  assert.match(note.body, /## Firebase deploy auth/)
+  assert.match(note.body, /firebase login:ci/)
   assert.match(note.body, /GOOGLE_APPLICATION_CREDENTIALS/)
+  assert.match(note.body, /Cloud Functions Developer/)
+  assert.match(note.body, /Service Account User/)
 })
 
 test('writeFirebaseLocalEnvFiles writes frontend and backoffice .env.local files', async () => {
@@ -738,11 +742,14 @@ test('finalizeFirebaseProvisioning writes env files when sdk config is available
     assert.match(serverEnv, /^FIREBASE_TOKEN=$/m)
     assert.equal(notes[0]?.title, 'Firebase 연결 값을 적어뒀어요')
     assert.match(notes[0]?.body ?? '', /server\/package\.json 의 deploy/)
+    assert.match(notes[0]?.body ?? '', /## Firebase deploy auth/)
     assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
     assert.match(notes[0]?.body ?? '', /firebase login:ci/)
     assert.match(notes[0]?.body ?? '', /firebase\.google\.com\/docs\/cli/)
-    assert.match(notes[0]?.body ?? '', /GOOGLE_APPLICATION_CREDENTIALS 는 비어 있어요/)
+    assert.match(notes[0]?.body ?? '', /`GOOGLE_APPLICATION_CREDENTIALS`는 비어 있어요/)
     assert.match(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
+    assert.match(notes[0]?.body ?? '', /Cloud Functions Developer/)
+    assert.match(notes[0]?.body ?? '', /Service Account User/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }
@@ -779,12 +786,14 @@ test('finalizeFirebaseProvisioning falls back to manual setup guidance when sdk 
     assert.equal(notes[0]?.title, 'Firebase 연결 값을 이렇게 넣어 주세요')
     assert.match(notes[0]?.body ?? '', /frontend\/\.env\.local/)
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
+    assert.match(notes[0]?.body ?? '', /## Firebase deploy auth/)
     assert.doesNotMatch(notes[0]?.body ?? '', /CI나 비대화형 배포가 필요할 때만 채우면 됩니다/)
     assert.match(serverEnv, /^FIREBASE_PROJECT_ID=ebook-firebase$/m)
     assert.match(serverEnv, /^FIREBASE_TOKEN=$/m)
     assert.match(serverEnv, /^GOOGLE_APPLICATION_CREDENTIALS=\/tmp\/firebase\.json$/m)
     assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
     assert.match(notes[0]?.body ?? '', /firebase login:ci/)
+    assert.match(notes[0]?.body ?? '', /Cloud Functions Developer/)
     assert.doesNotMatch(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })

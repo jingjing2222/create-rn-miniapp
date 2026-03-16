@@ -103,6 +103,10 @@ const FIREBASE_REQUIRED_BUILD_SERVICE_ACCOUNT_ROLES = [
 const CLOUD_BUILD_API_SERVICE = 'cloudbuild.googleapis.com'
 const FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_ATTEMPTS = 5
 const FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_DELAY_MS = 750
+const FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES = [
+  'Cloud Functions Developer',
+  'Service Account User',
+] as const
 
 const GOOGLE_CLOUD_PROJECT_BILLING_URL = (projectId: string) =>
   `https://console.cloud.google.com/billing/linkedaccount?project=${projectId}`
@@ -1479,24 +1483,35 @@ export function formatFirebaseManualSetupNote(options: {
     ).trimEnd(),
     '',
     `server/functions/src/index.ts 의 기본 HTTP 함수 이름은 ${FIREBASE_DEFAULT_FUNCTION_NAME} 입니다.`,
+    '',
+    '## Firebase deploy auth',
+    '',
+    '- 브라우저 로그인 없이 CI나 비대화형 배포를 할 때만 필요해요.',
   )
 
   if (!options.hasConfiguredToken) {
     lines.push(
-      'FIREBASE_TOKEN 은 CI나 비대화형 Firebase CLI 배포가 필요할 때만 채우면 돼요.',
-      '`firebase login:ci`로 토큰을 발급받아 server/.env.local 의 FIREBASE_TOKEN 에 넣어 주세요.',
+      '- `FIREBASE_TOKEN`은 `firebase login:ci`로 발급받아 server/.env.local 의 FIREBASE_TOKEN 에 넣어 주세요.',
       FIREBASE_CLI_DOC_URL,
     )
+  } else {
+    lines.push('- `FIREBASE_TOKEN`은 기존 값을 그대로 둘게요.')
   }
 
   if (!options.hasConfiguredCredentials) {
     lines.push(
-      'GOOGLE_APPLICATION_CREDENTIALS 는 CI나 비대화형 배포가 필요할 때만 채우면 돼요.',
-      'Google Cloud Service Accounts 페이지에서 서비스 계정 JSON 키를 발급받아 파일 경로를 server/.env.local 에 넣어 주세요.',
+      '- `GOOGLE_APPLICATION_CREDENTIALS`는 Google Cloud Service Accounts 페이지에서 서비스 계정 JSON 키를 발급받아 파일 경로를 server/.env.local 에 넣어 주세요.',
       GOOGLE_CLOUD_SERVICE_ACCOUNTS_URL(options.projectId),
       FIREBASE_ADMIN_SETUP_URL,
     )
+  } else {
+    lines.push('- `GOOGLE_APPLICATION_CREDENTIALS`는 기존 값을 그대로 둘게요.')
   }
+
+  lines.push(
+    `- 서비스 계정을 따로 쓸 때는 보통 \`${FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES[0]}\`와 \`${FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES[1]}\` 역할이 먼저 필요해요.`,
+    '- 프로젝트 설정에 따라 Cloud Build, Cloud Run, Artifact Registry 쪽 권한이 더 필요할 수 있고, 이 생성기는 가능한 자동 보정을 먼저 시도해요.',
+  )
 
   return {
     title: 'Firebase 연결 값을 이렇게 넣어 주세요',
@@ -1658,21 +1673,27 @@ export async function finalizeFirebaseProvisioning(options: {
             : 'frontend/.env.local 에 Firebase Web SDK 연결 값을 적어뒀어요.',
           'server/.env.local 에는 Firebase project 메타데이터를 적어뒀어요.',
           'server/package.json 의 deploy 로 Firebase Functions를 다시 배포할 수 있어요.',
+          '',
+          '## Firebase deploy auth',
+          '',
+          '- 브라우저 로그인 없이 CI나 비대화형 배포를 할 때만 필요해요.',
           serverEnv.hasConfiguredToken
-            ? 'server/.env.local 의 FIREBASE_TOKEN 은 기존 값을 그대로 둘게요.'
+            ? '- `FIREBASE_TOKEN`은 기존 값을 그대로 둘게요.'
             : [
-                'server/.env.local 의 FIREBASE_TOKEN 은 비어 있어요.',
-                '`firebase login:ci`로 토큰을 발급받아 필요할 때만 채워 넣어 주세요.',
+                '- `FIREBASE_TOKEN`은 비어 있어요.',
+                '- `firebase login:ci`로 토큰을 발급받아 필요할 때만 채워 넣어 주세요.',
                 FIREBASE_CLI_DOC_URL,
               ].join('\n'),
           serverEnv.hasConfiguredCredentials
-            ? 'server/.env.local 의 GOOGLE_APPLICATION_CREDENTIALS 는 기존 값을 그대로 둘게요.'
+            ? '- `GOOGLE_APPLICATION_CREDENTIALS`는 기존 값을 그대로 둘게요.'
             : [
-                'server/.env.local 의 GOOGLE_APPLICATION_CREDENTIALS 는 비어 있어요.',
-                'Google Cloud Service Accounts 페이지에서 서비스 계정 JSON 키를 발급받아 파일 경로를 채워 넣어 주세요.',
+                '- `GOOGLE_APPLICATION_CREDENTIALS`는 비어 있어요.',
+                '- Google Cloud Service Accounts 페이지에서 서비스 계정 JSON 키를 발급받아 파일 경로를 채워 넣어 주세요.',
                 GOOGLE_CLOUD_SERVICE_ACCOUNTS_URL(options.provisionedProject.projectId),
                 FIREBASE_ADMIN_SETUP_URL,
               ].join('\n'),
+          `- 서비스 계정을 따로 쓸 때는 보통 \`${FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES[0]}\`와 \`${FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES[1]}\` 역할이 먼저 필요해요.`,
+          '- 프로젝트 설정에 따라 Cloud Build, Cloud Run, Artifact Registry 쪽 권한이 더 필요할 수 있고, 이 생성기는 가능한 자동 보정을 먼저 시도해요.',
           '',
           'Firebase 설정을 다시 확인해야 하면 아래 URL을 보면 돼요.',
           FIREBASE_CONSOLE_SETTINGS_URL(options.provisionedProject.projectId),

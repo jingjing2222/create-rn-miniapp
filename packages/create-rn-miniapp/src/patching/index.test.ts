@@ -963,6 +963,21 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
 
 test('patchSupabaseServerWorkspace creates a server README with remote and local guidance', async (t) => {
   const targetRoot = await createTempWorkspace(t)
+  const serverRoot = path.join(targetRoot, 'server')
+  const accessTokenGuideImageSourcePath1 = path.join(
+    targetRoot,
+    'fixtures',
+    'supabase-access-token-guide1.png',
+  )
+  const accessTokenGuideImageSourcePath2 = path.join(
+    targetRoot,
+    'fixtures',
+    'supabase-access-token-guide2.png',
+  )
+
+  await mkdir(path.dirname(accessTokenGuideImageSourcePath1), { recursive: true })
+  await writeFile(accessTokenGuideImageSourcePath1, 'fake-image-1', 'utf8')
+  await writeFile(accessTokenGuideImageSourcePath2, 'fake-image-2', 'utf8')
 
   await patchSupabaseServerWorkspace(
     targetRoot,
@@ -975,7 +990,13 @@ test('patchSupabaseServerWorkspace creates a server README with remote and local
       packageManagerExecCommand: 'pnpm exec',
       verifyCommand: 'pnpm verify',
     },
-    { packageManager: 'pnpm' },
+    {
+      packageManager: 'pnpm',
+      accessTokenGuideImageSourcePaths: [
+        accessTokenGuideImageSourcePath1,
+        accessTokenGuideImageSourcePath2,
+      ],
+    },
   )
 
   const serverPackageJson = JSON.parse(
@@ -984,6 +1005,8 @@ test('patchSupabaseServerWorkspace creates a server README with remote and local
     scripts?: Record<string, string>
   }
   const readme = await readFile(path.join(targetRoot, 'server', 'README.md'), 'utf8')
+  const copiedGuide1 = path.join(serverRoot, 'assets', 'supabase-access-token-guide1.png')
+  const copiedGuide2 = path.join(serverRoot, 'assets', 'supabase-access-token-guide2.png')
 
   assert.equal(serverPackageJson.scripts?.['db:apply'], 'node ./scripts/supabase-db-apply.mjs')
   assert.match(readme, /^# server$/m)
@@ -1000,13 +1023,42 @@ test('patchSupabaseServerWorkspace creates a server README with remote and local
   assert.match(readme, /MINIAPP_SUPABASE_URL/)
   assert.match(readme, /backoffice\/src\/lib\/supabase\.ts/)
   assert.match(readme, /VITE_SUPABASE_URL/)
+  assert.match(readme, /## Supabase access token/)
+  assert.match(readme, /SUPABASE_ACCESS_TOKEN=/)
+  assert.match(readme, /dashboard\/account\/tokens/)
+  assert.match(
+    readme,
+    /!\[Supabase access token 발급 화면 1\]\(\.\/assets\/supabase-access-token-guide1\.png\)/,
+  )
+  assert.match(
+    readme,
+    /!\[Supabase access token 발급 화면 2\]\(\.\/assets\/supabase-access-token-guide2\.png\)/,
+  )
+  assert.equal(await readFile(copiedGuide1, 'utf8'), 'fake-image-1')
+  assert.equal(await readFile(copiedGuide2, 'utf8'), 'fake-image-2')
 })
 
 test('patchFirebaseServerWorkspace creates a server README for firebase functions', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const serverRoot = path.join(targetRoot, 'server')
+  const loginCiGuideImageSourcePath = path.join(
+    targetRoot,
+    'fixtures',
+    'firebase-login-ci-guide.png',
+  )
+  const serviceAccountGuideImageSourcePath1 = path.join(
+    targetRoot,
+    'fixtures',
+    'firebase-service-account-guide1.png',
+  )
+  const serviceAccountGuideImageSourcePath2 = path.join(
+    targetRoot,
+    'fixtures',
+    'firebase-service-account-guide2.png',
+  )
 
   await mkdir(path.join(serverRoot, 'functions', 'src'), { recursive: true })
+  await mkdir(path.dirname(loginCiGuideImageSourcePath), { recursive: true })
   await writeFile(path.join(targetRoot, '.gitignore'), 'node_modules\n', 'utf8')
   await writeJson(path.join(targetRoot, 'biome.json'), {
     files: {
@@ -1024,6 +1076,9 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
       test: `node -e "console.log('firebase server test placeholder')"`,
     },
   })
+  await writeFile(loginCiGuideImageSourcePath, 'firebase-login-ci', 'utf8')
+  await writeFile(serviceAccountGuideImageSourcePath1, 'firebase-service-account-1', 'utf8')
+  await writeFile(serviceAccountGuideImageSourcePath2, 'firebase-service-account-2', 'utf8')
 
   await patchFirebaseServerWorkspace(
     targetRoot,
@@ -1036,7 +1091,14 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
       packageManagerExecCommand: 'pnpm exec',
       verifyCommand: 'pnpm verify',
     },
-    { packageManager: 'pnpm' },
+    {
+      packageManager: 'pnpm',
+      loginCiGuideImageSourcePath,
+      serviceAccountGuideImageSourcePaths: [
+        serviceAccountGuideImageSourcePath1,
+        serviceAccountGuideImageSourcePath2,
+      ],
+    },
   )
 
   const projectJson = JSON.parse(await readFile(path.join(serverRoot, 'project.json'), 'utf8')) as {
@@ -1049,6 +1111,17 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
       ignore?: string[]
     }
   }
+  const copiedLoginCiGuide = path.join(serverRoot, 'assets', 'firebase-login-ci-guide.png')
+  const copiedServiceAccountGuide1 = path.join(
+    serverRoot,
+    'assets',
+    'firebase-service-account-guide1.png',
+  )
+  const copiedServiceAccountGuide2 = path.join(
+    serverRoot,
+    'assets',
+    'firebase-service-account-guide2.png',
+  )
 
   assert.equal(projectJson.targets?.build?.command, 'pnpm --dir server build')
   assert.match(readme, /^# server$/m)
@@ -1060,7 +1133,25 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   assert.match(readme, /frontend\/src\/lib\/storage\.ts/)
   assert.match(readme, /MINIAPP_FIREBASE_API_KEY/)
   assert.match(readme, /VITE_FIREBASE_API_KEY/)
+  assert.match(readme, /## Firebase deploy auth/)
+  assert.match(readme, /firebase login:ci/)
   assert.match(readme, /GOOGLE_APPLICATION_CREDENTIALS/)
+  assert.match(readme, /Cloud Functions Developer/)
+  assert.match(
+    readme,
+    /!\[Firebase login:ci 발급 화면\]\(\.\/assets\/firebase-login-ci-guide\.png\)/,
+  )
+  assert.match(
+    readme,
+    /!\[Firebase service account 발급 화면 1\]\(\.\/assets\/firebase-service-account-guide1\.png\)/,
+  )
+  assert.match(
+    readme,
+    /!\[Firebase service account 발급 화면 2\]\(\.\/assets\/firebase-service-account-guide2\.png\)/,
+  )
+  assert.equal(await readFile(copiedLoginCiGuide, 'utf8'), 'firebase-login-ci')
+  assert.equal(await readFile(copiedServiceAccountGuide1, 'utf8'), 'firebase-service-account-1')
+  assert.equal(await readFile(copiedServiceAccountGuide2, 'utf8'), 'firebase-service-account-2')
   assert.match(rootGitignore, /^server\/functions\/lib\/$/m)
   assert.deepEqual(rootBiome.files?.ignore, ['node_modules', '**/server/functions/lib/**'])
 })

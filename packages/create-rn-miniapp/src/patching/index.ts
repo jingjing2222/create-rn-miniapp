@@ -63,6 +63,8 @@ const FIREBASE_JS_VERSION = getFirebaseWebSdkVersion()
 const DOTENV_VERSION = '^16.4.7'
 const NODE_TYPES_VERSION = '^24.10.1'
 const FALLBACK_GRANITE_PLUGIN_VERSION = '1.0.7'
+const SUPABASE_ACCESS_TOKENS_DASHBOARD_URL = 'https://supabase.com/dashboard/account/tokens'
+const SUPABASE_MANAGEMENT_API_DOC_URL = 'https://supabase.com/docs/reference/api/introduction'
 const WRANGLER_PACKAGE_NAME = 'wrangler'
 const CLOUDFLARE_API_TOKENS_DASHBOARD_URL = 'https://dash.cloudflare.com/profile/api-tokens'
 const CLOUDFLARE_CREATE_TOKEN_DOC_URL =
@@ -81,6 +83,10 @@ const FIREBASE_YARN_PACKAGE_EXTENSION_BLOCK = [
   '    dependencies:',
   '      yaml: "^2.4.1"',
 ].join('\n')
+const SUPABASE_ACCESS_TOKEN_GUIDE_ASSET_CANDIDATES = [
+  'optional/server-supabase/assets/supabase-access-token-guide1.png',
+  'optional/server-supabase/assets/supabase-access-token-guide2.png',
+] as const
 const CLOUDFLARE_TOKEN_GUIDE_ASSET_CANDIDATES = [
   'optional/server-cloudflare/assets/cloudflare-api-token-guide.png',
   'optional/server-cloudflare/assets/cloudflare-api-token-guide.jpg',
@@ -88,7 +94,18 @@ const CLOUDFLARE_TOKEN_GUIDE_ASSET_CANDIDATES = [
   'optional/server-cloudflare/assets/cloudflare-api-token-guide.webp',
   'optional/server-cloudflare/assets/cloudflare-api-token-guide.gif',
 ] as const
-const CLOUDFLARE_TOKEN_GUIDE_TARGET_DIR = 'assets'
+const FIREBASE_LOGIN_CI_GUIDE_ASSET_CANDIDATES = [
+  'optional/server-firebase/assets/firebase-login-ci-guide.png',
+] as const
+const FIREBASE_SERVICE_ACCOUNT_GUIDE_ASSET_CANDIDATES = [
+  'optional/server-firebase/assets/firebase-service-account-guide1.png',
+  'optional/server-firebase/assets/firebase-service-account-guide2.png',
+] as const
+const SERVER_GUIDE_ASSET_TARGET_DIR = 'assets'
+const FIREBASE_CLI_DOC_URL = 'https://firebase.google.com/docs/cli'
+const FIREBASE_ADMIN_SETUP_URL = 'https://firebase.google.com/docs/admin/setup'
+const GOOGLE_CLOUD_SERVICE_ACCOUNTS_CONSOLE_URL =
+  'https://console.cloud.google.com/iam-admin/serviceaccounts'
 
 const require = createRequire(import.meta.url)
 
@@ -444,31 +461,49 @@ function resolveTemplatesPackageRoot() {
   return path.dirname(packageJsonPath)
 }
 
-async function copyCloudflareTokenGuideAsset(
+async function copyGuideAssets(
   serverRoot: string,
-  sourcePathOverride?: string | null,
+  sourcePathOverrides: readonly (string | null | undefined)[],
+  assetCandidates?: readonly string[],
 ) {
-  const assetCandidates = sourcePathOverride
-    ? [sourcePathOverride]
-    : CLOUDFLARE_TOKEN_GUIDE_ASSET_CANDIDATES.map((relativePath) =>
-        path.join(resolveTemplatesPackageRoot(), relativePath),
-      )
+  const overridePaths = sourcePathOverrides.filter(
+    (sourcePath): sourcePath is string => typeof sourcePath === 'string' && sourcePath.length > 0,
+  )
+  const resolvedAssetCandidates =
+    overridePaths.length > 0
+      ? overridePaths
+      : (assetCandidates ?? []).map((relativePath) =>
+          path.join(resolveTemplatesPackageRoot(), relativePath),
+        )
+  const copiedPaths: string[] = []
 
-  for (const sourcePath of assetCandidates) {
+  for (const sourcePath of resolvedAssetCandidates) {
     if (!(await pathExists(sourcePath))) {
       continue
     }
 
     const targetFileName = path.basename(sourcePath)
-    const targetPath = path.join(serverRoot, CLOUDFLARE_TOKEN_GUIDE_TARGET_DIR, targetFileName)
+    const targetPath = path.join(serverRoot, SERVER_GUIDE_ASSET_TARGET_DIR, targetFileName)
 
     await mkdir(path.dirname(targetPath), { recursive: true })
     await copyFile(sourcePath, targetPath)
-
-    return `./${CLOUDFLARE_TOKEN_GUIDE_TARGET_DIR}/${targetFileName}`
+    copiedPaths.push(`./${SERVER_GUIDE_ASSET_TARGET_DIR}/${targetFileName}`)
   }
 
-  return null
+  return copiedPaths
+}
+
+async function copyCloudflareTokenGuideAsset(
+  serverRoot: string,
+  sourcePathOverride?: string | null,
+) {
+  const copiedPaths = await copyGuideAssets(
+    serverRoot,
+    [sourcePathOverride],
+    CLOUDFLARE_TOKEN_GUIDE_ASSET_CANDIDATES,
+  )
+
+  return copiedPaths[0] ?? null
 }
 
 function renderCloudflareDeployScript(tokens: TemplateTokens) {
@@ -560,7 +595,12 @@ function renderCloudflareDeployScript(tokens: TemplateTokens) {
   ].join('\n')
 }
 
-function renderSupabaseServerReadme(tokens: TemplateTokens) {
+function renderSupabaseServerReadme(
+  tokens: TemplateTokens,
+  options?: {
+    accessTokenGuideImagePaths?: string[] | null
+  },
+) {
   return [
     '# server',
     '',
@@ -605,6 +645,26 @@ function renderSupabaseServerReadme(tokens: TemplateTokens) {
     '- 원격 SQL push를 계속하려면 `server/.env.local`의 `SUPABASE_DB_PASSWORD`를 채워주세요.',
     '- 다른 Edge Function을 추가하려면 `supabase functions new <name> --workdir .`로 생성한 뒤 `functions:deploy`를 다시 실행하면 돼요.',
     '- frontend/backoffice의 `.env.local`은 server provisioning 결과와 같은 Supabase project를 가리키게 맞춰두는 걸 권장해요.',
+    '',
+    '## Supabase access token',
+    '',
+    '- 브라우저 로그인 없이 CI나 비대화형 배포를 할 때만 필요해요.',
+    '- Supabase Dashboard > Account > Access Tokens 에서 새 personal access token을 만들어 주세요.',
+    '- Supabase access token은 별도 scope를 고르는 방식이 아니라, 토큰을 만든 계정 권한을 그대로 따라가요.',
+    '- 프로젝트 생성이나 배포가 필요하면 해당 organization / project에 접근 가능한 계정으로 만들어 주세요.',
+    '- 발급된 token은 `server/.env.local`의 `SUPABASE_ACCESS_TOKEN=` 뒤에 붙여 넣으면 돼요.',
+    `- ${SUPABASE_ACCESS_TOKENS_DASHBOARD_URL}`,
+    `- ${SUPABASE_MANAGEMENT_API_DOC_URL}`,
+    ...(options?.accessTokenGuideImagePaths?.length
+      ? [
+          '',
+          '### 발급 화면 예시',
+          '',
+          ...options.accessTokenGuideImagePaths.map(
+            (imagePath, index) => `![Supabase access token 발급 화면 ${index + 1}](${imagePath})`,
+          ),
+        ]
+      : []),
     '',
   ].join('\n')
 }
@@ -675,7 +735,13 @@ function renderCloudflareServerReadme(
   ].join('\n')
 }
 
-function renderFirebaseServerReadme(tokens: TemplateTokens) {
+function renderFirebaseServerReadme(
+  tokens: TemplateTokens,
+  options?: {
+    loginCiGuideImagePath?: string | null
+    serviceAccountGuideImagePaths?: string[] | null
+  },
+) {
   return [
     '# server',
     '',
@@ -715,6 +781,36 @@ function renderFirebaseServerReadme(tokens: TemplateTokens) {
     '- `server/.env.local`의 `FIREBASE_PROJECT_ID`, `FIREBASE_FUNCTION_REGION`은 배포 기준 메타데이터예요.',
     '- `server/.env.local`의 `FIREBASE_TOKEN` 또는 `GOOGLE_APPLICATION_CREDENTIALS`를 채우면 비대화형 deploy에 사용할 수 있어요.',
     '- `server/functions/src/index.ts`의 기본 HTTP 함수 이름은 `api`예요.',
+    '',
+    '## Firebase deploy auth',
+    '',
+    '- 브라우저 로그인 없이 CI나 비대화형 배포를 할 때만 필요해요.',
+    '- `FIREBASE_TOKEN`은 `firebase login:ci`로 발급받아 `server/.env.local`의 `FIREBASE_TOKEN=` 뒤에 넣어 주세요.',
+    '- `GOOGLE_APPLICATION_CREDENTIALS`는 Google Cloud Service Accounts 페이지에서 JSON 키를 발급받아 파일 경로를 넣어 주세요.',
+    '- 서비스 계정을 따로 쓸 때는 보통 `Cloud Functions Developer`와 `Service Account User` 역할이 먼저 필요해요.',
+    '- 프로젝트 설정에 따라 Cloud Build, Cloud Run, Artifact Registry 쪽 권한이 더 필요할 수 있고, 이 생성기는 가능한 자동 보정을 먼저 시도해요.',
+    `- ${FIREBASE_CLI_DOC_URL}`,
+    `- ${GOOGLE_CLOUD_SERVICE_ACCOUNTS_CONSOLE_URL}`,
+    `- ${FIREBASE_ADMIN_SETUP_URL}`,
+    ...(options?.loginCiGuideImagePath
+      ? [
+          '',
+          '### `FIREBASE_TOKEN` 발급 화면 예시',
+          '',
+          `![Firebase login:ci 발급 화면](${options.loginCiGuideImagePath})`,
+        ]
+      : []),
+    ...(options?.serviceAccountGuideImagePaths?.length
+      ? [
+          '',
+          '### `GOOGLE_APPLICATION_CREDENTIALS` 발급 화면 예시',
+          '',
+          ...options.serviceAccountGuideImagePaths.map(
+            (imagePath, index) =>
+              `![Firebase service account 발급 화면 ${index + 1}](${imagePath})`,
+          ),
+        ]
+      : []),
     '',
   ].join('\n')
 }
@@ -1329,11 +1425,23 @@ export async function patchBackofficeWorkspace(
 export async function patchSupabaseServerWorkspace(
   targetRoot: string,
   tokens: TemplateTokens,
-  options: Pick<WorkspacePatchOptions, 'packageManager'>,
+  options: Pick<WorkspacePatchOptions, 'packageManager'> & {
+    accessTokenGuideImageSourcePaths?: string[] | null
+  },
 ) {
   const serverRoot = path.join(targetRoot, 'server')
+  const accessTokenGuideImagePaths = await copyGuideAssets(
+    serverRoot,
+    options.accessTokenGuideImageSourcePaths ?? [],
+    SUPABASE_ACCESS_TOKEN_GUIDE_ASSET_CANDIDATES,
+  )
   await applyServerPackageTemplate(targetRoot, tokens)
-  await writeTextFile(path.join(serverRoot, 'README.md'), renderSupabaseServerReadme(tokens))
+  await writeTextFile(
+    path.join(serverRoot, 'README.md'),
+    renderSupabaseServerReadme(tokens, {
+      accessTokenGuideImagePaths,
+    }),
+  )
   await removeToolingFiles(serverRoot, options.packageManager)
   await removeWorkspaceArtifacts(serverRoot, options.packageManager)
   await applyWorkspaceProjectTemplate(targetRoot, 'server', tokens)
@@ -1407,11 +1515,33 @@ export async function patchCloudflareServerWorkspace(
 export async function patchFirebaseServerWorkspace(
   targetRoot: string,
   tokens: TemplateTokens,
-  options: Pick<WorkspacePatchOptions, 'packageManager'>,
+  options: Pick<WorkspacePatchOptions, 'packageManager'> & {
+    loginCiGuideImageSourcePath?: string | null
+    serviceAccountGuideImageSourcePaths?: string[] | null
+  },
 ) {
   const serverRoot = path.join(targetRoot, 'server')
+  const loginCiGuideImagePath =
+    (
+      await copyGuideAssets(
+        serverRoot,
+        [options.loginCiGuideImageSourcePath],
+        FIREBASE_LOGIN_CI_GUIDE_ASSET_CANDIDATES,
+      )
+    )[0] ?? null
+  const serviceAccountGuideImagePaths = await copyGuideAssets(
+    serverRoot,
+    options.serviceAccountGuideImageSourcePaths ?? [],
+    FIREBASE_SERVICE_ACCOUNT_GUIDE_ASSET_CANDIDATES,
+  )
 
-  await writeTextFile(path.join(serverRoot, 'README.md'), renderFirebaseServerReadme(tokens))
+  await writeTextFile(
+    path.join(serverRoot, 'README.md'),
+    renderFirebaseServerReadme(tokens, {
+      loginCiGuideImagePath,
+      serviceAccountGuideImagePaths,
+    }),
+  )
   await ensureRootGitignoreEntry(targetRoot, FIREBASE_ROOT_GITIGNORE_ENTRY)
   await ensureRootBiomeIgnoreEntry(targetRoot, FIREBASE_ROOT_BIOME_IGNORE_ENTRY)
   if (options.packageManager === 'yarn') {

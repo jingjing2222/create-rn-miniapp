@@ -1,6 +1,33 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: Supabase / Firebase auth guide 이미지를 generated server README에 반영
+1. 문제
+   - Supabase와 Firebase는 auth 안내 섹션을 추가했지만, 실제 발급 화면 예시는 아직 generated `server/README.md`에 붙지 않는다.
+   - 사용자가 찍어 준 스크린샷을 provider별로만 복사하고 렌더하는 경로가 필요하다.
+2. 방향
+   - `packages/scaffold-templates/optional/server-supabase/assets`, `optional/server-firebase/assets`에 guide 이미지를 넣는다.
+   - provider별 patch 단계에서만 해당 asset을 `server/assets/`로 복사하고, generated `server/README.md`에 상대 경로로 붙인다.
+   - Supabase는 access token guide 2장, Firebase는 `login:ci` 1장 + service account guide 2장을 별도 소제목 아래 렌더한다.
+3. 완료 기준
+   - Supabase provider일 때만 Supabase guide 이미지가 `server/README.md`에 보인다.
+   - Firebase provider일 때만 Firebase guide 이미지가 `server/README.md`에 보인다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Supabase / Firebase auth 안내를 Cloudflare 수준으로 보강
+1. 문제
+   - 현재 Supabase와 Firebase는 `server/.env.local`과 재배포 경로가 이미 있는데도, note와 generated `server/README.md`에는 어디서 토큰이나 서비스 계정 정보를 발급받는지 설명이 Cloudflare보다 약하다.
+   - 특히 Supabase는 `SUPABASE_DB_PASSWORD`만 눈에 띄고, 비대화형 재배포에 쓸 access token 경로가 문서와 env 파일에 드러나지 않는다.
+   - Firebase도 `FIREBASE_TOKEN`, `GOOGLE_APPLICATION_CREDENTIALS` 설명은 있지만, 발급 위치와 필요한 역할이 섹션 단위로 정리돼 있지 않아 빠르게 따라가기 어렵다.
+2. 방향
+   - Supabase는 `server/.env.local`에 `SUPABASE_ACCESS_TOKEN` placeholder를 추가하고, note와 `server/README.md`에 별도 인증 섹션을 만든다.
+   - Firebase는 note와 `server/README.md`에 `Firebase deploy auth` 섹션을 만들고 `FIREBASE_TOKEN`, `GOOGLE_APPLICATION_CREDENTIALS`, 발급 위치, 권장 역할을 정리한다.
+   - 이미지 삽입은 하지 않고, 나중에 스크린샷을 붙일 수 있게 섹션 구조만 먼저 준비한다.
+3. 완료 기준
+   - Supabase / Firebase 생성물의 `server/README.md`만 읽어도 비대화형 재배포에 필요한 토큰/서비스 계정 발급 위치와 넣을 위치를 바로 알 수 있다.
+   - provisioning note도 같은 내용을 짧게 요약해준다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: 제공받은 Cloudflare token guide 이미지 반영
 1. 문제
    - Cloudflare token guide 이미지를 생성물 `server/README.md`에 노출할 수 있게 패치했지만, 실제 이미지 파일은 아직 template asset 경로에 들어가 있지 않다.
