@@ -1,10 +1,6 @@
 import type { ServerProvider } from '../../providers/index.js'
 import type { TemplateTokens } from '../../templates/index.js'
 import {
-  type SwcArrayExpression,
-  type SwcExpression,
-  type SwcModule,
-  type SwcObjectExpression,
   cloneAstNode,
   ensureImport,
   ensureTopLevelStatementBlock,
@@ -17,6 +13,10 @@ import {
   parseExpression,
   parseTypeScriptModule,
   printTypeScriptModule,
+  type SwcArrayExpression,
+  type SwcExpression,
+  type SwcModule,
+  type SwcObjectExpression,
   upsertObjectProperty,
 } from './shared.js'
 
@@ -164,7 +164,7 @@ function ensureRepoRootWatchFolder(configObject: SwcObjectExpression) {
   })
 }
 
-const FRONTEND_REPO_ROOT_PREAMBLE = ["const repoRoot = path.resolve(__dirname, '../..')", ''].join(
+const FRONTEND_REPO_ROOT_PREAMBLE = ["const repoRoot = path.resolve(__dirname, '../')", ''].join(
   '\n',
 )
 

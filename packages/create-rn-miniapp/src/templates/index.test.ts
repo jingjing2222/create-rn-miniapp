@@ -6,13 +6,13 @@ import path from 'node:path'
 import test from 'node:test'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import {
-  FIREBASE_DEFAULT_FUNCTION_REGION,
   applyDocsTemplates,
-  applyRootTemplates,
   applyFirebaseServerWorkspaceTemplate,
+  applyRootTemplates,
   applyServerPackageTemplate,
   applyTrpcWorkspaceTemplate,
   applyWorkspaceProjectTemplate,
+  FIREBASE_DEFAULT_FUNCTION_REGION,
   pathExists,
   syncOptionalDocsTemplates,
   syncRootWorkspaceManifest,
@@ -101,9 +101,14 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   assert.match(biomeJson, /schemas\/2\.4\.7\/schema\.json/)
   assert.match(biomeJson, /noRestrictedImports/)
   assert.match(biomeJson, /@react-native-async-storage\/async-storage/)
-  assert.match(biomeJson, /react-native-\*\*/)
+  assert.match(biomeJson, /@react-navigation\/\*/)
+  assert.match(biomeJson, /@react-native-community\/\*/)
+  assert.match(biomeJson, /react-native-\*/)
+  assert.match(biomeJson, /!!frontend\/\.granite/)
   assert.match(biomeJson, /ActivityIndicator/)
   assert.match(biomeJson, /Alert/)
+  assert.match(biomeJson, /Text/)
+  assert.match(biomeJson, /TDS `Txt`/)
   assert.match(biomeJson, /docs\/engineering\/native-modules-policy\.md/)
   assert.match(biomeJson, /docs\/engineering\/tds-react-native-index\.md/)
 })

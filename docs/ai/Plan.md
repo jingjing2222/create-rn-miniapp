@@ -1,3 +1,138 @@
+## 다음 작업: starter Lottie asset을 `Marketing.json`으로 교체하고 README에 guardrail 의도를 추가하기
+1. 문제
+   - starter Lottie asset이 아직 임시 `dots loading` JSON이라 기본 화면 인상이 약하다.
+   - README 초반에는 lint/verify가 왜 TDS와 Granite 쪽으로 유도하는지, 특히 에이전트가 컨텍스트를 놓치지 않게 하려는 guardrail이라는 설명이 부족하다.
+2. 방향
+   - `packages/scaffold-templates/root/assets/frontend/miniapp-starter-hero.lottie.json`을 사용자가 준 `Marketing.json`으로 교체한다.
+   - asset 관련 테스트 기대값도 새 animation 이름 기준으로 바꾼다.
+   - README 초반에 lint/verify가 TDS와 Granite 기준으로 유도하는 이유를 한 문단 추가한다.
+3. 테스트
+   - starter asset 테스트가 `Marketing` 식별값을 기대하도록 먼저 고친다.
+   - 마지막에 `pnpm verify`를 다시 통과시킨다.
+4. 완료 기준
+   - generated starter hero는 `Marketing.json`을 기본 asset으로 쓴다.
+   - README 초반에 guardrail 의도가 바로 보인다.
+   - `pnpm verify` 통과
+
+## 다음 작업: frontend starter Lottie를 `LottieView` + JSON import 기준으로 맞추고 starter copy를 정리하기
+1. 문제
+   - 지금 generated starter page는 `@granite-js/react-native`의 `Lottie.AnimationObject`와 `animationObject` prop을 쓰고 있다.
+   - 실제 Granite native wrapper 타입은 `@granite-js/native/lottie-react-native`의 `LottieView`이고, `source` + `style`을 받는다.
+   - starter hero 상단의 `AppInToss MiniApp starter` 라벨도 지금 화면에선 정보 가치가 낮다.
+2. 방향
+   - starter page를 `import LottieView from '@granite-js/native/lottie-react-native'` 기준으로 바꾼다.
+   - local JSON asset은 ESM import로 읽고 `source={starterHeroLottie}`로 넘긴다.
+   - 크기는 `height` prop 대신 `style`로 준다.
+   - 상단 `AppInToss MiniApp starter` 문구는 제거하고 나머지 안내 copy만 유지한다.
+3. 테스트
+   - frontend patch 테스트가 `LottieView`, JSON import, `source={starterHeroLottie}`, `heroAnimationView`를 기대하도록 먼저 고친다.
+   - 기존 `animationObject`와 `AppInToss MiniApp starter` 문구가 더 이상 나오지 않는지도 같이 검증한다.
+4. 완료 기준
+   - generated starter page가 `discount-board`에서 검증한 사용 방식과 같아진다.
+   - `pnpm verify` 통과
+
+## 다음 작업: frontend starter Lottie를 인라인 object 대신 실제 JSON asset 파일로 바꾸기
+1. 문제
+   - 지금 starter page의 Lottie는 `index.tsx` 안에 직접 박아 넣은 object를 쓴다.
+   - 이 방식은 실제 asset 기반이 아니라서 수정 이력도 추적하기 어렵고, 사용자가 보기에도 "추측해서 만든 animation"처럼 느껴질 수 있다.
+2. 방향
+   - Granite showcase에서 검증된 Lottie 데이터를 실제 `.lottie.json` asset 파일로 템플릿 패키지에 둔다.
+   - generated frontend starter page는 그 asset 파일을 import해서 `Lottie.AnimationObject`에 넘긴다.
+   - 재현 repo인 `discount-board`도 같은 방식으로 asset 파일을 두고 starter page를 맞춘다.
+3. 테스트
+   - frontend patch 테스트가 starter page에 JSON asset import가 들어가는지 검증한다.
+   - patch 뒤에 `frontend/src/assets/miniapp-starter-hero.lottie.json`이 생성되는지도 함께 검증한다.
+4. 완료 기준
+   - generated starter page는 인라인 Lottie object 없이 실제 asset 파일을 쓴다.
+   - generator repo와 재현 repo 둘 다 verify가 통과한다.
+
+## 다음 작업: generated root Biome에서 `frontend/.granite/**`를 제외하기
+1. 문제
+   - generated repo의 root `verify`가 `frontend/.granite/**` 산출물까지 format/lint 대상으로 잡고 있다.
+   - 이 디렉터리는 Granite가 만드는 build/runtime artifact라서 사용자가 직접 관리하는 소스가 아니고, root Biome 규칙을 그대로 적용하면 unrelated lint가 verify를 깨뜨린다.
+2. 방향
+   - generated root `biome.json` 템플릿 4종에 `!!frontend/.granite` ignore를 추가한다.
+   - template test도 generated `biome.json`에 이 ignore가 들어가는지 먼저 고정한다.
+   - 실제 재현 repo에서도 같은 ignore를 넣고 `pnpm verify`를 다시 돌려 남는 실패가 artifact 때문이 아닌지 확인한다.
+3. 테스트
+   - template test가 `!!frontend/.granite`를 기대하도록 추가한다.
+   - `pnpm verify`로 generator repo를 다시 검증한다.
+4. 완료 기준
+   - generated repo의 root Biome는 `frontend/.granite`를 검사하지 않는다.
+   - 재현 repo에서도 root `verify`가 Granite artifact lint 때문에 막히지 않는다.
+
+## 다음 작업: Granite 기본 `_404.tsx`도 frontend starter patch 범위에 포함하기
+1. 문제
+   - root Biome는 `react-native`의 `Text`를 막는데, Granite 공식 scaffold가 만드는 `frontend/pages/_404.tsx`는 여전히 `Text`를 직접 import한다.
+   - `patchFrontendWorkspace`는 지금 `src/pages/index.tsx`, `src/pages/about.tsx`만 교체해서 `_404.tsx`는 root Biome 전에 그대로 남는다.
+2. 방향
+   - Granite 공식 `_404.tsx` source를 감지하는 matcher를 추가한다.
+   - official default source일 때만 TDS `Txt` 기반 not-found page로 교체한다.
+   - root Biome 순서는 그대로 두고, patch 대상만 넓혀서 문제를 닫는다.
+3. 테스트
+   - frontend patch 테스트에 공식 `_404.tsx` fixture를 추가한다.
+   - patch 뒤에 `Text` import가 사라지고 `Txt` import가 들어가는지 검증한다.
+4. 완료 기준
+   - generated repo는 create 직후 `_404.tsx` 때문에 root Biome이 깨지지 않는다.
+   - `pnpm verify` 통과
+
+## 다음 작업: frontend starter page를 TDS와 Granite Lottie로 보기 좋게 다듬기
+1. 문제
+   - 지금 starter page는 정책 위반을 피하는 최소 텍스트 안내만 있고, 생성 직후 화면으로는 너무 밋밋하다.
+   - 사용자는 생성 직후부터 AppInToss + TDS 기준이 반영된 starter 화면을 보는 편이 이해하기 쉽다.
+2. 방향
+   - Granite starter page 교체본에 TDS `Txt`와 TDS `Button`을 넣는다.
+   - Granite Lottie를 써서 간단한 hero animation을 함께 보여준다.
+   - 안내 문구는 `docs/product`, `AGENTS.md`, `docs/engineering`을 먼저 보라는 흐름으로 맞춘다.
+3. 테스트
+   - starter page patch 테스트가 `Txt`, `Button`, `Lottie.AnimationObject`가 들어가는지 확인한다.
+4. 완료 기준
+   - generated starter page는 생성 직후부터 lint 규칙을 지키면서도 안내 화면으로 충분히 읽을 만하다.
+   - `pnpm verify` 통과
+
+## 다음 작업: `react-native` `Text`를 금지하고 starter page를 TDS `Txt`로 맞추기
+1. 문제
+   - generated frontend lint는 `react-native` 기본 UI 직접 import를 막고 있지만, 아직 `Text`는 금지 목록에 없다.
+   - 그런데 starter page는 여전히 `react-native`의 `Text`를 쓰고 있어서, `Text`를 금지하려면 starter page도 같이 바꿔야 생성 직후 verify가 깨지지 않는다.
+2. 방향
+   - generated root `biome.json`의 `noRestrictedImports`에 `react-native` `Text`를 추가한다.
+   - 관련 에러 메시지는 `Text` 대신 TDS `Txt`를 쓰라고 바로 안내한다.
+   - Granite 공식 starter page를 교체하는 patch도 `Txt` 기준으로 맞춘다.
+3. 테스트
+   - generated `biome.json` test가 `Text` 금지와 `Txt` 안내 문구를 기대하도록 먼저 고친다.
+   - starter page patch 테스트가 `Text` import가 사라지고 `Txt` import가 들어가는지 검증한다.
+4. 완료 기준
+   - generated repo는 `react-native` `Text`를 lint에서 막는다.
+   - starter page는 create 직후부터 TDS `Txt`를 사용한다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Granite starter page를 frontend 정책에 맞게 조건부 교체하기
+1. 문제
+   - 공식 Granite scaffold가 만드는 기본 `frontend/src/pages/index.tsx`, `frontend/src/pages/about.tsx`가 `TouchableOpacity`를 사용한다.
+   - generated repo는 create 직후 root Biome 금지 룰을 적용하므로, 사용자가 아무 것도 바꾸지 않아도 `biome check`가 깨질 수 있다.
+2. 방향
+   - `patchFrontendWorkspace`에서 Granite 공식 starter page로 보이는 파일만 감지해서 우리 기준의 안전한 starter page로 교체한다.
+   - `TouchableOpacity` 없는 최소 route 예시로 바꾸고, 사용자가 이미 수정한 페이지는 덮어쓰지 않도록 공식 starter 문구가 있을 때만 적용한다.
+3. 테스트
+   - frontend patch 테스트에 Granite 공식 starter source를 재현해서, patch 뒤에 `TouchableOpacity`가 사라지고 새 starter 문구가 들어가는지 검증한다.
+4. 완료 기준
+   - create 직후 generated frontend는 Biome 금지 import를 스스로 어기지 않는다.
+   - `pnpm verify` 통과
+
+## 다음 작업: generated Biome restricted import glob을 Biome 2 문법으로 고치기
+1. 문제
+   - generated `biome.json`의 `noRestrictedImports.patterns.group`에 `react-native-**`처럼 잘못된 glob이 들어가 있다.
+   - Biome 2는 이 패턴을 deserialize 단계에서 거부해서, 스캐폴딩 직후 root `biome check`가 실패할 수 있다.
+2. 방향
+   - Biome 공식 `noRestrictedImports` 예시처럼 package name 패턴은 `@scope/*`, `react-native-*` 형태로 맞춘다.
+   - root template 4종 `biome.json`과 관련 template test를 같이 수정한다.
+3. 테스트
+   - generated `biome.json` test가 `react-native-*`, `@react-navigation/*`, `@react-native-community/*`를 기대하도록 고친다.
+   - `pnpm verify`로 root와 template 전체를 다시 검증한다.
+4. 완료 기준
+   - generated repo의 Biome config가 deserialize 오류 없이 통과한다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Biome 금지 import 에러 메시지를 원천 engineering docs로 연결
 1. 문제
    - generated repo의 Biome 금지 import 에러는 금지 이유는 알려주지만, 어떤 engineering 문서를 보면 되는지 바로 연결되지 않는다.

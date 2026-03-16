@@ -6,6 +6,8 @@
 
 이 도구는 앱 소스 전체를 자체 템플릿으로 복제하지 않아요. Granite, AppInToss, Supabase, Cloudflare, Firebase, Vite의 공식 scaffold를 먼저 실행하고, 그 결과물 위에 MiniApp 운영에 필요한 컨텍스트만 덧입혀요.
 
+생성된 repo는 lint와 `verify`로도 TDS와 Granite 기준 쪽으로 계속 유도해요. 이건 단순 취향 강제가 아니라, 에이전트가 작업하다가 컨텍스트를 놓치고 `react-native` 기본 UI나 우회 경로로 새는 걸 초반부터 막기 위한 룰이에요.
+
 - `frontend`: Granite + `@apps-in-toss/framework` 기반 MiniApp scaffold와 실행 컨텍스트를 함께 맞춰줘요.
 - `server`: optional Supabase, Cloudflare, Firebase server 워크스페이스와 provider별 운영 스크립트/문서를 넣어줘요.
 - `packages/contracts`: optional tRPC boundary schema workspace를 만들고, client-server 경계 타입을 `z.infer` 기준으로 공유하게 해줘요.

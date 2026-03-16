@@ -18,10 +18,11 @@
    - 금지: `@granite-js/native/@react-native-async-storage/async-storage`
    - 허용: `@apps-in-toss/framework` storage API
 4. `react-native` 기본 UI 직접 import도 금지
-   - 금지: `Button`, `Modal`, `Switch`, `TextInput`, `ActivityIndicator`, `Alert`, `TouchableOpacity`, `TouchableHighlight`, `TouchableWithoutFeedback`
+   - 금지: `Button`, `Modal`, `Switch`, `TextInput`, `Text`, `ActivityIndicator`, `Alert`, `TouchableOpacity`, `TouchableHighlight`, `TouchableWithoutFeedback`
    - `Pressable`도 기본은 금지하고, 정말 필요한 경우에만 `biome-ignore`에 이유를 함께 남긴다.
    - 허용: TDS나 Granite가 제공하는 컴포넌트
    - 예:
+     - `Text` 대신 TDS `Txt`
      - `Button` 대신 TDS `button`, `text-button`, `bottom-cta`
      - `Modal`, `Alert` 대신 TDS `dialog`, `bottom-sheet`, `toast`
      - `TextInput` 대신 TDS `text-field`, `search-field`
