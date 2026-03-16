@@ -1,6 +1,6 @@
 # create-rn-miniapp
 
-![Cloudflare scaffold flow](https://raw.githubusercontent.com/jingjing2222/create-rn-miniapp/main/cloudflare.gif)
+![Cloudflare scaffold flow](https://raw.githubusercontent.com/jingjing2222/create-rn-miniapp/main/example.gif)
 
 `create-rn-miniapp`은 AppInToss MiniApp용 모노레포를 만든 뒤, 에이전트가 Granite, `@apps-in-toss/framework` API, TDS를 바로 활용할 수 있게 실행 컨텍스트를 patch해주는 스캐폴딩 CLI예요.
 
