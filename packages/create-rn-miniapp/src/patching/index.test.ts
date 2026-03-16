@@ -368,6 +368,229 @@ test('patchFrontendWorkspace adds cloudflare API bootstrap when cloudflare serve
   assert.match(apiClient, /export async function apiFetch/)
 })
 
+test('patchFrontendWorkspace adds cloudflare trpc client when trpc overlay is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const frontendRoot = path.join(targetRoot, 'frontend')
+
+  await mkdir(path.join(frontendRoot, 'src'), { recursive: true })
+  await writeJson(path.join(frontendRoot, 'package.json'), {
+    name: 'ebook-miniapp',
+    private: true,
+    scripts: {
+      dev: 'granite dev',
+      build: 'ait build',
+    },
+    dependencies: {
+      '@apps-in-toss/framework': '^2.0.5',
+    },
+    devDependencies: {
+      '@granite-js/plugin-hermes': '1.0.7',
+      '@granite-js/plugin-router': '1.0.7',
+      typescript: '^5.8.3',
+    },
+  })
+  await writeFile(
+    path.join(frontendRoot, 'tsconfig.json'),
+    ['{', '  "compilerOptions": {', '    "module": "commonjs"', '  }', '}', ''].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [appsInToss({ brand: { displayName: "전자책 미니앱" } })],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+
+  await patchFrontendWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'cloudflare', trpc: true },
+  )
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(frontendRoot, 'package.json'), 'utf8'),
+  ) as {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
+  const tsconfig = JSON.parse(await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')) as {
+    compilerOptions?: {
+      allowImportingTsExtensions?: boolean
+    }
+  }
+  const trpcClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
+
+  assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
+  assert.equal(packageJson.devDependencies?.['@workspace/trpc'], 'workspace:*')
+  assert.equal(tsconfig.compilerOptions?.allowImportingTsExtensions, true)
+  assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'api.ts')), false)
+  assert.match(trpcClient, /createTRPCProxyClient/)
+  assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/trpc'/)
+  assert.match(trpcClient, /import\.meta\.env\.MINIAPP_API_BASE_URL/)
+  assert.doesNotMatch(trpcClient, /from '\.\/api'/)
+})
+
+test('patchFrontendWorkspace adds supabase trpc client and ts extension support when trpc overlay is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const frontendRoot = path.join(targetRoot, 'frontend')
+
+  await mkdir(path.join(frontendRoot, 'src'), { recursive: true })
+  await writeJson(path.join(frontendRoot, 'package.json'), {
+    name: 'ebook-miniapp',
+    private: true,
+    scripts: {
+      dev: 'granite dev',
+      build: 'ait build',
+    },
+    dependencies: {
+      '@apps-in-toss/framework': '^2.0.5',
+    },
+    devDependencies: {
+      '@granite-js/plugin-hermes': '1.0.7',
+      '@granite-js/plugin-router': '1.0.7',
+      typescript: '^5.8.3',
+    },
+  })
+  await writeFile(
+    path.join(frontendRoot, 'tsconfig.json'),
+    ['{', '  "compilerOptions": {', '    "module": "commonjs"', '  }', '}', ''].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [appsInToss({ brand: { displayName: "전자책 미니앱" } })],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+
+  await patchFrontendWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'supabase', trpc: true },
+  )
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(frontendRoot, 'package.json'), 'utf8'),
+  ) as {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
+  const tsconfig = JSON.parse(await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')) as {
+    compilerOptions?: {
+      allowImportingTsExtensions?: boolean
+    }
+  }
+  const trpcClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
+
+  assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
+  assert.equal(packageJson.devDependencies?.['@workspace/trpc'], 'workspace:*')
+  assert.equal(tsconfig.compilerOptions?.allowImportingTsExtensions, true)
+  assert.match(trpcClient, /createTRPCProxyClient/)
+  assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/trpc'/)
+  assert.match(trpcClient, /functions\/v1\/api\/trpc/)
+  assert.match(trpcClient, /supabase\.auth\.getSession/)
+})
+
+test('patchFrontendWorkspace removes existing cloudflare api helper when trpc cleanup is requested', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const frontendRoot = path.join(targetRoot, 'frontend')
+
+  await mkdir(path.join(frontendRoot, 'src', 'lib'), { recursive: true })
+  await writeJson(path.join(frontendRoot, 'package.json'), {
+    name: 'ebook-miniapp',
+    private: true,
+    scripts: {
+      dev: 'granite dev',
+      build: 'ait build',
+    },
+    dependencies: {
+      '@apps-in-toss/framework': '^2.0.5',
+    },
+    devDependencies: {
+      '@granite-js/plugin-hermes': '1.0.7',
+      '@granite-js/plugin-router': '1.0.7',
+      typescript: '^5.8.3',
+    },
+  })
+  await writeFile(
+    path.join(frontendRoot, 'tsconfig.json'),
+    ['{', '  "compilerOptions": {', '    "module": "commonjs"', '  }', '}', ''].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [appsInToss({ brand: { displayName: "전자책 미니앱" } })],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'src', 'lib', 'api.ts'),
+    'export function apiFetch() { return Promise.resolve(null) }\n',
+    'utf8',
+  )
+
+  await patchFrontendWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    {
+      packageManager: 'pnpm',
+      serverProvider: 'cloudflare',
+      trpc: true,
+      removeCloudflareApiClientHelpers: true,
+    },
+  )
+
+  assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'api.ts')), false)
+})
+
 test('patchFrontendWorkspace adds firebase bootstrap when firebase server provider is selected', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const frontendRoot = path.join(targetRoot, 'frontend')
@@ -815,6 +1038,257 @@ test('patchBackofficeWorkspace adds firebase bootstrap when firebase server prov
   assert.match(storageClient, /getStorage/)
 })
 
+test('patchBackofficeWorkspace adds supabase trpc client when trpc overlay is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const backofficeRoot = path.join(targetRoot, 'backoffice')
+
+  await mkdir(path.join(backofficeRoot, 'src'), { recursive: true })
+  await writeJson(path.join(backofficeRoot, 'package.json'), {
+    name: 'backoffice',
+    private: true,
+    version: '0.0.0',
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'tsc -b && vite build',
+    },
+    dependencies: {
+      react: '^19.2.4',
+      'react-dom': '^19.2.4',
+      '@supabase/supabase-js': '^2.57.4',
+    },
+    devDependencies: {
+      vite: '^8.0.0',
+      typescript: '~5.9.3',
+    },
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.json'), {
+    compilerOptions: { module: 'commonjs' },
+    files: [],
+    references: [{ path: './tsconfig.app.json' }, { path: './tsconfig.node.json' }],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.app.json'), {
+    compilerOptions: { module: 'commonjs' },
+    include: ['src'],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.node.json'), {
+    compilerOptions: { composite: true, module: 'commonjs' },
+    include: ['vite.config.ts'],
+  })
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'main.tsx'),
+    [
+      "import { StrictMode } from 'react'",
+      "import { createRoot } from 'react-dom/client'",
+      "import App from './App.tsx'",
+      '',
+      "createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)",
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'App.tsx'),
+    'export default function App() { return null }\n',
+    'utf8',
+  )
+
+  await patchBackofficeWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'supabase', trpc: true },
+  )
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(backofficeRoot, 'package.json'), 'utf8'),
+  ) as {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
+  const trpcClient = await readFile(path.join(backofficeRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
+
+  assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
+  assert.equal(packageJson.devDependencies?.['@workspace/trpc'], 'workspace:*')
+  assert.match(trpcClient, /createTRPCProxyClient/)
+  assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/trpc'/)
+  assert.match(trpcClient, /Authorization/)
+  assert.match(trpcClient, /functions\/v1\/api\/trpc/)
+})
+
+test('patchBackofficeWorkspace adds cloudflare trpc client without api helper when trpc overlay is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const backofficeRoot = path.join(targetRoot, 'backoffice')
+
+  await mkdir(path.join(backofficeRoot, 'src'), { recursive: true })
+  await writeJson(path.join(backofficeRoot, 'package.json'), {
+    name: 'backoffice',
+    private: true,
+    version: '0.0.0',
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'tsc -b && vite build',
+    },
+    dependencies: {
+      react: '^19.2.4',
+      'react-dom': '^19.2.4',
+    },
+    devDependencies: {
+      vite: '^8.0.0',
+      typescript: '~5.9.3',
+    },
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.json'), {
+    compilerOptions: { module: 'commonjs' },
+    files: [],
+    references: [{ path: './tsconfig.app.json' }, { path: './tsconfig.node.json' }],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.app.json'), {
+    compilerOptions: { module: 'commonjs' },
+    include: ['src'],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.node.json'), {
+    compilerOptions: { composite: true, module: 'commonjs' },
+    include: ['vite.config.ts'],
+  })
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'main.tsx'),
+    [
+      "import { StrictMode } from 'react'",
+      "import { createRoot } from 'react-dom/client'",
+      "import App from './App.tsx'",
+      '',
+      "createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)",
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'App.tsx'),
+    'export default function App() { return null }\n',
+    'utf8',
+  )
+
+  await patchBackofficeWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', serverProvider: 'cloudflare', trpc: true },
+  )
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(backofficeRoot, 'package.json'), 'utf8'),
+  ) as {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
+  const trpcClient = await readFile(path.join(backofficeRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
+
+  assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
+  assert.equal(packageJson.devDependencies?.['@workspace/trpc'], 'workspace:*')
+  assert.equal(await pathExists(path.join(backofficeRoot, 'src', 'lib', 'api.ts')), false)
+  assert.match(trpcClient, /createTRPCProxyClient/)
+  assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/trpc'/)
+  assert.match(trpcClient, /import\.meta\.env\.VITE_API_BASE_URL/)
+  assert.doesNotMatch(trpcClient, /from '\.\/api'/)
+})
+
+test('patchBackofficeWorkspace removes existing cloudflare api helper when trpc cleanup is requested', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const backofficeRoot = path.join(targetRoot, 'backoffice')
+
+  await mkdir(path.join(backofficeRoot, 'src', 'lib'), { recursive: true })
+  await writeJson(path.join(backofficeRoot, 'package.json'), {
+    name: 'backoffice',
+    private: true,
+    version: '0.0.0',
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'tsc -b && vite build',
+    },
+    dependencies: {
+      react: '^19.2.4',
+      'react-dom': '^19.2.4',
+    },
+    devDependencies: {
+      vite: '^8.0.0',
+      typescript: '~5.9.3',
+    },
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.json'), {
+    compilerOptions: { module: 'commonjs' },
+    files: [],
+    references: [{ path: './tsconfig.app.json' }, { path: './tsconfig.node.json' }],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.app.json'), {
+    compilerOptions: { module: 'commonjs' },
+    include: ['src'],
+  })
+  await writeJson(path.join(backofficeRoot, 'tsconfig.node.json'), {
+    compilerOptions: { composite: true, module: 'commonjs' },
+    include: ['vite.config.ts'],
+  })
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'main.tsx'),
+    [
+      "import { StrictMode } from 'react'",
+      "import { createRoot } from 'react-dom/client'",
+      "import App from './App.tsx'",
+      '',
+      "createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)",
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'App.tsx'),
+    'export default function App() { return null }\n',
+    'utf8',
+  )
+  await writeFile(
+    path.join(backofficeRoot, 'src', 'lib', 'api.ts'),
+    'export function apiFetch() { return Promise.resolve(null) }\n',
+    'utf8',
+  )
+
+  await patchBackofficeWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    {
+      packageManager: 'pnpm',
+      serverProvider: 'cloudflare',
+      trpc: true,
+      removeCloudflareApiClientHelpers: true,
+    },
+  )
+
+  assert.equal(await pathExists(path.join(backofficeRoot, 'src', 'lib', 'api.ts')), false)
+})
+
 test('patchCloudflareServerWorkspace keeps worker scripts and removes local tooling files', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const serverRoot = path.join(targetRoot, 'server')
@@ -961,6 +1435,84 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
   assert.equal(await pathExists(path.join(serverRoot, '.vscode', 'settings.json')), false)
 })
 
+test('patchCloudflareServerWorkspace wires local worker test config and handler when trpc overlay is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const serverRoot = path.join(targetRoot, 'server')
+
+  await mkdir(path.join(serverRoot, 'src'), { recursive: true })
+  await writeJson(path.join(serverRoot, 'package.json'), {
+    name: 'my-worker',
+    private: true,
+    scripts: {
+      dev: 'wrangler dev',
+      deploy: 'wrangler deploy',
+      test: 'vitest',
+    },
+    dependencies: {},
+    devDependencies: {
+      wrangler: '^4.73.0',
+      vitest: '~3.2.0',
+      typescript: '^5.5.2',
+    },
+  })
+  await writeFile(
+    path.join(serverRoot, 'wrangler.jsonc'),
+    '{\n  "$schema": "node_modules/wrangler/config-schema.json",\n  "name": "server"\n}\n',
+    'utf8',
+  )
+
+  await patchCloudflareServerWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', trpc: true },
+  )
+
+  const packageJson = JSON.parse(await readFile(path.join(serverRoot, 'package.json'), 'utf8')) as {
+    scripts?: Record<string, string>
+    dependencies?: Record<string, string>
+  }
+  const indexSource = await readFile(path.join(serverRoot, 'src', 'index.ts'), 'utf8')
+  const contextSource = await readFile(path.join(serverRoot, 'src', 'trpc', 'context.ts'), 'utf8')
+  const vitestConfig = await readFile(path.join(serverRoot, 'vitest.config.mts'), 'utf8')
+  const wranglerVitestConfig = JSON.parse(
+    await readFile(path.join(serverRoot, 'wrangler.vitest.jsonc'), 'utf8'),
+  ) as {
+    name?: string
+    d1_databases?: Array<Record<string, unknown>>
+    r2_buckets?: Array<Record<string, unknown>>
+  }
+  const readme = await readFile(path.join(serverRoot, 'README.md'), 'utf8')
+
+  assert.equal(packageJson.dependencies?.['@trpc/server'], '^11.13.4')
+  assert.equal(packageJson.dependencies?.['@workspace/trpc'], 'workspace:*')
+  assert.equal(packageJson.dependencies?.zod, '^4.3.6')
+  assert.equal(packageJson.scripts?.['trpc:sync'], undefined)
+  assert.equal(packageJson.scripts?.dev, 'wrangler dev')
+  assert.equal(packageJson.scripts?.build, 'wrangler deploy --dry-run')
+  assert.match(indexSource, /fetchRequestHandler/)
+  assert.match(indexSource, /from '@workspace\/trpc'/)
+  assert.match(contextSource, /export type CloudflareTrpcContext/)
+  assert.match(vitestConfig, /configPath: '\.\/wrangler\.vitest\.jsonc'/)
+  assert.equal(wranglerVitestConfig.name, 'server')
+  assert.deepEqual(wranglerVitestConfig.d1_databases, undefined)
+  assert.deepEqual(wranglerVitestConfig.r2_buckets, undefined)
+  assert.match(readme, /packages\/trpc/)
+  assert.match(readme, /frontend\/src\/lib\/trpc\.ts/)
+  assert.match(readme, /API SSOT/)
+  assert.match(readme, /server API의 source of truth/)
+  assert.match(readme, /wrangler\.vitest\.jsonc/)
+  assert.match(readme, /local D1\/R2 binding/)
+  assert.doesNotMatch(readme, /trpc:sync/)
+})
+
 test('patchSupabaseServerWorkspace creates a server README with remote and local guidance', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const serverRoot = path.join(targetRoot, 'server')
@@ -1023,6 +1575,7 @@ test('patchSupabaseServerWorkspace creates a server README with remote and local
   assert.match(readme, /MINIAPP_SUPABASE_URL/)
   assert.match(readme, /backoffice\/src\/lib\/supabase\.ts/)
   assert.match(readme, /VITE_SUPABASE_URL/)
+  assert.doesNotMatch(readme, /API SSOT/)
   assert.match(readme, /## Supabase access token/)
   assert.match(readme, /SUPABASE_ACCESS_TOKEN=/)
   assert.match(readme, /dashboard\/account\/tokens/)
@@ -1036,6 +1589,61 @@ test('patchSupabaseServerWorkspace creates a server README with remote and local
   )
   assert.equal(await readFile(copiedGuide1, 'utf8'), 'fake-image-1')
   assert.equal(await readFile(copiedGuide2, 'utf8'), 'fake-image-2')
+})
+
+test('patchSupabaseServerWorkspace wires tRPC through function-local deno.json aliases when tRPC overlay is selected', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const serverRoot = path.join(targetRoot, 'server')
+
+  await mkdir(path.join(serverRoot, 'supabase', 'functions', 'api'), { recursive: true })
+
+  await patchSupabaseServerWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'pnpm',
+      packageManagerCommand: 'pnpm',
+      packageManagerRunCommand: 'pnpm',
+      packageManagerExecCommand: 'pnpm exec',
+      verifyCommand: 'pnpm verify',
+    },
+    { packageManager: 'pnpm', trpc: true },
+  )
+
+  const serverPackageJson = JSON.parse(
+    await readFile(path.join(serverRoot, 'package.json'), 'utf8'),
+  ) as {
+    scripts?: Record<string, string>
+  }
+  const functionSource = await readFile(
+    path.join(serverRoot, 'supabase', 'functions', 'api', 'index.ts'),
+    'utf8',
+  )
+  const denoConfig = JSON.parse(
+    await readFile(path.join(serverRoot, 'supabase', 'functions', 'api', 'deno.json'), 'utf8'),
+  ) as {
+    imports?: Record<string, string>
+  }
+  const readme = await readFile(path.join(serverRoot, 'README.md'), 'utf8')
+
+  assert.equal(serverPackageJson.scripts?.['trpc:sync'], undefined)
+  assert.doesNotMatch(serverPackageJson.scripts?.['functions:serve'] ?? '', /trpc:sync/)
+  assert.doesNotMatch(serverPackageJson.scripts?.['functions:deploy'] ?? '', /trpc:sync/)
+  assert.match(functionSource, /fetchRequestHandler/)
+  assert.match(functionSource, /npm:@trpc\/server\/adapters\/fetch/)
+  assert.match(functionSource, /from '@workspace\/trpc'/)
+  assert.equal(denoConfig.imports?.['@workspace/trpc'], '../../../../packages/trpc/src/index.ts')
+  assert.equal(denoConfig.imports?.['@trpc/server'], 'npm:@trpc/server@^11.13.4')
+  assert.equal(denoConfig.imports?.zod, 'npm:zod@^4.3.6')
+  assert.match(readme, /packages\/trpc/)
+  assert.match(readme, /frontend\/src\/lib\/trpc\.ts/)
+  assert.match(readme, /functions\/api\/deno\.json/)
+  assert.match(readme, /@workspace\/trpc/)
+  assert.match(readme, /API SSOT/)
+  assert.match(readme, /server API의 source of truth/)
+  assert.doesNotMatch(readme, /trpc:sync/)
+  assert.doesNotMatch(readme, /supabase\.functions\.invoke\('api'\)/)
 })
 
 test('patchFirebaseServerWorkspace creates a server README for firebase functions', async (t) => {

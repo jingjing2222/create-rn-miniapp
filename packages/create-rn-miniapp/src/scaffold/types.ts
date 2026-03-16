@@ -13,6 +13,7 @@ export type ScaffoldOptions = {
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
+  withTrpc: boolean
   withBackoffice: boolean
   skipInstall: boolean
 }
@@ -25,10 +26,13 @@ export type AddWorkspaceOptions = {
   displayName: string
   existingServerProvider: ServerProvider | null
   existingHasBackoffice: boolean
+  existingHasTrpc: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
   withServer: boolean
+  withTrpc: boolean
+  removeCloudflareApiClientHelpers: boolean
   withBackoffice: boolean
   skipInstall: boolean
 }

@@ -4,7 +4,10 @@ import path from 'node:path'
 import process from 'node:process'
 import { log } from '@clack/prompts'
 import { parse } from 'jsonc-parser'
-import { patchWranglerConfigSource } from '../../patching/jsonc.js'
+import {
+  createCloudflareVitestWranglerConfigSource,
+  patchWranglerConfigSource,
+} from '../../patching/jsonc.js'
 import { runCommand, runCommandWithOutput, type CommandSpec } from '../../commands.js'
 import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
@@ -591,6 +594,7 @@ async function patchWranglerCloudflareBindings(
   },
 ) {
   const wranglerConfigPath = path.join(serverRoot, 'wrangler.jsonc')
+  const wranglerVitestConfigPath = path.join(serverRoot, 'wrangler.vitest.jsonc')
 
   if (!(await pathExists(wranglerConfigPath))) {
     return
@@ -622,6 +626,14 @@ async function patchWranglerCloudflareBindings(
   })
 
   await writeFile(wranglerConfigPath, next, 'utf8')
+
+  if (await pathExists(wranglerVitestConfigPath)) {
+    await writeFile(
+      wranglerVitestConfigPath,
+      createCloudflareVitestWranglerConfigSource(next),
+      'utf8',
+    )
+  }
 }
 
 async function createCloudflareD1Database(

@@ -34,7 +34,10 @@ export type PackageManagerAdapter = {
   installInDirectoryCommand(directory: string): string
   runScriptInDirectoryCommand(directory: string, script: string): string
   dlxCommand(packageName: string, args: string[]): string
-  workspaceRunCommand(workspace: 'frontend' | 'backoffice' | 'server', script: string): string
+  workspaceRunCommand(
+    workspace: 'frontend' | 'backoffice' | 'server' | 'packages/trpc',
+    script: string,
+  ): string
   runScript(script: string): string
   rootFormatScript(): string
   rootFormatCheckScript(): string

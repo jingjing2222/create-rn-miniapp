@@ -10,6 +10,7 @@ import {
   applyRootTemplates,
   applyFirebaseServerWorkspaceTemplate,
   applyServerPackageTemplate,
+  applyTrpcWorkspaceTemplate,
   applyWorkspaceProjectTemplate,
   pathExists,
   syncOptionalDocsTemplates,
@@ -90,6 +91,76 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   )
 })
 
+test('syncRootWorkspaceManifest normalizes package workspaces to packages/* in pnpm manifest', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend'])
+  await syncRootWorkspaceManifest(targetRoot, 'pnpm', ['frontend', 'packages/trpc'])
+
+  assert.equal(
+    await readFile(path.join(targetRoot, 'pnpm-workspace.yaml'), 'utf8'),
+    ['packages:', '  - frontend', '  - packages/*', ''].join('\n'),
+  )
+})
+
+test('applyTrpcWorkspaceTemplate creates a shared packages/trpc workspace for cloudflare', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend', 'server', 'packages/trpc'])
+  await applyTrpcWorkspaceTemplate(targetRoot, tokens, { serverProvider: 'cloudflare' })
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(targetRoot, 'packages', 'trpc', 'package.json'), 'utf8'),
+  ) as {
+    name?: string
+    dependencies?: Record<string, string>
+    scripts?: Record<string, string>
+  }
+  const tsconfig = JSON.parse(
+    await readFile(path.join(targetRoot, 'packages', 'trpc', 'tsconfig.json'), 'utf8'),
+  ) as {
+    compilerOptions?: {
+      allowImportingTsExtensions?: boolean
+      composite?: boolean
+      declaration?: boolean
+      outDir?: string
+      rewriteRelativeImportExtensions?: boolean
+    }
+  }
+  const projectJson = JSON.parse(
+    await readFile(path.join(targetRoot, 'packages', 'trpc', 'project.json'), 'utf8'),
+  ) as {
+    targets?: Record<string, { command?: string }>
+  }
+  const readme = await readFile(path.join(targetRoot, 'packages', 'trpc', 'README.md'), 'utf8')
+  const indexSource = await readFile(
+    path.join(targetRoot, 'packages', 'trpc', 'src', 'index.ts'),
+    'utf8',
+  )
+  const rootSource = await readFile(
+    path.join(targetRoot, 'packages', 'trpc', 'src', 'root.ts'),
+    'utf8',
+  )
+
+  assert.equal(packageJson.name, '@workspace/trpc')
+  assert.equal(packageJson.dependencies?.['@trpc/server'], '^11.13.4')
+  assert.equal(packageJson.dependencies?.zod, '^4.3.6')
+  assert.equal(packageJson.scripts?.build, 'tsc -p tsconfig.json')
+  assert.equal(tsconfig.compilerOptions?.composite, true)
+  assert.equal(tsconfig.compilerOptions?.declaration, true)
+  assert.equal(tsconfig.compilerOptions?.outDir, 'dist')
+  assert.equal(tsconfig.compilerOptions?.allowImportingTsExtensions, true)
+  assert.equal(tsconfig.compilerOptions?.rewriteRelativeImportExtensions, true)
+  assert.equal(projectJson.targets?.build?.command, 'pnpm --dir packages/trpc build')
+  assert.equal(projectJson.targets?.typecheck?.command, 'pnpm --dir packages/trpc typecheck')
+  assert.match(readme, /packages\/trpc/)
+  assert.match(readme, /server를 직접 참조하지 않아요/)
+  assert.match(indexSource, /export type \{ AppRouter \} from '\.\/root\.ts'/)
+  assert.match(rootSource, /from '\.\/routers\/example\.ts'/)
+})
+
 test('applyDocsTemplates keeps optional workspace docs out of the base copy', async (t) => {
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
@@ -125,6 +196,7 @@ test('syncOptionalDocsTemplates copies and indexes selected backoffice and serve
   await syncOptionalDocsTemplates(targetRoot, tokens, {
     hasBackoffice: true,
     serverProvider: 'firebase',
+    hasTrpc: false,
   })
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
@@ -134,8 +206,10 @@ test('syncOptionalDocsTemplates copies and indexes selected backoffice and serve
   assert.match(agents, /server-provider-firebase/)
   assert.doesNotMatch(agents, /server-provider-supabase/)
   assert.doesNotMatch(agents, /server-provider-cloudflare/)
+  assert.doesNotMatch(agents, /server-api-ssot-trpc/)
   assert.match(docsIndex, /Backoffice React best practices/)
   assert.match(docsIndex, /Server provider guide \(Firebase\)/)
+  assert.doesNotMatch(docsIndex, /Server API SSOT \(tRPC\)/)
   assert.equal(
     await pathExists(
       path.join(targetRoot, 'docs', 'engineering', 'backoffice-react-best-practices.md'),
@@ -148,6 +222,10 @@ test('syncOptionalDocsTemplates copies and indexes selected backoffice and serve
   )
   assert.equal(
     await pathExists(path.join(targetRoot, 'docs', 'engineering', 'server-provider-supabase.md')),
+    false,
+  )
+  assert.equal(
+    await pathExists(path.join(targetRoot, 'docs', 'engineering', 'server-api-ssot-trpc.md')),
     false,
   )
 })
@@ -183,6 +261,7 @@ test('syncOptionalDocsTemplates can patch legacy docs files without markers', as
   await syncOptionalDocsTemplates(targetRoot, tokens, {
     hasBackoffice: true,
     serverProvider: 'supabase',
+    hasTrpc: true,
   })
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
@@ -191,9 +270,15 @@ test('syncOptionalDocsTemplates can patch legacy docs files without markers', as
   assert.match(agents, /optional-doc-links:start/)
   assert.match(agents, /backoffice-react-best-practices/)
   assert.match(agents, /server-provider-supabase/)
+  assert.match(agents, /server-api-ssot-trpc/)
   assert.match(docsIndex, /optional-engineering-links:start/)
   assert.match(docsIndex, /Backoffice React best practices/)
   assert.match(docsIndex, /Server provider guide \(Supabase\)/)
+  assert.match(docsIndex, /Server API SSOT \(tRPC\)/)
+  assert.equal(
+    await pathExists(path.join(targetRoot, 'docs', 'engineering', 'server-api-ssot-trpc.md')),
+    true,
+  )
 })
 
 test('applyRootTemplates and workspace templates emit yarn-specific files and commands', async (t) => {
@@ -600,10 +685,10 @@ test('syncRootWorkspaceManifest adds newly added workspaces to existing root man
   await applyRootTemplates(npmRoot, createTokens('npm'), ['frontend'])
   await applyRootTemplates(bunRoot, createTokens('bun'), ['frontend'])
 
-  await syncRootWorkspaceManifest(pnpmRoot, 'pnpm', ['frontend', 'server'])
-  await syncRootWorkspaceManifest(yarnRoot, 'yarn', ['frontend', 'backoffice'])
-  await syncRootWorkspaceManifest(npmRoot, 'npm', ['frontend', 'server'])
-  await syncRootWorkspaceManifest(bunRoot, 'bun', ['frontend', 'backoffice'])
+  await syncRootWorkspaceManifest(pnpmRoot, 'pnpm', ['frontend', 'server', 'packages/trpc'])
+  await syncRootWorkspaceManifest(yarnRoot, 'yarn', ['frontend', 'backoffice', 'packages/trpc'])
+  await syncRootWorkspaceManifest(npmRoot, 'npm', ['frontend', 'server', 'packages/trpc'])
+  await syncRootWorkspaceManifest(bunRoot, 'bun', ['frontend', 'backoffice', 'packages/trpc'])
 
   const pnpmWorkspaceManifest = await readFile(path.join(pnpmRoot, 'pnpm-workspace.yaml'), 'utf8')
   const yarnPackageJson = JSON.parse(
@@ -618,8 +703,8 @@ test('syncRootWorkspaceManifest adds newly added workspaces to existing root man
     workspaces?: string[]
   }
 
-  assert.equal(pnpmWorkspaceManifest, 'packages:\n  - frontend\n  - server\n')
-  assert.deepEqual(yarnPackageJson.workspaces, ['frontend', 'backoffice'])
-  assert.deepEqual(npmPackageJson.workspaces, ['frontend', 'server'])
-  assert.deepEqual(bunPackageJson.workspaces, ['frontend', 'backoffice'])
+  assert.equal(pnpmWorkspaceManifest, 'packages:\n  - frontend\n  - server\n  - packages/*\n')
+  assert.deepEqual(yarnPackageJson.workspaces, ['frontend', 'packages/*', 'backoffice'])
+  assert.deepEqual(npmPackageJson.workspaces, ['frontend', 'server', 'packages/*'])
+  assert.deepEqual(bunPackageJson.workspaces, ['frontend', 'packages/*', 'backoffice'])
 })

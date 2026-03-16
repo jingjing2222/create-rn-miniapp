@@ -6,8 +6,24 @@ import {
   patchBackofficeMainSource,
   patchGraniteConfigSource,
 } from './ast/index.js'
-import { patchTsconfigModuleSource, patchWranglerConfigSource } from './jsonc.js'
+import {
+  createCloudflareVitestWranglerConfigSource,
+  patchTsconfigModuleSource,
+  patchWranglerConfigSource,
+} from './jsonc.js'
 import { patchPackageJsonSource } from './package-json.js'
+import {
+  renderCloudflareServerIndexSource,
+  renderCloudflareServerTrpcContextSource,
+  renderCloudflareTrpcClientSource,
+  renderSupabaseEdgeFunctionTrpcSource,
+  renderSupabaseTrpcDenoConfig,
+  renderSupabaseTrpcClientSource,
+  TRPC_CLIENT_VERSION,
+  TRPC_SERVER_VERSION,
+  TRPC_WORKSPACE_DEPENDENCY,
+  ZOD_VERSION,
+} from './trpc.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
 import {
@@ -445,6 +461,8 @@ type PackageJson = {
 type WorkspacePatchOptions = {
   packageManager: PackageManager
   serverProvider: ServerProvider | null
+  trpc?: boolean
+  removeCloudflareApiClientHelpers?: boolean
 }
 
 async function readPackageJson(packageJsonPath: string) {
@@ -595,12 +613,32 @@ function renderCloudflareDeployScript(tokens: TemplateTokens) {
   ].join('\n')
 }
 
+function renderCloudflareVitestConfigSource() {
+  return [
+    "import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'",
+    '',
+    'export default defineWorkersConfig({',
+    '  test: {',
+    '    poolOptions: {',
+    '      workers: {',
+    "        wrangler: { configPath: './wrangler.vitest.jsonc' },",
+    '      },',
+    '    },',
+    '  },',
+    '})',
+    '',
+  ].join('\n')
+}
+
 function renderSupabaseServerReadme(
   tokens: TemplateTokens,
   options?: {
     accessTokenGuideImagePaths?: string[] | null
+    trpc?: boolean
   },
 ) {
+  const trpcEnabled = options?.trpc === true
+
   return [
     '# server',
     '',
@@ -613,6 +651,7 @@ function renderSupabaseServerReadme(
     '  supabase/config.toml',
     '  supabase/migrations/',
     `  supabase/functions/${SUPABASE_DEFAULT_FUNCTION_NAME}/index.ts`,
+    ...(trpcEnabled ? ['  supabase/functions/api/deno.json'] : []),
     '  scripts/supabase-db-apply.mjs',
     '  scripts/supabase-functions-deploy.mjs',
     '  .env.local',
@@ -634,17 +673,44 @@ function renderSupabaseServerReadme(
     '- miniapp frontend는 `frontend/src/lib/supabase.ts`에서 Supabase client를 생성해요.',
     '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_SUPABASE_URL`, `MINIAPP_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
     '- frontend `granite.config.ts`는 `.env.local` 값을 읽어 `MINIAPP_SUPABASE_URL`, `MINIAPP_SUPABASE_PUBLISHABLE_KEY`를 주입해요.',
-    `- miniapp frontend는 \`supabase.functions.invoke('${SUPABASE_DEFAULT_FUNCTION_NAME}')\` 형태로 Edge Function을 호출할 수 있어요.`,
+    ...(trpcEnabled
+      ? [
+          '- tRPC를 같이 골랐다면 `packages/trpc`가 router와 `AppRouter` 타입의 canonical source예요.',
+          '- miniapp frontend는 `frontend/src/lib/trpc.ts`로 `AppRouter` 타입을 가져와 Edge Function `/api/trpc` endpoint를 호출해요.',
+          '- `server/supabase/functions/api/deno.json`의 `imports`가 `@workspace/trpc`를 `packages/trpc/src/index.ts`로 직접 연결해요.',
+        ]
+      : [
+          `- miniapp frontend는 \`supabase.functions.invoke('${SUPABASE_DEFAULT_FUNCTION_NAME}')\` 형태로 Edge Function을 호출할 수 있어요.`,
+        ]),
     '- backoffice가 있으면 `backoffice/src/lib/supabase.ts`에서 별도 browser client를 생성해요.',
     '- backoffice `.env.local`은 `backoffice/.env.local`에 두고 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
-    '- backoffice도 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
-    `- backoffice도 동일하게 \`supabase.functions.invoke('${SUPABASE_DEFAULT_FUNCTION_NAME}')\`를 사용할 수 있어요.`,
+    ...(trpcEnabled
+      ? ['- backoffice도 `backoffice/src/lib/trpc.ts`에서 같은 `AppRouter` 타입을 사용해요.']
+      : [
+          '- backoffice도 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
+          `- backoffice도 동일하게 \`supabase.functions.invoke('${SUPABASE_DEFAULT_FUNCTION_NAME}')\`를 사용할 수 있어요.`,
+        ]),
+    ...(trpcEnabled
+      ? [
+          '',
+          '## API SSOT',
+          '',
+          '- tRPC를 같이 골랐다면 `packages/trpc`가 server API의 source of truth예요.',
+          '- route shape를 바꾸고 싶으면 먼저 `packages/trpc`를 수정한 뒤 `functions:serve`나 `functions:deploy`를 다시 실행하면 돼요.',
+        ]
+      : []),
     '',
     '## 운영 메모',
     '',
     '- 원격 SQL push를 계속하려면 `server/.env.local`의 `SUPABASE_DB_PASSWORD`를 채워주세요.',
     '- 다른 Edge Function을 추가하려면 `supabase functions new <name> --workdir .`로 생성한 뒤 `functions:deploy`를 다시 실행하면 돼요.',
     '- frontend/backoffice의 `.env.local`은 server provisioning 결과와 같은 Supabase project를 가리키게 맞춰두는 걸 권장해요.',
+    ...(trpcEnabled
+      ? [
+          '- tRPC를 같이 썼다면 `packages/trpc`만 수정하면 되고, Supabase 함수는 `deno.json` alias로 같은 router를 바로 봐요.',
+          '- 즉 `functions:serve` 또는 `functions:deploy`를 다시 실행하면 sync 없이 같은 router가 바로 반영돼요.',
+        ]
+      : []),
     '',
     '## Supabase access token',
     '',
@@ -673,8 +739,11 @@ function renderCloudflareServerReadme(
   tokens: TemplateTokens,
   options?: {
     tokenGuideImagePath?: string | null
+    trpc?: boolean
   },
 ) {
+  const trpcEnabled = options?.trpc === true
+
   return [
     '# server',
     '',
@@ -685,7 +754,10 @@ function renderCloudflareServerReadme(
     '```text',
     'server/',
     '  src/index.ts',
+    ...(trpcEnabled ? ['  src/trpc/context.ts'] : []),
     '  wrangler.jsonc',
+    '  wrangler.vitest.jsonc',
+    '  vitest.config.mts',
     '  worker-configuration.d.ts',
     '  .env.local',
     '  package.json',
@@ -697,21 +769,44 @@ function renderCloudflareServerReadme(
     `- \`cd server && ${tokens.packageManagerRunCommand} build\`: \`wrangler deploy --dry-run\`으로 번들을 검증해요.`,
     `- \`cd server && ${tokens.packageManagerRunCommand} typecheck\`: \`wrangler types\`와 TypeScript 검사를 함께 실행해요.`,
     `- \`cd server && ${tokens.packageManagerRunCommand} deploy\`: \`server/.env.local\`의 auth 값을 읽고 \`wrangler.jsonc\` 기준으로 원격 Worker를 배포해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} test\`: placeholder 테스트를 실행해요.`,
+    `- \`cd server && ${tokens.packageManagerRunCommand} test\`: \`wrangler.vitest.jsonc\`의 local D1/R2 binding으로 Worker 테스트를 실행해요.`,
     '',
     '## Miniapp / Backoffice 연결',
     '',
-    '- miniapp frontend는 `frontend/src/lib/api.ts`에서 API helper를 만들고 `MINIAPP_API_BASE_URL`을 사용해요.',
     '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_API_BASE_URL`을 사용해요.',
-    '- backoffice가 있으면 `backoffice/src/lib/api.ts`에서 `VITE_API_BASE_URL` 기반 helper를 사용해요.',
     '- backoffice `.env.local`은 `backoffice/.env.local`에 두고 `VITE_API_BASE_URL`을 사용해요.',
     '- provisioning이 성공하면 frontend/backoffice `.env.local`에 Worker URL이 자동으로 기록돼요.',
     `- Worker 코드는 \`${CLOUDFLARE_D1_BINDING_NAME}\` D1 binding과 \`${CLOUDFLARE_R2_BINDING_NAME}\` R2 binding을 사용할 수 있어요.`,
+    ...(trpcEnabled
+      ? [
+          '- tRPC를 같이 골랐다면 `packages/trpc`가 router와 `AppRouter` 타입의 canonical source예요.',
+          '- miniapp frontend는 `frontend/src/lib/trpc.ts`, backoffice는 `backoffice/src/lib/trpc.ts`에서 Worker `/trpc` endpoint를 호출해요.',
+          '- Worker runtime은 `@workspace/trpc`를 직접 import해서 같은 router를 바로 써요.',
+        ]
+      : [
+          '- miniapp frontend는 `frontend/src/lib/api.ts`에서 API helper를 만들고 `MINIAPP_API_BASE_URL`을 사용해요.',
+          '- backoffice가 있으면 `backoffice/src/lib/api.ts`에서 `VITE_API_BASE_URL` 기반 helper를 사용해요.',
+        ]),
+    ...(trpcEnabled
+      ? [
+          '',
+          '## API SSOT',
+          '',
+          '- tRPC를 같이 골랐다면 `packages/trpc`가 server API의 source of truth예요.',
+          '- route shape를 바꾸고 싶으면 먼저 `packages/trpc`를 수정한 뒤 `dev`, `build`, `deploy`를 다시 실행하면 돼요.',
+        ]
+      : []),
     '',
     '## 운영 메모',
     '',
     '- `worker-configuration.d.ts`는 `wrangler types`가 생성하는 파일이에요.',
     '- `server/.env.local`은 Cloudflare account/worker/D1/R2 메타데이터를 기록해요.',
+    '- `wrangler.jsonc`는 원격 deploy 기준 설정이고, `wrangler.vitest.jsonc`는 local D1/R2 binding으로 테스트를 돌리기 위한 설정이에요.',
+    ...(trpcEnabled
+      ? [
+          '- tRPC를 같이 썼다면 `packages/trpc`만 수정하고 `dev`, `build`, `deploy`를 다시 실행하면 같은 router가 바로 반영돼요.',
+        ]
+      : []),
     '',
     '## Cloudflare API token',
     '',
@@ -819,6 +914,7 @@ async function patchTsconfigModuleFile(
   filePath: string,
   options?: {
     includeNodeTypes?: boolean
+    allowImportingTsExtensions?: boolean
   },
 ) {
   if (!(await pathExists(filePath))) {
@@ -984,12 +1080,34 @@ async function patchWorkspaceTsconfigModules(
   filePatches: Array<{
     fileName: string
     includeNodeTypes?: boolean
+    allowImportingTsExtensions?: boolean
   }>,
 ) {
   await Promise.all(
-    filePatches.map(({ fileName, includeNodeTypes }) =>
-      patchTsconfigModuleFile(path.join(workspaceRoot, fileName), { includeNodeTypes }),
+    filePatches.map(({ fileName, includeNodeTypes, allowImportingTsExtensions }) =>
+      patchTsconfigModuleFile(path.join(workspaceRoot, fileName), {
+        includeNodeTypes,
+        allowImportingTsExtensions,
+      }),
     ),
+  )
+}
+
+async function writeCloudflareVitestConfigFiles(serverRoot: string) {
+  const wranglerConfigPath = path.join(serverRoot, 'wrangler.jsonc')
+
+  if (!(await pathExists(wranglerConfigPath))) {
+    return
+  }
+
+  const wranglerSource = await readFile(wranglerConfigPath, 'utf8')
+  await writeTextFile(
+    path.join(serverRoot, 'wrangler.vitest.jsonc'),
+    createCloudflareVitestWranglerConfigSource(wranglerSource),
+  )
+  await writeTextFile(
+    path.join(serverRoot, 'vitest.config.mts'),
+    renderCloudflareVitestConfigSource(),
   )
 }
 
@@ -1006,6 +1124,15 @@ async function writeFrontendCloudflareBootstrap(frontendRoot: string) {
   await writeTextFile(
     path.join(frontendRoot, 'src', 'lib', 'api.ts'),
     FRONTEND_CLOUDFLARE_API_CLIENT,
+  )
+}
+
+async function writeFrontendCloudflareTrpcBootstrap(frontendRoot: string) {
+  await writeTextFile(
+    path.join(frontendRoot, 'src', 'lib', 'trpc.ts'),
+    renderCloudflareTrpcClientSource({
+      urlExpression: 'import.meta.env.MINIAPP_API_BASE_URL',
+    }),
   )
 }
 
@@ -1030,6 +1157,17 @@ async function writeBackofficeSupabaseBootstrap(backofficeRoot: string) {
   )
 }
 
+async function writeBackofficeSupabaseTrpcBootstrap(backofficeRoot: string) {
+  await writeTextFile(
+    path.join(backofficeRoot, 'src', 'lib', 'trpc.ts'),
+    renderSupabaseTrpcClientSource({
+      supabaseImportPath: './supabase',
+      urlExpression: 'import.meta.env.VITE_SUPABASE_URL',
+      publishableKeyExpression: 'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY',
+    }),
+  )
+}
+
 async function writeBackofficeCloudflareBootstrap(backofficeRoot: string) {
   await writeTextFile(
     path.join(backofficeRoot, 'src', 'vite-env.d.ts'),
@@ -1038,6 +1176,26 @@ async function writeBackofficeCloudflareBootstrap(backofficeRoot: string) {
   await writeTextFile(
     path.join(backofficeRoot, 'src', 'lib', 'api.ts'),
     BACKOFFICE_CLOUDFLARE_API_CLIENT,
+  )
+}
+
+async function writeBackofficeCloudflareTrpcBootstrap(backofficeRoot: string) {
+  await writeTextFile(
+    path.join(backofficeRoot, 'src', 'lib', 'trpc.ts'),
+    renderCloudflareTrpcClientSource({
+      urlExpression: 'import.meta.env.VITE_API_BASE_URL',
+    }),
+  )
+}
+
+async function writeFrontendSupabaseTrpcBootstrap(frontendRoot: string) {
+  await writeTextFile(
+    path.join(frontendRoot, 'src', 'lib', 'trpc.ts'),
+    renderSupabaseTrpcClientSource({
+      supabaseImportPath: './supabase',
+      urlExpression: 'import.meta.env.MINIAPP_SUPABASE_URL',
+      publishableKeyExpression: 'import.meta.env.MINIAPP_SUPABASE_PUBLISHABLE_KEY',
+    }),
   )
 }
 
@@ -1057,6 +1215,25 @@ async function writeBackofficeFirebaseBootstrap(backofficeRoot: string) {
   await writeTextFile(
     path.join(backofficeRoot, 'src', 'lib', 'storage.ts'),
     BACKOFFICE_FIREBASE_STORAGE,
+  )
+}
+
+async function writeCloudflareTrpcServerBootstrap(serverRoot: string) {
+  await writeTextFile(
+    path.join(serverRoot, 'src', 'trpc', 'context.ts'),
+    renderCloudflareServerTrpcContextSource(),
+  )
+  await writeTextFile(path.join(serverRoot, 'src', 'index.ts'), renderCloudflareServerIndexSource())
+}
+
+async function writeSupabaseTrpcServerBootstrap(serverRoot: string) {
+  await writeTextFile(
+    path.join(serverRoot, 'supabase', 'functions', 'api', 'index.ts'),
+    renderSupabaseEdgeFunctionTrpcSource(),
+  )
+  await writeTextFile(
+    path.join(serverRoot, 'supabase', 'functions', 'api', 'deno.json'),
+    renderSupabaseTrpcDenoConfig(),
   )
 }
 
@@ -1105,6 +1282,7 @@ async function ensureFrontendPackageJsonForWorkspace(
   frontendRoot: string,
   packageJson: PackageJson,
   serverProvider: ServerProvider | null,
+  trpc = false,
 ) {
   const scripts: Record<string, string> = {}
   const dependencies: Record<string, string> = {}
@@ -1153,6 +1331,16 @@ async function ensureFrontendPackageJsonForWorkspace(
     devDependencies.dotenv = DOTENV_VERSION
   }
 
+  if (trpc && (serverProvider === 'supabase' || serverProvider === 'cloudflare')) {
+    if (!packageJson.dependencies?.['@trpc/client']) {
+      dependencies['@trpc/client'] = TRPC_CLIENT_VERSION
+    }
+
+    if (!packageJson.devDependencies?.['@workspace/trpc']) {
+      devDependencies['@workspace/trpc'] = TRPC_WORKSPACE_DEPENDENCY
+    }
+  }
+
   await patchPackageJsonFile(path.join(frontendRoot, 'package.json'), {
     upsertTopLevel: [
       {
@@ -1172,11 +1360,13 @@ async function ensureBackofficePackageJsonForWorkspace(
   backofficeRoot: string,
   packageJson: PackageJson,
   serverProvider: ServerProvider | null,
+  trpc = false,
 ) {
   const scripts: Record<string, string> = {
     typecheck: 'tsc -b --pretty false',
   }
   const dependencies: Record<string, string> = {}
+  const devDependencies: Record<string, string> = {}
 
   if (!packageJson.scripts?.test) {
     scripts.test = `node -e "console.log('backoffice test placeholder')"`
@@ -1194,6 +1384,16 @@ async function ensureBackofficePackageJsonForWorkspace(
     dependencies.firebase = FIREBASE_JS_VERSION
   }
 
+  if (trpc && (serverProvider === 'supabase' || serverProvider === 'cloudflare')) {
+    if (!packageJson.dependencies?.['@trpc/client']) {
+      dependencies['@trpc/client'] = TRPC_CLIENT_VERSION
+    }
+
+    if (!packageJson.devDependencies?.['@workspace/trpc']) {
+      devDependencies['@workspace/trpc'] = TRPC_WORKSPACE_DEPENDENCY
+    }
+  }
+
   await patchPackageJsonFile(path.join(backofficeRoot, 'package.json'), {
     upsertTopLevel: [
       {
@@ -1204,6 +1404,7 @@ async function ensureBackofficePackageJsonForWorkspace(
     upsertSections: {
       scripts,
       dependencies,
+      devDependencies,
     },
   })
 }
@@ -1342,7 +1543,12 @@ export async function patchFrontendWorkspace(
       devDependencies: [...TOOLING_DEPENDENCIES],
     },
   })
-  await ensureFrontendPackageJsonForWorkspace(frontendRoot, packageJson, options.serverProvider)
+  await ensureFrontendPackageJsonForWorkspace(
+    frontendRoot,
+    packageJson,
+    options.serverProvider,
+    options.trpc,
+  )
   await removeToolingFiles(frontendRoot, options.packageManager)
   await removeWorkspaceArtifacts(frontendRoot, options.packageManager)
   await patchGraniteConfig(frontendRoot, tokens, options.serverProvider)
@@ -1350,6 +1556,9 @@ export async function patchFrontendWorkspace(
     {
       fileName: 'tsconfig.json',
       includeNodeTypes: true,
+      allowImportingTsExtensions:
+        options.trpc &&
+        (options.serverProvider === 'supabase' || options.serverProvider === 'cloudflare'),
     },
   ])
   if (options.packageManager === 'npm') {
@@ -1358,10 +1567,24 @@ export async function patchFrontendWorkspace(
 
   if (options.serverProvider === 'supabase') {
     await writeFrontendSupabaseBootstrap(frontendRoot)
+    if (options.trpc) {
+      await writeFrontendSupabaseTrpcBootstrap(frontendRoot)
+    }
   }
 
   if (options.serverProvider === 'cloudflare') {
-    await writeFrontendCloudflareBootstrap(frontendRoot)
+    await writeTextFile(path.join(frontendRoot, 'src', 'env.d.ts'), FRONTEND_CLOUDFLARE_ENV_TYPES)
+    if (options.trpc) {
+      await writeFrontendCloudflareTrpcBootstrap(frontendRoot)
+      if (options.removeCloudflareApiClientHelpers) {
+        await removePathIfExists(path.join(frontendRoot, 'src', 'lib', 'api.ts'))
+      }
+    } else {
+      await writeTextFile(
+        path.join(frontendRoot, 'src', 'lib', 'api.ts'),
+        FRONTEND_CLOUDFLARE_API_CLIENT,
+      )
+    }
   }
 
   if (options.serverProvider === 'firebase') {
@@ -1394,7 +1617,12 @@ export async function patchBackofficeWorkspace(
       devDependencies: [...TOOLING_DEPENDENCIES],
     },
   })
-  await ensureBackofficePackageJsonForWorkspace(backofficeRoot, packageJson, options.serverProvider)
+  await ensureBackofficePackageJsonForWorkspace(
+    backofficeRoot,
+    packageJson,
+    options.serverProvider,
+    options.trpc,
+  )
   await patchWorkspaceTsconfigModules(backofficeRoot, [
     { fileName: 'tsconfig.json' },
     { fileName: 'tsconfig.app.json' },
@@ -1409,10 +1637,27 @@ export async function patchBackofficeWorkspace(
 
   if (options.serverProvider === 'supabase') {
     await writeBackofficeSupabaseBootstrap(backofficeRoot)
+    if (options.trpc) {
+      await writeBackofficeSupabaseTrpcBootstrap(backofficeRoot)
+    }
   }
 
   if (options.serverProvider === 'cloudflare') {
-    await writeBackofficeCloudflareBootstrap(backofficeRoot)
+    await writeTextFile(
+      path.join(backofficeRoot, 'src', 'vite-env.d.ts'),
+      BACKOFFICE_CLOUDFLARE_ENV_TYPES,
+    )
+    if (options.trpc) {
+      await writeBackofficeCloudflareTrpcBootstrap(backofficeRoot)
+      if (options.removeCloudflareApiClientHelpers) {
+        await removePathIfExists(path.join(backofficeRoot, 'src', 'lib', 'api.ts'))
+      }
+    } else {
+      await writeTextFile(
+        path.join(backofficeRoot, 'src', 'lib', 'api.ts'),
+        BACKOFFICE_CLOUDFLARE_API_CLIENT,
+      )
+    }
   }
 
   if (options.serverProvider === 'firebase') {
@@ -1427,6 +1672,7 @@ export async function patchSupabaseServerWorkspace(
   tokens: TemplateTokens,
   options: Pick<WorkspacePatchOptions, 'packageManager'> & {
     accessTokenGuideImageSourcePaths?: string[] | null
+    trpc?: boolean
   },
 ) {
   const serverRoot = path.join(targetRoot, 'server')
@@ -1436,10 +1682,16 @@ export async function patchSupabaseServerWorkspace(
     SUPABASE_ACCESS_TOKEN_GUIDE_ASSET_CANDIDATES,
   )
   await applyServerPackageTemplate(targetRoot, tokens)
+  if (options.trpc) {
+    await writeSupabaseTrpcServerBootstrap(serverRoot)
+    await removePathIfExists(path.join(serverRoot, 'scripts', 'trpc-sync.mjs'))
+    await removePathIfExists(path.join(serverRoot, 'supabase', 'functions', '_shared', 'trpc'))
+  }
   await writeTextFile(
     path.join(serverRoot, 'README.md'),
     renderSupabaseServerReadme(tokens, {
       accessTokenGuideImagePaths,
+      trpc: options.trpc,
     }),
   )
   await removeToolingFiles(serverRoot, options.packageManager)
@@ -1452,6 +1704,7 @@ export async function patchCloudflareServerWorkspace(
   tokens: TemplateTokens,
   options: Pick<WorkspacePatchOptions, 'packageManager'> & {
     tokenGuideImageSourcePath?: string | null
+    trpc?: boolean
   },
 ) {
   const serverRoot = path.join(targetRoot, 'server')
@@ -1471,31 +1724,55 @@ export async function patchCloudflareServerWorkspace(
     ],
     upsertSections: {
       scripts: {
-        deploy: 'node ./scripts/cloudflare-deploy.mjs',
-        build: 'wrangler deploy --dry-run',
-        typecheck: 'wrangler types && tsc --noEmit',
+        ...(options.trpc
+          ? {
+              dev: packageJson.scripts?.dev ?? 'wrangler dev',
+              deploy: 'node ./scripts/cloudflare-deploy.mjs',
+              build: 'wrangler deploy --dry-run',
+              typecheck: 'wrangler types && tsc --noEmit',
+            }
+          : {
+              deploy: 'node ./scripts/cloudflare-deploy.mjs',
+              build: 'wrangler deploy --dry-run',
+              typecheck: 'wrangler types && tsc --noEmit',
+            }),
         ...(packageJson.scripts?.test === 'vitest'
           ? {
               test: normalizeVitestTestScript(packageJson.scripts.test),
             }
           : {}),
       },
+      ...(options.trpc
+        ? {
+            dependencies: {
+              '@trpc/server': TRPC_SERVER_VERSION,
+              '@workspace/trpc': TRPC_WORKSPACE_DEPENDENCY,
+              zod: ZOD_VERSION,
+            },
+          }
+        : {}),
     },
     removeFromSections: {
-      scripts: ['deploy:remote'],
+      scripts: ['deploy:remote', ...(options.trpc ? ['trpc:sync'] : [])],
     },
   })
   await patchWranglerConfigSchema(serverRoot, packageJson)
+  await writeCloudflareVitestConfigFiles(serverRoot)
   await writeTextFile(
     path.join(serverRoot, 'README.md'),
     renderCloudflareServerReadme(tokens, {
       tokenGuideImagePath,
+      trpc: options.trpc,
     }),
   )
   await writeTextFile(
     path.join(serverRoot, 'scripts', 'cloudflare-deploy.mjs'),
     renderCloudflareDeployScript(tokens),
   )
+  if (options.trpc) {
+    await writeCloudflareTrpcServerBootstrap(serverRoot)
+    await removePathIfExists(path.join(serverRoot, 'scripts', 'trpc-sync.mjs'))
+  }
   if (options.packageManager === 'npm') {
     await writeWorkspaceNpmrc(serverRoot)
   }

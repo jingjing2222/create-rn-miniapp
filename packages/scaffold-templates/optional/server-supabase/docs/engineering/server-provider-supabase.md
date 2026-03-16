@@ -31,6 +31,12 @@
 클라이언트는 위 파일을 통해 같은 Supabase 프로젝트에 붙어요.
 DB schema와 Edge Functions를 server workspace에서 관리하고, 앱은 publishable key와 URL을 써서 접근해요.
 
+## tRPC를 같이 골랐다면
+- `packages/trpc`가 router와 `AppRouter` 타입의 canonical source예요.
+- `server/supabase/functions/api/deno.json`의 `imports`가 `@workspace/trpc`를 `packages/trpc/src/index.ts`로 직접 연결해요.
+- `frontend/src/lib/trpc.ts`, `backoffice/src/lib/trpc.ts`가 같은 `AppRouter` 타입을 기준으로 Edge Function `/api/trpc` endpoint를 호출해요.
+- `server/supabase/functions/api/index.ts`는 Supabase Edge Functions fetch adapter로 tRPC handler를 연결해요.
+
 ## 작업할 때 먼저 확인할 것
 - `server/.env.local`에 `SUPABASE_PROJECT_REF`가 있는가
 - 원격 DB 반영이 필요하면 `db:apply`를 먼저 해야 하는가

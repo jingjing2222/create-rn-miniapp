@@ -31,6 +31,7 @@ export function patchTsconfigModuleSource(
   source: string,
   options?: {
     includeNodeTypes?: boolean
+    allowImportingTsExtensions?: boolean
   },
 ) {
   const parsed = parse(source, [], JSONC_PARSE_OPTIONS)
@@ -56,7 +57,41 @@ export function patchTsconfigModuleSource(
     compilerOptions.types = existingTypes
   }
 
+  if (options?.allowImportingTsExtensions) {
+    compilerOptions.allowImportingTsExtensions = true
+  }
+
   next.compilerOptions = compilerOptions
+
+  return `${JSON.stringify(next, null, 2)}\n`
+}
+
+export function createCloudflareVitestWranglerConfigSource(source: string) {
+  const parsed = parse(source, [], JSONC_PARSE_OPTIONS)
+
+  if (!isRecord(parsed)) {
+    return source
+  }
+
+  const next = { ...parsed }
+
+  if (Array.isArray(next.d1_databases)) {
+    next.d1_databases = next.d1_databases
+      .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+      .map((entry) => ({
+        ...entry,
+        remote: false,
+      }))
+  }
+
+  if (Array.isArray(next.r2_buckets)) {
+    next.r2_buckets = next.r2_buckets
+      .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+      .map((entry) => ({
+        ...entry,
+        remote: false,
+      }))
+  }
 
   return `${JSON.stringify(next, null, 2)}\n`
 }

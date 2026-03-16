@@ -3,8 +3,12 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { patchRootPackageJsonSource } from '../patching/package-json.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import {
+  applyTrpcWorkspaceTemplate as applyTrpcWorkspaceTemplateImpl,
+  TRPC_WORKSPACE_PATH,
+} from './trpc.js'
 
-const ROOT_WORKSPACE_ORDER = ['frontend', 'server', 'backoffice'] as const
+const ROOT_WORKSPACE_ORDER = ['frontend', 'server', TRPC_WORKSPACE_PATH, 'backoffice'] as const
 
 export type WorkspaceName = (typeof ROOT_WORKSPACE_ORDER)[number]
 
@@ -23,6 +27,7 @@ type OptionalDocsServerProvider = 'supabase' | 'cloudflare' | 'firebase'
 export type OptionalDocsOptions = {
   hasBackoffice: boolean
   serverProvider: OptionalDocsServerProvider | null
+  hasTrpc: boolean
 }
 
 type WorkspaceProjectJson = {
@@ -62,6 +67,14 @@ const OPTIONAL_DOCS_INDEX_END_MARKER = '<!-- optional-engineering-links:end -->'
 const NPMRC_SOURCE = 'legacy-peer-deps=true\n'
 
 const require = createRequire(import.meta.url)
+const NORMALIZED_PACKAGE_WORKSPACE = 'packages/*' as const
+const NORMALIZED_ROOT_WORKSPACE_ORDER = [
+  'frontend',
+  'server',
+  NORMALIZED_PACKAGE_WORKSPACE,
+  'backoffice',
+] as const
+type NormalizedRootWorkspaceName = (typeof NORMALIZED_ROOT_WORKSPACE_ORDER)[number]
 
 function resolveTemplatesPackageRoot() {
   const packageJsonPath = require.resolve('@create-rn-miniapp/scaffold-templates/package.json')
@@ -627,16 +640,23 @@ function renderFirebaseServerPackageJson(tokens: TemplateTokens) {
   }
 }
 
-function normalizeRootWorkspaces(workspaces: WorkspaceName[]) {
-  const included = new Set(workspaces)
-  return ROOT_WORKSPACE_ORDER.filter((workspace) => included.has(workspace))
+function normalizeRootWorkspaces(workspaces: WorkspaceName[]): NormalizedRootWorkspaceName[] {
+  const included = new Set<string>()
+
+  for (const workspace of workspaces) {
+    if (workspace.startsWith('packages/')) {
+      included.add(NORMALIZED_PACKAGE_WORKSPACE)
+      continue
+    }
+
+    included.add(workspace)
+  }
+
+  return NORMALIZED_ROOT_WORKSPACE_ORDER.filter((workspace) => included.has(workspace))
 }
 
-function renderPnpmWorkspaceManifest(workspaces: WorkspaceName[]) {
-  const lines = [
-    'packages:',
-    ...normalizeRootWorkspaces(workspaces).map((workspace) => `  - ${workspace}`),
-  ]
+function renderPnpmWorkspaceManifest(workspaces: NormalizedRootWorkspaceName[]) {
+  const lines = ['packages:', ...workspaces.map((workspace) => `  - ${workspace}`)]
   return `${lines.join('\n')}\n`
 }
 
@@ -671,6 +691,13 @@ function renderOptionalAgentsSection(options: OptionalDocsOptions) {
     )
   }
 
+  if (options.hasTrpc) {
+    lines.push(
+      '- `docs/engineering/server-api-ssot-trpc.md`',
+      '  - tRPC를 같이 쓸 때 server API의 source of truth가 어디인지 먼저 확인하는 문서',
+    )
+  }
+
   return lines.join('\n')
 }
 
@@ -693,6 +720,10 @@ function renderOptionalDocsIndexSection(options: OptionalDocsOptions) {
 
   if (options.serverProvider === 'firebase') {
     lines.push('- Server provider guide (Firebase): `engineering/server-provider-firebase.md`')
+  }
+
+  if (options.hasTrpc) {
+    lines.push('- Server API SSOT (tRPC): `engineering/server-api-ssot-trpc.md`')
   }
 
   return lines.join('\n')
@@ -739,6 +770,12 @@ function resolveOptionalDocTemplates(options: OptionalDocsOptions): OptionalDocT
   if (options.serverProvider) {
     templates.push({
       templateDir: `server-${options.serverProvider}`,
+    })
+  }
+
+  if (options.hasTrpc) {
+    templates.push({
+      templateDir: 'trpc',
     })
   }
 
@@ -837,6 +874,16 @@ export async function applyRootTemplates(
       tokens,
     )
   }
+}
+
+export async function applyTrpcWorkspaceTemplate(
+  targetRoot: string,
+  tokens: TemplateTokens,
+  options: {
+    serverProvider: 'supabase' | 'cloudflare'
+  },
+) {
+  await applyTrpcWorkspaceTemplateImpl(targetRoot, tokens, options)
 }
 
 export async function applyDocsTemplates(targetRoot: string, tokens: TemplateTokens) {

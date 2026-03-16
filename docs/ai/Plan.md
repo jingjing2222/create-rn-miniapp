@@ -1,6 +1,211 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: tRPC overlay가 필요한 frontend / Cloudflare test config를 같이 생성
+1. 문제
+   - `packages/trpc`는 source export(`src/index.ts`)와 `.ts` 확장자 import를 쓰는데, generated `frontend/tsconfig.json`은 `allowImportingTsExtensions`를 켜지 않아 Granite frontend typecheck가 깨질 수 있다.
+   - Cloudflare는 deploy용 `wrangler.jsonc`에 D1/R2 binding을 `remote: true`로 기록하는데, Worker 테스트도 같은 config를 보면 local test가 원격 리소스를 바라봐 timeout/502가 날 수 있다.
+   - 현재 tRPC overlay는 router/client wiring까지만 해 주고, 이 두 보조 설정은 사용자가 직접 메워야 한다.
+2. 방향
+   - tRPC overlay를 고른 `frontend` workspace에는 `allowImportingTsExtensions`를 자동으로 넣는다.
+   - 특히 Granite frontend가 `@workspace/trpc` source export를 바로 읽는 `supabase` / `cloudflare` 경로를 우선 보정한다.
+   - Cloudflare + tRPC server에는 deploy config와 분리된 `wrangler.vitest.jsonc`, `vitest.config.mts`, 샘플 test를 생성해서 local D1/R2 binding으로 Worker 테스트가 돌게 한다.
+   - `server/package.json`의 test 스크립트도 generated Vitest config를 쓰도록 맞춘다.
+   - Supabase는 Deno alias 기반 구조에서 추가로 깨질 지점이 있는지 테스트로 먼저 점검하고, 별도 설정이 필요 없으면 문서화만 한다.
+3. 테스트
+   - `patchFrontendWorkspace` 테스트에서 `supabase` / `cloudflare` + `trpc`일 때 `tsconfig.json`에 `allowImportingTsExtensions`가 들어가는지 검증한다.
+   - `patchCloudflareServerWorkspace` 테스트에서 `wrangler.vitest.jsonc`, `vitest.config.mts`, example test와 local binding 설정이 생성되는지 검증한다.
+   - Supabase tRPC patch 테스트는 현재 생성물만으로 필요한 alias/config가 닫혀 있는지 검증한다.
+4. 완료 기준
+   - tRPC overlay 생성물은 frontend typecheck를 위해 추가 수작업이 필요 없다.
+   - Cloudflare Worker 테스트는 deploy binding과 분리된 local config를 기본 제공한다.
+   - `pnpm verify` 통과
+
+## 다음 작업: root workspace manifest의 `packages/trpc`를 `packages/*`로 일반화
+1. 문제
+   - 지금 generated root workspace manifest는 optional package workspace가 생기면 `packages/trpc`를 그대로 등록한다.
+   - 이 표현은 현재 구조엔 맞지만, 앞으로 `packages/*` 아래에 다른 shared package가 생겨도 root manifest를 다시 바꿔야 해서 확장성이 떨어진다.
+2. 방향
+   - 내부 source of truth 경로는 계속 `packages/trpc`로 유지한다.
+   - 다만 root `pnpm-workspace.yaml`과 `package.json.workspaces`에는 `packages/*`를 등록한다.
+   - 즉 실제 생성/감지 로직은 `packages/trpc`를 보되, manifest에 쓸 때만 `packages/*`로 normalize 한다.
+3. 테스트
+   - root workspace manifest 테스트에서 `packages/trpc`를 넘겨도 최종 manifest는 `packages/*`를 쓰는지 검증한다.
+   - pnpm, yarn/npm/bun 공통 기대값을 함께 갱신한다.
+4. 완료 기준
+   - generated root manifest는 optional package workspace가 있으면 `packages/*`를 쓴다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Cloudflare + tRPC일 때 `api.ts`는 만들지 않고 `--add`에서는 삭제 여부를 고르게
+1. 문제
+   - 지금 Cloudflare에 tRPC overlay를 켜도 `frontend/src/lib/api.ts`, `backoffice/src/lib/api.ts`가 그대로 남는다.
+   - 이 상태에선 generated repo에 `api.ts`와 `trpc.ts`가 같이 있어서 어떤 client를 써야 하는지 애매하다.
+   - 특히 `--add --trpc`로 기존 Cloudflare workspace에 overlay만 붙일 때는 이미 만들어진 `api.ts`를 우리가 알아서 지울지, 사용자가 유지할지 선택할 수 있어야 한다.
+2. 방향
+   - create 경로에서 Cloudflare + tRPC를 고르면 `api.ts`를 새로 만들지 않는다.
+   - Cloudflare용 `trpc.ts`는 더 이상 `./api`를 import하지 않고, 각 workspace env를 직접 읽어 URL을 만든다.
+   - `--add --trpc`에서 기존 provider가 Cloudflare이고 기존 `api.ts`가 있으면, 지워둘지 직접 남길지 select prompt로 고른다.
+   - `--yes`에서는 비파괴가 기본이라 기존 `api.ts`를 유지한다.
+   - README도 Cloudflare + tRPC일 때는 `api.ts`가 아니라 `trpc.ts`가 기본 client라는 점만 보여준다.
+3. 테스트
+   - `resolveAddCliOptions` 테스트에서 기존 Cloudflare repo + `api.ts` 존재 시 삭제 여부를 묻는지 검증한다.
+   - Cloudflare frontend/backoffice patch 테스트에서 tRPC일 때 `api.ts`가 생성되지 않는지 검증한다.
+   - 기존 `api.ts`가 있는 상태에서 제거 옵션을 주면 실제로 삭제되는지도 검증한다.
+4. 완료 기준
+   - Cloudflare + tRPC 생성물에는 `api.ts`가 기본 생성되지 않는다.
+   - `--add --trpc`는 기존 `api.ts`가 있을 때만 삭제 여부를 고를 수 있다.
+   - `pnpm verify` 통과
+
+## 다음 작업: tRPC일 때만 AGENTS / server README에 API SSOT 추가
+1. 문제
+   - 현재 tRPC 관련 설명은 provider README나 shared workspace README에는 있지만, root `AGENTS.md`와 generated `server/README.md`에 “server API의 source of truth가 `packages/trpc`다”라는 신호가 항상 일관되게 드러나지 않는다.
+   - 이 문구를 base template에 고정으로 넣으면 tRPC를 만들지 않은 repo에도 불필요한 설명이 남는다.
+2. 방향
+   - `AGENTS.md`에는 optional docs 주입 경로를 이용해서, tRPC를 만들었을 때만 `docs/engineering/server-api-ssot-trpc.md` 링크를 추가한다.
+   - generated `server/README.md`도 provider plain mode에는 넣지 않고, tRPC가 켜졌을 때만 `## API SSOT` 섹션을 렌더링한다.
+   - 즉 base template에 고정하지 않고 create/add 옵션 결과에 따라 동적으로 생성한다.
+3. 테스트
+   - optional docs sync 테스트에서 `hasTrpc`가 true일 때만 AGENTS/index와 engineering doc이 생기는지 검증한다.
+   - Supabase/Cloudflare server README 테스트에서 tRPC일 때만 `API SSOT` 문구가 생기는지 검증한다.
+4. 완료 기준
+   - tRPC를 만들지 않은 repo에는 API SSOT 문구가 없다.
+   - tRPC를 만든 repo에는 AGENTS와 server README에서 `packages/trpc`가 server API의 source of truth라는 점이 분명히 보인다.
+
+## 다음 작업: Supabase tRPC를 sync 없이 `deno.json` alias로 연결
+1. 문제
+   - 현재 Supabase tRPC overlay는 `server/scripts/trpc-sync.mjs`로 `packages/trpc`를 `server/supabase/functions/_shared/trpc`에 mirror하는 구조다.
+   - 이 방식은 안전하지만, Cloudflare와 mental model이 달라지고 사용자가 `packages/trpc`를 수정한 뒤 왜 sync를 거쳐야 하는지 이해하기 어렵다.
+   - `packages/trpc`를 canonical source of truth로 둔다는 메시지와 실제 runtime 연결 방식이 어긋난다.
+2. 기준
+   - `packages/trpc`는 계속 canonical source of truth로 유지한다.
+   - Supabase Edge Functions runtime도 `_shared` mirror 대신 `@workspace/trpc`를 직접 보게 만든다.
+   - 단, Deno runtime이라 npm workspace resolution을 그대로 기대하지 않고 function-local `deno.json`의 `imports`로 alias를 명시한다.
+   - `@workspace/trpc`뿐 아니라 shared package 내부에서 쓰는 `@trpc/server`, `zod`도 Deno에서 풀 수 있게 `npm:` mapping을 같이 둔다.
+3. 방향
+   - `server/supabase/functions/api/deno.json`를 생성한다.
+   - `imports`에는 아래를 넣는다.
+     - `@workspace/trpc`: `../../../../packages/trpc/src/index.ts`
+     - `@trpc/server`: `npm:@trpc/server@^11.13.4`
+     - `zod`: `npm:zod@^4.3.6`
+   - `server/supabase/functions/api/index.ts`는 `_shared/trpc` 대신 `@workspace/trpc`를 직접 import 한다.
+   - `server/scripts/trpc-sync.mjs`는 더 이상 생성하지 않는다.
+   - `functions:serve`, `functions:deploy`도 sync prefix 없이 원래 명령만 유지한다.
+   - `README`와 provider engineering docs에서도 `_shared` / `trpc:sync` 설명을 제거하고, function-local `deno.json` alias 설명으로 바꾼다.
+4. 테스트
+   - Supabase tRPC patch 테스트는 `trpc:sync`가 없고 `functions/api/deno.json`이 생기는지 검증한다.
+   - handler source가 `@workspace/trpc`를 직접 import 하는지 검증한다.
+   - README / docs 기대값도 `deno.json` alias 설명 기준으로 갱신한다.
+5. 완료 기준
+   - Supabase tRPC overlay는 `packages/trpc` 수정이 별도 sync 없이 바로 source of truth가 된다.
+   - Supabase generated repo에는 `_shared/trpc`와 `trpc:sync`가 더 이상 없다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Supabase / Cloudflare 선택 시 optional tRPC overlay 추가
+1. 문제
+   - 지금 `server` provider는 `supabase`, `cloudflare`, `firebase` 중 하나를 고르면 provider별 기본 연결만 만들어 준다.
+   - `supabase`는 `frontend/src/lib/supabase.ts`, `cloudflare`는 `frontend/src/lib/api.ts`처럼 provider별 기본 client만 있고, 타입 안전한 API layer를 선택적으로 얹는 경로는 없다.
+   - 사용자는 `create-t3-app`의 tRPC처럼 provider를 고른 뒤 `tRPC도 같이 이어줄지` 결정하고 싶어 한다.
+   - 특히 `frontend` / `backoffice`가 `../../server/...` 같은 상대 경로로 server router 타입을 직접 참조하는 구조는 원하지 않는다. 그 방식은 tsconfig와 번들러 설정까지 끌고 와서 generated repo 사용성이 급격히 나빠진다.
+2. 기준
+   - 범위는 1차에 `supabase`, `cloudflare`만 포함한다.
+   - `firebase`는 기본 SDK 중심 provider라 1차 tRPC overlay 대상에서 제외한다.
+   - 구현 방식은 `create-t3-app`처럼 “옵션 installer/overlay”로 보고, provider 기본 scaffold 위에 추가 파일과 의존성을 얹는다.
+   - 타입 공유는 `server` 직접 참조가 아니라, tRPC를 켠 경우에만 생기는 별도 workspace package로 해결한다.
+   - 조사 기준은 `create-t3-app` 단일 앱 구조, `create-t3-turbo` 모노레포 구조, tRPC 공식 docs를 함께 본다.
+3. 방향
+   - CLI
+     - `serverProvider`가 `supabase` 또는 `cloudflare`일 때만 `tRPC도 같이 이어줄까요?`를 묻는다.
+     - non-interactive 경로도 필요하므로 `--trpc` 같은 명시 옵션을 추가한다.
+     - `--yes`일 때는 기본값을 `false`로 두고, `--trpc`를 줬을 때만 켠다.
+   - 옵션 모델
+     - `server provider`와 별개로 `server API overlay` 개념을 추가한다.
+     - 1차 값은 `none | trpc` 정도로 단순하게 두고, provider adapter에 `supportsTrpc` 또는 `apiOverlays` 메타데이터를 둔다.
+     - `add` 모드에서도 기존 provider가 `supabase`/`cloudflare`면 tRPC overlay만 추가할 수 있게 한다.
+   - 공통 타입 / router source of truth
+     - tRPC를 선택하면 root에 optional workspace `packages/trpc`를 만든다.
+     - 이름을 `packages/api`가 아니라 `packages/trpc`로 두는 이유는, 우리 generated repo에는 이미 provider별 `server` workspace가 있고 `api`라는 이름이 너무 넓기 때문이다.
+     - `create-t3-turbo`는 `packages/api`를 쓰지만, 우리는 “provider 위에 얹는 optional tRPC overlay”라는 의미가 더 분명해야 해서 `packages/trpc`가 맞다.
+     - 이 workspace가 tRPC router, procedure, validator, `AppRouter` type의 source of truth가 된다.
+     - `frontend` / `backoffice`는 `../../server/...`를 보지 않고, 오직 `@workspace/trpc` 같은 workspace package 이름만 import 한다.
+     - 이 package는 generated app에서만 생기고, tRPC를 선택하지 않으면 만들지 않는다.
+   - frontend / backoffice 타입 공유 방식
+     - `frontend` / `backoffice`는 runtime 코드를 shared package에서 직접 가져오지 않고, 기본적으로 `import type { AppRouter } from '@workspace/trpc'`만 사용한다.
+     - 각 workspace의 `src/lib/trpc.ts`는 자기 환경에 맞는 client factory를 로컬에 두고, shared package에서는 router type만 받아 inference에 쓴다.
+     - 이렇게 하면 Metro/Vite가 shared package 런타임 코드를 번들링하는 부담을 줄이고, client 쪽 tsconfig path alias도 별도로 강요하지 않을 수 있다.
+     - import 문자열은 실제 구현에서 `@workspace/trpc`로 맞춘다.
+     - `create-t3-turbo` README도 Expo 같은 다른 앱은 shared API package를 devDependency로만 두고 타입만 가져가는 패턴을 권장한다.
+   - workspace 연결 방식
+   - `packages/trpc`는 실제 workspace package로 등록한다.
+   - `frontend`, `backoffice`, `server`는 상대 경로 대신 workspace dependency로만 이 package를 본다.
+   - 즉 tRPC overlay가 켜진 경우에만 root workspace manifest와 Nx project graph에 `packages/trpc`가 추가된다.
+   - client workspace는 `@workspace/trpc`를 devDependency로만 두고 `import type`만 쓴다.
+    - Cloudflare server는 `@workspace/trpc`를 runtime dependency로 직접 가져간다.
+    - 이 분리는 `create-t3-turbo`의 `api` package 원칙을 거의 그대로 따르되, package 이름만 우리 문맥에 맞게 바꾼 것이다.
+    - 서버 생성물
+     - `packages/trpc`
+       - `src/router.ts`, `src/root.ts`, `src/routers/example.ts`, `src/types.ts` 같은 canonical 구조를 둔다.
+       - 여기에는 provider-specific handler가 아니라 runtime-neutral router 정의와 `AppRouter` export만 둔다.
+       - 내부 import는 tsconfig path alias를 쓰지 않고 package 내부 상대 경로만 쓴다.
+       - `AppRouter`가 client 쪽에서 `any`로 무너지는 문제를 피하려고 `composite: true`, declaration emit, portable export를 기본값으로 둔다.
+     - `cloudflare`
+       - `server/src/trpc/context.ts`와 `server/src/index.ts`만 provider-specific entry로 둔다.
+       - Worker fetch handler는 `packages/trpc`의 router를 직접 받아 `fetchRequestHandler`에 연결한다.
+       - Cloudflare는 Node/Workers 번들러가 workspace package import를 처리할 수 있으니, 별도 mirror/sync는 두지 않는다.
+     - `supabase`
+       - tRPC 공식 `fetch` adapter는 Cloudflare Worker와 Deno를 둘 다 지원하므로, handler 패턴 자체는 Cloudflare와 크게 다르지 않다.
+       - 다만 Supabase Edge Functions는 Deno runtime이라 npm workspace resolution을 그대로 기대하지 않는다.
+       - 그래서 `server/supabase/functions/api/deno.json`의 `imports`로 `@workspace/trpc`를 `../../../../packages/trpc/src/index.ts`에 alias한다.
+       - shared package 내부 의존성도 Deno가 풀 수 있게 `@trpc/server`, `zod`를 `npm:` specifier로 함께 매핑한다.
+       - `functions/api/index.ts`는 `_shared` mirror 없이 `@workspace/trpc`를 직접 import 한다.
+     - 공통 원칙
+       - canonical router/type은 `packages/trpc`
+       - runtime handler entry는 provider-specific
+       - client bootstrap은 workspace-specific
+       - relative import로 server를 직접 참조하는 구조는 만들지 않는다.
+   - frontend / backoffice runtime bootstrap
+   - `cloudflare`
+       - 기존 `src/lib/api.ts` 대신 `src/lib/trpc.ts`와 필요하면 `src/lib/trpc-provider.tsx`를 추가한다.
+       - base URL은 현재 `MINIAPP_API_BASE_URL`, `VITE_API_BASE_URL`을 그대로 쓴다.
+     - `supabase`
+       - 기존 `src/lib/supabase.ts`는 유지한다. auth/storage/client DB에 여전히 필요하다.
+       - 그 위에 Edge Function endpoint를 치는 `src/lib/trpc.ts`를 추가한다.
+       - Supabase Edge Functions는 `apikey` / `Authorization` header 처리가 필요하므로, tRPC client link에서 기존 Supabase config와 세션을 읽어 헤더를 붙이는 방식을 먼저 설계한다.
+   - tsconfig / tooling 원칙
+     - `frontend` / `backoffice` / `server`에 `paths`로 `../../server/...`를 억지로 매핑하지 않는다.
+     - workspace package import가 되게 root workspace manifest만 갱신하고, 개별 workspace tsconfig는 가능한 한 건드리지 않는다.
+   - `packages/trpc`는 typecheck 가능하도록 자기 `package.json`, `tsconfig.json`, `project.json`을 가진다.
+   - Cloudflare runtime direct import를 위해 `package.json`의 `files`는 `src`를 포함하고, `exports` / `types`도 `src/index.ts`를 가리킨다.
+     - `packages/trpc` 안에서는 alias import를 쓰지 않는다. community 사례를 보면 이런 alias가 `AppRouter`를 client에서 `any`로 무너뜨릴 가능성이 있다.
+     - 필요하면 `packages/trpc`만 project references / declaration emit을 가진 독립 TS package로 본다.
+   - docs / README
+     - provider engineering docs에 `plain mode`와 `tRPC overlay mode` 차이를 설명한다.
+     - generated `server/README.md`도 provider별로 tRPC가 켜진 경우에만 router 구조와 호출 예시를 추가한다.
+     - tRPC overlay를 선택한 경우 `packages/trpc/README.md` 또는 engineering doc에 “왜 server를 직접 참조하지 않고 package를 두는지”를 짧게 설명한다.
+4. 테스트
+   - CLI
+     - `supabase` / `cloudflare` 선택 시에만 tRPC prompt가 뜨는지 검증
+     - `firebase`나 `no server`에선 prompt가 없는지 검증
+     - `--trpc` without supported provider 조합은 에러 처리 검증
+   - patch / template
+     - `packages/trpc` workspace 생성, workspace registration, Nx project 등록 검증
+     - Cloudflare tRPC server files, client files, shared package deps 생성 검증
+     - Supabase tRPC Edge Function files, function-local `deno.json` alias, shared package deps 생성 검증
+     - 기존 plain provider 생성물에는 tRPC 파일이 안 생기는지 검증
+   - add mode
+     - 기존 `cloudflare` / `supabase` workspace에 tRPC overlay만 추가 가능한지 검증
+5. 리스크
+   - Supabase Edge Functions는 Deno runtime이라 `deno.json` alias가 정확하지 않으면 `packages/trpc`를 runtime에서 직접 참조하지 못한다.
+   - Granite/React Native가 workspace package runtime import까지 자연스럽게 먹는지는 별도 확인이 필요하다.
+   - 그래서 client는 type-only import, server는 provider별 runtime adapter, Supabase는 `deno.json imports` alias 전략으로 간다.
+   - Supabase tRPC client는 anon key/session header를 어떻게 실어 보낼지 먼저 정리해야 한다.
+   - `AppRouter` shared package는 내부 alias import나 불완전한 TS 설정이 있으면 client에서 `any`로 무너질 수 있다. 이건 공식 docs보다는 community issue에서 반복적으로 보이는 문제라, 구현 때 예방적으로 피한다.
+6. 완료 기준
+   - `supabase` / `cloudflare` provider 선택 시 tRPC overlay 여부를 결정할 수 있다.
+   - 선택한 경우 `packages/trpc`와 server/frontend/backoffice의 tRPC 구조가 함께 생성된다.
+   - `frontend` / `backoffice`는 server 상대 경로 import 없이 `AppRouter` 타입을 사용할 수 있다.
+   - plain mode 기존 동작은 유지된다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: changeset frontmatter 파싱 실패 수정
 1. 문제
    - release CI에서 `.changeset/early-pumas-design.md`를 읽는 단계가 `invalid frontmatter`로 실패하고 있다.

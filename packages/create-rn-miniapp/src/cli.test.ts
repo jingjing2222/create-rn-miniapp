@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import {
@@ -57,6 +59,13 @@ test('parseCliArgs accepts firebase as a server provider', async () => {
   assert.equal(argv.serverProvider, 'firebase')
 })
 
+test('parseCliArgs parses trpc overlay flag', async () => {
+  const argv = await parseCliArgs(['--server-provider', 'cloudflare', '--trpc'], '/workspace')
+
+  assert.equal(argv.serverProvider, 'cloudflare')
+  assert.equal(argv.trpc, true)
+})
+
 test('parseCliArgs rejects the removed with-server flag', async () => {
   await assert.rejects(
     () => parseCliArgs(['--with-server'], '/workspace'),
@@ -81,6 +90,7 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   const promptValues = ['ebook-miniapp', '전자책 미니앱']
   const promptSelections: Array<'supabase' | 'cloudflare' | 'firebase' | 'yes' | 'no'> = [
     'supabase',
+    'no',
     'no',
   ]
 
@@ -151,6 +161,7 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   ])
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
+    '`tRPC`도 같이 이어드릴까요?',
     '`backoffice`도 같이 만들까요?',
   ])
 })
@@ -160,6 +171,7 @@ test('resolveCliOptions does not ask for a cloudflare worker mode when cloudflar
   const promptValues = ['ebook-miniapp', '전자책 미니앱']
   const promptSelections: Array<'supabase' | 'cloudflare' | 'firebase' | 'yes' | 'no'> = [
     'cloudflare',
+    'yes',
     'yes',
   ]
 
@@ -200,11 +212,96 @@ test('resolveCliOptions does not ask for a cloudflare worker mode when cloudflar
   )
 
   assert.equal(resolved.serverProvider, 'cloudflare')
+  assert.equal(resolved.withTrpc, true)
   assert.equal(resolved.serverProjectMode, null)
+  assert.deepEqual(selectMessages, [
+    '`server` 제공자를 골라 주세요.',
+    '`tRPC`도 같이 이어드릴까요?',
+    '`backoffice`도 같이 만들까요?',
+  ])
+})
+
+test('resolveCliOptions does not ask for trpc when firebase is selected', async () => {
+  const selectMessages: string[] = []
+  const promptValues = ['ebook-miniapp', '전자책 미니앱']
+  const promptSelections: Array<'supabase' | 'cloudflare' | 'firebase' | 'yes' | 'no'> = [
+    'firebase',
+    'yes',
+  ]
+
+  const resolved = await resolveCliOptions(
+    {
+      add: false,
+      rootDir: '/tmp/workspace',
+      outputDir: '/tmp/workspace',
+      skipInstall: false,
+      yes: false,
+      help: false,
+      version: false,
+    },
+    {
+      async text() {
+        return promptValues.shift() ?? ''
+      },
+      async select(options) {
+        selectMessages.push(options.message)
+        const fallback = options.options[0]
+
+        if (!fallback) {
+          throw new Error('선택지가 없습니다.')
+        }
+
+        const nextSelection = promptSelections.shift()
+
+        if (nextSelection && options.options.some((option) => option.value === nextSelection)) {
+          return nextSelection as typeof fallback.value
+        }
+
+        return fallback.value
+      },
+    },
+    {
+      npm_config_user_agent: 'pnpm/10.32.1 npm/? node/v25.6.1 darwin arm64',
+    },
+  )
+
+  assert.equal(resolved.serverProvider, 'firebase')
+  assert.equal(resolved.withTrpc, false)
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
     '`backoffice`도 같이 만들까요?',
   ])
+})
+
+test('resolveCliOptions rejects trpc without a supported server provider', async () => {
+  await assert.rejects(
+    () =>
+      resolveCliOptions(
+        {
+          add: false,
+          name: 'ebook-miniapp',
+          outputDir: '/tmp/workspace',
+          rootDir: '/tmp/workspace',
+          trpc: true,
+          yes: true,
+          skipInstall: false,
+          help: false,
+          version: false,
+        },
+        {
+          async text() {
+            throw new Error('text prompt should not be called')
+          },
+          async select() {
+            throw new Error('select prompt should not be called')
+          },
+        },
+        {
+          npm_config_user_agent: 'pnpm/10.32.1 npm/? node/v25.6.1 darwin arm64',
+        },
+      ),
+    /`--trpc`는 `supabase` 또는 `cloudflare` server provider와 함께만 사용할 수 있어요\./,
+  )
 })
 
 test('resolveCliOptions rejects execution when the invoking package manager cannot be detected', async () => {
@@ -284,6 +381,7 @@ test('resolveCliOptions keeps prompts optional when yes flag is set', async () =
 
 test('resolveCliOptions accepts an explicit server-provider without extra server prompts', async () => {
   const selectMessages: string[] = []
+  const promptSelections: Array<'yes' | 'no'> = ['no', 'no']
   const resolved = await resolveCliOptions(
     {
       add: false,
@@ -309,6 +407,12 @@ test('resolveCliOptions accepts an explicit server-provider without extra server
           throw new Error('선택지가 없습니다.')
         }
 
+        const nextSelection = promptSelections.shift()
+
+        if (nextSelection && options.options.some((option) => option.value === nextSelection)) {
+          return nextSelection as typeof fallback.value
+        }
+
         return fallback.value
       },
     },
@@ -320,7 +424,7 @@ test('resolveCliOptions accepts an explicit server-provider without extra server
   assert.equal(resolved.withServer, true)
   assert.equal(resolved.serverProvider, 'cloudflare')
   assert.equal(resolved.serverProjectMode, null)
-  assert.deepEqual(selectMessages, ['`backoffice`도 같이 만들까요?'])
+  assert.deepEqual(selectMessages, ['`tRPC`도 같이 이어드릴까요?', '`backoffice`도 같이 만들까요?'])
 })
 
 test('resolveCliOptions rejects server-project-mode without server-provider', async () => {
@@ -461,6 +565,7 @@ test('resolveCliOptions skips package-manager prompt when pnpm create invoked th
   const promptSelections: Array<'supabase' | 'cloudflare' | 'firebase' | 'yes' | 'no'> = [
     'supabase',
     'no',
+    'no',
   ]
 
   const resolved = await resolveCliOptions(
@@ -502,6 +607,7 @@ test('resolveCliOptions skips package-manager prompt when pnpm create invoked th
   assert.equal(resolved.packageManager, 'pnpm')
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
+    '`tRPC`도 같이 이어드릴까요?',
     '`backoffice`도 같이 만들까요?',
   ])
 })
@@ -563,6 +669,7 @@ test('resolveCliOptions skips package-manager prompt when npm create invoked the
   const promptSelections: Array<'supabase' | 'cloudflare' | 'firebase' | 'yes' | 'no'> = [
     'cloudflare',
     'no',
+    'no',
   ]
 
   const resolved = await resolveCliOptions(
@@ -604,6 +711,7 @@ test('resolveCliOptions skips package-manager prompt when npm create invoked the
   assert.equal(resolved.packageManager, 'npm')
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
+    '`tRPC`도 같이 이어드릴까요?',
     '`backoffice`도 같이 만들까요?',
   ])
 })
@@ -698,6 +806,7 @@ test('resolveAddCliOptions detects additive targets from an existing workspace',
   const selectMessages: string[] = []
   const promptSelections: Array<'supabase' | 'cloudflare' | 'firebase' | 'yes' | 'no'> = [
     'supabase',
+    'no',
     'yes',
   ]
 
@@ -739,6 +848,7 @@ test('resolveAddCliOptions detects additive targets from an existing workspace',
       displayName: '전자책 미니앱',
       hasServer: false,
       hasBackoffice: false,
+      hasTrpc: false,
       serverProvider: null,
     },
   )
@@ -749,12 +859,15 @@ test('resolveAddCliOptions detects additive targets from an existing workspace',
   assert.equal(resolved.rootDir, path.resolve('/tmp/existing-miniapp'))
   assert.equal(resolved.withServer, true)
   assert.equal(resolved.serverProvider, 'supabase')
+  assert.equal(resolved.withTrpc, false)
   assert.equal(resolved.serverProjectMode, null)
   assert.equal(resolved.withBackoffice, true)
   assert.equal(resolved.existingServerProvider, null)
   assert.equal(resolved.existingHasBackoffice, false)
+  assert.equal(resolved.existingHasTrpc, false)
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
+    '`tRPC`도 같이 이어드릴까요?',
     '`backoffice`도 같이 추가할까요?',
   ])
 })
@@ -786,13 +899,187 @@ test('resolveAddCliOptions accepts explicit server-provider in yes mode', async 
       displayName: '전자책 미니앱',
       hasServer: false,
       hasBackoffice: false,
+      hasTrpc: false,
       serverProvider: null,
     },
   )
 
   assert.equal(resolved.withServer, true)
   assert.equal(resolved.serverProvider, 'firebase')
+  assert.equal(resolved.withTrpc, false)
   assert.equal(resolved.serverProjectMode, null)
+})
+
+test('resolveAddCliOptions can add trpc to an existing cloudflare server workspace', async () => {
+  const selectMessages: string[] = []
+  const promptSelections: Array<'yes' | 'no'> = ['yes', 'no']
+
+  const resolved = await resolveAddCliOptions(
+    {
+      add: true,
+      rootDir: '/tmp/existing-miniapp',
+      outputDir: '/tmp/workspace',
+      skipInstall: false,
+      yes: false,
+      help: false,
+      version: false,
+    },
+    {
+      async text() {
+        throw new Error('text prompt should not be called')
+      },
+      async select(options) {
+        selectMessages.push(options.message)
+        const fallback = options.options[0]
+
+        if (!fallback) {
+          throw new Error('선택지가 없습니다.')
+        }
+
+        const nextSelection = promptSelections.shift()
+
+        if (nextSelection && options.options.some((option) => option.value === nextSelection)) {
+          return nextSelection as typeof fallback.value
+        }
+
+        return fallback.value
+      },
+    },
+    {
+      rootDir: '/tmp/existing-miniapp',
+      packageManager: 'pnpm',
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      hasServer: true,
+      hasBackoffice: false,
+      hasTrpc: false,
+      serverProvider: 'cloudflare',
+    },
+  )
+
+  assert.equal(resolved.withServer, false)
+  assert.equal(resolved.withBackoffice, false)
+  assert.equal(resolved.withTrpc, true)
+  assert.equal(resolved.serverProvider, null)
+  assert.equal(resolved.existingServerProvider, 'cloudflare')
+  assert.equal(resolved.existingHasTrpc, false)
+  assert.deepEqual(selectMessages, [
+    '`tRPC`도 같이 이어드릴까요?',
+    '`backoffice`도 같이 추가할까요?',
+  ])
+})
+
+test('resolveAddCliOptions asks whether to remove existing cloudflare api helpers when adding trpc', async () => {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'create-miniapp-cloudflare-add-'))
+  const frontendApiPath = path.join(rootDir, 'frontend', 'src', 'lib', 'api.ts')
+  const backofficeApiPath = path.join(rootDir, 'backoffice', 'src', 'lib', 'api.ts')
+  const selectMessages: string[] = []
+  const promptSelections: Array<'yes' | 'no' | 'remove'> = ['yes', 'remove', 'no']
+
+  await mkdir(path.dirname(frontendApiPath), { recursive: true })
+  await mkdir(path.dirname(backofficeApiPath), { recursive: true })
+  await writeFile(frontendApiPath, 'export function apiFetch() {}\n', 'utf8')
+  await writeFile(backofficeApiPath, 'export function apiFetch() {}\n', 'utf8')
+
+  try {
+    const resolved = await resolveAddCliOptions(
+      {
+        add: true,
+        rootDir,
+        outputDir: '/tmp/workspace',
+        skipInstall: false,
+        yes: false,
+        help: false,
+        version: false,
+      },
+      {
+        async text() {
+          throw new Error('text prompt should not be called')
+        },
+        async select(options) {
+          selectMessages.push(options.message)
+          const fallback = options.options[0]
+
+          if (!fallback) {
+            throw new Error('선택지가 없습니다.')
+          }
+
+          const nextSelection = promptSelections.shift()
+
+          if (nextSelection && options.options.some((option) => option.value === nextSelection)) {
+            return nextSelection as typeof fallback.value
+          }
+
+          return fallback.value
+        },
+      },
+      {
+        rootDir,
+        packageManager: 'pnpm',
+        appName: 'ebook-miniapp',
+        displayName: '전자책 미니앱',
+        hasServer: true,
+        hasBackoffice: true,
+        hasTrpc: false,
+        serverProvider: 'cloudflare',
+      },
+    )
+
+    assert.equal(resolved.withTrpc, true)
+    assert.equal(resolved.removeCloudflareApiClientHelpers, true)
+    assert.deepEqual(selectMessages, [
+      '`tRPC`도 같이 이어드릴까요?',
+      '기존 Cloudflare API helper를 같이 정리할까요?',
+    ])
+  } finally {
+    await rm(rootDir, { recursive: true, force: true })
+  }
+})
+
+test('resolveAddCliOptions keeps existing cloudflare api helpers in yes mode', async () => {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'create-miniapp-cloudflare-add-'))
+  const frontendApiPath = path.join(rootDir, 'frontend', 'src', 'lib', 'api.ts')
+
+  await mkdir(path.dirname(frontendApiPath), { recursive: true })
+  await writeFile(frontendApiPath, 'export function apiFetch() {}\n', 'utf8')
+
+  try {
+    const resolved = await resolveAddCliOptions(
+      {
+        add: true,
+        trpc: true,
+        rootDir,
+        outputDir: '/tmp/workspace',
+        skipInstall: false,
+        yes: true,
+        help: false,
+        version: false,
+      },
+      {
+        async text() {
+          throw new Error('text prompt should not be called')
+        },
+        async select() {
+          throw new Error('select prompt should not be called')
+        },
+      },
+      {
+        rootDir,
+        packageManager: 'pnpm',
+        appName: 'ebook-miniapp',
+        displayName: '전자책 미니앱',
+        hasServer: true,
+        hasBackoffice: false,
+        hasTrpc: false,
+        serverProvider: 'cloudflare',
+      },
+    )
+
+    assert.equal(resolved.withTrpc, true)
+    assert.equal(resolved.removeCloudflareApiClientHelpers, false)
+  } finally {
+    await rm(rootDir, { recursive: true, force: true })
+  }
 })
 
 test('resolveAddCliOptions rejects server-project-mode without server-provider', async () => {
@@ -830,6 +1117,7 @@ test('resolveAddCliOptions rejects server-project-mode without server-provider',
           displayName: '전자책 미니앱',
           hasServer: false,
           hasBackoffice: false,
+          hasTrpc: false,
           serverProvider: null,
         },
       ),
@@ -846,6 +1134,7 @@ test('formatCliHelp renders Korean help text', () => {
   assert.match(help, /--add/)
   assert.match(help, /--root-dir <디렉터리>/)
   assert.match(help, /--server-provider <supabase\|cloudflare\|firebase>/)
+  assert.match(help, /--trpc/)
   assert.match(help, /--server-project-mode <create\|existing>/)
   assert.doesNotMatch(help, /--with-server/)
   assert.match(help, /도움말 보기/)
