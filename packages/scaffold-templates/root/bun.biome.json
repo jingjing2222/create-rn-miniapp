@@ -1,7 +1,7 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.7/schema.json",
   "files": {
-    "ignore": ["**/.nx/**", "**/node_modules/**", "**/dist/**"]
+    "includes": ["**", "!!**/.nx", "!!**/node_modules", "!!**/dist"]
   },
   "formatter": {
     "enabled": true,
@@ -12,7 +12,51 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@react-native-async-storage/async-storage": "AsyncStorage는 쓰면 안 돼요. 대신 `@apps-in-toss/framework` storage API를 써 주세요. 자세한 기준은 `docs/engineering/native-modules-policy.md`를 먼저 봐 주세요.",
+              "@granite-js/native/@react-native-async-storage/async-storage": "AsyncStorage는 쓰면 안 돼요. 대신 `@apps-in-toss/framework` storage API를 써 주세요. 자세한 기준은 `docs/engineering/native-modules-policy.md`를 먼저 봐 주세요.",
+              "react-native": {
+                "message": "`react-native` 기본 UI 컴포넌트는 바로 쓰지 말고 TDS나 Granite가 제공하는 컴포넌트를 먼저 써 주세요. `Pressable`이 정말 필요하면 `biome-ignore`에 이유를 같이 남겨 주세요. 먼저 `docs/engineering/tds-react-native-index.md`와 `docs/engineering/native-modules-policy.md`를 확인해 주세요.",
+                "importNames": [
+                  "Button",
+                  "Modal",
+                  "Switch",
+                  "TextInput",
+                  "ActivityIndicator",
+                  "Alert",
+                  "TouchableOpacity",
+                  "TouchableHighlight",
+                  "TouchableWithoutFeedback",
+                  "Pressable"
+                ]
+              }
+            },
+            "patterns": [
+              {
+                "group": ["@react-navigation/**"],
+                "message": "react-navigation 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/native-modules-policy.md`를 먼저 봐 주세요."
+              },
+              {
+                "group": ["@react-native-community/**"],
+                "message": "react-native community 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/native-modules-policy.md`를 먼저 봐 주세요."
+              },
+              {
+                "group": ["react-native-**"],
+                "message": "react-native 네이티브 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/native-modules-policy.md`를 먼저 봐 주세요."
+              },
+              {
+                "group": ["@shopify/flash-list", "lottie-react-native", "fingerprint"],
+                "message": "이 네이티브 모듈은 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/native-modules-policy.md`를 먼저 봐 주세요."
+              }
+            ]
+          }
+        }
+      }
     }
   },
   "javascript": {

@@ -1,5 +1,65 @@
+## 다음 작업: Biome 금지 import 에러 메시지를 원천 engineering docs로 연결
+1. 문제
+   - generated repo의 Biome 금지 import 에러는 금지 이유는 알려주지만, 어떤 engineering 문서를 보면 되는지 바로 연결되지 않는다.
+   - AGENTS와 docs index에 문서가 인덱싱돼 있어도, lint 에러에서 바로 그 문서 경로를 보지 못하면 수정 속도가 떨어진다.
+2. 방향
+   - generated root `biome.json`의 `noRestrictedImports` 메시지에 각 규칙의 원천 문서 경로를 함께 넣는다.
+   - native module / AsyncStorage 규칙은 `docs/engineering/native-modules-policy.md`로, RN 기본 UI/TDS 규칙은 `docs/engineering/tds-react-native-index.md`와 `docs/engineering/native-modules-policy.md`로 안내한다.
+   - 관련 template test를 먼저 고쳐 message drift를 막는다.
+3. 테스트
+   - generated `biome.json` template test가 각 메시지에 대응 문서 경로가 포함되는지 검증한다.
+4. 완료 기준
+   - generated repo의 Biome 에러 메시지만 보고도 어떤 engineering 문서를 열어야 하는지 바로 알 수 있다.
+
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
+
+## 다음 작업: TDS lint 범위와 Granite `:$param` 허용 기준 맞추기
+1. 문제
+   - 지금 generated lint는 RN 기본 primitive 일부만 막고 있어서 TDS 인덱스 문서 대비 범위가 왜 이 정도인지 설명이 약하다.
+   - Granite SSoT와 route checker 문구는 `$param`만 금지하면 되는데도 `고정 path만`처럼 읽혀 `:bookId` path params 허용 기준과 어긋난다.
+2. 방향
+   - Granite SSoT와 route checker 안내 문구를 `$param` 금지 기준으로 좁히고, `:param` route params는 허용 예시로 정리한다.
+   - RN 기본 primitive 중 TDS 대체제가 명확한 `ActivityIndicator`, `Alert`까지 `noRestrictedImports`에 추가한다.
+   - native modules policy 문서에 현재 lint 범위가 “TDS 전체 금지”가 아니라 “직접 쓰면 안 되는 RN 기본 primitive + 네이티브 모듈”이라는 점을 명시한다.
+3. 테스트
+   - generated `biome.json`에 `ActivityIndicator`, `Alert`가 포함되는지 template test를 보강한다.
+   - Granite SSoT 문서와 route checker 메시지가 `:$param` 허용 예시를 가지는지 확인한다.
+4. 완료 기준
+   - `$param` 금지와 `:param` 허용 기준이 문서/메시지에 일관되게 반영된다.
+   - TDS 대응이 명확한 RN primitive 금지 범위가 lint에 추가된다.
+
+## 다음 작업: Biome 2로 올리고 frontend 정책을 lint/verify로 재배치
+1. 문제
+   - 지금 generated repo는 Biome 1.9.4 기준이라 `react-native` named import 금지 같은 세밀한 import restriction을 lint로 옮기기 어렵다.
+   - native module / AsyncStorage 금지는 custom verify에 몰려 있는데, 이건 lint가 더 자연스러운 영역이고 `$param` 라우트 금지와 성격이 다르다.
+   - Biome 2 마이그레이션 시 package별 `biome.json`이 필요한지부터 공식 문서 기준으로 정리해야 한다.
+2. 방향
+   - 공식 문서 기준으로 Biome 2는 루트 config 하나로 계속 운용하고, package별 override가 필요할 때만 nested `biome.json`을 추가한다.
+   - repo root와 generated root template의 `@biomejs/biome`를 최신 stable `2.4.7`로 올린다.
+   - root `biome.json` 스키마를 v2로 올리고, generated `biome.json`도 같은 기준으로 맞춘다.
+   - native module / AsyncStorage 금지는 Biome `noRestrictedImports`로 이동한다.
+   - `frontend:policy:check`는 Granite `$param` 라우트 금지 전용 custom verify로 줄인다.
+3. 테스트
+   - generated `biome.json`이 Biome 2 스키마와 `noRestrictedImports` 규칙을 가지는 실패 테스트를 먼저 추가한다.
+   - generated route checker가 `$param` 파일/경로를 막고 고정 경로는 통과시키는 실패 테스트를 먼저 추가한다.
+   - root package와 generated root package의 Biome 버전이 같이 올라가는지 검증한다.
+4. 완료 기준
+   - generated repo에서 native module / AsyncStorage 금지는 lint가 맡고, `$param` 라우트 금지만 verify가 맡는다.
+   - package별 `biome.json` 없이도 root config 하나로 `pnpm verify`가 통과한다.
+
+## 다음 작업: 인덱싱된 문서 기준으로 verify 후보 규칙을 추리기
+1. 문제
+   - 지금 generated repo에는 AGENTS와 engineering docs로 여러 구현 규칙이 인덱싱돼 있지만, 어떤 규칙은 문서에만 머물고 있다.
+   - agent나 개발자가 자주 어기는 규칙 중 일부는 verify에서 자동으로 막을 수 있는데, 아직 후보 정리가 안 되어 있다.
+2. 방향
+   - base/optional docs index와 AGENTS에 연결된 engineering 문서를 훑는다.
+   - import 패턴, forbidden dependency, 금지 컴포넌트 사용처럼 정적 검사로 막을 수 있는 규칙을 먼저 추린다.
+   - TDS, native modules, storage, tRPC SSOT처럼 verify 친화적인 것과 문서/리뷰로만 다뤄야 하는 것을 구분한다.
+3. 결과물
+   - verify로 바로 막을 수 있는 후보 목록
+   - 구현 난이도와 오탐 가능성
+   - 우선순위 제안
 
 ## 다음 작업: 누락된 Cloudflare env fix의 버전 PR 생성
 1. 문제

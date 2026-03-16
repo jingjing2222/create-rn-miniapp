@@ -1339,9 +1339,9 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
     path.join(targetRoot, 'biome.json'),
     `${JSON.stringify(
       {
-        $schema: 'https://biomejs.dev/schemas/1.9.4/schema.json',
+        $schema: 'https://biomejs.dev/schemas/2.4.7/schema.json',
         files: {
-          ignore: ['**/.nx/**', '**/node_modules/**', '**/dist/**'],
+          includes: ['**', '!!**/.nx', '!!**/node_modules', '!!**/dist'],
         },
       },
       null,
@@ -1385,7 +1385,7 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
   const rootGitignore = await readFile(path.join(targetRoot, '.gitignore'), 'utf8')
   const rootBiome = JSON.parse(await readFile(path.join(targetRoot, 'biome.json'), 'utf8')) as {
     files?: {
-      ignore?: string[]
+      includes?: string[]
     }
   }
   const readme = await readFile(path.join(serverRoot, 'README.md'), 'utf8')
@@ -1406,11 +1406,12 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
   assert.equal(projectJson.targets?.build?.command, 'pnpm --dir server build')
   assert.equal(projectJson.targets?.typecheck?.command, 'pnpm --dir server typecheck')
   assert.match(rootGitignore, /^server\/worker-configuration\.d\.ts$/m)
-  assert.deepEqual(rootBiome.files?.ignore, [
-    '**/.nx/**',
-    '**/node_modules/**',
-    '**/dist/**',
-    '**/server/worker-configuration.d.ts',
+  assert.deepEqual(rootBiome.files?.includes, [
+    '**',
+    '!!**/.nx',
+    '!!**/node_modules',
+    '!!**/dist',
+    '!!**/server/worker-configuration.d.ts',
   ])
   assert.match(readme, /^# server$/m)
   assert.match(readme, /Cloudflare Worker/)
@@ -1690,7 +1691,7 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   await writeFile(path.join(targetRoot, '.gitignore'), 'node_modules\n', 'utf8')
   await writeJson(path.join(targetRoot, 'biome.json'), {
     files: {
-      ignore: ['node_modules'],
+      includes: ['**', '!!node_modules'],
     },
   })
   await writeJson(path.join(serverRoot, 'package.json'), {
@@ -1736,7 +1737,7 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   const rootGitignore = await readFile(path.join(targetRoot, '.gitignore'), 'utf8')
   const rootBiome = JSON.parse(await readFile(path.join(targetRoot, 'biome.json'), 'utf8')) as {
     files?: {
-      ignore?: string[]
+      includes?: string[]
     }
   }
   const copiedLoginCiGuide = path.join(serverRoot, 'assets', 'firebase-login-ci-guide.png')
@@ -1781,7 +1782,7 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   assert.equal(await readFile(copiedServiceAccountGuide1, 'utf8'), 'firebase-service-account-1')
   assert.equal(await readFile(copiedServiceAccountGuide2, 'utf8'), 'firebase-service-account-2')
   assert.match(rootGitignore, /^server\/functions\/lib\/$/m)
-  assert.deepEqual(rootBiome.files?.ignore, ['node_modules', '**/server/functions/lib/**'])
+  assert.deepEqual(rootBiome.files?.includes, ['**', '!!node_modules', '!!**/server/functions/lib'])
 })
 
 test('patchFirebaseServerWorkspace adds firebase-only yarn packageExtensions to root yarnrc', async (t) => {

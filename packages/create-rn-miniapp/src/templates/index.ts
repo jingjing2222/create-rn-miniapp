@@ -74,6 +74,7 @@ const OPTIONAL_AGENTS_END_MARKER = '<!-- optional-doc-links:end -->'
 const OPTIONAL_DOCS_INDEX_START_MARKER = '<!-- optional-engineering-links:start -->'
 const OPTIONAL_DOCS_INDEX_END_MARKER = '<!-- optional-engineering-links:end -->'
 const NPMRC_SOURCE = 'legacy-peer-deps=true\n'
+const FRONTEND_POLICY_CHECK_SCRIPT = 'node ./scripts/verify-frontend-routes.mjs'
 
 const require = createRequire(import.meta.url)
 const NORMALIZED_PACKAGE_WORKSPACE = 'packages/*' as const
@@ -88,6 +89,11 @@ type NormalizedRootWorkspaceName = (typeof NORMALIZED_ROOT_WORKSPACE_ORDER)[numb
 function resolveTemplatesPackageRoot() {
   const packageJsonPath = require.resolve('@create-rn-miniapp/scaffold-templates/package.json')
   return path.dirname(packageJsonPath)
+}
+
+function renderRootVerifyScript(packageManager: PackageManager) {
+  const adapter = getPackageManagerAdapter(packageManager)
+  return `${adapter.rootVerifyScript()} && ${adapter.runScript('frontend:policy:check')}`
 }
 
 function replaceTemplateTokens(source: string, tokens: TemplateTokens) {
@@ -435,7 +441,7 @@ function renderFirebaseFunctionsDeployScript(tokens: TemplateTokens) {
     '    : path.resolve(serverRoot, credentials)',
     '',
     '  if (!existsSync(resolvedCredentials)) {',
-    '    console.error(`[server] GOOGLE_APPLICATION_CREDENTIALS file not found: ${resolvedCredentials}`)',
+    "    console.error('[server] GOOGLE_APPLICATION_CREDENTIALS file not found: ' + resolvedCredentials)",
     '    process.exit(1)',
     '  }',
     '',
@@ -839,7 +845,10 @@ export async function applyRootTemplates(
   const packageManager = getPackageManagerAdapter(tokens.packageManager)
   const normalizedWorkspaces = normalizeRootWorkspaces(workspaces)
 
-  const fileMappings = [['nx.json', 'nx.json']] as const
+  const fileMappings = [
+    ['nx.json', 'nx.json'],
+    ['verify-frontend-routes.mjs', 'scripts/verify-frontend-routes.mjs'],
+  ] as const
 
   for (const [sourceName, targetName] of fileMappings) {
     await copyFileWithTokens(
@@ -870,7 +879,8 @@ export async function applyRootTemplates(
       format: packageManager.rootFormatScript(),
       'format:check': packageManager.rootFormatCheckScript(),
       lint: packageManager.rootLintScript(),
-      verify: packageManager.rootVerifyScript(),
+      'frontend:policy:check': FRONTEND_POLICY_CHECK_SCRIPT,
+      verify: renderRootVerifyScript(tokens.packageManager),
     },
     workspaces: packageManager.workspaceManifestFile === null ? normalizedWorkspaces : null,
   })

@@ -10,9 +10,9 @@ API 후보를 찾는 용도는 `appsintoss-granite-api-index.md`와 `appsintoss-
 ## 1) Routing Policy
 
 ### 원칙
-1. MiniApp 라우트는 고정 path만 사용한다.
-2. App Router 스타일 동적 세그먼트(`/$param`)를 금지한다.
-3. 파라미터 전달은 `navigation.navigate('/fixed-path', { ... })`와 `createRoute(... validateParams ...)` 조합으로 처리한다.
+1. App Router 스타일 동적 세그먼트(`/$param`)를 금지한다.
+2. Granite router가 지원하는 `:param` path params는 사용할 수 있다.
+3. 파라미터 전달은 `:param` path params 또는 `validateParams` 조합으로 처리한다.
 
 ### 금지 패턴
 - `/$[a-zA-Z]` 형태 경로 문자열
@@ -21,7 +21,9 @@ API 후보를 찾는 용도는 `appsintoss-granite-api-index.md`와 `appsintoss-
 
 ### 허용 대안
 - `/book-detail` 같은 고정 경로
+- `/book/:bookId` 같은 Granite path params
 - `navigation.navigate('/book-detail', { bookId })`
+- `createRoute('/book/:bookId', { component })`
 - `createRoute('/book-detail', { validateParams, component })`
 
 ## 2) Pages Structure Policy
@@ -43,15 +45,16 @@ API 후보를 찾는 용도는 `appsintoss-granite-api-index.md`와 `appsintoss-
    - route key와 entry 파일 구조가 일치해야 한다.
 2. 정적 검증
    - `{{verifyCommand}}`
+   - generated repo의 `frontend:policy:check`가 `$param` 라우트 패턴을 추가로 막아 준다.
 
 ## 4) Forbidden vs Allowed
 
 | 분류 | 금지 | 허용 |
 |---|---|---|
-| route path | `/book/$bookId` | `/book-detail` |
+| route path | `/book/$bookId` | `/book-detail`, `/book/:bookId` |
 | entry filename | `pages/book/$bookId.tsx` | `pages/book-detail.tsx` |
 | impl filename | `src/pages/book/$bookId.tsx` | `src/pages/book-detail.tsx` |
-| navigation | `navigate('/book/$bookId', ...)` | `navigate('/book-detail', { bookId })` |
+| navigation | `navigate('/book/$bookId', ...)` | `navigate('/book-detail', { bookId })`, `navigate('/book/123')` |
 
 ## 5) Rule Catalog
 
@@ -66,7 +69,7 @@ API 후보를 찾는 용도는 `appsintoss-granite-api-index.md`와 `appsintoss-
 
 | id | examples |
 |---|---|
-| `fixed-path-routing` | `/book-detail`, `navigation.navigate('/book-detail', { bookId })` |
+| `fixed-path-routing` | `/book-detail`, `/book/:bookId`, `navigation.navigate('/book-detail', { bookId })`, `navigate('/book/123')` |
 | `params-validation` | `createRoute('/book-detail', { validateParams, component })` |
 
 ### Required checks

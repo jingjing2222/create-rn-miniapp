@@ -228,7 +228,7 @@ const FRONTEND_SUPABASE_CLIENT = [
   '',
   '  if (!isSafeHttpUrl(configured)) {',
   '    throw new Error(',
-  "      `[frontend] MINIAPP_SUPABASE_URL must be a valid http(s) URL. Received: ${configured || '<empty>'}`",
+  "      '[frontend] MINIAPP_SUPABASE_URL must be a valid http(s) URL. Received: ' + (configured || '<empty>')",
   '    )',
   '  }',
   '',
@@ -273,7 +273,7 @@ const FRONTEND_CLOUDFLARE_API_CLIENT = [
   '',
   '  if (!isSafeHttpUrl(configured)) {',
   '    throw new Error(',
-  "      `[frontend] MINIAPP_API_BASE_URL must be a valid http(s) URL. Received: ${configured || '<empty>'}`",
+  "      '[frontend] MINIAPP_API_BASE_URL must be a valid http(s) URL. Received: ' + (configured || '<empty>')",
   '    )',
   '  }',
   '',
@@ -284,7 +284,7 @@ const FRONTEND_CLOUDFLARE_API_CLIENT = [
   '',
   'export function resolveApiUrl(pathname: string) {',
   "  const normalizedPath = pathname.replace(/^\\//, '')",
-  '  return new URL(normalizedPath, `${apiBaseUrl}/`).toString()',
+  "  return new URL(normalizedPath, apiBaseUrl + '/').toString()",
   '}',
   '',
   'export async function apiFetch(pathname: string, init?: RequestInit) {',
@@ -363,7 +363,7 @@ const BACKOFFICE_SUPABASE_CLIENT = [
   'const supabaseUrl = resolveSupabaseUrl()',
   'if (!isSafeHttpUrl(supabaseUrl)) {',
   '  throw new Error(',
-  '    `[backoffice] VITE_SUPABASE_URL must be a valid http(s) URL. Received: ${supabaseUrl}`',
+  "    '[backoffice] VITE_SUPABASE_URL must be a valid http(s) URL. Received: ' + supabaseUrl",
   '  )',
   '}',
   '',
@@ -396,7 +396,7 @@ const BACKOFFICE_CLOUDFLARE_API_CLIENT = [
   '',
   '  if (!isSafeHttpUrl(configured)) {',
   '    throw new Error(',
-  "      `[backoffice] VITE_API_BASE_URL must be a valid http(s) URL. Received: ${configured || '<empty>'}`",
+  "      '[backoffice] VITE_API_BASE_URL must be a valid http(s) URL. Received: ' + (configured || '<empty>')",
   '    )',
   '  }',
   '',
@@ -407,7 +407,7 @@ const BACKOFFICE_CLOUDFLARE_API_CLIENT = [
   '',
   'export function resolveApiUrl(pathname: string) {',
   "  const normalizedPath = pathname.replace(/^\\//, '')",
-  '  return new URL(normalizedPath, `${apiBaseUrl}/`).toString()',
+  "  return new URL(normalizedPath, apiBaseUrl + '/').toString()",
   '}',
   '',
   'export async function apiFetch(pathname: string, init?: RequestInit) {',
@@ -1005,21 +1005,49 @@ async function ensureRootBiomeIgnoreEntry(targetRoot: string, entry: string) {
   const biomeJson = JSON.parse(await readFile(biomePath, 'utf8')) as {
     files?: {
       ignore?: string[]
+      includes?: string[]
     }
   }
 
-  const ignore = biomeJson.files?.ignore ?? []
+  const includes = biomeJson.files?.includes
 
-  if (ignore.includes(entry)) {
-    return
-  }
+  if (includes) {
+    const forceIgnoreEntry = toBiomeForceIgnorePattern(entry)
 
-  biomeJson.files = {
-    ...(biomeJson.files ?? {}),
-    ignore: [...ignore, entry],
+    if (includes.includes(forceIgnoreEntry) || includes.includes(entry)) {
+      return
+    }
+
+    biomeJson.files = {
+      ...(biomeJson.files ?? {}),
+      includes: [...includes, forceIgnoreEntry],
+    }
+  } else {
+    const ignore = biomeJson.files?.ignore ?? []
+
+    if (ignore.includes(entry)) {
+      return
+    }
+
+    biomeJson.files = {
+      ...(biomeJson.files ?? {}),
+      ignore: [...ignore, entry],
+    }
   }
 
   await writeFile(biomePath, `${JSON.stringify(biomeJson, null, 2)}\n`, 'utf8')
+}
+
+function toBiomeForceIgnorePattern(entry: string) {
+  if (entry.startsWith('!')) {
+    return entry
+  }
+
+  if (entry.endsWith('/**')) {
+    return `!!${entry.slice(0, -3)}`
+  }
+
+  return `!!${entry}`
 }
 
 async function ensureRootYarnPackageExtension(targetRoot: string) {

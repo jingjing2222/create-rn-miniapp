@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -71,12 +72,20 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   assert.equal(await pathExists(path.join(targetRoot, '.yarnrc.yml')), false)
   assert.equal(await pathExists(path.join(targetRoot, 'tsconfig.base.json')), false)
   assert.equal(
+    await pathExists(path.join(targetRoot, 'scripts', 'verify-frontend-routes.mjs')),
+    true,
+  )
+  assert.equal(
     packageJson.scripts?.verify,
-    'pnpm format:check && pnpm lint && pnpm typecheck && pnpm test',
+    'pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm frontend:policy:check',
+  )
+  assert.equal(
+    packageJson.scripts?.['frontend:policy:check'],
+    'node ./scripts/verify-frontend-routes.mjs',
   )
   assert.equal(packageJson.devDependencies?.nx, '^22.5.4')
   assert.equal(packageJson.devDependencies?.typescript, '^5.9.3')
-  assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^1.9.4')
+  assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^2.4.7')
   assert.equal(nxJson.$schema, NX_ROOT_SCHEMA_URL)
   assert.deepEqual(nxJson.namedInputs?.sharedGlobals, ['{workspaceRoot}/biome.json'])
   assert.doesNotMatch(gitignore, /^\.yarn\/?$/m)
@@ -89,6 +98,14 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
     await readFile(path.join(targetRoot, 'pnpm-workspace.yaml'), 'utf8'),
     'packages:\n  - frontend\n',
   )
+  assert.match(biomeJson, /schemas\/2\.4\.7\/schema\.json/)
+  assert.match(biomeJson, /noRestrictedImports/)
+  assert.match(biomeJson, /@react-native-async-storage\/async-storage/)
+  assert.match(biomeJson, /react-native-\*\*/)
+  assert.match(biomeJson, /ActivityIndicator/)
+  assert.match(biomeJson, /Alert/)
+  assert.match(biomeJson, /docs\/engineering\/native-modules-policy\.md/)
+  assert.match(biomeJson, /docs\/engineering\/tds-react-native-index\.md/)
 })
 
 test('syncRootWorkspaceManifest normalizes package workspaces to packages/* in pnpm manifest', async (t) => {
@@ -166,7 +183,6 @@ test('applyTrpcWorkspaceTemplate creates shared contracts and app-router workspa
     path.join(targetRoot, 'packages', 'app-router', 'src', 'root.ts'),
     'utf8',
   )
-
   assert.equal(contractsPackageJson.name, '@workspace/contracts')
   assert.equal(contractsPackageJson.dependencies?.zod, '^4.3.6')
   assert.equal(appRouterPackageJson.name, '@workspace/app-router')
@@ -189,6 +205,142 @@ test('applyTrpcWorkspaceTemplate creates shared contracts and app-router workspa
   assert.match(contractsIndexSource, /ExampleEchoInputSchema/)
   assert.match(appRouterIndexSource, /export type \{ AppRouter \} from '\.\/root\.ts'/)
   assert.match(appRouterRootSource, /from '\.\/routers\/example\.ts'/)
+})
+
+test('applyRootTemplates wires frontend route checker into root verify', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend'])
+
+  const rootPackageJson = JSON.parse(
+    await readFile(path.join(targetRoot, 'package.json'), 'utf8'),
+  ) as {
+    scripts?: Record<string, string>
+  }
+  const scriptSource = await readFile(
+    path.join(targetRoot, 'scripts', 'verify-frontend-routes.mjs'),
+    'utf8',
+  )
+
+  assert.equal(
+    rootPackageJson.scripts?.['frontend:policy:check'],
+    'node ./scripts/verify-frontend-routes.mjs',
+  )
+  assert.equal(
+    rootPackageJson.scripts?.verify,
+    'pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm frontend:policy:check',
+  )
+  assert.match(scriptSource, /route-dynamic-segment-dollar/)
+  assert.match(scriptSource, /FRONTEND_ENTRY_ROOT/)
+  assert.match(scriptSource, /FRONTEND_SOURCE_PAGES_ROOT/)
+})
+
+test('generated frontend route checker allows fixed path routes', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend'])
+  await mkdir(path.join(targetRoot, 'frontend', 'pages'), { recursive: true })
+  await mkdir(path.join(targetRoot, 'frontend', 'src', 'pages'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'pages', 'book-detail.tsx'),
+    ["export { BookDetailPage } from '../src/pages/book-detail'", ''].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'src', 'pages', 'book-detail.tsx'),
+    [
+      "export const BOOK_DETAIL_ROUTE = '/book-detail'",
+      '',
+      'export const BookDetailPage = () => null',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+
+  const result = spawnSync(process.execPath, ['./scripts/verify-frontend-routes.mjs'], {
+    cwd: targetRoot,
+    encoding: 'utf8',
+  })
+
+  assert.equal(result.status, 0, result.stderr)
+})
+
+test('generated frontend route checker rejects dollar route filenames', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend'])
+  await mkdir(path.join(targetRoot, 'frontend', 'pages', 'book'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'pages', 'book', '$bookId.tsx'),
+    ["export { BookPage } from '../../src/pages/book/$bookId'", ''].join('\n'),
+    'utf8',
+  )
+
+  const result = spawnSync(process.execPath, ['./scripts/verify-frontend-routes.mjs'], {
+    cwd: targetRoot,
+    encoding: 'utf8',
+  })
+
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /frontend\/pages\/book\/\$bookId\.tsx/)
+  assert.match(result.stderr, /\$param/)
+  assert.match(result.stderr, /docs\/engineering\/granite-ssot\.md/)
+})
+
+test('generated frontend route checker rejects dollar route strings', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend'])
+  await mkdir(path.join(targetRoot, 'frontend', 'src'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'src', 'navigation-bad.ts'),
+    ["export const navigationBad = () => '/book/$bookId'", ''].join('\n'),
+    'utf8',
+  )
+
+  const result = spawnSync(process.execPath, ['./scripts/verify-frontend-routes.mjs'], {
+    cwd: targetRoot,
+    encoding: 'utf8',
+  })
+
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /frontend\/src\/navigation-bad\.ts/)
+  assert.match(result.stderr, /\/\$bookId/)
+  assert.match(result.stderr, /docs\/engineering\/granite-ssot\.md/)
+})
+
+test('generated frontend route checker reports every violation in one run', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend'])
+  await mkdir(path.join(targetRoot, 'frontend', 'pages', 'book'), { recursive: true })
+  await mkdir(path.join(targetRoot, 'frontend', 'src'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'pages', 'book', '$bookId.tsx'),
+    ["export { BookPage } from '../../src/pages/book/$bookId'", ''].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'src', 'navigation-bad.ts'),
+    ["export const navigationBad = () => '/book/$bookId'", ''].join('\n'),
+    'utf8',
+  )
+
+  const result = spawnSync(process.execPath, ['./scripts/verify-frontend-routes.mjs'], {
+    cwd: targetRoot,
+    encoding: 'utf8',
+  })
+
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /frontend\/pages\/book\/\$bookId\.tsx/)
+  assert.match(result.stderr, /frontend\/src\/navigation-bad\.ts/)
+  assert.match(result.stderr, /\/book\/\$bookId/)
+  assert.match(result.stderr, /docs\/engineering\/granite-ssot\.md/)
 })
 
 test('applyDocsTemplates keeps optional workspace docs out of the base copy', async (t) => {
@@ -378,12 +530,16 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   assert.equal(packageJson.packageManager, 'yarn@4.13.0')
   assert.deepEqual(packageJson.workspaces, ['frontend', 'server'])
   assert.equal(await pathExists(path.join(targetRoot, 'pnpm-workspace.yaml')), false)
+  assert.equal(
+    packageJson.scripts?.verify,
+    'yarn format:check && yarn lint && yarn typecheck && yarn test && yarn frontend:policy:check',
+  )
   assert.ok(
     packageJsonSource.indexOf('"packageManager"') < packageJsonSource.indexOf('"workspaces"'),
   )
   assert.equal(packageJson.devDependencies?.nx, '^22.5.4')
   assert.equal(packageJson.devDependencies?.typescript, '^5.9.3')
-  assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^1.9.4')
+  assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^2.4.7')
   assert.equal(frontendProject.$schema, NX_PROJECT_SCHEMA_URL)
   assert.match(gitignore, /^\.yarn\/?$/m)
   assert.match(gitignore, /^\.pnp\.\*$/m)
@@ -393,8 +549,8 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   assert.match(yarnrc, /"@babel\/runtime": "\^7\.0\.0"/)
   assert.doesNotMatch(yarnrc, /"@apphosting\/build@\*":/)
   assert.doesNotMatch(yarnrc, /yaml: "\^2\.4\.1"/)
-  assert.match(biomeJson, /\*\*\/\.yarn\/\*\*/)
-  assert.match(biomeJson, /\*\*\/\.pnp\.\*/)
+  assert.match(biomeJson, /!!\*\*\/\.yarn/)
+  assert.match(biomeJson, /!!\*\*\/\.pnp\.\*/)
   assert.doesNotMatch(gitignore, /^server\/worker-configuration\.d\.ts$/m)
   assert.doesNotMatch(biomeJson, /\*\*\/server\/worker-configuration\.d\.ts/)
   assert.doesNotMatch(gitignore, /^server\/functions\/lib\/$/m)
@@ -475,7 +631,7 @@ test('applyRootTemplates emits npm-specific workspace manifest and scripts', asy
   assert.equal(serverPackageJson.scripts?.build, 'npm run typecheck')
   assert.equal(
     packageJson.scripts?.verify,
-    'npm run format:check && npm run lint && npm run typecheck && npm run test',
+    'npm run format:check && npm run lint && npm run typecheck && npm run test && npm run frontend:policy:check',
   )
   assert.equal(
     await readFile(path.join(targetRoot, 'server', '.npmrc'), 'utf8'),
@@ -527,7 +683,7 @@ test('applyRootTemplates emits bun-specific workspace manifest and scripts', asy
   assert.equal(serverPackageJson.scripts?.build, 'bun run typecheck')
   assert.equal(
     packageJson.scripts?.verify,
-    'bun run format:check && bun run lint && bun run typecheck && bun run test',
+    'bun run format:check && bun run lint && bun run typecheck && bun run test && bun run frontend:policy:check',
   )
   assert.match(serverDbApplyScript, /bunx/)
 })

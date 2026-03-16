@@ -4,9 +4,7 @@ export const APP_ROUTER_WORKSPACE_DEPENDENCY = 'workspace:*'
 export const CONTRACTS_WORKSPACE_DEPENDENCY = 'workspace:*'
 export const ZOD_VERSION = '^4.3.6'
 
-export function renderCloudflareTrpcClientSource(options: {
-  urlExpression: string
-}) {
+export function renderCloudflareTrpcClientSource(options: { urlExpression: string }) {
   return [
     "import { createTRPCProxyClient, httpBatchLink } from '@trpc/client'",
     "import type { AppRouter } from '@workspace/app-router'",
@@ -18,7 +16,7 @@ export function renderCloudflareTrpcClientSource(options: {
     "    throw new Error('Cloudflare API base URL이 비어 있어요. .env.local을 먼저 확인해 주세요.')",
     '  }',
     '',
-    "  return `${baseUrl.replace(/\\/$/, '')}/trpc`",
+    "  return baseUrl.replace(/\\/$/, '') + '/trpc'",
     '}',
     '',
     'export const trpc = createTRPCProxyClient<AppRouter>({',
@@ -49,7 +47,7 @@ export function renderSupabaseTrpcClientSource(options: {
     "    throw new Error('Supabase URL이 비어 있어요. .env.local을 먼저 확인해 주세요.')",
     '  }',
     '',
-    "  return `${baseUrl.replace(/\\/$/, '')}/functions/v1/api/trpc`",
+    "  return baseUrl.replace(/\\/$/, '') + '/functions/v1/api/trpc'",
     '}',
     '',
     'async function resolveTrpcHeaders() {',
@@ -61,7 +59,7 @@ export function renderSupabaseTrpcClientSource(options: {
     '  const accessToken = data.session?.access_token?.trim()',
     '',
     '  if (accessToken) {',
-    '    headers.Authorization = `Bearer ${accessToken}`',
+    "    headers.Authorization = 'Bearer ' + accessToken",
     '  }',
     '',
     '  return headers',

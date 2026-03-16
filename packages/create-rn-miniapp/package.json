@@ -6,7 +6,9 @@
   "bin": {
     "create-miniapp": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },

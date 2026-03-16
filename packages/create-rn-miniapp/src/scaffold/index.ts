@@ -14,12 +14,7 @@ import {
   syncRootWorkspaceManifest,
 } from '../templates/index.js'
 import type { ProvisioningNote } from '../server-project.js'
-import {
-  buildRootFinalizePlan,
-  buildCreateExecutionOrder,
-  buildCreateLifecycleOrder,
-  buildRootGitSetupPlan,
-} from './orders.js'
+import { buildRootFinalizePlan, buildRootGitSetupPlan } from './orders.js'
 import {
   maybeFinalizeCloudflareProvisioning,
   maybeFinalizeFirebaseProvisioning,
@@ -41,10 +36,9 @@ import type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
 export type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
 export {
   buildRootFinalizePlan,
-  buildCreateExecutionOrder,
-  buildCreateLifecycleOrder,
   buildRootGitSetupPlan,
 } from './orders.js'
+export { buildCreateExecutionOrder, buildCreateLifecycleOrder } from './orders.js'
 
 export async function scaffoldWorkspace(options: ScaffoldOptions) {
   const targetRoot = path.resolve(options.outputDir, options.appName)
