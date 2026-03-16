@@ -174,6 +174,7 @@ test('applyDocsTemplates keeps optional workspace docs out of the base copy', as
   assert.doesNotMatch(agents, /server-provider-supabase/)
   assert.doesNotMatch(agents, /server-provider-cloudflare/)
   assert.doesNotMatch(agents, /server-provider-firebase/)
+  assert.doesNotMatch(agents, /Boundary types from schema only/)
   assert.doesNotMatch(docsIndex, /Backoffice React best practices/)
   assert.doesNotMatch(docsIndex, /Server provider guide/)
   assert.equal(
@@ -207,6 +208,7 @@ test('syncOptionalDocsTemplates copies and indexes selected backoffice and serve
   assert.doesNotMatch(agents, /server-provider-supabase/)
   assert.doesNotMatch(agents, /server-provider-cloudflare/)
   assert.doesNotMatch(agents, /server-api-ssot-trpc/)
+  assert.doesNotMatch(agents, /Boundary types from schema only/)
   assert.match(docsIndex, /Backoffice React best practices/)
   assert.match(docsIndex, /Server provider guide \(Firebase\)/)
   assert.doesNotMatch(docsIndex, /Server API SSOT \(tRPC\)/)
@@ -227,6 +229,29 @@ test('syncOptionalDocsTemplates copies and indexes selected backoffice and serve
   assert.equal(
     await pathExists(path.join(targetRoot, 'docs', 'engineering', 'server-api-ssot-trpc.md')),
     false,
+  )
+})
+
+test('syncOptionalDocsTemplates adds the tRPC boundary type golden rule only when trpc is enabled', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyDocsTemplates(targetRoot, tokens)
+  await syncOptionalDocsTemplates(targetRoot, tokens, {
+    hasBackoffice: false,
+    serverProvider: 'cloudflare',
+    hasTrpc: true,
+  })
+
+  const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
+  const docsIndex = await readFile(path.join(targetRoot, 'docs', 'index.md'), 'utf8')
+
+  assert.match(agents, /8\. Boundary types from schema only:/)
+  assert.match(agents, /server-api-ssot-trpc/)
+  assert.match(docsIndex, /Server API SSOT \(tRPC\)/)
+  assert.equal(
+    await pathExists(path.join(targetRoot, 'docs', 'engineering', 'server-api-ssot-trpc.md')),
+    true,
   )
 })
 
@@ -268,6 +293,7 @@ test('syncOptionalDocsTemplates can patch legacy docs files without markers', as
   const docsIndex = await readFile(path.join(targetRoot, 'docs', 'index.md'), 'utf8')
 
   assert.match(agents, /optional-doc-links:start/)
+  assert.match(agents, /Boundary types from schema only/)
   assert.match(agents, /backoffice-react-best-practices/)
   assert.match(agents, /server-provider-supabase/)
   assert.match(agents, /server-api-ssot-trpc/)

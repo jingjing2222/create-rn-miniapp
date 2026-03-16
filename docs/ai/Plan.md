@@ -1,6 +1,22 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: tRPC를 만든 경우에만 AGENTS Golden Rule에 schema-derived boundary type 규칙 추가
+1. 문제
+   - 지금 generated `AGENTS.md`는 tRPC가 있는 repo와 없는 repo의 Golden Rules가 같다.
+   - `packages/trpc`를 만든 경우에는 client-server 경계 타입을 schema에서만 파생한다는 규칙을 바로 보여주는 게 맞지만, base template에 고정으로 넣으면 non-tRPC repo에도 불필요한 규칙이 남는다.
+2. 방향
+   - base `AGENTS.md`에 optional Golden Rule marker를 둔다.
+   - `syncOptionalDocsTemplates()`가 `hasTrpc`일 때만 `8. Boundary types from schema only: ...` 규칙을 넣는다.
+   - tRPC를 만들지 않은 repo에는 이 규칙이 전혀 생기지 않게 한다.
+3. 테스트
+   - base docs copy 후에는 Golden Rule 8이 없는지 검증한다.
+   - optional docs sync에서 `hasTrpc: false`면 여전히 없는지 검증한다.
+   - `hasTrpc: true`면 Golden Rule 8이 들어가는지 검증한다.
+4. 완료 기준
+   - tRPC repo에서만 AGENTS Golden Rule 8이 보인다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: tRPC frontend tsconfig 조합을 TypeScript 제약에 맞게 보정
 1. 문제
    - `allowImportingTsExtensions`만 켜면 TypeScript가 바로 통과하지 않는다.

@@ -11,6 +11,8 @@
 5. Docs first: 구조와 규칙이 바뀌면 코드보다 문서를 먼저 맞춘다.
 6. No secrets: 키, 토큰, 내부 URL 같은 민감정보를 코드, 로그, PR에 남기지 않는다.
 7. Official docs first: Granite, `@apps-in-toss/framework`, TDS는 공식 공개 문서를 먼저 확인한다.
+<!-- optional-golden-rules:start -->
+<!-- optional-golden-rules:end -->
 
 ## Start Here
 1. `docs/ai/Plan.md`: 목표, 범위, DoD

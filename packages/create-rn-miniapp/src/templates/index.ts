@@ -60,6 +60,8 @@ const FIREBASE_ADMIN_VERSION = '^13.6.0'
 const FIREBASE_FUNCTIONS_VERSION = '^7.0.0'
 const GOOGLE_CLOUD_FUNCTIONS_FRAMEWORK_VERSION = '^3.4.5'
 const FIREBASE_FUNCTIONS_TYPESCRIPT_VERSION = '^5.7.3'
+const OPTIONAL_GOLDEN_RULES_START_MARKER = '<!-- optional-golden-rules:start -->'
+const OPTIONAL_GOLDEN_RULES_END_MARKER = '<!-- optional-golden-rules:end -->'
 const OPTIONAL_AGENTS_START_MARKER = '<!-- optional-doc-links:start -->'
 const OPTIONAL_AGENTS_END_MARKER = '<!-- optional-doc-links:end -->'
 const OPTIONAL_DOCS_INDEX_START_MARKER = '<!-- optional-engineering-links:start -->'
@@ -701,6 +703,16 @@ function renderOptionalAgentsSection(options: OptionalDocsOptions) {
   return lines.join('\n')
 }
 
+function renderOptionalGoldenRulesSection(options: OptionalDocsOptions) {
+  if (!options.hasTrpc) {
+    return ''
+  }
+
+  return [
+    '8. Boundary types from schema only: client-server 경계 타입은 Zod schema에서 `z.infer`로만 파생하고, 같은 DTO를 별도 type alias로 중복 정의하지 않는다.',
+  ].join('\n')
+}
+
 function renderOptionalDocsIndexSection(options: OptionalDocsOptions) {
   const lines: string[] = []
 
@@ -921,12 +933,20 @@ export async function syncOptionalDocsTemplates(
   const agentsPath = path.join(targetRoot, 'AGENTS.md')
   if (await pathExists(agentsPath)) {
     const agentsSource = await readFile(agentsPath, 'utf8')
-    const nextAgentsSource = replaceMarkedSection(agentsSource, {
-      startMarker: OPTIONAL_AGENTS_START_MARKER,
-      endMarker: OPTIONAL_AGENTS_END_MARKER,
-      renderedSection: renderOptionalAgentsSection(options),
-      fallbackAnchor: '- `docs/engineering/native-modules-policy.md`',
-    })
+    const nextAgentsSource = replaceMarkedSection(
+      replaceMarkedSection(agentsSource, {
+        startMarker: OPTIONAL_GOLDEN_RULES_START_MARKER,
+        endMarker: OPTIONAL_GOLDEN_RULES_END_MARKER,
+        renderedSection: renderOptionalGoldenRulesSection(options),
+        fallbackAnchor: '## Start Here',
+      }),
+      {
+        startMarker: OPTIONAL_AGENTS_START_MARKER,
+        endMarker: OPTIONAL_AGENTS_END_MARKER,
+        renderedSection: renderOptionalAgentsSection(options),
+        fallbackAnchor: '- `docs/engineering/native-modules-policy.md`',
+      },
+    )
     await writeFile(agentsPath, nextAgentsSource, 'utf8')
   }
 
