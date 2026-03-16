@@ -1,6 +1,17 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: changeset frontmatter 파싱 실패 수정
+1. 문제
+   - release CI에서 `.changeset/early-pumas-design.md`를 읽는 단계가 `invalid frontmatter`로 실패하고 있다.
+   - 원인은 파일이 YAML frontmatter 시작 구분자 `---` 없이 바로 package/version 매핑으로 시작하기 때문이다.
+2. 방향
+   - 문제가 난 changeset 파일 frontmatter를 정상 형태로 고친다.
+   - 같은 실수를 막기 위해 `release.test.ts`에 `.changeset/*.md`가 모두 `---`로 시작하는지 검증하는 회귀 테스트를 추가한다.
+3. 완료 기준
+   - changesets/action이 해당 파일을 정상 파싱할 수 있다.
+   - 로컬 `pnpm verify`가 통과한다.
+
 ## 다음 작업: Supabase / Firebase auth guide 이미지를 generated server README에 반영
 1. 문제
    - Supabase와 Firebase는 auth 안내 섹션을 추가했지만, 실제 발급 화면 예시는 아직 generated `server/README.md`에 붙지 않는다.

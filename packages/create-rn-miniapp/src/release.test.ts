@@ -87,6 +87,23 @@ test('workspace project schema does not depend on local node_modules paths', () 
   )
 })
 
+test('changeset files keep valid frontmatter delimiters', () => {
+  const changesetRoot = path.join(repoRoot, '.changeset')
+  const changesetFiles = fs
+    .readdirSync(changesetRoot)
+    .filter((fileName) => fileName.endsWith('.md') && fileName !== 'README.md')
+    .sort()
+
+  for (const fileName of changesetFiles) {
+    const source = fs.readFileSync(path.join(changesetRoot, fileName), 'utf8')
+    assert.equal(
+      source.startsWith('---\n') || source.startsWith('---\r\n'),
+      true,
+      `${fileName} must start with a YAML frontmatter delimiter`,
+    )
+  }
+})
+
 test('scaffold templates tarball keeps the root gitignore template', () => {
   const packJson = execFileSync('npm', ['pack', '--dry-run', '--json'], {
     cwd: path.join(repoRoot, 'packages/scaffold-templates'),
