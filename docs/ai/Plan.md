@@ -1,6 +1,25 @@
 ## 작업명
 `create-miniapp` 오케스트레이션 CLI 구현
 
+## 다음 작업: Cloudflare server env에서 공개 Worker URL을 제거
+1. 문제
+   - 지금 Cloudflare provisioning은 `server/.env.local`에 `CLOUDFLARE_API_BASE_URL=https://<worker>.workers.dev`를 기록한다.
+   - 이 이름은 Wrangler가 Cloudflare 관리 API override로도 해석해서, 배포 요청이 `api.cloudflare.com` 대신 공개 Worker URL로 잘못 향할 수 있다.
+   - 공개 Worker URL은 app client가 쓰는 값이지, server deploy 메타데이터로는 적절하지 않다.
+2. 방향
+   - `frontend/.env.local`의 `MINIAPP_API_BASE_URL`, `backoffice/.env.local`의 `VITE_API_BASE_URL`은 그대로 유지한다.
+   - `server/.env.local`에서는 `CLOUDFLARE_API_BASE_URL`를 제거하고, 배포 메타데이터만 남긴다.
+   - 기존 잘못 생성된 `CLOUDFLARE_API_BASE_URL=` 줄도 다음 provisioning/overwrite 시 자동으로 제거한다.
+   - README와 provisioning note도 server env 설명을 새 기준으로 고친다.
+3. 테스트
+   - `writeCloudflareServerLocalEnvFile` 테스트에서 `CLOUDFLARE_API_BASE_URL`가 더 이상 생성되지 않는지 검증한다.
+   - 기존 env에 `CLOUDFLARE_API_BASE_URL`가 있어도 다음 write에서 제거되는지 검증한다.
+   - finalize/provision note 테스트와 README 설명도 새 메타데이터 목록 기준으로 맞춘다.
+4. 완료 기준
+   - 공개 Worker URL은 frontend/backoffice env에만 기록된다.
+   - `server/.env.local`은 Wrangler deploy용 메타데이터만 가진다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: tRPC overlay를 `packages/contracts` + `packages/app-router`로 재구성
 1. 문제
    - 기존 `packages/trpc` 하나에 boundary schema, router, `AppRouter` 타입을 같이 두면 shared runtime code와 server-oriented code의 책임이 흐려진다.
@@ -1212,7 +1231,7 @@
 
 ## 현재 Cloudflare server 원격 운영 스크립트 작업
 1. Cloudflare provider를 선택해 Worker를 연결한 경우 `server/.env.local`도 함께 세팅한다.
-2. `server/.env.local`에는 적어도 `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME`, `CLOUDFLARE_API_BASE_URL` 자리를 유지한다.
+2. `server/.env.local`에는 적어도 `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_R2_BUCKET_NAME` 같은 deploy 메타데이터 자리를 유지한다.
 3. 이미 `server/.env.local`이 있으면 사용자가 넣어둔 `CLOUDFLARE_API_TOKEN` 같은 비밀값은 지우지 않고 보존한다.
 4. `server/package.json`에는 원격 Worker 재배포용 기본 `deploy` 스크립트를 제공한다.
 5. 원격 `deploy`는 `server/.env.local`을 읽고 `wrangler deploy --env-file ./.env.local --name ...`를 실행해야 한다.

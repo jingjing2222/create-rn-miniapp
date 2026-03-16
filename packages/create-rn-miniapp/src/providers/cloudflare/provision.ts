@@ -158,7 +158,6 @@ function createCloudflareEnvValues(apiBaseUrl: string) {
 function createCloudflareServerEnvValues(options: {
   accountId: string
   workerName: string
-  apiBaseUrl: string | null
   d1DatabaseId: string
   d1DatabaseName: string
   r2BucketName: string
@@ -168,7 +167,6 @@ function createCloudflareServerEnvValues(options: {
     '# Cloudflare Worker metadata for this workspace.',
     `CLOUDFLARE_ACCOUNT_ID=${options.accountId}`,
     `CLOUDFLARE_WORKER_NAME=${options.workerName}`,
-    `CLOUDFLARE_API_BASE_URL=${options.apiBaseUrl ?? ''}`,
     `CLOUDFLARE_D1_DATABASE_ID=${options.d1DatabaseId}`,
     `CLOUDFLARE_D1_DATABASE_NAME=${options.d1DatabaseName}`,
     `CLOUDFLARE_R2_BUCKET_NAME=${options.r2BucketName}`,
@@ -849,7 +847,6 @@ export function formatCloudflareManualSetupNote(options: {
     createCloudflareServerEnvValues({
       accountId: options.accountId,
       workerName: options.workerName,
-      apiBaseUrl: null,
       d1DatabaseId: options.d1DatabaseId,
       d1DatabaseName: options.d1DatabaseName,
       r2BucketName: options.r2BucketName,
@@ -890,12 +887,12 @@ export async function writeCloudflareServerLocalEnvFile(options: {
   targetRoot: string
   accountId: string
   workerName: string
-  apiBaseUrl: string | null
   d1DatabaseId: string
   d1DatabaseName: string
   r2BucketName: string
 }) {
   const serverEnvPath = path.join(options.targetRoot, 'server', '.env.local')
+  const removeLineSentinel = '__remove_cloudflare_server_api_base_url__'
   let existingSource = ''
 
   if (await pathExists(serverEnvPath)) {
@@ -908,7 +905,6 @@ export async function writeCloudflareServerLocalEnvFile(options: {
 
   let hasAccountId = false
   let hasWorkerName = false
-  let hasApiBaseUrl = false
   let hasD1DatabaseId = false
   let hasD1DatabaseName = false
   let hasR2BucketName = false
@@ -930,8 +926,7 @@ export async function writeCloudflareServerLocalEnvFile(options: {
     }
 
     if (trimmed.startsWith('CLOUDFLARE_API_BASE_URL=')) {
-      nextLines[index] = `CLOUDFLARE_API_BASE_URL=${options.apiBaseUrl ?? ''}`
-      hasApiBaseUrl = true
+      nextLines[index] = removeLineSentinel
       continue
     }
 
@@ -966,10 +961,6 @@ export async function writeCloudflareServerLocalEnvFile(options: {
     nextLines.push(`CLOUDFLARE_WORKER_NAME=${options.workerName}`)
   }
 
-  if (!hasApiBaseUrl) {
-    nextLines.push(`CLOUDFLARE_API_BASE_URL=${options.apiBaseUrl ?? ''}`)
-  }
-
   if (!hasD1DatabaseId) {
     nextLines.push(`CLOUDFLARE_D1_DATABASE_ID=${options.d1DatabaseId}`)
   }
@@ -988,6 +979,10 @@ export async function writeCloudflareServerLocalEnvFile(options: {
 
   const normalizedSource = `${nextLines
     .filter((line, index, array) => {
+      if (line === removeLineSentinel) {
+        return false
+      }
+
       if (index === array.length - 1) {
         return line.length > 0
       }
@@ -1232,7 +1227,6 @@ export async function finalizeCloudflareProvisioning(options: {
     targetRoot: options.targetRoot,
     accountId: options.provisionedWorker.accountId,
     workerName: options.provisionedWorker.workerName,
-    apiBaseUrl: options.provisionedWorker.apiBaseUrl,
     d1DatabaseId: options.provisionedWorker.d1DatabaseId,
     d1DatabaseName: options.provisionedWorker.d1DatabaseName,
     r2BucketName: options.provisionedWorker.r2BucketName,

@@ -219,7 +219,6 @@ test('writeCloudflareServerLocalEnvFile creates server env file and preserves an
       targetRoot,
       accountId: 'account-123',
       workerName: 'ebook-miniapp',
-      apiBaseUrl: 'https://ebook-miniapp.team-ebook.workers.dev',
       d1DatabaseId: 'database-123',
       d1DatabaseName: 'ebook-db',
       r2BucketName: 'ebook-storage',
@@ -233,7 +232,6 @@ test('writeCloudflareServerLocalEnvFile creates server env file and preserves an
         '# Cloudflare Worker metadata for this workspace.',
         'CLOUDFLARE_ACCOUNT_ID=account-123',
         'CLOUDFLARE_WORKER_NAME=ebook-miniapp',
-        'CLOUDFLARE_API_BASE_URL=https://ebook-miniapp.team-ebook.workers.dev',
         'CLOUDFLARE_D1_DATABASE_ID=database-123',
         'CLOUDFLARE_D1_DATABASE_NAME=ebook-db',
         'CLOUDFLARE_R2_BUCKET_NAME=ebook-storage',
@@ -263,7 +261,6 @@ test('writeCloudflareServerLocalEnvFile creates server env file and preserves an
       targetRoot,
       accountId: 'next-account',
       workerName: 'next-worker',
-      apiBaseUrl: 'https://next-worker.next-subdomain.workers.dev',
       d1DatabaseId: 'next-db-id',
       d1DatabaseName: 'next-db',
       r2BucketName: 'next-storage',
@@ -273,10 +270,7 @@ test('writeCloudflareServerLocalEnvFile creates server env file and preserves an
 
     assert.match(updatedServerEnv, /^CLOUDFLARE_ACCOUNT_ID=next-account$/m)
     assert.match(updatedServerEnv, /^CLOUDFLARE_WORKER_NAME=next-worker$/m)
-    assert.match(
-      updatedServerEnv,
-      /^CLOUDFLARE_API_BASE_URL=https:\/\/next-worker\.next-subdomain\.workers\.dev$/m,
-    )
+    assert.doesNotMatch(updatedServerEnv, /^CLOUDFLARE_API_BASE_URL=/m)
     assert.match(updatedServerEnv, /^CLOUDFLARE_D1_DATABASE_ID=next-db-id$/m)
     assert.match(updatedServerEnv, /^CLOUDFLARE_D1_DATABASE_NAME=next-db$/m)
     assert.match(updatedServerEnv, /^CLOUDFLARE_R2_BUCKET_NAME=next-storage$/m)

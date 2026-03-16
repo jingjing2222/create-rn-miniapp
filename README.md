@@ -200,7 +200,7 @@ Cloudflare를 선택하면 account를 고른 뒤 기존 Worker 목록을 먼저 
 - 기존 Worker를 고르면 해당 Worker 기준으로 URL을 계산할 수 있을 때 `frontend/.env.local`과 optional `backoffice/.env.local`까지 자동으로 작성해줘요.
 - 새 Worker 생성을 고르면 Wrangler 로그인과 account 선택 뒤 Worker를 배포하고, D1 database와 R2 bucket도 기존 것을 고르거나 새로 만들 수 있어요. `workers.dev` URL을 계산할 수 있으면 같은 방식으로 `.env.local`까지 자동으로 작성해줘요.
 - URL을 자동으로 확정하지 못한 경우에만 마지막에 `.env.local`에 넣을 값을 안내해줘요.
-- `server/.env.local`에는 `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME`, `CLOUDFLARE_API_BASE_URL`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_D1_DATABASE_NAME`, `CLOUDFLARE_R2_BUCKET_NAME`, `CLOUDFLARE_API_TOKEN` 자리를 함께 만들어 두고, `server/package.json`의 `deploy`는 이 파일을 읽어 원격 Worker를 다시 배포해요.
+- `server/.env.local`에는 `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_D1_DATABASE_NAME`, `CLOUDFLARE_R2_BUCKET_NAME`, `CLOUDFLARE_API_TOKEN` 자리를 함께 만들어 두고, `server/package.json`의 `deploy`는 이 파일을 읽어 원격 Worker를 다시 배포해요.
 - `server/wrangler.jsonc`에는 `DB` D1 binding과 `STORAGE` R2 binding을 같이 맞춰줘요.
 - plain mode면 `frontend/src/lib/api.ts`, `backoffice/src/lib/api.ts`를 기준으로 Worker를 호출해요.
 - tRPC를 같이 고르면 `packages/contracts`가 boundary schema SSOT가 되고, `packages/app-router`가 canonical router가 돼요. Worker runtime은 `@workspace/app-router`를 직접 import해서 같은 router를 바로 써요. 이 경우 client 기본 진입점도 `src/lib/trpc.ts`예요.
