@@ -1,5 +1,15 @@
 # @create-rn-miniapp/scaffold-templates
 
+## 0.0.18
+
+### Patch Changes
+
+- e8ece25: Improve the generated frontend starter and guardrails.
+
+  - move frontend native/UI guardrails into generated Biome rules and keep Granite `$param` routes in verify
+  - replace the frontend starter animation with the Marketing Lottie asset and wire it through `@granite-js/native/lottie-react-native`
+  - refresh generated starter pages, Granite config repo root handling, and README guidance about TDS/Granite guardrails
+
 ## 0.0.17
 
 ### Patch Changes
