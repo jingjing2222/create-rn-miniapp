@@ -126,6 +126,34 @@ test('buildCreateLifecycleOrder applies root templates and server patch before f
   ])
 })
 
+test('buildCreateLifecycleOrder syncs root workspaces before cloudflare trpc provisioning', () => {
+  const labels = buildCreateLifecycleOrder({
+    appName: 'ebook',
+    targetRoot: path.join('/tmp', 'ebook'),
+    packageManager: 'pnpm',
+    serverProvider: 'cloudflare',
+    withTrpc: true,
+    withBackoffice: false,
+  })
+
+  assert.deepEqual(labels, [
+    'frontend Granite 만들기',
+    'frontend 의존성 설치하기',
+    'frontend AppInToss Framework 설치하기',
+    'frontend ait 초기화하기',
+    'frontend TDS 설치하기',
+    'server Cloudflare Workers 준비하기',
+    'server 워크스페이스 준비하기',
+    '루트 템플릿 적용하기',
+    'server 워크스페이스 다듬기',
+    '루트 workspace manifest 먼저 맞추기',
+    'server provisioning 하기',
+    '루트 workspace manifest 맞추기',
+    '루트 git 저장소 만들기',
+    '루트 기본 브랜치를 main으로 맞추기',
+  ])
+})
+
 test('buildRootGitSetupPlan initializes git and switches HEAD to main', () => {
   const targetRoot = path.join('/tmp', 'ebook')
   const plan = buildRootGitSetupPlan({ targetRoot })

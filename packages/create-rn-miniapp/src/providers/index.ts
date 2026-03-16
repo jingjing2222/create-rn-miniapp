@@ -34,11 +34,13 @@ type ProviderPatchOptions = {
   targetRoot: string
   tokens: TemplateTokens
   packageManager: PackageManager
+  trpc?: boolean
 }
 
 export type ServerProviderAdapter = {
   id: 'supabase' | 'cloudflare' | 'firebase'
   label: string
+  supportsTrpc: boolean
   detect(rootDir: string): Promise<boolean>
   buildCreatePlan(options: ProviderPlanOptions): ServerProviderCommandSpec[]
   buildAddPlan(options: ProviderPlanOptions): ServerProviderCommandSpec[]
@@ -76,6 +78,7 @@ function buildSupabasePlan(options: ProviderPlanOptions): ServerProviderCommandS
 const supabaseAdapter: ServerProviderAdapter = {
   id: 'supabase',
   label: 'Supabase',
+  supportsTrpc: true,
   async detect(rootDir) {
     return pathExists(path.join(rootDir, 'server', 'supabase', 'config.toml'))
   },
@@ -113,6 +116,7 @@ function buildCloudflarePlan(options: ProviderPlanOptions): ServerProviderComman
 const cloudflareAdapter: ServerProviderAdapter = {
   id: 'cloudflare',
   label: 'Cloudflare Workers',
+  supportsTrpc: true,
   async detect(rootDir) {
     return (
       (await pathExists(path.join(rootDir, 'server', 'wrangler.jsonc'))) ||
@@ -141,6 +145,7 @@ const cloudflareAdapter: ServerProviderAdapter = {
 const firebaseAdapter: ServerProviderAdapter = {
   id: 'firebase',
   label: 'Firebase',
+  supportsTrpc: false,
   async detect(rootDir) {
     return pathExists(path.join(rootDir, 'server', 'firebase.json'))
   },
@@ -183,6 +188,12 @@ export type ServerProvider = (typeof SERVER_PROVIDERS)[number]
 
 export function getServerProviderAdapter(provider: ServerProvider): ServerProviderAdapter {
   return serverProviders[provider]
+}
+
+export function serverProviderSupportsTrpc(
+  provider: ServerProvider | null | undefined,
+): provider is Extract<ServerProvider, 'supabase' | 'cloudflare'> {
+  return provider === 'supabase' || provider === 'cloudflare'
 }
 
 export async function detectServerProvider(rootDir: string) {

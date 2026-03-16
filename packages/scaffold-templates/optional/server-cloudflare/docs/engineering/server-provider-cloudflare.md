@@ -30,6 +30,12 @@
 클라이언트는 API base URL을 읽어서 Worker를 호출해요.
 Worker URL이 바뀌면 `.env.local`과 배포 경로를 같이 확인해야 해요.
 
+## tRPC를 같이 골랐다면
+- `packages/trpc`가 router와 `AppRouter` 타입의 canonical source예요.
+- Worker runtime은 `@workspace/trpc`를 직접 import해서 같은 router를 바로 써요.
+- `frontend/src/lib/trpc.ts`, `backoffice/src/lib/trpc.ts`가 Worker `/trpc` endpoint를 호출해요.
+- `server/src/index.ts`는 Worker fetch handler를 tRPC adapter 기준으로 다시 연결해요.
+
 ## 작업할 때 먼저 확인할 것
 - `server/.env.local`에 `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_R2_BUCKET_NAME`이 있는가
 - `server/.env.local`에 `CLOUDFLARE_API_TOKEN`이 필요하면 채워져 있는가

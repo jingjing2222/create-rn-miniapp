@@ -10,6 +10,7 @@ import {
   applyRootTemplates,
   applyFirebaseServerWorkspaceTemplate,
   applyServerPackageTemplate,
+  applyTrpcWorkspaceTemplate,
   applyWorkspaceProjectTemplate,
   pathExists,
   syncOptionalDocsTemplates,
@@ -88,6 +89,72 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
     await readFile(path.join(targetRoot, 'pnpm-workspace.yaml'), 'utf8'),
     'packages:\n  - frontend\n',
   )
+})
+
+test('syncRootWorkspaceManifest can register packages/trpc in pnpm workspace manifest', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend'])
+  await syncRootWorkspaceManifest(targetRoot, 'pnpm', ['frontend', 'packages/trpc'])
+
+  assert.equal(
+    await readFile(path.join(targetRoot, 'pnpm-workspace.yaml'), 'utf8'),
+    ['packages:', '  - frontend', '  - packages/trpc', ''].join('\n'),
+  )
+})
+
+test('applyTrpcWorkspaceTemplate creates a shared packages/trpc workspace for cloudflare', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await applyRootTemplates(targetRoot, tokens, ['frontend', 'server', 'packages/trpc'])
+  await applyTrpcWorkspaceTemplate(targetRoot, tokens, { serverProvider: 'cloudflare' })
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(targetRoot, 'packages', 'trpc', 'package.json'), 'utf8'),
+  ) as {
+    name?: string
+    dependencies?: Record<string, string>
+    scripts?: Record<string, string>
+  }
+  const tsconfig = JSON.parse(
+    await readFile(path.join(targetRoot, 'packages', 'trpc', 'tsconfig.json'), 'utf8'),
+  ) as {
+    compilerOptions?: {
+      composite?: boolean
+      declaration?: boolean
+      outDir?: string
+    }
+  }
+  const projectJson = JSON.parse(
+    await readFile(path.join(targetRoot, 'packages', 'trpc', 'project.json'), 'utf8'),
+  ) as {
+    targets?: Record<string, { command?: string }>
+  }
+  const readme = await readFile(path.join(targetRoot, 'packages', 'trpc', 'README.md'), 'utf8')
+  const indexSource = await readFile(
+    path.join(targetRoot, 'packages', 'trpc', 'src', 'index.ts'),
+    'utf8',
+  )
+  const rootSource = await readFile(
+    path.join(targetRoot, 'packages', 'trpc', 'src', 'root.ts'),
+    'utf8',
+  )
+
+  assert.equal(packageJson.name, '@workspace/trpc')
+  assert.equal(packageJson.dependencies?.['@trpc/server'], '^11.13.4')
+  assert.equal(packageJson.dependencies?.zod, '^4.3.6')
+  assert.equal(packageJson.scripts?.build, 'tsc -p tsconfig.json')
+  assert.equal(tsconfig.compilerOptions?.composite, true)
+  assert.equal(tsconfig.compilerOptions?.declaration, true)
+  assert.equal(tsconfig.compilerOptions?.outDir, 'dist')
+  assert.equal(projectJson.targets?.build?.command, 'pnpm --dir packages/trpc build')
+  assert.equal(projectJson.targets?.typecheck?.command, 'pnpm --dir packages/trpc typecheck')
+  assert.match(readme, /packages\/trpc/)
+  assert.match(readme, /server를 직접 참조하지 않아요/)
+  assert.match(indexSource, /export type \{ AppRouter \} from '\.\/root'/)
+  assert.match(rootSource, /createTRPCRouter/)
 })
 
 test('applyDocsTemplates keeps optional workspace docs out of the base copy', async (t) => {

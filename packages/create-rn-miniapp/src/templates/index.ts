@@ -3,8 +3,12 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { patchRootPackageJsonSource } from '../patching/package-json.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import {
+  applyTrpcWorkspaceTemplate as applyTrpcWorkspaceTemplateImpl,
+  TRPC_WORKSPACE_PATH,
+} from './trpc.js'
 
-const ROOT_WORKSPACE_ORDER = ['frontend', 'server', 'backoffice'] as const
+const ROOT_WORKSPACE_ORDER = ['frontend', 'server', TRPC_WORKSPACE_PATH, 'backoffice'] as const
 
 export type WorkspaceName = (typeof ROOT_WORKSPACE_ORDER)[number]
 
@@ -837,6 +841,16 @@ export async function applyRootTemplates(
       tokens,
     )
   }
+}
+
+export async function applyTrpcWorkspaceTemplate(
+  targetRoot: string,
+  tokens: TemplateTokens,
+  options: {
+    serverProvider: 'supabase' | 'cloudflare'
+  },
+) {
+  await applyTrpcWorkspaceTemplateImpl(targetRoot, tokens, options)
 }
 
 export async function applyDocsTemplates(targetRoot: string, tokens: TemplateTokens) {

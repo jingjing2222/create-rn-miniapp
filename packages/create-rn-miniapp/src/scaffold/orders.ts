@@ -55,6 +55,7 @@ type CreateOrderOptions = {
   packageManager: PackageManager
   noGit?: boolean
   serverProvider: ServerProvider | null
+  withTrpc?: boolean
   withBackoffice: boolean
 }
 
@@ -85,9 +86,17 @@ export function buildCreateLifecycleOrder(options: CreateOrderOptions) {
     labels.push('server 워크스페이스 다듬기', 'server provisioning 하기')
   }
 
+  if (options.withTrpc) {
+    labels.splice(
+      labels.indexOf('server provisioning 하기'),
+      0,
+      '루트 workspace manifest 먼저 맞추기',
+    )
+  }
+
   labels.push(...phases.backoffice.map((command) => command.label))
 
-  if (options.withBackoffice) {
+  if (options.withBackoffice || options.withTrpc) {
     labels.push('루트 workspace manifest 맞추기')
   }
 

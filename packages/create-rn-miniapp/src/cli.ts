@@ -7,6 +7,7 @@ import { SERVER_PROJECT_MODES, type ServerProjectMode } from './server-project.j
 import {
   SERVER_PROVIDERS,
   SERVER_PROVIDER_OPTIONS,
+  serverProviderSupportsTrpc,
   type ServerProvider,
 } from './providers/index.js'
 import type { WorkspaceInspection } from './workspace-inspector.js'
@@ -19,6 +20,7 @@ export type ParsedCliArgs = {
   noGit?: boolean
   serverProvider?: ServerProvider
   serverProjectMode?: ServerProjectMode
+  trpc?: boolean
   withBackoffice?: boolean
   rootDir: string
   outputDir: string
@@ -73,6 +75,7 @@ export type ResolvedCliOptions = {
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
   withServer: boolean
+  withTrpc: boolean
   withBackoffice: boolean
   outputDir: string
   skipInstall: boolean
@@ -86,10 +89,12 @@ export type ResolvedAddCliOptions = {
   displayName: string
   existingServerProvider: ServerProvider | null
   existingHasBackoffice: boolean
+  existingHasTrpc: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
   withServer: boolean
+  withTrpc: boolean
   withBackoffice: boolean
   skipInstall: boolean
 }
@@ -136,6 +141,10 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
       choices: SERVER_PROJECT_MODES,
       describe: '`server` 제공자의 원격 리소스 연결 방식 지정',
     })
+    .option('trpc', {
+      type: 'boolean',
+      describe: '지원하는 `server` provider 위에 tRPC overlay 추가',
+    })
     .option('with-backoffice', {
       type: 'boolean',
       describe: '`backoffice` 워크스페이스 포함',
@@ -180,6 +189,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     noGit: argv.git === false,
     serverProvider: argv.serverProvider,
     serverProjectMode: argv.serverProjectMode,
+    trpc: argv.trpc,
     withBackoffice: argv.withBackoffice,
     rootDir: argv.rootDir,
     outputDir: argv.outputDir,
@@ -205,6 +215,7 @@ export function formatCliHelp() {
     '  --no-git                       생성 완료 후 루트 git init 생략',
     `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
     '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
+    '  --trpc                         지원하는 `server` provider 위에 tRPC overlay 추가',
     '  --with-backoffice              `backoffice` 워크스페이스 포함',
     '  --root-dir <디렉터리>          `--add`에서 수정할 기존 모노레포 루트 디렉터리',
     '  --output-dir <디렉터리>        생성할 모노레포의 상위 디렉터리',
@@ -218,6 +229,7 @@ export function formatCliHelp() {
     '  create-miniapp --name my-miniapp --display-name "내 미니앱"',
     '  create-miniapp --name my-miniapp --server-provider supabase --with-backoffice',
     '  create-miniapp --name my-miniapp --server-provider cloudflare',
+    '  create-miniapp --name my-miniapp --server-provider cloudflare --trpc',
     '  create-miniapp --name my-miniapp --server-provider firebase',
     '  create-miniapp --name my-miniapp --server-provider supabase --server-project-mode existing',
     '  create-miniapp --name my-miniapp --server-provider cloudflare --server-project-mode existing',
@@ -235,6 +247,14 @@ function validateServerProjectMode(
   if (!serverProvider && serverProjectMode) {
     throw new Error(
       '`--server-project-mode`는 `server` provider를 선택했을 때만 사용할 수 있습니다.',
+    )
+  }
+}
+
+function validateTrpcSelection(serverProvider: ServerProvider | null, trpc: boolean | undefined) {
+  if (trpc && !serverProviderSupportsTrpc(serverProvider)) {
+    throw new Error(
+      '`--trpc`는 `supabase` 또는 `cloudflare` server provider와 함께만 사용할 수 있어요.',
     )
   }
 }
@@ -265,6 +285,37 @@ async function resolveServerProviderInput(
     options: [{ label: options.noneLabel, value: 'none' }, ...SERVER_PROVIDER_OPTIONS],
     initialValue: 'none',
   })
+}
+
+async function resolveTrpcInput(
+  argv: ParsedCliArgs,
+  prompt: CliPrompter,
+  serverProvider: ServerProvider | null,
+) {
+  validateTrpcSelection(serverProvider, argv.trpc)
+
+  if (!serverProviderSupportsTrpc(serverProvider)) {
+    return false
+  }
+
+  if (argv.trpc !== undefined) {
+    return argv.trpc
+  }
+
+  if (argv.yes) {
+    return false
+  }
+
+  return (
+    (await prompt.select({
+      message: '`tRPC`도 같이 이어드릴까요?',
+      options: [
+        { label: '네, 같이 넣어둘게요', value: 'yes' },
+        { label: '아니요, 지금은 안 넣을게요', value: 'no' },
+      ],
+      initialValue: 'no',
+    })) === 'yes'
+  )
 }
 
 export function detectInvocationPackageManager(
@@ -364,6 +415,7 @@ export async function resolveCliOptions(
   const normalizedServerProvider = serverProvider === 'none' ? null : serverProvider
   const withServer = normalizedServerProvider !== null
   const serverProjectMode = await resolveServerProjectModeInput(normalizedServerProvider, argv)
+  const withTrpc = await resolveTrpcInput(argv, prompt, normalizedServerProvider)
   const skipServerProvisioning = argv.yes && !serverProjectMode
 
   const withBackoffice =
@@ -389,6 +441,7 @@ export async function resolveCliOptions(
     serverProjectMode,
     skipServerProvisioning,
     withServer,
+    withTrpc,
     withBackoffice,
     outputDir: path.resolve(argv.outputDir),
     skipInstall: argv.skipInstall,
@@ -416,6 +469,8 @@ export async function resolveAddCliOptions(
   const withServer = normalizedServerProvider !== null
   const serverProjectMode = await resolveServerProjectModeInput(normalizedServerProvider, argv)
   const skipServerProvisioning = argv.yes && !serverProjectMode
+  const trpcProvider = normalizedServerProvider ?? inspection.serverProvider
+  const withTrpc = inspection.hasTrpc ? false : await resolveTrpcInput(argv, prompt, trpcProvider)
 
   const withBackoffice = inspection.hasBackoffice
     ? false
@@ -431,7 +486,7 @@ export async function resolveAddCliOptions(
             initialValue: 'no',
           })) === 'yes'))
 
-  if (!withServer && !withBackoffice) {
+  if (!withServer && !withBackoffice && !withTrpc) {
     throw new Error('추가할 워크스페이스가 없어요. 이미 모두 있거나 이번엔 선택하지 않았어요.')
   }
 
@@ -443,10 +498,12 @@ export async function resolveAddCliOptions(
     displayName: inspection.displayName,
     existingServerProvider: inspection.serverProvider,
     existingHasBackoffice: inspection.hasBackoffice,
+    existingHasTrpc: inspection.hasTrpc,
     serverProvider: normalizedServerProvider,
     serverProjectMode,
     skipServerProvisioning,
     withServer,
+    withTrpc,
     withBackoffice,
     skipInstall: argv.skipInstall,
   } satisfies ResolvedAddCliOptions

@@ -3,6 +3,7 @@ import { log } from '@clack/prompts'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import { getServerProviderAdapter, type ServerProvider } from '../providers/index.js'
 import {
+  applyTrpcWorkspaceTemplate,
   pathExists,
   type TemplateTokens,
   type WorkspaceName,
@@ -41,7 +42,7 @@ export async function maybeWriteNpmWorkspaceConfig(
 export async function resolveRootWorkspaces(targetRoot: string) {
   const workspaces: WorkspaceName[] = []
 
-  for (const workspace of ['frontend', 'server', 'backoffice'] as const) {
+  for (const workspace of ['frontend', 'server', 'packages/trpc', 'backoffice'] as const) {
     if (await pathExists(path.join(targetRoot, workspace))) {
       workspaces.push(workspace)
     }
@@ -79,6 +80,7 @@ export async function maybePatchServerWorkspace(options: {
   tokens: TemplateTokens
   packageManager: PackageManager
   serverProvider: ServerProvider | null
+  trpc: boolean
 }) {
   if (!options.serverProvider || !(await pathExists(path.join(options.targetRoot, 'server')))) {
     return
@@ -90,5 +92,21 @@ export async function maybePatchServerWorkspace(options: {
     targetRoot: options.targetRoot,
     tokens: options.tokens,
     packageManager: options.packageManager,
+    trpc: options.trpc,
+  })
+}
+
+export async function maybePrepareTrpcWorkspace(options: {
+  targetRoot: string
+  tokens: TemplateTokens
+  withTrpc: boolean
+  serverProvider: Extract<ServerProvider, 'supabase' | 'cloudflare'> | null
+}) {
+  if (!options.withTrpc || !options.serverProvider) {
+    return
+  }
+
+  await applyTrpcWorkspaceTemplate(options.targetRoot, options.tokens, {
+    serverProvider: options.serverProvider,
   })
 }

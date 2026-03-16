@@ -10,12 +10,24 @@ import {
   resolveAddCliOptions,
   resolveCliOptions,
 } from './cli.js'
-import { generatedWorkspaceLayout } from './layout.js'
 import { addWorkspaces, scaffoldWorkspace } from './scaffold/index.js'
 import { inspectWorkspace } from './workspace-inspector.js'
 
 const require = createRequire(import.meta.url)
 const packageJson = require('../package.json') as { version: string }
+
+function describeWorkspaceLayout(options: {
+  withServer: boolean
+  withTrpc: boolean
+  withBackoffice: boolean
+}) {
+  return [
+    'frontend',
+    ...(options.withServer ? ['server'] : []),
+    ...(options.withTrpc ? ['packages/trpc'] : []),
+    ...(options.withBackoffice ? ['backoffice'] : []),
+  ].join(', ')
+}
 
 export async function main() {
   try {
@@ -48,6 +60,7 @@ export async function main() {
           `server 추가: ${String(resolved.withServer)}`,
           `server 제공자: ${resolved.serverProvider ?? '이번엔 안 만들어요'}`,
           `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '이번엔 건너뛸게요' : (resolved.serverProjectMode ?? '목록에서 고를게요')) : '해당 없어요'}`,
+          `tRPC 추가: ${String(resolved.withTrpc)}`,
           `backoffice 추가: ${String(resolved.withBackoffice)}`,
         ].join('\n'),
         '이렇게 반영할게요',
@@ -74,11 +87,12 @@ export async function main() {
         `앱 이름(appName): ${resolved.appName}`,
         `표시 이름(displayName): ${resolved.displayName}`,
         `만들 위치: ${resolved.outputDir}/${resolved.appName}`,
-        `만들 구조: ${generatedWorkspaceLayout.join(', ')}`,
+        `만들 구조: ${describeWorkspaceLayout(resolved)}`,
         `루트 git 초기화: ${String(!resolved.noGit)}`,
         `server 포함: ${String(resolved.withServer)}`,
         `server 제공자: ${resolved.serverProvider ?? '이번엔 안 만들어요'}`,
         `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '이번엔 건너뛸게요' : (resolved.serverProjectMode ?? '목록에서 고를게요')) : '해당 없어요'}`,
+        `tRPC 포함: ${String(resolved.withTrpc)}`,
         `backoffice 포함: ${String(resolved.withBackoffice)}`,
       ].join('\n'),
       '이렇게 만들게요',

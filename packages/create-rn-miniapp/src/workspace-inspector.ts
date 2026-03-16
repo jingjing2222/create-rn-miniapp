@@ -17,6 +17,7 @@ export type WorkspaceInspection = {
   displayName: string
   hasServer: boolean
   hasBackoffice: boolean
+  hasTrpc: boolean
   serverProvider: ServerProvider | null
 }
 
@@ -67,6 +68,7 @@ export async function inspectWorkspace(rootDir: string): Promise<WorkspaceInspec
 
   const hasServer = await pathExists(path.join(resolvedRootDir, 'server'))
   const hasBackoffice = await pathExists(path.join(resolvedRootDir, 'backoffice'))
+  const hasTrpc = await pathExists(path.join(resolvedRootDir, 'packages', 'trpc', 'package.json'))
   const serverProvider = hasServer ? await detectServerProvider(resolvedRootDir) : null
 
   return {
@@ -76,6 +78,7 @@ export async function inspectWorkspace(rootDir: string): Promise<WorkspaceInspec
     displayName: metadata.displayName ?? toDefaultDisplayName(metadata.appName),
     hasServer,
     hasBackoffice,
+    hasTrpc,
     serverProvider,
   }
 }
