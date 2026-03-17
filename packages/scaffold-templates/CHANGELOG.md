@@ -1,5 +1,12 @@
 # @create-rn-miniapp/scaffold-templates
 
+## 0.0.19
+
+### Patch Changes
+
+- 29d24d9: chore: typo
+- 62f4c6b: Build generated tRPC shared packages with `tsdown` and expose both ESM and CJS exports.
+
 ## 0.0.18
 
 ### Patch Changes
