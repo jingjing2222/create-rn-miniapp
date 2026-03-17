@@ -1,3 +1,35 @@
+## 다음 작업: Firebase provider가 Firestore 리소스와 seed 흐름까지 같이 준비하게 만들기
+1. 문제
+   - 지금 Firebase provider는 `frontend/src/lib/firestore.ts`와 `backoffice/src/lib/firestore.ts`를 생성하지만, 원격 프로젝트에는 Firestore API와 `(default)` 데이터베이스를 준비하지 않는다.
+   - 이 상태면 스캐폴딩 직후 클라이언트 코드는 Firestore를 바라보는데, 실제 Firebase 프로젝트는 DB 자체를 바로 쓸 수 없는 구조적 빈틈이 남는다.
+2. 방향
+   - provisioning 단계에서 `firestore.googleapis.com`을 활성화하고 `(default)` Firestore database가 없으면 function region 기준으로 자동 생성한다.
+   - Firebase server workspace에는 `firestore.rules`, `firestore.indexes.json`, `firestore.seed.json`, `scripts/firebase-firestore-seed.mjs`를 함께 만든다.
+   - generated `server/package.json`은 `deploy`에서 `functions,firestore`를 같이 배포하고, `firestore:seed` 스크립트를 추가한다.
+   - generated README와 Firebase provider guide도 Firestore rules/indexes/seed 흐름을 같이 설명한다.
+3. 테스트
+   - Firestore API 활성화와 default database 생성 helper 테스트를 먼저 추가한다.
+   - Firebase server template 테스트에 `firestore.rules`, `firestore.indexes.json`, `firestore:seed`와 deploy script 변경을 고정한다.
+4. 완료 기준
+   - Firebase provisioning이 Firestore API와 기본 DB를 자동으로 준비한다.
+   - generated Firebase server workspace에 Firestore 설정 파일과 seed 진입점이 존재한다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Firebase deploy auth note를 짧게 줄이고 발급 경로만 남기기
+1. 문제
+   - 지금 Firebase provisioning note는 역할 설명, 자동 보정, 일반 설정 링크까지 섞여 있어서 필요한 행동이 바로 보이지 않는다.
+   - 특히 `firebase login:ci`는 설치 경로가 빠져 있어 그대로 따라 하기 어렵고, 발급 화면 예시가 이미 `server/README.md`에 있는데 note가 그걸 활용하지 못한다.
+2. 방향
+   - note는 `server/.env.local`의 빈 값과 발급 경로만 짧게 안내한다.
+   - `FIREBASE_TOKEN`은 `npx firebase-tools login:ci`로 직접 안내한다.
+   - `GOOGLE_APPLICATION_CREDENTIALS`는 프로젝트별 Service Accounts URL만 보여준다.
+   - 역할 설명, 자동 보정 설명, 일반 Firebase 설정 링크는 note에서 제거하고, 발급 화면 예시는 `server/README.md`로 안내한다.
+3. 테스트
+   - provisioning note 테스트를 먼저 짧은 문구와 `server/README.md` 기준으로 고정한다.
+4. 완료 기준
+   - Firebase note가 짧아지고 필요한 행동만 바로 보인다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Supabase server typecheck를 placeholder에서 실제 Edge Function 정적 검사로 바꾸기
 1. 문제
    - 현재 generated `server/package.json`의 `typecheck`는 placeholder라 `supabase/functions/*/index.ts` entrypoint 자체를 검사하지 않는다.

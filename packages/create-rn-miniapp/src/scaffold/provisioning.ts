@@ -130,6 +130,7 @@ export async function maybeProvisionFirebaseProject(options: {
 
 export async function maybeFinalizeFirebaseProvisioning(options: {
   targetRoot: string
+  packageManager: PackageManager
   provisionedProject: ProvisionedFirebaseProject | null
   serverProvider: ServerProvider | null
 }) {
@@ -139,6 +140,7 @@ export async function maybeFinalizeFirebaseProvisioning(options: {
 
   return await finalizeFirebaseProvisioning({
     targetRoot: options.targetRoot,
+    packageManager: options.packageManager,
     provisionedProject: options.provisionedProject,
   })
 }
