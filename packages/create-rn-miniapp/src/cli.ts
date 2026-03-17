@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { isCancel, log, select, text } from '@clack/prompts'
+import { isCancel, log, password, select, text } from '@clack/prompts'
 import yargs from 'yargs'
 import { assertValidAppName, toDefaultDisplayName } from './layout.js'
 import { PACKAGE_MANAGERS, type PackageManager } from './package-manager.js'
@@ -48,13 +48,21 @@ export type SelectPromptOptions<T extends string> = {
   initialValue?: T
 }
 
+export type PasswordPromptOptions = {
+  message: string
+  guide?: string
+  validate?: (value: string) => string | undefined
+}
+
 export type CliPrompter = {
   text(options: TextPromptOptions): Promise<string>
+  password?(options: PasswordPromptOptions): Promise<string>
   select<T extends string>(options: SelectPromptOptions<T>): Promise<T>
 }
 
 type ClackPrompter = {
   text(options: TextPromptOptions): Promise<string | symbol>
+  password(options: PasswordPromptOptions): Promise<string | symbol>
   select<T extends string>(options: {
     message: string
     options: Array<{
@@ -569,6 +577,18 @@ const defaultClackPrompter: ClackPrompter = {
       },
     })
   },
+  async password(options: PasswordPromptOptions) {
+    if (options.guide) {
+      log.message(options.guide)
+    }
+
+    return password({
+      message: options.message,
+      validate(value) {
+        return options.validate?.(value ?? '')
+      },
+    })
+  },
   async select<T extends string>(options: {
     message: string
     options: Array<{
@@ -597,6 +617,15 @@ export function createClackPrompter(
   return {
     async text(options) {
       const value = await clackPrompter.text(options)
+
+      if (clackPrompter.isCancel(value)) {
+        throw new Error('입력을 취소했어요.')
+      }
+
+      return value
+    },
+    async password(options) {
+      const value = await clackPrompter.password(options)
 
       if (clackPrompter.isCancel(value)) {
         throw new Error('입력을 취소했어요.')

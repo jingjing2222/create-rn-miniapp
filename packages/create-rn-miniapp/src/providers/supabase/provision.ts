@@ -46,6 +46,24 @@ export function buildCreateSupabaseProjectArgs(projectName: string, dbPassword: 
   return ['projects', 'create', projectName, '--db-password', dbPassword]
 }
 
+export function resolveSupabaseProjectDbPassword(rawDbPassword: string) {
+  const manualDbPassword = rawDbPassword.trim()
+
+  if (manualDbPassword.length > 0) {
+    return {
+      createPassword: manualDbPassword,
+      persistedPassword: null,
+    }
+  }
+
+  const generatedPassword = generateSupabaseDbPassword()
+
+  return {
+    createPassword: generatedPassword,
+    persistedPassword: generatedPassword,
+  }
+}
+
 function buildSupabaseCommand(
   packageManager: PackageManager,
   cwd: string,
@@ -452,6 +470,20 @@ async function promptSupabaseProjectName(prompt: CliPrompter, targetRoot: string
   })
 }
 
+async function promptSupabaseProjectDbPassword(prompt: CliPrompter) {
+  const options = {
+    message: '새 Supabase 프로젝트 DB 비밀번호를 적어 주세요.',
+    guide:
+      '직접 정한 비밀번호를 쓰고 싶으면 적어 주세요. 비워 두면 제가 강한 비밀번호를 만들어서 server/.env.local에 적어둘게요.',
+  } as const
+
+  if (prompt.password) {
+    return await prompt.password(options)
+  }
+
+  return await prompt.text(options)
+}
+
 async function createSupabaseProject(
   packageManager: PackageManager,
   cwd: string,
@@ -459,15 +491,17 @@ async function createSupabaseProject(
 ) {
   log.step('Supabase 프로젝트를 새로 만들게요')
   const projectName = (await promptSupabaseProjectName(prompt, cwd)).trim()
-  const dbPassword = generateSupabaseDbPassword()
+  const resolvedDbPassword = resolveSupabaseProjectDbPassword(
+    await promptSupabaseProjectDbPassword(prompt),
+  )
   await runCommand(
     buildSupabaseCommand(packageManager, cwd, 'Supabase 프로젝트 만들기', [
-      ...buildCreateSupabaseProjectArgs(projectName, dbPassword),
+      ...buildCreateSupabaseProjectArgs(projectName, resolvedDbPassword.createPassword),
     ]),
   )
 
   return {
-    dbPassword,
+    dbPassword: resolvedDbPassword.persistedPassword,
   }
 }
 

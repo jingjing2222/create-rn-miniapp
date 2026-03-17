@@ -199,6 +199,9 @@ test('ensureFirebaseProjectIsOnBlazePlan retries until billing is enabled', asyn
     async text() {
       throw new Error('text should not be called')
     },
+    async password() {
+      return ''
+    },
     async select<T extends string>() {
       actions.push('retry')
       return '__firebase_blaze_retry__' as T
@@ -228,6 +231,9 @@ test('ensureFirebaseProjectIsOnBlazePlan refreshes gcloud auth on invalid_grant 
   const prompt: CliPrompter = {
     async text() {
       throw new Error('text should not be called')
+    },
+    async password() {
+      return ''
     },
     async select<T extends string>() {
       actions.push('retry')
@@ -269,6 +275,9 @@ test('ensureFirebaseProjectIsOnBlazePlan stops when user cancels Blaze upgrade l
   const prompt: CliPrompter = {
     async text() {
       throw new Error('text should not be called')
+    },
+    async password() {
+      return ''
     },
     async select<T extends string>() {
       return '__firebase_blaze_cancel__' as T

@@ -103,6 +103,9 @@ test('resolveCliOptions asks for missing values when interactive input is needed
       })
       return promptValues.shift() ?? ''
     },
+    async password() {
+      return ''
+    },
     async select(options) {
       const fallback = options.options[0]
 
@@ -336,6 +339,10 @@ test('resolveCliOptions keeps prompts optional when yes flag is set', async () =
   let promptCalled = false
   const prompts: CliPrompter = {
     async text() {
+      promptCalled = true
+      return ''
+    },
+    async password() {
       promptCalled = true
       return ''
     },
@@ -1152,6 +1159,10 @@ test('createClackPrompter delegates text input and single-choice selection to cl
       messages.push(`text:${options.message}`)
       return options.initialValue ?? 'ebook-miniapp'
     },
+    async password(options) {
+      messages.push(`password:${options.message}`)
+      return 'secret-password'
+    },
     async select<T extends string>(options: {
       message: string
       options: Array<{
@@ -1188,6 +1199,10 @@ test('createClackPrompter delegates text input and single-choice selection to cl
     message: 'displayName을 입력해 주세요',
     guide: '앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
   })
+  assert.ok(prompter.password)
+  const passwordValue = await prompter.password({
+    message: '비밀번호를 입력해 주세요',
+  })
   const selectValue = await prompter.select({
     message: '`server` 제공자를 골라 주세요.',
     options: [
@@ -1198,11 +1213,13 @@ test('createClackPrompter delegates text input and single-choice selection to cl
   })
 
   assert.equal(textValue, 'ebook-miniapp')
+  assert.equal(passwordValue, 'secret-password')
   assert.equal(selectValue, 'firebase')
   assert.deepEqual(messages, [
     'text:appName을 입력해 주세요',
     'guide:앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
     'text:displayName을 입력해 주세요',
+    'password:비밀번호를 입력해 주세요',
     'select:`server` 제공자를 골라 주세요.',
   ])
 })
@@ -1211,6 +1228,9 @@ test('createClackPrompter turns prompt cancellation into a user-facing error', a
   const cancelled = Symbol('cancelled')
   const prompter = createClackPrompter({
     async text() {
+      return cancelled
+    },
+    async password() {
       return cancelled
     },
     async select<T extends string>(options: {

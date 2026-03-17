@@ -9,6 +9,7 @@ import {
   finalizeSupabaseProvisioning,
   formatSupabaseManualSetupNote,
   pollForNewSupabaseProject,
+  resolveSupabaseProjectDbPassword,
   resolveSupabaseClientApiKey,
   writeSupabaseServerLocalEnvFile,
   writeSupabaseLocalEnvFiles,
@@ -81,6 +82,21 @@ test('buildCreateSupabaseProjectArgs appends the project name positional arg', (
     '--db-password',
     'generated-password',
   ])
+})
+
+test('resolveSupabaseProjectDbPassword keeps manual passwords out of server env persistence', () => {
+  assert.deepEqual(resolveSupabaseProjectDbPassword('manual-secret'), {
+    createPassword: 'manual-secret',
+    persistedPassword: null,
+  })
+})
+
+test('resolveSupabaseProjectDbPassword generates and persists a password when the input is blank', () => {
+  const resolved = resolveSupabaseProjectDbPassword('   ')
+
+  assert.equal(typeof resolved.createPassword, 'string')
+  assert.ok(resolved.createPassword.length > 0)
+  assert.equal(resolved.persistedPassword, resolved.createPassword)
 })
 
 test('pollForNewSupabaseProject waits 1, 2, 4, 5 seconds and stops when a new project appears', async () => {
