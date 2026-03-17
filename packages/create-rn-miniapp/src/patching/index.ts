@@ -17,6 +17,7 @@ import {
   patchBackofficeAppSource,
   patchBackofficeMainSource,
   patchGraniteConfigSource,
+  renderGranitePresetSource,
 } from './ast/index.js'
 import {
   createCloudflareVitestWranglerConfigSource,
@@ -1136,7 +1137,7 @@ function renderSupabaseServerReadme(
     '',
     '- miniapp frontend는 `frontend/src/lib/supabase.ts`에서 Supabase client를 생성해요.',
     '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_SUPABASE_URL`, `MINIAPP_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
-    '- frontend `granite.config.ts`는 `.env.local` 값을 읽어 `MINIAPP_SUPABASE_URL`, `MINIAPP_SUPABASE_PUBLISHABLE_KEY`를 주입해요.',
+    '- frontend `scaffold.preset.ts`가 `.env.local` 값을 읽어 `MINIAPP_SUPABASE_URL`, `MINIAPP_SUPABASE_PUBLISHABLE_KEY`를 주입하고, `granite.config.ts`는 그 scaffold preset만 연결해요.',
     `- miniapp frontend는 \`supabase.functions.invoke('${SUPABASE_DEFAULT_FUNCTION_NAME}')\` 형태로 Edge Function을 호출할 수 있어요.`,
     '- backoffice가 있으면 `backoffice/src/lib/supabase.ts`에서 별도 browser client를 생성해요.',
     '- backoffice `.env.local`은 `backoffice/.env.local`에 두고 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
@@ -1315,7 +1316,7 @@ function renderFirebaseServerReadme(
     '',
     '- miniapp frontend는 `frontend/src/lib/firebase.ts`, `frontend/src/lib/firestore.ts`, `frontend/src/lib/storage.ts`에서 Firebase Web SDK를 초기화해요.',
     '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_FIREBASE_API_KEY`, `MINIAPP_FIREBASE_AUTH_DOMAIN`, `MINIAPP_FIREBASE_PROJECT_ID`, `MINIAPP_FIREBASE_STORAGE_BUCKET`, `MINIAPP_FIREBASE_MESSAGING_SENDER_ID`, `MINIAPP_FIREBASE_APP_ID`, `MINIAPP_FIREBASE_MEASUREMENT_ID`, `MINIAPP_FIREBASE_FUNCTION_REGION`를 사용해요.',
-    '- frontend `granite.config.ts`는 `process.cwd()` 기준으로 `.env.local` 값을 읽어 같은 `MINIAPP_FIREBASE_*` 값을 주입해요.',
+    '- frontend `scaffold.preset.ts`는 `process.cwd()` 기준으로 `.env.local` 값을 읽어 같은 `MINIAPP_FIREBASE_*` 값을 주입하고, `granite.config.ts`는 그 scaffold preset만 연결해요.',
     '- `frontend/src/lib/public-app-status.ts`는 Firestore direct read를 먼저 시도하고, 권한 오류가 나면 `getPublicStatus` callable function으로 fallback 해요.',
     '- backoffice가 있으면 `backoffice/src/lib/firebase.ts`, `backoffice/src/lib/firestore.ts`, `backoffice/src/lib/storage.ts`가 같은 Firebase project를 사용해요.',
     '- backoffice `.env.local`은 `backoffice/.env.local`에 두고 `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`를 사용해요.',
@@ -1551,6 +1552,16 @@ async function patchGraniteConfig(
   const next = patchGraniteConfigSource(source, tokens, serverProvider)
 
   await writeFile(graniteConfigPath, next, 'utf8')
+}
+
+async function writeFrontendGranitePreset(
+  frontendRoot: string,
+  serverProvider: ServerProvider | null,
+) {
+  await writeTextFile(
+    path.join(frontendRoot, 'scaffold.preset.ts'),
+    renderGranitePresetSource(serverProvider),
+  )
 }
 
 async function patchWorkspaceTsconfigModules(
@@ -2098,6 +2109,7 @@ export async function patchFrontendWorkspace(
   await removeToolingFiles(frontendRoot, options.packageManager)
   await removeWorkspaceArtifacts(frontendRoot, options.packageManager)
   await patchGraniteConfig(frontendRoot, tokens, options.serverProvider)
+  await writeFrontendGranitePreset(frontendRoot, options.serverProvider)
   await ensureFrontendStarterHeroAsset(frontendRoot)
   await patchGraniteStarterPages(frontendRoot)
   await patchWorkspaceTsconfigModules(frontendRoot, [

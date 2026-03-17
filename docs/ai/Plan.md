@@ -1,3 +1,18 @@
+## 다음 작업: generated frontend의 Granite preset 로직을 로컬 helper로 분리하기
+1. 문제
+   - 지금 `frontend/granite.config.ts`는 repoRoot, env 로딩, provider별 `env()` plugin, Firebase crypto shim resolver까지 모두 직접 들고 있어 patch 결과가 점점 비대해진다.
+   - 설정 주입이 늘어날수록 `granite.config.ts` 자체가 overlay 구현 파일처럼 변해서, Granite 기본 설정과 generator overlay의 경계가 흐려진다.
+2. 방향
+   - generated frontend에 `scaffold.preset.ts` 같은 로컬 helper 파일을 만든다.
+   - provider별 env 로딩, `workspaceRepoRoot`, Firebase crypto shim resolver는 helper로 옮기고, `granite.config.ts`는 `defineConfig()`와 `appsInToss()` 중심의 얇은 선언형 파일로 유지한다.
+   - 기존 Firebase / Supabase / Cloudflare patch는 helper 파일 생성과 얇은 config wiring 기준으로 다시 맞춘다.
+3. 테스트
+   - frontend patch 테스트를 먼저 바꿔 `granite.config.ts`가 helper를 import하는지, helper가 provider별 env/resolver를 담는지 고정한다.
+4. 완료 기준
+   - generated `frontend/granite.config.ts`는 얇은 wiring만 남는다.
+   - provider별 env/resolver 로직은 generated helper 파일로 이동한다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Firebase frontend에 Granite crypto shim과 resolver alias를 같이 패치하기
 1. 문제
    - 실제 Firebase 생성물은 `firebase`가 `crypto` / `node:crypto`를 참조하는데, 현재 `frontend/granite.config.ts`에는 Granite build / metro resolver alias가 없어 `ait build`가 깨진다.

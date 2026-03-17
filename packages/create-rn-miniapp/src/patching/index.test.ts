@@ -117,6 +117,7 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
     devDependencies?: Record<string, string>
   }
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
+  const granitePreset = await readFile(path.join(frontendRoot, 'scaffold.preset.ts'), 'utf8')
   const tsconfigSource = await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')
   const tsconfig = JSON.parse(tsconfigSource) as {
     compilerOptions?: {
@@ -132,11 +133,15 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   assert.equal(packageJson.devDependencies?.typescript, '^5.8.3')
   assert.equal(packageJson.devDependencies?.['@types/node'], '^24.10.1')
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
+  assert.match(graniteConfig, /import \{ workspaceRepoRoot \} from '\.\/scaffold\.preset'/)
+  assert.doesNotMatch(graniteConfig, /import path from 'node:path'/)
+  assert.doesNotMatch(graniteConfig, /process\.cwd\(\)/)
+  assert.match(graniteConfig, /watchFolders:\s*\[\s*workspaceRepoRoot\s*\]/)
+  assert.match(granitePreset, /import path from 'node:path'/)
   assert.match(
-    graniteConfig,
-    /import path from 'node:path';\nconst appRoot = process\.cwd\(\);\n\nconst repoRoot = path\.resolve\(appRoot, '\.\.\/'\)/,
+    granitePreset,
+    /export const workspaceRepoRoot = path\.resolve\(process\.cwd\(\), '\.\.\/'\)/,
   )
-  assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
   assert.equal(tsconfig.compilerOptions?.module, 'esnext')
   assert.deepEqual(tsconfig.compilerOptions?.types, ['node'])
   assert.doesNotMatch(tsconfigSource, /frontend tsconfig comment/)
@@ -429,6 +434,7 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
     devDependencies?: Record<string, string>
   }
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
+  const granitePreset = await readFile(path.join(frontendRoot, 'scaffold.preset.ts'), 'utf8')
   const envTypes = await readFile(path.join(frontendRoot, 'src', 'env.d.ts'), 'utf8')
   const tsconfig = JSON.parse(await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')) as {
     compilerOptions?: {
@@ -448,29 +454,37 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   assert.equal(packageJson.devDependencies?.typescript, '^5.8.3')
   assert.equal(packageJson.devDependencies?.['@types/node'], '^24.10.1')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
+  assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
   assert.match(
     graniteConfig,
-    /import dotenv from 'dotenv';\nconst appRoot = process\.cwd\(\);\n\nconst repoRoot = path\.resolve/,
+    /import \{ scaffoldEnvBindings, workspaceRepoRoot \} from '\.\/scaffold\.preset'/,
   )
-  assert.match(graniteConfig, /const appRoot = process\.cwd\(\)/)
-  assert.match(graniteConfig, /const repoRoot = path\.resolve\(appRoot, '\.\.\/'\)/)
-  assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
-  assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
-  assert.match(graniteConfig, /import dotenv from 'dotenv'/)
+  assert.match(graniteConfig, /watchFolders:\s*\[\s*workspaceRepoRoot\s*\]/)
   assert.match(
     graniteConfig,
-    /const appRoot = process\.cwd\(\);\n\nconst repoRoot = path\.resolve\(appRoot, '\.\.\/'\)/,
+    /plugins:\s*\[\s*env\(scaffoldEnvBindings,\s*\{\s*dts:\s*false\s*\}\),/,
   )
-  assert.match(graniteConfig, /path\.join\(appRoot, '\.env'\)/)
+  assert.doesNotMatch(graniteConfig, /import dotenv from 'dotenv'/)
+  assert.doesNotMatch(graniteConfig, /resolveMiniappEnv/)
   assert.doesNotMatch(graniteConfig, /function resolveOptionalMiniappEnv/)
-  assert.match(graniteConfig, /\}\n\nconst miniappSupabaseUrl = resolveMiniappEnv/)
-  assert.doesNotMatch(graniteConfig, /function resolveOptionalMiniappEnv\(/)
+  assert.match(granitePreset, /import dotenv from 'dotenv'/)
   assert.match(
-    graniteConfig,
-    /const miniappSupabasePublishableKey = resolveMiniappEnv\('MINIAPP_SUPABASE_PUBLISHABLE_KEY'\);\n\nexport default defineConfig/,
+    granitePreset,
+    /export const workspaceRepoRoot = path\.resolve\(process\.cwd\(\), '\.\.\/'\)/,
   )
-  assert.match(graniteConfig, /MINIAPP_SUPABASE_URL: miniappSupabaseUrl/)
+  assert.match(
+    granitePreset,
+    /const miniappSupabaseUrl = resolveMiniappEnv\('MINIAPP_SUPABASE_URL'\)/,
+  )
+  assert.match(
+    granitePreset,
+    /const miniappSupabasePublishableKey = resolveMiniappEnv\('MINIAPP_SUPABASE_PUBLISHABLE_KEY'\)/,
+  )
+  assert.match(
+    granitePreset,
+    /export const scaffoldEnvBindings = \{ MINIAPP_SUPABASE_URL: miniappSupabaseUrl, MINIAPP_SUPABASE_PUBLISHABLE_KEY: miniappSupabasePublishableKey \}/,
+  )
   assert.equal(tsconfig.compilerOptions?.module, 'esnext')
   assert.deepEqual(tsconfig.compilerOptions?.types, ['node'])
   assert.equal(await pathExists(path.join(frontendRoot, '.env.local.example')), false)
@@ -563,18 +577,31 @@ test('patchFrontendWorkspace adds cloudflare API bootstrap when cloudflare serve
     devDependencies?: Record<string, string>
   }
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
+  const granitePreset = await readFile(path.join(frontendRoot, 'scaffold.preset.ts'), 'utf8')
   const envTypes = await readFile(path.join(frontendRoot, 'src', 'env.d.ts'), 'utf8')
   const apiClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'api.ts'), 'utf8')
 
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], undefined)
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
-  assert.doesNotMatch(graniteConfig, /function resolveOptionalMiniappEnv/)
-  assert.match(graniteConfig, /MINIAPP_API_BASE_URL: miniappApiBaseUrl/)
-  assert.doesNotMatch(graniteConfig, /function resolveOptionalMiniappEnv\(/)
+  assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
   assert.match(
     graniteConfig,
+    /import \{ scaffoldEnvBindings, workspaceRepoRoot \} from '\.\/scaffold\.preset'/,
+  )
+  assert.match(
+    graniteConfig,
+    /plugins:\s*\[\s*env\(scaffoldEnvBindings,\s*\{\s*dts:\s*false\s*\}\),/,
+  )
+  assert.doesNotMatch(graniteConfig, /resolveMiniappEnv/)
+  assert.doesNotMatch(graniteConfig, /function resolveOptionalMiniappEnv/)
+  assert.match(
+    granitePreset,
     /const miniappApiBaseUrl = resolveMiniappEnv\('MINIAPP_API_BASE_URL'\)/,
+  )
+  assert.match(
+    granitePreset,
+    /export const scaffoldEnvBindings = \{ MINIAPP_API_BASE_URL: miniappApiBaseUrl \}/,
   )
   assert.match(envTypes, /readonly MINIAPP_API_BASE_URL: string/)
   assert.match(apiClient, /import\.meta\.env\.MINIAPP_API_BASE_URL/)
@@ -876,6 +903,7 @@ test('patchFrontendWorkspace adds firebase bootstrap when firebase server provid
     devDependencies?: Record<string, string>
   }
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
+  const granitePreset = await readFile(path.join(frontendRoot, 'scaffold.preset.ts'), 'utf8')
   const envTypes = await readFile(path.join(frontendRoot, 'src', 'env.d.ts'), 'utf8')
   const firebaseClient = await readFile(
     path.join(frontendRoot, 'src', 'lib', 'firebase.ts'),
@@ -899,30 +927,52 @@ test('patchFrontendWorkspace adds firebase bootstrap when firebase server provid
   assert.equal(packageJson.dependencies?.firebase, '^12.10.0')
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
-  assert.match(graniteConfig, /MINIAPP_FIREBASE_API_KEY: miniappFirebaseApiKey/)
-  assert.match(graniteConfig, /MINIAPP_FIREBASE_FUNCTION_REGION: miniappFirebaseFunctionRegion/)
-  assert.match(graniteConfig, /const appRoot = process\.cwd\(\)/)
+  assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
   assert.match(
     graniteConfig,
-    /const cryptoShimPath = path\.join\(appRoot, 'src\/shims\/crypto\.ts'\)/,
+    /import \{ firebaseBuildResolver, firebaseMetroResolver, scaffoldEnvBindings, workspaceRepoRoot \} from '\.\/scaffold\.preset'/,
   )
-  assert.match(graniteConfig, /const cryptoModuleAliases = \[/)
-  assert.match(graniteConfig, /from: 'crypto'/)
-  assert.match(graniteConfig, /from: 'node:crypto'/)
-  assert.match(graniteConfig, /build:\s*\{[\s\S]*resolver:\s*\{[\s\S]*alias: cryptoModuleAliases/)
   assert.match(
     graniteConfig,
-    /metro:\s*\{[\s\S]*resolver:\s*\{[\s\S]*conditionNames:\s*\[[\s\S]*'react-native'[\s\S]*'browser'[\s\S]*'require'[\s\S]*'default'/,
+    /plugins:\s*\[\s*env\(scaffoldEnvBindings,\s*\{\s*dts:\s*false\s*\}\),/,
   )
-  assert.match(graniteConfig, /extraNodeModules:\s*\{[\s\S]*crypto: cryptoShimPath/)
-  assert.match(graniteConfig, /'node:crypto': cryptoShimPath/)
-  assert.match(graniteConfig, /function resolveOptionalMiniappEnv\(/)
+  assert.match(graniteConfig, /build:\s*\{[\s\S]*resolver:\s*\{[\s\S]*\.\.\.firebaseBuildResolver/)
   assert.match(
     graniteConfig,
+    /metro:\s*\{[\s\S]*watchFolders:\s*\[\s*workspaceRepoRoot\s*\][\s\S]*resolver:\s*\{[\s\S]*\.\.\.firebaseMetroResolver/,
+  )
+  assert.doesNotMatch(graniteConfig, /cryptoShimPath/)
+  assert.doesNotMatch(graniteConfig, /resolveMiniappEnv/)
+  assert.match(granitePreset, /MINIAPP_FIREBASE_API_KEY: miniappFirebaseApiKey/)
+  assert.match(granitePreset, /MINIAPP_FIREBASE_FUNCTION_REGION: miniappFirebaseFunctionRegion/)
+  assert.match(
+    granitePreset,
+    /export const scaffoldEnvBindings = \{[\s\S]*MINIAPP_FIREBASE_API_KEY: miniappFirebaseApiKey[\s\S]*MINIAPP_FIREBASE_FUNCTION_REGION: miniappFirebaseFunctionRegion[\s\S]*\}/,
+  )
+  assert.match(
+    granitePreset,
+    /const cryptoShimPath = path\.join\(process\.cwd\(\), 'src\/shims\/crypto\.ts'\)/,
+  )
+  assert.match(granitePreset, /const cryptoModuleAliases = \[/)
+  assert.match(granitePreset, /from: 'crypto'/)
+  assert.match(granitePreset, /from: 'node:crypto'/)
+  assert.match(
+    granitePreset,
+    /export const firebaseBuildResolver = \{ alias: cryptoModuleAliases \}/,
+  )
+  assert.match(
+    granitePreset,
+    /export const firebaseMetroResolver = \{[\s\S]*conditionNames:\s*\[[\s\S]*'react-native'[\s\S]*'browser'[\s\S]*'require'[\s\S]*'default'/,
+  )
+  assert.match(granitePreset, /extraNodeModules:\s*\{[\s\S]*crypto: cryptoShimPath/)
+  assert.match(granitePreset, /'node:crypto': cryptoShimPath/)
+  assert.match(granitePreset, /function resolveOptionalMiniappEnv\(/)
+  assert.match(
+    granitePreset,
     /const miniappFirebaseMeasurementId = resolveOptionalMiniappEnv\('MINIAPP_FIREBASE_MEASUREMENT_ID'\)/,
   )
   assert.match(
-    graniteConfig,
+    granitePreset,
     /const miniappFirebaseFunctionRegion = resolveOptionalMiniappEnv\('MINIAPP_FIREBASE_FUNCTION_REGION'\) \|\| ["']asia-northeast3["']/,
   )
   assert.match(envTypes, /readonly MINIAPP_FIREBASE_STORAGE_BUCKET: string/)
