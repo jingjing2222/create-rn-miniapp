@@ -10,7 +10,7 @@ import {
 import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
-import { pathExists, SUPABASE_DEFAULT_FUNCTION_NAME } from '../../templates/index.js'
+import { pathExists } from '../../templates/index.js'
 
 type SupabaseProject = {
   id: string
@@ -26,6 +26,7 @@ type SupabaseApiKey = {
 export type ProvisionedSupabaseProject = {
   projectRef: string
   publishableKey: string | null
+  dbPassword: string | null
   mode: ServerProjectMode
 }
 
@@ -38,7 +39,10 @@ type ProvisionSupabaseProjectOptions = {
 
 const CREATE_SUPABASE_PROJECT_SENTINEL = '__create_supabase_project__'
 const SUPABASE_ACCESS_TOKENS_DASHBOARD_URL = 'https://supabase.com/dashboard/account/tokens'
-const SUPABASE_MANAGEMENT_API_DOC_URL = 'https://supabase.com/docs/reference/api/introduction'
+
+export function buildCreateSupabaseProjectArgs(projectName: string) {
+  return ['projects', 'create', projectName]
+}
 
 function buildSupabaseCommand(
   packageManager: PackageManager,
@@ -84,6 +88,44 @@ function createSupabaseServerEnvValues(projectRef: string, dbPassword = '', acce
 
 function getSupabaseApiSettingsUrl(projectRef: string) {
   return `https://supabase.com/dashboard/project/${projectRef}/settings/api`
+}
+
+function getSupabaseDatabaseSettingsUrl(projectRef: string) {
+  return `https://supabase.com/dashboard/project/${projectRef}/database/settings`
+}
+
+function formatSupabaseSecretGuidance(options: {
+  projectRef: string
+  hasDbPassword: boolean
+  hasAccessToken: boolean
+}) {
+  const lines: string[] = []
+
+  if (!options.hasAccessToken && !options.hasDbPassword) {
+    lines.push(
+      'server/.env.local 의 `SUPABASE_ACCESS_TOKEN`과 `SUPABASE_DB_PASSWORD`는 비어 있어요. 아래 URL을 통해 각각 값을 넣어 주세요.',
+      SUPABASE_ACCESS_TOKENS_DASHBOARD_URL,
+      getSupabaseDatabaseSettingsUrl(options.projectRef),
+    )
+
+    return lines
+  }
+
+  if (!options.hasAccessToken) {
+    lines.push(
+      'server/.env.local 의 `SUPABASE_ACCESS_TOKEN`은 비어 있어요. 아래 URL에서 값을 확인한 뒤 넣어 주세요.',
+      SUPABASE_ACCESS_TOKENS_DASHBOARD_URL,
+    )
+  }
+
+  if (!options.hasDbPassword) {
+    lines.push(
+      'server/.env.local 의 `SUPABASE_DB_PASSWORD`는 비어 있어요. 아래 URL에서 DB password를 확인하거나 재설정한 뒤 넣어 주세요.',
+      getSupabaseDatabaseSettingsUrl(options.projectRef),
+    )
+  }
+
+  return lines
 }
 
 function stripAnsi(value: string) {
@@ -189,35 +231,17 @@ export function formatSupabaseManualSetupNote(options: {
     '',
     path.join(options.targetRoot, 'server', '.env.local'),
     createSupabaseServerEnvValues(options.projectRef, '<프로젝트 DB password>').trimEnd(),
-    '',
-    'server/package.json 의 db:apply 와 functions:deploy 는 server/.env.local 값을 사용합니다.',
   )
 
-  if (!options.hasDbPassword) {
-    lines.push(
-      'server/.env.local 의 SUPABASE_DB_PASSWORD 는 비어 있어요. 프로젝트를 만들 때 쓴 DB password를 직접 채워 넣으면 돼요.',
-    )
+  const secretGuidance = formatSupabaseSecretGuidance({
+    projectRef: options.projectRef,
+    hasDbPassword: options.hasDbPassword,
+    hasAccessToken: options.hasAccessToken ?? false,
+  })
+
+  if (secretGuidance.length > 0) {
+    lines.push('', ...secretGuidance)
   }
-
-  lines.push(
-    '',
-    '## Supabase access token',
-    '',
-    '- 브라우저 로그인 없이 CI나 비대화형 배포를 할 때만 필요해요.',
-    '- Supabase Dashboard > Account > Access Tokens 에서 새 personal access token을 만들어 주세요.',
-    '- Supabase access token은 별도 scope를 고르는 방식이 아니라, 토큰을 만든 계정 권한을 그대로 따라가요.',
-    '- 프로젝트 생성이나 배포가 필요하면 해당 organization / project에 접근 가능한 계정으로 만들어 주세요.',
-    options.hasAccessToken
-      ? '- `server/.env.local`의 `SUPABASE_ACCESS_TOKEN`은 기존 값을 그대로 둘게요.'
-      : '- 발급된 token은 `server/.env.local`의 `SUPABASE_ACCESS_TOKEN=` 뒤에 붙여 넣으면 돼요.',
-    `- ${SUPABASE_ACCESS_TOKENS_DASHBOARD_URL}`,
-    `- ${SUPABASE_MANAGEMENT_API_DOC_URL}`,
-    '',
-  )
-
-  lines.push(
-    `기본 Edge Function은 \`supabase/functions/${SUPABASE_DEFAULT_FUNCTION_NAME}/index.ts\`에 생성되어 있고, \`${path.join(options.targetRoot, 'server', 'package.json')}\`의 \`functions:deploy\`로 다시 배포할 수 있습니다.`,
-  )
 
   return {
     title: 'Supabase 연결 값을 이렇게 넣어 주세요',
@@ -247,6 +271,7 @@ export async function writeSupabaseLocalEnvFiles(options: {
 export async function writeSupabaseServerLocalEnvFile(options: {
   targetRoot: string
   projectRef: string
+  dbPassword?: string | null
 }) {
   const serverEnvPath = path.join(options.targetRoot, 'server', '.env.local')
   let existingSource = ''
@@ -280,6 +305,12 @@ export async function writeSupabaseServerLocalEnvFile(options: {
     if (trimmed.startsWith('SUPABASE_DB_PASSWORD=')) {
       hasPassword = true
       hasNonEmptyPassword = trimmed.slice('SUPABASE_DB_PASSWORD='.length).trim().length > 0
+
+      if (!hasNonEmptyPassword && options.dbPassword) {
+        nextLines[index] = `SUPABASE_DB_PASSWORD=${options.dbPassword}`
+        hasNonEmptyPassword = true
+      }
+
       continue
     }
 
@@ -294,7 +325,8 @@ export async function writeSupabaseServerLocalEnvFile(options: {
   }
 
   if (!hasPassword) {
-    nextLines.push('SUPABASE_DB_PASSWORD=')
+    nextLines.push(`SUPABASE_DB_PASSWORD=${options.dbPassword ?? ''}`)
+    hasNonEmptyPassword = Boolean(options.dbPassword)
   }
 
   if (!hasAccessToken) {
@@ -343,6 +375,43 @@ async function ensureSupabaseProjects(packageManager: PackageManager, cwd: strin
   }
 }
 
+async function sleep(delayMs: number) {
+  await new Promise((resolve) => {
+    setTimeout(resolve, delayMs)
+  })
+}
+
+export async function pollForNewSupabaseProject(
+  existingProjectRefs: string[],
+  options: {
+    delaysMs?: number[]
+    listProjects?: () => Promise<SupabaseProject[]>
+    sleep?: (delayMs: number) => Promise<void>
+  } = {},
+) {
+  const delaysMs = options.delaysMs ?? [1000, 2000, 4000, 5000]
+  const listProjects = options.listProjects
+
+  if (!listProjects) {
+    throw new Error('Supabase 프로젝트 목록 조회 함수가 필요해요.')
+  }
+
+  const wait = options.sleep ?? sleep
+
+  for (const delayMs of delaysMs) {
+    await wait(delayMs)
+
+    const projects = await listProjects()
+    const matchedProject = projects.find((project) => !existingProjectRefs.includes(project.id))
+
+    if (matchedProject) {
+      return matchedProject
+    }
+  }
+
+  return null
+}
+
 async function selectSupabaseProject(
   prompt: CliPrompter,
   projects: SupabaseProject[],
@@ -382,11 +451,37 @@ async function selectSupabaseProject(
   })
 }
 
-async function createSupabaseProject(packageManager: PackageManager, cwd: string) {
+async function promptSupabaseProjectName(prompt: CliPrompter, targetRoot: string) {
+  return await prompt.text({
+    message: '새 Supabase 프로젝트 이름을 적어 주세요.',
+    placeholder: path.basename(targetRoot),
+    initialValue: path.basename(targetRoot),
+    validate(value) {
+      if (value.trim().length === 0) {
+        return '프로젝트 이름은 비워둘 수 없어요.'
+      }
+
+      return undefined
+    },
+  })
+}
+
+async function createSupabaseProject(
+  packageManager: PackageManager,
+  cwd: string,
+  prompt: CliPrompter,
+) {
   log.step('Supabase 프로젝트를 새로 만들게요')
+  const projectName = (await promptSupabaseProjectName(prompt, cwd)).trim()
   await runCommand(
-    buildSupabaseCommand(packageManager, cwd, 'Supabase 프로젝트 만들기', ['projects', 'create']),
+    buildSupabaseCommand(packageManager, cwd, 'Supabase 프로젝트 만들기', [
+      ...buildCreateSupabaseProjectArgs(projectName),
+    ]),
   )
+
+  return {
+    dbPassword: null,
+  }
 }
 
 async function getSupabaseApiKeys(packageManager: PackageManager, cwd: string, projectRef: string) {
@@ -470,6 +565,7 @@ export async function provisionSupabaseProject(
 
   let selectedProjectId: string | null = null
   let resolvedProjectMode = options.projectMode
+  let createdProjectDbPassword: string | null = null
 
   if (resolvedProjectMode === null) {
     const selectedProject = await selectSupabaseProject(options.prompt, projects, {
@@ -486,23 +582,37 @@ export async function provisionSupabaseProject(
   }
 
   if (resolvedProjectMode === 'create') {
-    await createSupabaseProject(options.packageManager, options.targetRoot)
-    const refreshedProjects = await ensureSupabaseProjects(
+    const previousProjectIds = new Set(projects.map((project) => project.id))
+    const createdProject = await createSupabaseProject(
       options.packageManager,
       options.targetRoot,
+      options.prompt,
     )
+    createdProjectDbPassword = createdProject.dbPassword
 
-    const previousProjectIds = new Set(projects.map((project) => project.id))
-    const newlyCreatedProjects = refreshedProjects.filter(
-      (project) => !previousProjectIds.has(project.id),
-    )
+    const createdSupabaseProject = await pollForNewSupabaseProject([...previousProjectIds], {
+      listProjects: async () =>
+        await ensureSupabaseProjects(options.packageManager, options.targetRoot),
+    })
 
-    if (newlyCreatedProjects.length === 1) {
-      selectedProjectId = newlyCreatedProjects[0].id
+    if (createdSupabaseProject) {
+      selectedProjectId = createdSupabaseProject.id
     } else {
-      selectedProjectId = await selectSupabaseProject(options.prompt, refreshedProjects, {
-        message: '연결할 Supabase 프로젝트를 골라 주세요.',
-      })
+      const refreshedProjects = await ensureSupabaseProjects(
+        options.packageManager,
+        options.targetRoot,
+      )
+      const newlyCreatedProjects = refreshedProjects.filter(
+        (project) => !previousProjectIds.has(project.id),
+      )
+
+      if (newlyCreatedProjects.length === 1) {
+        selectedProjectId = newlyCreatedProjects[0].id
+      } else {
+        selectedProjectId = await selectSupabaseProject(options.prompt, refreshedProjects, {
+          message: '연결할 Supabase 프로젝트를 골라 주세요.',
+        })
+      }
     }
   } else if (resolvedProjectMode === 'existing' && !selectedProjectId) {
     selectedProjectId = await selectSupabaseProject(options.prompt, projects)
@@ -525,6 +635,7 @@ export async function provisionSupabaseProject(
   return {
     projectRef: selectedProjectId,
     publishableKey,
+    dbPassword: createdProjectDbPassword,
     mode: resolvedProjectMode,
   }
 }
@@ -546,6 +657,7 @@ export async function finalizeSupabaseProvisioning(options: {
   const serverEnv = await writeSupabaseServerLocalEnvFile({
     targetRoot: options.targetRoot,
     projectRef: options.provisionedProject.projectRef,
+    dbPassword: options.provisionedProject.dbPassword,
   })
 
   if (options.provisionedProject.publishableKey) {
@@ -563,28 +675,14 @@ export async function finalizeSupabaseProvisioning(options: {
           hasBackoffice
             ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 적어뒀어요.'
             : 'frontend/.env.local 에 Supabase 연결 값을 적어뒀어요.',
-          'server/.env.local 에는 원격 DB 반영과 Edge Functions 배포에 필요한 값을 적어뒀어요.',
-          serverEnv.hasDbPassword
-            ? 'server/package.json 의 db:apply 와 functions:deploy 로 다음 배포도 바로 이어갈 수 있어요.'
-            : 'server/.env.local 의 SUPABASE_DB_PASSWORD 는 비어 있어요. 프로젝트를 만들 때 쓴 DB password를 직접 넣어 주세요.',
-          ...(!serverEnv.hasDbPassword
-            ? [
-                'SUPABASE_DB_PASSWORD 를 넣고 나면 server/package.json 의 db:apply 와 functions:deploy 로 바로 이어서 반영할 수 있어요.',
-              ]
-            : []),
-          serverEnv.hasAccessToken
-            ? 'server/.env.local 의 SUPABASE_ACCESS_TOKEN 은 기존 값을 그대로 둘게요.'
-            : [
-                'server/.env.local 의 SUPABASE_ACCESS_TOKEN 은 비어 있어요.',
-                '브라우저 로그인 없이 CI나 비대화형 배포가 필요하면 Supabase Dashboard > Account > Access Tokens 에서 personal access token을 만들어 넣어 주세요.',
-                'Supabase access token은 토큰을 만든 계정 권한을 그대로 따라가요.',
-                SUPABASE_ACCESS_TOKENS_DASHBOARD_URL,
-                SUPABASE_MANAGEMENT_API_DOC_URL,
-              ].join('\n'),
-          `기본 Edge Function은 \`supabase/functions/${SUPABASE_DEFAULT_FUNCTION_NAME}/index.ts\`에 만들어뒀어요.`,
-          '',
-          '키를 다시 확인해야 하면 아래 URL을 보면 돼요.',
-          getSupabaseApiSettingsUrl(options.provisionedProject.projectRef),
+          'server/.env.local 에도 필요한 값을 적어뒀어요.',
+          ...(serverEnv.hasDbPassword && serverEnv.hasAccessToken
+            ? []
+            : formatSupabaseSecretGuidance({
+                projectRef: options.provisionedProject.projectRef,
+                hasDbPassword: serverEnv.hasDbPassword,
+                hasAccessToken: serverEnv.hasAccessToken,
+              })),
         ].join('\n'),
       },
     ] satisfies ProvisioningNote[]

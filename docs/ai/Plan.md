@@ -31,6 +31,96 @@
 4. 완료 기준
    - `supabase + --trpc`는 인터랙티브와 비대화형 모두 막힌다.
    - Supabase 생성물에는 더 이상 tRPC bootstrap과 관련 문서가 없다.
+
+## 다음 작업: Supabase provisioning note에서 배포 설명을 빼고 값 입력 안내만 남기기
+1. 문제
+   - 지금 Supabase provisioning note에는 `db:apply`, `functions:deploy`, Edge Function 위치 같은 배포 설명이 섞여 있다.
+   - 이 내용은 이미 generated `server/README.md`에 있으니, note까지 같은 책임을 지면 오히려 혼잡하다.
+2. 방향
+   - note에서는 `.env.local`에 어떤 값을 넣어야 하는지와 해당 대시보드 URL만 남긴다.
+   - 배포/재배포 명령과 Edge Function 설명은 `server/README.md`에만 남긴다.
+3. 테스트
+   - Supabase note 테스트에서 `functions:deploy`, `db:apply` 같은 문구를 더 이상 기대하지 않게 바꾼다.
+4. 완료 기준
+   - note는 값 입력 안내만 짧게 보여준다.
+   - 배포 설명은 `server/README.md`에만 남는다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Supabase provisioning note를 짧게 줄이고 DB password 대시보드 URL을 바로 안내하기
+1. 문제
+   - 지금 Supabase provisioning note는 access token, DB password, publishable key 설명이 길게 섞여 있어서 필요한 행동이 바로 보이지 않는다.
+   - 특히 DB password는 생성기가 알 수 없는 경우가 많으니, 프로젝트별 Database Settings 대시보드 URL을 바로 주는 편이 더 낫다.
+2. 방향
+   - note에서 `SUPABASE_ACCESS_TOKEN`과 `SUPABASE_DB_PASSWORD`가 비어 있으면 한 줄로 묶어서 짧게 안내한다.
+   - 바로 아래에 access token dashboard URL과 project database settings URL만 남긴다.
+   - success note와 manual setup note 둘 다 같은 톤으로 정리한다.
+3. 테스트
+   - provisioning note test가 짧은 문구와 두 URL만 기대하도록 먼저 고친다.
+4. 완료 기준
+   - note가 짧아지고, 어디서 값을 넣어야 하는지 URL만 봐도 바로 알 수 있다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Supabase DB 비밀번호는 CLI에 맡기고 생성기는 note만 남기기
+1. 문제
+   - 생성기가 DB 비밀번호를 직접 물어보거나 만들어서 넘기는 방식은 Supabase CLI 비밀번호 정책이 바뀔 때마다 쉽게 깨진다.
+   - 사용자는 Supabase 공식 interactive prompt를 그대로 쓰는 편이 더 자연스럽고, 생성기가 그 규칙까지 복제하는 건 유지보수 비용이 크다.
+2. 방향
+   - `supabase projects create <name>`는 다시 공식 interactive CLI 흐름만 띄운다.
+   - 생성기는 DB 비밀번호를 직접 입력받거나 만들지 않는다.
+   - 새 프로젝트 생성 뒤에는 `server/.env.local`의 `SUPABASE_DB_PASSWORD`를 자동으로 채우지 않고, 마지막 note에서 직접 넣으라고 안내한다.
+   - CLI 출력에서 비밀번호를 안정적으로 읽을 수 있는 경우만 나중에 별도 확장하고, 지금은 보수적으로 비워 둔다.
+3. 테스트
+   - create args에 `--db-password`가 더 이상 붙지 않는지 먼저 고정한다.
+   - 새 프로젝트 생성 후 note가 `SUPABASE_DB_PASSWORD`를 직접 넣으라고 안내하는지 유지한다.
+4. 완료 기준
+   - Supabase 프로젝트 생성은 공식 interactive CLI 그대로 동작한다.
+   - 생성기는 비밀번호 규칙을 직접 구현하지 않는다.
+   - 새 프로젝트를 만든 뒤에는 `SUPABASE_DB_PASSWORD`를 직접 넣으라는 안내가 남는다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Supabase 새 프로젝트 DB 비밀번호를 생성기가 직접 만들고 저장하기
+1. 문제
+   - Supabase CLI prompt에서 DB 비밀번호를 비워 두면 생성된 값을 CLI가 다시 보여주지 않아, 사용자가 비밀번호를 모른 채 프로젝트가 만들어질 수 있다.
+   - 현재 생성기는 그 값을 알 수 없어서 `server/.env.local`에도 비워 둔다.
+2. 방향
+   - 생성기가 강한 DB 비밀번호를 직접 만들고, `supabase projects create <name> --db-password <generated>`로 넘긴다.
+   - create는 여전히 interactive TTY로 실행해서 org와 region 선택은 Supabase CLI 흐름을 그대로 쓴다.
+   - 생성한 비밀번호는 `server/.env.local`에 바로 적어 두고, 기존 값이 있으면 덮어쓰지 않는다.
+3. 테스트
+   - create args가 `--db-password`를 포함하는지 먼저 고정한다.
+   - `writeSupabaseServerLocalEnvFile`이 새 비밀번호를 초기값으로 기록하는지 테스트를 추가한다.
+4. 완료 기준
+   - 새 Supabase 프로젝트를 만들 때 DB 비밀번호를 잃어버리지 않는다.
+   - `server/.env.local`에 바로 이어서 쓸 수 있는 비밀번호가 남는다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Supabase create 명령에 프로젝트 이름 positional arg 넣기
+1. 문제
+   - 최신 Supabase CLI는 `supabase projects create [project name]` 형태를 요구한다.
+   - 지금 생성기는 `projects create`까지만 호출해서, 특히 bun 경로에서 `accepts 1 arg(s), received 0`로 바로 실패한다.
+2. 방향
+   - 새 프로젝트 생성 전 이름을 한 번 더 물어보고, 그 값을 positional arg로 넘긴다.
+   - 기본값은 target root 이름을 쓰고, 빈 값은 막는다.
+   - create 단계는 다시 interactive TTY 흐름을 유지하고, 생성 후에는 이전 목록 대비 새 프로젝트를 polling으로 찾는다.
+3. 테스트
+   - create command args에 project name이 포함되는지 먼저 고정한다.
+4. 완료 기준
+   - bun/pnpm/yarn/npm 모두 `supabase projects create <name>` 형태로 실행된다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Supabase 새 프로젝트 생성 직후 재선택 프롬프트를 없애기
+1. 문제
+   - `supabase projects create` 직후 프로젝트 목록이 바로 최신화되지 않으면, 방금 만든 프로젝트가 리스트에 안 보여도 다시 고르게 만든다.
+   - 이 흐름은 새 프로젝트를 만든 직후 가장 불편한 구간이고, 사용자 입장에선 방금 만든 프로젝트를 또 찾으라는 형태가 된다.
+2. 방향
+   - create 전의 프로젝트 목록을 기준선으로 잡는다.
+   - create 뒤에 1초, 2초, 4초, 5초 간격으로 목록을 폴링하면서 “이전엔 없던 새 프로젝트”를 찾는다.
+   - 새 프로젝트가 하나로 잡히면 바로 그 ref로 진행하고, 끝까지 안 잡히면 그때만 다시 선택하게 한다.
+3. 테스트
+   - create command args에 project name이 positional로 붙는지 먼저 고정한다.
+   - 폴링이 1/2/4/5초 순서로 돌고, 이전 목록에 없던 프로젝트를 찾으면 즉시 멈추는 테스트를 먼저 추가한다.
+4. 완료 기준
+   - 새 프로젝트 생성 직후 재선택 프롬프트가 사라진다.
    - `pnpm verify` 통과
 
 ## 다음 작업: tRPC shared packages를 `tsdown` 빌드 산출물 기반으로 전환하기

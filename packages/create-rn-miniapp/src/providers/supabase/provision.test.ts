@@ -4,9 +4,11 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import {
+  buildCreateSupabaseProjectArgs,
   extractJsonPayload,
   finalizeSupabaseProvisioning,
   formatSupabaseManualSetupNote,
+  pollForNewSupabaseProject,
   resolveSupabaseClientApiKey,
   writeSupabaseServerLocalEnvFile,
   writeSupabaseLocalEnvFiles,
@@ -48,12 +50,14 @@ test('formatSupabaseManualSetupNote includes frontend and backoffice env guidanc
     note.body,
     /VITE_SUPABASE_PUBLISHABLE_KEY=<Supabase Settings > API에서 복사한 Publishable key>/,
   )
-  assert.match(note.body, /SUPABASE_DB_PASSWORD 는 비어 있어요/)
-  assert.match(note.body, /## Supabase access token/)
-  assert.match(note.body, /SUPABASE_ACCESS_TOKEN=/)
+  assert.match(
+    note.body,
+    /server\/\.env\.local 의 `SUPABASE_ACCESS_TOKEN`과 `SUPABASE_DB_PASSWORD`는 비어 있어요\./,
+  )
   assert.match(note.body, /dashboard\/account\/tokens/)
-  assert.match(note.body, /토큰을 만든 계정 권한을 그대로 따라가요/)
-  assert.match(note.body, /functions:deploy/)
+  assert.match(note.body, /dashboard\/project\/abc123\/database\/settings/)
+  assert.doesNotMatch(note.body, /functions:deploy/)
+  assert.doesNotMatch(note.body, /db:apply/)
 })
 
 test('extractJsonPayload strips package-manager log lines around JSON output', () => {
@@ -69,6 +73,64 @@ test('extractJsonPayload strips package-manager log lines around JSON output', (
   assert.deepEqual(payload, {
     project: ['one', 'two'],
   })
+})
+
+test('buildCreateSupabaseProjectArgs appends only the project name positional arg', () => {
+  assert.deepEqual(buildCreateSupabaseProjectArgs('test-project'), [
+    'projects',
+    'create',
+    'test-project',
+  ])
+})
+
+test('pollForNewSupabaseProject waits 1, 2, 4, 5 seconds and stops when a new project appears', async () => {
+  const delays: number[] = []
+  const listedRefGroups: string[][] = []
+  let attempt = 0
+
+  const project = await pollForNewSupabaseProject(['existing-ref'], {
+    delaysMs: [1000, 2000, 4000, 5000],
+    sleep: async (delayMs) => {
+      delays.push(delayMs)
+    },
+    listProjects: async () => {
+      attempt += 1
+
+      if (attempt < 3) {
+        const projects = [
+          {
+            id: 'existing-ref',
+            name: 'existing',
+          },
+        ]
+
+        listedRefGroups.push(projects.map((candidate) => candidate.id))
+        return projects
+      }
+
+      const projects = [
+        {
+          id: 'existing-ref',
+          name: 'existing',
+        },
+        {
+          id: 'created-ref',
+          name: 'created',
+        },
+      ]
+
+      listedRefGroups.push(projects.map((candidate) => candidate.id))
+      return projects
+    },
+  })
+
+  assert.deepEqual(delays, [1000, 2000, 4000])
+  assert.deepEqual(listedRefGroups, [
+    ['existing-ref'],
+    ['existing-ref'],
+    ['existing-ref', 'created-ref'],
+  ])
+  assert.equal(project?.id, 'created-ref')
 })
 
 test('writeSupabaseLocalEnvFiles writes frontend and backoffice .env.local files', async () => {
@@ -113,6 +175,7 @@ test('writeSupabaseServerLocalEnvFile creates server env file and preserves an e
     await writeSupabaseServerLocalEnvFile({
       targetRoot,
       projectRef: 'abc123',
+      dbPassword: 'generated-password',
     })
 
     const initialServerEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
@@ -122,7 +185,7 @@ test('writeSupabaseServerLocalEnvFile creates server env file and preserves an e
       [
         '# Used by server/package.json db:apply and functions:deploy for remote Supabase operations.',
         'SUPABASE_PROJECT_REF=abc123',
-        'SUPABASE_DB_PASSWORD=',
+        'SUPABASE_DB_PASSWORD=generated-password',
         'SUPABASE_ACCESS_TOKEN=',
         '',
       ].join('\n'),
@@ -166,6 +229,7 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
       provisionedProject: {
         projectRef: 'abc123',
         publishableKey: 'sb_publishable_123',
+        dbPassword: null,
         mode: 'existing',
       },
     })
@@ -185,17 +249,15 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
     assert.match(serverEnv, /^SUPABASE_DB_PASSWORD=$/m)
     assert.match(serverEnv, /^SUPABASE_ACCESS_TOKEN=$/m)
     assert.equal(notes[0]?.title, 'Supabase 연결 값을 적어뒀어요')
+    assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
     assert.match(
       notes[0]?.body ?? '',
-      /https:\/\/supabase\.com\/dashboard\/project\/abc123\/settings\/api/,
+      /server\/\.env\.local 의 `SUPABASE_ACCESS_TOKEN`과 `SUPABASE_DB_PASSWORD`는 비어 있어요\./,
     )
-    assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
-    assert.match(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD 는 비어 있어요/)
-    assert.match(notes[0]?.body ?? '', /SUPABASE_ACCESS_TOKEN 은 비어 있어요/)
     assert.match(notes[0]?.body ?? '', /dashboard\/account\/tokens/)
-    assert.match(notes[0]?.body ?? '', /토큰을 만든 계정 권한을 그대로 따라가요/)
-    assert.match(notes[0]?.body ?? '', /db:apply/)
-    assert.match(notes[0]?.body ?? '', /functions:deploy/)
+    assert.match(notes[0]?.body ?? '', /dashboard\/project\/abc123\/database\/settings/)
+    assert.doesNotMatch(notes[0]?.body ?? '', /functions:deploy/)
+    assert.doesNotMatch(notes[0]?.body ?? '', /db:apply/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }
@@ -226,6 +288,7 @@ test('finalizeSupabaseProvisioning skips password guidance when server db passwo
       provisionedProject: {
         projectRef: 'abc123',
         publishableKey: 'sb_publishable_123',
+        dbPassword: null,
         mode: 'existing',
       },
     })
@@ -235,7 +298,8 @@ test('finalizeSupabaseProvisioning skips password guidance when server db passwo
     assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
     assert.match(serverEnv, /^SUPABASE_DB_PASSWORD=secret-password$/m)
     assert.doesNotMatch(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD 는 비어 있어요/)
-    assert.match(notes[0]?.body ?? '', /SUPABASE_ACCESS_TOKEN 은 기존 값을 그대로 둘게요/)
+    assert.match(notes[0]?.body ?? '', /SUPABASE_ACCESS_TOKEN`은 비어 있어요/)
+    assert.match(notes[0]?.body ?? '', /dashboard\/account\/tokens/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }
@@ -250,6 +314,7 @@ test('finalizeSupabaseProvisioning falls back to manual setup guidance when publ
       provisionedProject: {
         projectRef: 'abc123',
         publishableKey: null,
+        dbPassword: null,
         mode: 'existing',
       },
     })
@@ -260,11 +325,14 @@ test('finalizeSupabaseProvisioning falls back to manual setup guidance when publ
     assert.match(notes[0]?.body ?? '', /settings\/api/)
     assert.match(notes[0]?.body ?? '', /frontend\/\.env\.local/)
     assert.match(notes[0]?.body ?? '', /server\/\.env\.local/)
-    assert.match(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD 는 비어 있어요/)
-    assert.match(notes[0]?.body ?? '', /## Supabase access token/)
-    assert.match(notes[0]?.body ?? '', /SUPABASE_ACCESS_TOKEN=/)
+    assert.match(
+      notes[0]?.body ?? '',
+      /server\/\.env\.local 의 `SUPABASE_ACCESS_TOKEN`과 `SUPABASE_DB_PASSWORD`는 비어 있어요\./,
+    )
     assert.match(notes[0]?.body ?? '', /dashboard\/account\/tokens/)
-    assert.match(notes[0]?.body ?? '', /functions:deploy/)
+    assert.match(notes[0]?.body ?? '', /dashboard\/project\/abc123\/database\/settings/)
+    assert.doesNotMatch(notes[0]?.body ?? '', /functions:deploy/)
+    assert.doesNotMatch(notes[0]?.body ?? '', /db:apply/)
     assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
