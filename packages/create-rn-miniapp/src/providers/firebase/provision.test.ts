@@ -6,6 +6,7 @@ import test from 'node:test'
 import type { CliPrompter } from '../../cli.js'
 import {
   buildFirebaseCommand,
+  buildFirebaseFunctionsDeployCommand,
   ensureFirebaseBuildServiceAccountPermissions,
   ensureFirebaseFirestoreReady,
   ensureFirebaseProjectIsOnBlazePlan,
@@ -53,6 +54,28 @@ test('buildFirebaseCommand uses package-manager execution commands for all suppo
     args: ['firebase-tools', 'login'],
     label: 'Firebase 테스트',
   })
+})
+
+test('buildFirebaseFunctionsDeployCommand deploys functions and firestore resources together', () => {
+  assert.deepEqual(
+    buildFirebaseFunctionsDeployCommand('yarn', '/tmp/ebook/server', 'ebook-firebase'),
+    {
+      cwd: '/tmp/ebook/server',
+      command: 'yarn',
+      args: [
+        'dlx',
+        'firebase-tools',
+        'deploy',
+        '--only',
+        'functions,firestore:rules,firestore:indexes',
+        '--config',
+        'firebase.json',
+        '--project',
+        'ebook-firebase',
+      ],
+      label: 'Firebase Functions 배포',
+    },
+  )
 })
 
 test('resolveGoogleCloudCliArchiveSpec picks the correct official archive per platform', () => {
@@ -671,6 +694,7 @@ test('writeFirebaseLocalEnvFiles writes frontend and backoffice .env.local files
     await writeFirebaseLocalEnvFiles({
       targetRoot,
       hasBackoffice: true,
+      functionRegion: 'asia-northeast3',
       config: {
         apiKey: 'api-key',
         authDomain: 'ebook-firebase.firebaseapp.com',
@@ -695,6 +719,7 @@ test('writeFirebaseLocalEnvFiles writes frontend and backoffice .env.local files
         'MINIAPP_FIREBASE_MESSAGING_SENDER_ID=1234567890',
         'MINIAPP_FIREBASE_APP_ID=1:1234567890:web:abc123',
         'MINIAPP_FIREBASE_MEASUREMENT_ID=G-123456',
+        'MINIAPP_FIREBASE_FUNCTION_REGION=asia-northeast3',
         '',
       ].join('\n'),
     )

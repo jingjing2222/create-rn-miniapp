@@ -1,3 +1,77 @@
+## 다음 작업: Firebase frontend에 Granite crypto shim과 resolver alias를 같이 패치하기
+1. 문제
+   - 실제 Firebase 생성물은 `firebase`가 `crypto` / `node:crypto`를 참조하는데, 현재 `frontend/granite.config.ts`에는 Granite build / metro resolver alias가 없어 `ait build`가 깨진다.
+   - 지금 생성기는 Firebase bootstrap만 만들고 `src/shims/crypto.ts`와 resolver 설정은 넣지 않는다.
+2. 방향
+   - `packages/scaffold-templates`에 Firebase frontend용 crypto shim 템플릿을 추가한다.
+   - `patchFrontendWorkspace(..., serverProvider: 'firebase')`가 `frontend/src/shims/crypto.ts`를 만들고, `granite.config.ts`에 `build.resolver.alias`와 `metro.resolver.extraNodeModules`, `conditionNames`를 주입한다.
+3. 테스트
+   - Firebase frontend patch 테스트에 shim 파일 생성과 Granite resolver 설정을 먼저 고정한다.
+4. 완료 기준
+   - Firebase 생성물은 `frontend/src/shims/crypto.ts`를 포함한다.
+   - `granite.config.ts`가 `crypto` / `node:crypto` alias를 포함한다.
+   - `pnpm verify` 통과
+
+## 다음 작업: backoffice React 버전을 frontend 기준으로 정렬해 hoist 충돌을 막기
+1. 문제
+   - 실제 생성물에서 frontend는 `react@19.2.3`, backoffice는 `react@19.2.4`를 선언해 루트 hoist가 더 최신 React를 잡는다.
+   - 이 상태면 Jest / react-test-renderer는 hoisted React를 보고, frontend 컴포넌트는 로컬 React를 보면서 React 인스턴스가 갈라져 Invalid hook call과 peer mismatch가 난다.
+2. 방향
+   - backoffice patch 단계에서 frontend `package.json`을 source of truth로 읽는다.
+   - backoffice의 `react`, `react-dom`, `@types/react`는 frontend와 같은 버전으로 맞춘다.
+   - `@types/react-dom`은 frontend가 같은 패키지를 선언하면 그대로 따르고, 없으면 frontend React 버전 기준으로만 내려오게 정렬한다.
+3. 테스트
+   - backoffice patch 테스트에 frontend `19.2.3` / backoffice `19.2.4` fixture를 두고 patch 후 정렬되는지 먼저 고정한다.
+4. 완료 기준
+   - generated backoffice는 frontend보다 높은 React 계열 버전을 유지하지 않는다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Firebase scaffold의 seed script strict 오류와 provisioning deploy target 누락을 고치기
+1. 문제
+   - 실제 Firebase 생성물에서 `server/functions/src/seed-public-status.ts`가 strict TypeScript 기준으로 `implicit any`와 index signature 오류를 내며 build를 막는다.
+   - provisioning 단계의 Firebase deploy는 아직 `--only functions`만 써서 Firestore rules / indexes가 함께 배포되지 않는다.
+2. 방향
+   - `seed-public-status.ts` 생성 템플릿에 명시적 타입을 넣어 `tsc -p tsconfig.json`이 바로 통과하게 한다.
+   - provisioning deploy command를 `functions,firestore:rules,firestore:indexes` 기준으로 올려 현재 템플릿의 server deploy 스크립트와 맞춘다.
+3. 테스트
+   - template test에 seed script의 타입 시그니처를 추가한다.
+   - provider test에 Firebase provisioning deploy command helper가 Firestore rules / indexes를 포함하는지 추가한다.
+4. 완료 기준
+   - Firebase 생성물은 predeploy build에서 `seed-public-status.ts` 타입 오류가 나지 않는다.
+   - provisioning deploy와 generated server deploy가 같은 target 구성을 사용한다.
+   - `pnpm verify` 통과
+
+## 다음 작업: README의 tRPC shared workspace 설명을 Cloudflare 문맥으로만 제한하기
+1. 문제
+   - 현재 README 상단 소개에 `packages/contracts`, `packages/app-router` 설명이 일반 기능처럼 보인다.
+   - 실제로는 Cloudflare + tRPC일 때만 생성되므로, provider-independent 기능처럼 오해하기 쉽다.
+2. 방향
+   - 상단 bullet에서는 두 workspace 설명을 제거한다.
+   - 생성 구조 주석은 `optional (cloudflare + trpc)`로 명확히 바꾼다.
+   - Cloudflare 섹션과 Cloudflare+tRPC 설명만 canonical 설명으로 유지한다.
+3. 테스트
+   - 문서 변경 후 `pnpm verify`를 다시 통과시킨다.
+4. 완료 기준
+   - README에서 두 workspace 설명은 Cloudflare 문맥에서만 보인다.
+   - `pnpm verify` 통과
+
+## 다음 작업: 실제 생성물에서 확인된 Firebase/Granite 결함 4개를 스캐폴더에 반영하기
+1. 문제
+   - Firebase 스캐폴딩은 Firestore API / `(default)` database / public status seed 흐름이 없어 frontend direct read가 바로 이어지지 않는다.
+   - Firebase Functions runtime이 `node:24`로 남아 있어 배포 리스크가 있고, deploy도 Functions만 올려 Firestore rules / indexes 반영이 빠진다.
+   - frontend Firebase bootstrap은 Firestore direct read 실패 시 callable fallback이 없어 권한 오류를 그대로 노출한다.
+   - `frontend/granite.config.ts`는 `__dirname` 기준으로 `.env.local`을 읽어 `ait build`의 `.granite` 실행 경로에서 깨진다.
+2. 방향
+   - 실제 생성물 기준으로 `firebase-ensure-firestore.mjs`, `firestore.rules`, `firebase-functions-deploy.mjs`, `public-app-status.ts`, `process.cwd()` 기반 Granite env patch를 생성기에 그대로 반영한다.
+   - Firebase server README / provider guide / 루트 README도 새 Firestore + fallback 흐름 기준으로 맞춘다.
+3. 테스트
+   - 실패 중인 Granite preamble 테스트부터 현재 `process.cwd()` 기준으로 고친다.
+   - Firebase template / patch / provision 테스트가 `firestore.rules`, `firebase-ensure-firestore`, `seed:public-status`, fallback bootstrap, `MINIAPP_FIREBASE_FUNCTION_REGION`을 고정하도록 유지한다.
+4. 완료 기준
+   - Firebase 생성물이 Firestore 준비, rules/indexes deploy, public status seed, frontend fallback, Granite build env 로딩을 모두 포함한다.
+   - README와 provider guide가 실제 생성 구조와 일치한다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Firebase provider가 Firestore 리소스와 seed 흐름까지 같이 준비하게 만들기
 1. 문제
    - 지금 Firebase provider는 `frontend/src/lib/firestore.ts`와 `backoffice/src/lib/firestore.ts`를 생성하지만, 원격 프로젝트에는 Firestore API와 `(default)` 데이터베이스를 준비하지 않는다.

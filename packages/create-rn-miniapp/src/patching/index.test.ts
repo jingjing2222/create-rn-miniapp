@@ -132,8 +132,10 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   assert.equal(packageJson.devDependencies?.typescript, '^5.8.3')
   assert.equal(packageJson.devDependencies?.['@types/node'], '^24.10.1')
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
-  assert.match(graniteConfig, /import path from 'node:path';\n\nconst repoRoot = path\.resolve/)
-  assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/'\)/)
+  assert.match(
+    graniteConfig,
+    /import path from 'node:path';\nconst appRoot = process\.cwd\(\);\n\nconst repoRoot = path\.resolve\(appRoot, '\.\.\/'\)/,
+  )
   assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
   assert.equal(tsconfig.compilerOptions?.module, 'esnext')
   assert.deepEqual(tsconfig.compilerOptions?.types, ['node'])
@@ -447,13 +449,19 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   assert.equal(packageJson.devDependencies?.['@types/node'], '^24.10.1')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
-  assert.match(graniteConfig, /import dotenv from 'dotenv';\n\nconst repoRoot = path\.resolve/)
-  assert.match(graniteConfig, /const repoRoot = path\.resolve\(__dirname, '\.\.\/'\)/)
+  assert.match(
+    graniteConfig,
+    /import dotenv from 'dotenv';\nconst appRoot = process\.cwd\(\);\n\nconst repoRoot = path\.resolve/,
+  )
+  assert.match(graniteConfig, /const appRoot = process\.cwd\(\)/)
+  assert.match(graniteConfig, /const repoRoot = path\.resolve\(appRoot, '\.\.\/'\)/)
   assert.match(graniteConfig, /watchFolders:\s*\[\s*repoRoot\s*\]/)
   assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
   assert.match(graniteConfig, /import dotenv from 'dotenv'/)
-  assert.match(graniteConfig, /const appRoot = __dirname/)
-  assert.match(graniteConfig, /const appRoot = __dirname;\n\ndotenv\.config/)
+  assert.match(
+    graniteConfig,
+    /const appRoot = process\.cwd\(\);\n\nconst repoRoot = path\.resolve\(appRoot, '\.\.\/'\)/,
+  )
   assert.match(graniteConfig, /path\.join\(appRoot, '\.env'\)/)
   assert.doesNotMatch(graniteConfig, /function resolveOptionalMiniappEnv/)
   assert.match(graniteConfig, /\}\n\nconst miniappSupabaseUrl = resolveMiniappEnv/)
@@ -877,27 +885,79 @@ test('patchFrontendWorkspace adds firebase bootstrap when firebase server provid
     path.join(frontendRoot, 'src', 'lib', 'firestore.ts'),
     'utf8',
   )
+  const functionsClient = await readFile(
+    path.join(frontendRoot, 'src', 'lib', 'functions.ts'),
+    'utf8',
+  )
+  const cryptoShim = await readFile(path.join(frontendRoot, 'src', 'shims', 'crypto.ts'), 'utf8')
+  const publicAppStatusClient = await readFile(
+    path.join(frontendRoot, 'src', 'lib', 'public-app-status.ts'),
+    'utf8',
+  )
   const storageClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'storage.ts'), 'utf8')
 
   assert.equal(packageJson.dependencies?.firebase, '^12.10.0')
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
   assert.match(graniteConfig, /MINIAPP_FIREBASE_API_KEY: miniappFirebaseApiKey/)
+  assert.match(graniteConfig, /MINIAPP_FIREBASE_FUNCTION_REGION: miniappFirebaseFunctionRegion/)
+  assert.match(graniteConfig, /const appRoot = process\.cwd\(\)/)
+  assert.match(
+    graniteConfig,
+    /const cryptoShimPath = path\.join\(appRoot, 'src\/shims\/crypto\.ts'\)/,
+  )
+  assert.match(graniteConfig, /const cryptoModuleAliases = \[/)
+  assert.match(graniteConfig, /from: 'crypto'/)
+  assert.match(graniteConfig, /from: 'node:crypto'/)
+  assert.match(graniteConfig, /build:\s*\{[\s\S]*resolver:\s*\{[\s\S]*alias: cryptoModuleAliases/)
+  assert.match(
+    graniteConfig,
+    /metro:\s*\{[\s\S]*resolver:\s*\{[\s\S]*conditionNames:\s*\[[\s\S]*'react-native'[\s\S]*'browser'[\s\S]*'require'[\s\S]*'default'/,
+  )
+  assert.match(graniteConfig, /extraNodeModules:\s*\{[\s\S]*crypto: cryptoShimPath/)
+  assert.match(graniteConfig, /'node:crypto': cryptoShimPath/)
   assert.match(graniteConfig, /function resolveOptionalMiniappEnv\(/)
   assert.match(
     graniteConfig,
     /const miniappFirebaseMeasurementId = resolveOptionalMiniappEnv\('MINIAPP_FIREBASE_MEASUREMENT_ID'\)/,
   )
+  assert.match(
+    graniteConfig,
+    /const miniappFirebaseFunctionRegion = resolveOptionalMiniappEnv\('MINIAPP_FIREBASE_FUNCTION_REGION'\) \|\| ["']asia-northeast3["']/,
+  )
   assert.match(envTypes, /readonly MINIAPP_FIREBASE_STORAGE_BUCKET: string/)
+  assert.match(envTypes, /readonly MINIAPP_FIREBASE_FUNCTION_REGION: string/)
   assert.match(firebaseClient, /initializeApp/)
   assert.match(firebaseClient, /import\.meta\.env\.MINIAPP_FIREBASE_PROJECT_ID/)
   assert.match(firestoreClient, /getFirestore/)
+  assert.match(functionsClient, /getFunctions/)
+  assert.match(functionsClient, /MINIAPP_FIREBASE_FUNCTION_REGION/)
+  assert.match(cryptoShim, /export function randomBytes\(size: number\): Uint8Array/)
+  assert.match(cryptoShim, /export function randomUUID\(\): string/)
+  assert.match(cryptoShim, /export default cryptoShim/)
+  assert.match(publicAppStatusClient, /getDoc/)
+  assert.match(publicAppStatusClient, /httpsCallable/)
+  assert.match(publicAppStatusClient, /getPublicStatus/)
+  assert.match(publicAppStatusClient, /permission-denied/)
   assert.match(storageClient, /getStorage/)
 })
 
 test('patchBackofficeWorkspace adds supabase bootstrap when supabase server provider is selected', async (t) => {
   const targetRoot = await createTempWorkspace(t)
+  const frontendRoot = path.join(targetRoot, 'frontend')
   const backofficeRoot = path.join(targetRoot, 'backoffice')
+
+  await mkdir(frontendRoot, { recursive: true })
+  await writeJson(path.join(frontendRoot, 'package.json'), {
+    name: 'frontend',
+    private: true,
+    dependencies: {
+      react: '19.2.3',
+    },
+    devDependencies: {
+      '@types/react': '19.2.0',
+    },
+  })
 
   await mkdir(path.join(backofficeRoot, 'src'), { recursive: true })
   await writeJson(path.join(backofficeRoot, 'package.json'), {
@@ -915,6 +975,8 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
       'react-dom': '^19.2.4',
     },
     devDependencies: {
+      '@types/react': '^19.2.14',
+      '@types/react-dom': '^19.2.4',
       vite: '^8.0.0',
       typescript: '~5.9.3',
     },
@@ -1008,6 +1070,7 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   ) as {
     scripts?: Record<string, string>
     dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
   }
   const envTypes = await readFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), 'utf8')
   const mainSource = await readFile(path.join(backofficeRoot, 'src', 'main.tsx'), 'utf8')
@@ -1024,6 +1087,10 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   assert.equal(packageJson.scripts?.build, 'tsc -b && vite build')
   assert.equal(packageJson.scripts?.typecheck, 'tsc -b --pretty false')
   assert.equal(packageJson.scripts?.test, 'vitest run')
+  assert.equal(packageJson.dependencies?.react, '19.2.3')
+  assert.equal(packageJson.dependencies?.['react-dom'], '19.2.3')
+  assert.equal(packageJson.devDependencies?.['@types/react'], '19.2.0')
+  assert.equal(packageJson.devDependencies?.['@types/react-dom'], '^19.2.3')
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], '^2.57.4')
   assert.equal(await pathExists(path.join(backofficeRoot, '.env.local.example')), false)
   assert.match(envTypes, /readonly VITE_SUPABASE_URL: string/)
@@ -1923,7 +1990,8 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
     name: 'server',
     private: true,
     scripts: {
-      deploy: 'pnpm dlx firebase-tools deploy --only functions --config firebase.json',
+      deploy:
+        'pnpm dlx firebase-tools deploy --only functions,firestore:rules,firestore:indexes --config firebase.json',
       build: 'pnpm --dir ./functions install && pnpm --dir ./functions build',
       typecheck: 'pnpm --dir ./functions install && pnpm --dir ./functions typecheck',
       logs: 'pnpm dlx firebase-tools functions:log',
@@ -1981,10 +2049,15 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   assert.match(readme, /^# server$/m)
   assert.match(readme, /Firebase Functions/)
   assert.match(readme, /server\/functions\/src\/index\.ts/)
-  assert.match(readme, /server\/firestore\.rules/)
-  assert.match(readme, /server\/firestore\.seed\.json/)
+  assert.match(readme, /firestore\.rules/)
+  assert.match(readme, /firestore:ensure/)
+  assert.match(readme, /deploy:firestore/)
+  assert.match(readme, /seed:public-status/)
+  assert.match(readme, /setup:public-status/)
   assert.match(readme, /cd server && pnpm deploy/)
-  assert.match(readme, /cd server && pnpm firestore:seed/)
+  assert.match(readme, /frontend\/src\/lib\/public-app-status\.ts/)
+  assert.match(readme, /process\.cwd\(\)/)
+  assert.match(readme, /getPublicStatus/)
   assert.match(readme, /frontend\/src\/lib\/firebase\.ts/)
   assert.match(readme, /frontend\/src\/lib\/firestore\.ts/)
   assert.match(readme, /frontend\/src\/lib\/storage\.ts/)
@@ -1993,8 +2066,8 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   assert.match(readme, /## Firebase deploy auth/)
   assert.match(readme, /firebase login:ci/)
   assert.match(readme, /GOOGLE_APPLICATION_CREDENTIALS/)
-  assert.match(readme, /Firestore database/)
-  assert.match(readme, /Cloud Functions Developer/)
+  assert.match(readme, /Node runtime은 Firebase 지원 범위에 맞춰 `22`/)
+  assert.match(readme, /api` HTTP 함수와 `getPublicStatus` callable function/)
   assert.match(
     readme,
     /!\[Firebase login:ci 발급 화면\]\(\.\/assets\/firebase-login-ci-guide\.png\)/,
@@ -2023,7 +2096,8 @@ test('patchFirebaseServerWorkspace adds firebase-only yarn packageExtensions to 
     name: 'server',
     private: true,
     scripts: {
-      deploy: 'yarn dlx firebase-tools deploy --only functions --config firebase.json',
+      deploy:
+        'yarn dlx firebase-tools deploy --only functions,firestore:rules,firestore:indexes --config firebase.json',
     },
   })
   await writeFile(

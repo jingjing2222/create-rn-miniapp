@@ -117,6 +117,8 @@ const FIREBASE_SERVICE_ACCOUNT_GUIDE_ASSET_CANDIDATES = [
 const FRONTEND_STARTER_HERO_ASSET_RELATIVE_PATH =
   'root/assets/frontend/miniapp-starter-hero.lottie.json'
 const FRONTEND_STARTER_HERO_ASSET_FILE_NAME = 'miniapp-starter-hero.lottie.json'
+const FRONTEND_FIREBASE_CRYPTO_SHIM_RELATIVE_PATH = 'root/assets/frontend/firebase-crypto-shim.ts'
+const FRONTEND_FIREBASE_CRYPTO_SHIM_FILE_NAME = 'crypto.ts'
 const SERVER_GUIDE_ASSET_TARGET_DIR = 'assets'
 const FIREBASE_CLI_DOC_URL = 'https://firebase.google.com/docs/cli'
 const FIREBASE_ADMIN_SETUP_URL = 'https://firebase.google.com/docs/admin/setup'
@@ -157,6 +159,7 @@ const FRONTEND_FIREBASE_ENV_TYPES = [
   '  readonly MINIAPP_FIREBASE_MESSAGING_SENDER_ID: string',
   '  readonly MINIAPP_FIREBASE_APP_ID: string',
   '  readonly MINIAPP_FIREBASE_MEASUREMENT_ID: string',
+  '  readonly MINIAPP_FIREBASE_FUNCTION_REGION: string',
   '}',
   '',
   'interface ImportMeta {',
@@ -522,6 +525,118 @@ const FRONTEND_FIREBASE_FIRESTORE = [
   '',
 ].join('\n')
 
+const FRONTEND_FIREBASE_FUNCTIONS = [
+  "import { getFunctions } from 'firebase/functions'",
+  "import { firebaseApp } from './firebase'",
+  '',
+  "const region = import.meta.env.MINIAPP_FIREBASE_FUNCTION_REGION?.trim() || 'asia-northeast3'",
+  '',
+  'export const functions = getFunctions(firebaseApp, region)',
+  '',
+].join('\n')
+
+const FRONTEND_FIREBASE_PUBLIC_APP_STATUS = [
+  "import { httpsCallable } from 'firebase/functions'",
+  "import { doc, getDoc } from 'firebase/firestore'",
+  "import { functions } from './functions'",
+  "import { firestore } from './firestore'",
+  '',
+  'export interface PublicAppStatusItem {',
+  '  label: string',
+  '  value: string',
+  '}',
+  '',
+  'export interface PublicAppStatus {',
+  '  title: string',
+  '  message: string',
+  '  source: string',
+  '  updatedAtLabel: string',
+  '  items: PublicAppStatusItem[]',
+  '}',
+  '',
+  "const publicAppStatusReference = doc(firestore, 'publicAppStatus', 'current')",
+  '',
+  'export async function getPublicAppStatus(): Promise<PublicAppStatus> {',
+  '  try {',
+  '    const snapshot = await getDoc(publicAppStatusReference)',
+  '',
+  '    if (!snapshot.exists()) {',
+  "      throw new Error('Firebase 상태 문서가 아직 준비되지 않았어요.')",
+  '    }',
+  '',
+  '    return parsePublicAppStatus(snapshot.data())',
+  '  } catch (error: unknown) {',
+  '    if (!shouldFallbackToFunctions(error)) {',
+  '      throw error',
+  '    }',
+  '',
+  '    return getPublicAppStatusFromFunctions()',
+  '  }',
+  '}',
+  '',
+  'function parsePublicAppStatus(raw: unknown): PublicAppStatus {',
+  "  if (!raw || typeof raw !== 'object') {",
+  "    throw new Error('Firebase 상태 문서 형식이 올바르지 않아요.')",
+  '  }',
+  '',
+  '  const document = raw as Record<string, unknown>',
+  '',
+  '  return {',
+  "    title: readRequiredString(document.title, 'title'),",
+  "    message: readRequiredString(document.message, 'message'),",
+  "    source: readRequiredString(document.source, 'source'),",
+  "    updatedAtLabel: readRequiredString(document.updatedAtLabel, 'updatedAtLabel'),",
+  '    items: readItems(document.items),',
+  '  }',
+  '}',
+  '',
+  'function readRequiredString(value: unknown, fieldName: string): string {',
+  "  if (typeof value !== 'string' || value.trim().length === 0) {",
+  `    throw new Error(\`Firebase 상태 문서의 \${fieldName} 값이 올바르지 않아요.\`)`,
+  '  }',
+  '',
+  '  return value.trim()',
+  '}',
+  '',
+  'function readItems(value: unknown): PublicAppStatusItem[] {',
+  '  if (!Array.isArray(value)) {',
+  "    throw new Error('Firebase 상태 문서의 items 값이 올바르지 않아요.')",
+  '  }',
+  '',
+  '  return value.map((item, index) => {',
+  "    if (!item || typeof item !== 'object') {",
+  `      throw new Error(\`Firebase 상태 문서의 items[\${index}] 값이 올바르지 않아요.\`)`,
+  '    }',
+  '',
+  '    const record = item as Record<string, unknown>',
+  '',
+  '    return {',
+  `      label: readRequiredString(record.label, \`items[\${index}].label\`),`,
+  `      value: readRequiredString(record.value, \`items[\${index}].value\`),`,
+  '    }',
+  '  })',
+  '}',
+  '',
+  'async function getPublicAppStatusFromFunctions(): Promise<PublicAppStatus> {',
+  "  const getPublicStatus = httpsCallable<undefined, unknown>(functions, 'getPublicStatus')",
+  '  const result = await getPublicStatus()',
+  '',
+  '  return parsePublicAppStatus(result.data)',
+  '}',
+  '',
+  'function shouldFallbackToFunctions(error: unknown): boolean {',
+  '  if (!(error instanceof Error)) {',
+  '    return false',
+  '  }',
+  '',
+  '  return (',
+  "    error.message.includes('Missing or insufficient permissions') ||",
+  "    error.message.includes('permission-denied')",
+  '  )',
+  '}',
+  '',
+].join('\n')
+
 const FRONTEND_FIREBASE_STORAGE = [
   "import { getStorage } from 'firebase/storage'",
   "import { firebaseApp } from './firebase'",
@@ -667,6 +782,13 @@ type WorkspacePatchOptions = {
   removeCloudflareApiClientHelpers?: boolean
 }
 
+type ReactVersionAlignment = {
+  react: string | null
+  reactDom: string | null
+  reactTypes: string | null
+  reactDomTypes: string | null
+}
+
 async function readPackageJson(packageJsonPath: string) {
   return JSON.parse(await readFile(packageJsonPath, 'utf8')) as PackageJson
 }
@@ -674,6 +796,43 @@ async function readPackageJson(packageJsonPath: string) {
 async function writeTextFile(filePath: string, contents: string) {
   await mkdir(path.dirname(filePath), { recursive: true })
   await writeFile(filePath, contents, 'utf8')
+}
+
+function resolvePackageVersion(packageJson: PackageJson, packageName: string) {
+  return (
+    packageJson.dependencies?.[packageName] ?? packageJson.devDependencies?.[packageName] ?? null
+  )
+}
+
+function stripSimpleVersionPrefix(version: string) {
+  return version.replace(/^[~^]/, '')
+}
+
+function applyExistingVersionPrefix(currentVersion: string, targetVersion: string) {
+  const prefix = currentVersion.match(/^[~^]/)?.[0] ?? ''
+  return `${prefix}${stripSimpleVersionPrefix(targetVersion)}`
+}
+
+async function resolveFrontendReactVersionAlignment(targetRoot: string) {
+  const frontendPackageJsonPath = path.join(targetRoot, 'frontend', 'package.json')
+
+  if (!(await pathExists(frontendPackageJsonPath))) {
+    return null
+  }
+
+  const frontendPackageJson = await readPackageJson(frontendPackageJsonPath)
+  const reactVersion = resolvePackageVersion(frontendPackageJson, 'react')
+
+  if (!reactVersion) {
+    return null
+  }
+
+  return {
+    react: reactVersion,
+    reactDom: resolvePackageVersion(frontendPackageJson, 'react-dom') ?? reactVersion,
+    reactTypes: resolvePackageVersion(frontendPackageJson, '@types/react'),
+    reactDomTypes: resolvePackageVersion(frontendPackageJson, '@types/react-dom'),
+  } satisfies ReactVersionAlignment
 }
 
 function isGraniteStarterIndexPage(source: string) {
@@ -749,6 +908,30 @@ async function ensureFrontendStarterHeroAsset(frontendRoot: string) {
     FRONTEND_STARTER_HERO_ASSET_RELATIVE_PATH,
   )
   const targetPath = path.join(frontendRoot, 'src', 'assets', FRONTEND_STARTER_HERO_ASSET_FILE_NAME)
+
+  if (await pathExists(targetPath)) {
+    return
+  }
+
+  if (!(await pathExists(sourcePath))) {
+    return
+  }
+
+  await mkdir(path.dirname(targetPath), { recursive: true })
+  await copyFile(sourcePath, targetPath)
+}
+
+async function ensureFrontendFirebaseCryptoShim(frontendRoot: string) {
+  const sourcePath = path.join(
+    resolveTemplatesPackageRoot(),
+    FRONTEND_FIREBASE_CRYPTO_SHIM_RELATIVE_PATH,
+  )
+  const targetPath = path.join(
+    frontendRoot,
+    'src',
+    'shims',
+    FRONTEND_FIREBASE_CRYPTO_SHIM_FILE_NAME,
+  )
 
   if (await pathExists(targetPath)) {
     return
@@ -1097,7 +1280,7 @@ function renderFirebaseServerReadme(
   return [
     '# server',
     '',
-    '이 워크스페이스는 Firebase Functions 배포와 Firebase 프로젝트 연결을 관리하는 server 워크스페이스예요.',
+    '이 워크스페이스는 Firebase Functions, Firestore 리소스, Firebase 프로젝트 연결을 관리하는 server 워크스페이스예요.',
     '',
     '## 디렉토리 구조',
     '',
@@ -1106,11 +1289,10 @@ function renderFirebaseServerReadme(
     '  firebase.json',
     '  firestore.rules',
     '  firestore.indexes.json',
-    '  firestore.seed.json',
     '  .firebaserc',
     '  .env.local',
     '  scripts/',
-    '    firebase-firestore-seed.mjs',
+    '    firebase-ensure-firestore.mjs',
     '  functions/',
     '    src/index.ts',
     '    package.json',
@@ -1122,26 +1304,28 @@ function renderFirebaseServerReadme(
     '',
     `- \`cd server && ${tokens.packageManagerRunCommand} build\`: \`server/functions\`의 TypeScript를 빌드해요.`,
     `- \`cd server && ${tokens.packageManagerRunCommand} typecheck\`: \`server/functions\` 타입 검사를 실행해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} deploy\`: \`server/.env.local\`의 auth 값을 읽고 Firebase Functions와 Firestore 설정을 현재 project로 배포해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} firestore:seed\`: \`server/firestore.seed.json\`을 기준으로 Firestore 기본 문서를 적재해요.`,
+    `- \`cd server && ${tokens.packageManagerRunCommand} firestore:ensure\`: Firestore API를 확인하고 없으면 \`(default)\` DB를 \`asia-northeast3\`에 만들어요.`,
+    `- \`cd server && ${tokens.packageManagerRunCommand} deploy:firestore\`: Firestore rules와 indexes를 현재 project에 배포해요.`,
+    `- \`cd server && ${tokens.packageManagerRunCommand} seed:public-status\`: frontend가 읽을 \`publicAppStatus/current\` 문서를 Firestore에 써요.`,
+    `- \`cd server && ${tokens.packageManagerRunCommand} setup:public-status\`: Firestore 생성, rules 배포, seed 문서 작성을 한 번에 실행해요.`,
+    `- \`cd server && ${tokens.packageManagerRunCommand} deploy\`: \`server/.env.local\`의 auth 값을 읽고 Firebase Functions + Firestore 리소스를 현재 project로 배포해요.`,
     `- \`cd server && ${tokens.packageManagerRunCommand} logs\`: Firebase Functions 로그를 확인해요.`,
     '',
     '## Miniapp / Backoffice 연결',
     '',
     '- miniapp frontend는 `frontend/src/lib/firebase.ts`, `frontend/src/lib/firestore.ts`, `frontend/src/lib/storage.ts`에서 Firebase Web SDK를 초기화해요.',
-    '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_FIREBASE_API_KEY`, `MINIAPP_FIREBASE_AUTH_DOMAIN`, `MINIAPP_FIREBASE_PROJECT_ID`, `MINIAPP_FIREBASE_STORAGE_BUCKET`, `MINIAPP_FIREBASE_MESSAGING_SENDER_ID`, `MINIAPP_FIREBASE_APP_ID`, `MINIAPP_FIREBASE_MEASUREMENT_ID`를 사용해요.',
-    '- frontend `granite.config.ts`는 `.env.local` 값을 읽어 같은 `MINIAPP_FIREBASE_*` 값을 주입해요.',
+    '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_FIREBASE_API_KEY`, `MINIAPP_FIREBASE_AUTH_DOMAIN`, `MINIAPP_FIREBASE_PROJECT_ID`, `MINIAPP_FIREBASE_STORAGE_BUCKET`, `MINIAPP_FIREBASE_MESSAGING_SENDER_ID`, `MINIAPP_FIREBASE_APP_ID`, `MINIAPP_FIREBASE_MEASUREMENT_ID`, `MINIAPP_FIREBASE_FUNCTION_REGION`를 사용해요.',
+    '- frontend `granite.config.ts`는 `process.cwd()` 기준으로 `.env.local` 값을 읽어 같은 `MINIAPP_FIREBASE_*` 값을 주입해요.',
+    '- `frontend/src/lib/public-app-status.ts`는 Firestore direct read를 먼저 시도하고, 권한 오류가 나면 `getPublicStatus` callable function으로 fallback 해요.',
     '- backoffice가 있으면 `backoffice/src/lib/firebase.ts`, `backoffice/src/lib/firestore.ts`, `backoffice/src/lib/storage.ts`가 같은 Firebase project를 사용해요.',
     '- backoffice `.env.local`은 `backoffice/.env.local`에 두고 `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`를 사용해요.',
     '',
     '## 운영 메모',
     '',
     '- `server/.env.local`의 `FIREBASE_PROJECT_ID`, `FIREBASE_FUNCTION_REGION`은 배포 기준 메타데이터예요.',
-    '- Firebase provisioning은 `firestore.googleapis.com`과 `(default)` Firestore database를 먼저 준비해요.',
-    '- `server/firestore.rules`와 `server/firestore.indexes.json`은 `deploy` 때 Functions와 같이 반영돼요.',
-    '- `server/firestore.seed.json`은 seed 입력값이고, `firestore:seed`는 `GOOGLE_APPLICATION_CREDENTIALS`를 사용해 Firestore에 문서를 써요.',
     '- `server/.env.local`의 `FIREBASE_TOKEN` 또는 `GOOGLE_APPLICATION_CREDENTIALS`를 채우면 비대화형 deploy에 사용할 수 있어요.',
-    '- `server/functions/src/index.ts`의 기본 HTTP 함수 이름은 `api`예요.',
+    '- `server/functions/package.json`의 Node runtime은 Firebase 지원 범위에 맞춰 `22`를 사용해요.',
+    '- `server/functions/src/index.ts`는 `api` HTTP 함수와 `getPublicStatus` callable function을 함께 배포해요.',
     '',
     '## Firebase deploy auth',
     '',
@@ -1438,6 +1622,14 @@ async function writeFrontendFirebaseBootstrap(frontendRoot: string) {
     FRONTEND_FIREBASE_FIRESTORE,
   )
   await writeTextFile(
+    path.join(frontendRoot, 'src', 'lib', 'functions.ts'),
+    FRONTEND_FIREBASE_FUNCTIONS,
+  )
+  await writeTextFile(
+    path.join(frontendRoot, 'src', 'lib', 'public-app-status.ts'),
+    FRONTEND_FIREBASE_PUBLIC_APP_STATUS,
+  )
+  await writeTextFile(
     path.join(frontendRoot, 'src', 'lib', 'storage.ts'),
     FRONTEND_FIREBASE_STORAGE,
   )
@@ -1640,6 +1832,7 @@ async function ensureBackofficePackageJsonForWorkspace(
   packageManager: PackageManager,
   serverProvider: ServerProvider | null,
   trpc = false,
+  reactVersionAlignment: ReactVersionAlignment | null = null,
 ) {
   const scripts: Record<string, string> = {
     typecheck: 'tsc -b --pretty false',
@@ -1661,6 +1854,47 @@ async function ensureBackofficePackageJsonForWorkspace(
 
   if (serverProvider === 'firebase' && !packageJson.dependencies?.firebase) {
     dependencies.firebase = FIREBASE_JS_VERSION
+  }
+
+  if (
+    reactVersionAlignment?.react &&
+    packageJson.dependencies?.react &&
+    packageJson.dependencies.react !== reactVersionAlignment.react
+  ) {
+    dependencies.react = reactVersionAlignment.react
+  }
+
+  if (
+    reactVersionAlignment?.reactDom &&
+    packageJson.dependencies?.['react-dom'] &&
+    packageJson.dependencies['react-dom'] !== reactVersionAlignment.reactDom
+  ) {
+    dependencies['react-dom'] = reactVersionAlignment.reactDom
+  }
+
+  if (
+    reactVersionAlignment?.reactTypes &&
+    packageJson.devDependencies?.['@types/react'] &&
+    packageJson.devDependencies['@types/react'] !== reactVersionAlignment.reactTypes
+  ) {
+    devDependencies['@types/react'] = reactVersionAlignment.reactTypes
+  }
+
+  const alignedReactDomTypesVersion =
+    reactVersionAlignment?.reactDomTypes ??
+    (reactVersionAlignment?.react && packageJson.devDependencies?.['@types/react-dom']
+      ? applyExistingVersionPrefix(
+          packageJson.devDependencies['@types/react-dom'],
+          reactVersionAlignment.react,
+        )
+      : null)
+
+  if (
+    alignedReactDomTypesVersion &&
+    packageJson.devDependencies?.['@types/react-dom'] &&
+    packageJson.devDependencies['@types/react-dom'] !== alignedReactDomTypesVersion
+  ) {
+    devDependencies['@types/react-dom'] = alignedReactDomTypesVersion
   }
 
   if (trpc && serverProvider === 'cloudflare') {
@@ -1897,6 +2131,7 @@ export async function patchFrontendWorkspace(
   }
 
   if (options.serverProvider === 'firebase') {
+    await ensureFrontendFirebaseCryptoShim(frontendRoot)
     await writeFrontendFirebaseBootstrap(frontendRoot)
   }
 
@@ -1911,6 +2146,7 @@ export async function patchBackofficeWorkspace(
   const backofficeRoot = path.join(targetRoot, 'backoffice')
   const packageJsonPath = path.join(backofficeRoot, 'package.json')
   const packageJson = stripToolingFromPackageJson(await readPackageJson(packageJsonPath))
+  const reactVersionAlignment = await resolveFrontendReactVersionAlignment(targetRoot)
 
   packageJson.name = 'backoffice'
   await patchPackageJsonFile(packageJsonPath, {
@@ -1932,6 +2168,7 @@ export async function patchBackofficeWorkspace(
     options.packageManager,
     options.serverProvider,
     options.trpc,
+    reactVersionAlignment,
   )
   await patchWorkspaceTsconfigModules(backofficeRoot, [
     { fileName: 'tsconfig.json' },

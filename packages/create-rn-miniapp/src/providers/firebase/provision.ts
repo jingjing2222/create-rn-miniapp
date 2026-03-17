@@ -142,6 +142,22 @@ export function buildFirebaseCommand(
   }
 }
 
+export function buildFirebaseFunctionsDeployCommand(
+  packageManager: PackageManager,
+  cwd: string,
+  projectId: string,
+) {
+  return buildFirebaseCommand(packageManager, cwd, 'Firebase Functions 배포', [
+    'deploy',
+    '--only',
+    'functions,firestore:rules,firestore:indexes',
+    '--config',
+    'firebase.json',
+    '--project',
+    projectId,
+  ])
+}
+
 function unwrapFirebaseResult<T>(payload: unknown): T {
   if (payload && typeof payload === 'object') {
     if ('result' in payload) {
@@ -312,7 +328,7 @@ function normalizeFirebaseWebSdkConfig(payload: unknown) {
   } satisfies FirebaseWebSdkConfig
 }
 
-function createFirebaseEnvValues(config: FirebaseWebSdkConfig) {
+function createFirebaseEnvValues(config: FirebaseWebSdkConfig, functionRegion?: string) {
   return {
     frontend: [
       `MINIAPP_FIREBASE_API_KEY=${config.apiKey}`,
@@ -322,6 +338,7 @@ function createFirebaseEnvValues(config: FirebaseWebSdkConfig) {
       `MINIAPP_FIREBASE_MESSAGING_SENDER_ID=${config.messagingSenderId}`,
       `MINIAPP_FIREBASE_APP_ID=${config.appId}`,
       `MINIAPP_FIREBASE_MEASUREMENT_ID=${config.measurementId ?? ''}`,
+      `MINIAPP_FIREBASE_FUNCTION_REGION=${functionRegion ?? FIREBASE_DEFAULT_FUNCTION_REGION}`,
       '',
     ].join('\n'),
     backoffice: [
@@ -1474,17 +1491,7 @@ async function deployFirebaseFunctions(
 ) {
   log.step('Firebase Functions를 배포할게요')
   try {
-    await runCommand(
-      buildFirebaseCommand(packageManager, serverRoot, 'Firebase Functions 배포', [
-        'deploy',
-        '--only',
-        'functions',
-        '--config',
-        'firebase.json',
-        '--project',
-        projectId,
-      ]),
-    )
+    await runCommand(buildFirebaseFunctionsDeployCommand(packageManager, serverRoot, projectId))
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : String(error)
     const debugLog = await readFirebaseDebugLog(serverRoot)
@@ -1503,9 +1510,10 @@ async function deployFirebaseFunctions(
 export async function writeFirebaseLocalEnvFiles(options: {
   targetRoot: string
   hasBackoffice: boolean
+  functionRegion: string
   config: FirebaseWebSdkConfig
 }) {
-  const env = createFirebaseEnvValues(options.config)
+  const env = createFirebaseEnvValues(options.config, options.functionRegion)
   const frontendEnvPath = path.join(options.targetRoot, 'frontend', '.env.local')
 
   await mkdir(path.dirname(frontendEnvPath), { recursive: true })
@@ -1646,14 +1654,17 @@ export function formatFirebaseManualSetupNote(options: {
   hasConfiguredToken: boolean
   hasConfiguredCredentials: boolean
 }) {
-  const env = createFirebaseEnvValues({
-    apiKey: '<Firebase Web API key>',
-    authDomain: '<project-id>.firebaseapp.com',
-    projectId: options.projectId,
-    storageBucket: '<project-id>.firebasestorage.app',
-    messagingSenderId: '<messagingSenderId>',
-    appId: '<appId>',
-  })
+  const env = createFirebaseEnvValues(
+    {
+      apiKey: '<Firebase Web API key>',
+      authDomain: '<project-id>.firebaseapp.com',
+      projectId: options.projectId,
+      storageBucket: '<project-id>.firebasestorage.app',
+      messagingSenderId: '<messagingSenderId>',
+      appId: '<appId>',
+    },
+    options.functionRegion,
+  )
 
   const lines = [
     'Firebase Web SDK 설정을 자동으로 가져오지 못했어요. 아래 URL에서 앱 설정을 확인한 뒤 직접 넣어 주세요.',
@@ -1845,6 +1856,7 @@ export async function finalizeFirebaseProvisioning(options: {
     await writeFirebaseLocalEnvFiles({
       targetRoot: options.targetRoot,
       hasBackoffice,
+      functionRegion: options.provisionedProject.functionRegion,
       config: options.provisionedProject.config,
     })
 

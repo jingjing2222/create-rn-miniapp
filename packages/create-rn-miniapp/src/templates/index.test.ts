@@ -820,6 +820,10 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
   const functionsPackageJson = JSON.parse(
     await readFile(path.join(targetRoot, 'server', 'functions', 'package.json'), 'utf8'),
   ) as {
+    scripts?: Record<string, string>
+    engines?: {
+      node?: string
+    }
     dependencies?: Record<string, string>
     devDependencies?: Record<string, string>
   }
@@ -833,24 +837,29 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
     indexes?: unknown[]
     fieldOverrides?: unknown[]
   }
-  const serverFirestoreSeed = await readFile(
-    path.join(targetRoot, 'server', 'firestore.seed.json'),
+  const ensureFirestoreScript = await readFile(
+    path.join(targetRoot, 'server', 'scripts', 'firebase-ensure-firestore.mjs'),
     'utf8',
   )
   const functionEntry = await readFile(
     path.join(targetRoot, 'server', 'functions', 'src', 'index.ts'),
     'utf8',
   )
+  const publicStatusSource = await readFile(
+    path.join(targetRoot, 'server', 'functions', 'src', 'public-status.ts'),
+    'utf8',
+  )
+  const seedPublicStatusSource = await readFile(
+    path.join(targetRoot, 'server', 'functions', 'src', 'seed-public-status.ts'),
+    'utf8',
+  )
   const deployScript = await readFile(
     path.join(targetRoot, 'server', 'scripts', 'firebase-functions-deploy.mjs'),
     'utf8',
   )
-  const firestoreSeedScript = await readFile(
-    path.join(targetRoot, 'server', 'scripts', 'firebase-firestore-seed.mjs'),
-    'utf8',
-  )
 
   assert.equal(firebaserc.projects?.default, 'ebook-firebase')
+  assert.equal(serverPackageJson.dependencies?.['google-auth-library'], '^10.6.1')
   assert.equal(
     serverPackageJson.scripts?.build,
     'pnpm --dir ./functions install --ignore-workspace && pnpm --dir ./functions build',
@@ -864,10 +873,21 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
     'pnpm --dir ./functions install --ignore-workspace && node ./scripts/firebase-functions-deploy.mjs',
   )
   assert.equal(
-    serverPackageJson.scripts?.['firestore:seed'],
-    'node ./scripts/firebase-firestore-seed.mjs',
+    serverPackageJson.scripts?.['firestore:ensure'],
+    'node ./scripts/firebase-ensure-firestore.mjs',
   )
-  assert.equal(serverPackageJson.dependencies?.['firebase-admin'], '^13.6.0')
+  assert.equal(
+    serverPackageJson.scripts?.['deploy:firestore'],
+    'node ./scripts/firebase-functions-deploy.mjs --only firestore:rules,firestore:indexes',
+  )
+  assert.equal(
+    serverPackageJson.scripts?.['seed:public-status'],
+    'pnpm --dir ./functions install --ignore-workspace && pnpm --dir ./functions seed:public-status',
+  )
+  assert.equal(
+    serverPackageJson.scripts?.['setup:public-status'],
+    'pnpm firestore:ensure && pnpm deploy:firestore && pnpm seed:public-status',
+  )
   assert.equal(
     firebaseJson.functions?.[0]?.predeploy?.[0],
     'pnpm --dir "$RESOURCE_DIR" install --ignore-workspace && pnpm --dir "$RESOURCE_DIR" build',
@@ -878,20 +898,34 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
   assert.equal(functionsPackageJson.dependencies?.['firebase-admin'], '^13.6.0')
   assert.equal(functionsPackageJson.dependencies?.['firebase-functions'], '^7.0.0')
   assert.equal(functionsPackageJson.dependencies?.['@google-cloud/functions-framework'], '^3.4.5')
+  assert.equal(functionsPackageJson.engines?.node, '22')
+  assert.equal(functionsPackageJson.scripts?.test, 'tsx --test src/**/*.test.ts')
+  assert.equal(
+    functionsPackageJson.scripts?.['seed:public-status'],
+    'tsx src/seed-public-status.ts',
+  )
+  assert.equal(functionsPackageJson.devDependencies?.tsx, '^4.20.5')
   assert.equal(functionsPackageJson.devDependencies?.typescript, '^5.7.3')
   assert.match(serverFirestoreRules, /rules_version = '2'/)
   assert.deepEqual(serverFirestoreIndexes.indexes, [])
   assert.deepEqual(serverFirestoreIndexes.fieldOverrides, [])
-  assert.match(serverFirestoreSeed, /meta\/bootstrap/)
   assert.match(functionEntry, /region: 'us-central1'/)
+  assert.match(functionEntry, /export const getPublicStatus = onCall/)
+  assert.match(functionEntry, /normalizedPath === '\/public-status'/)
+  assert.match(publicStatusSource, /buildPublicAppStatusDocument/)
+  assert.match(seedPublicStatusSource, /function stripWrappingQuotes\(value: string\)/)
+  assert.match(seedPublicStatusSource, /function loadLocalEnv\(filePath: string\)/)
+  assert.match(seedPublicStatusSource, /const result: Record<string, string> = \{\}/)
+  assert.match(seedPublicStatusSource, /FIREBASE_PROJECT_ID is required/)
   assert.doesNotMatch(functionEntry, new RegExp(FIREBASE_DEFAULT_FUNCTION_REGION))
   assert.match(deployScript, /FIREBASE_PROJECT_ID/)
-  assert.match(deployScript, /functions,firestore/)
+  assert.match(deployScript, /functions,firestore:rules,firestore:indexes/)
+  assert.match(deployScript, /--only/)
   assert.match(deployScript, /FIREBASE_TOKEN/)
   assert.match(deployScript, /GOOGLE_APPLICATION_CREDENTIALS/)
   assert.match(deployScript, /firebase-tools/)
-  assert.match(firestoreSeedScript, /firebase-admin\/app/)
-  assert.match(firestoreSeedScript, /firestore\.seed\.json/)
+  assert.match(ensureFirestoreScript, /google-auth-library/)
+  assert.match(ensureFirestoreScript, /firestore\.googleapis\.com:enable/)
 })
 
 test('applyFirebaseServerWorkspaceTemplate emits bun-compatible predeploy commands', async (t) => {

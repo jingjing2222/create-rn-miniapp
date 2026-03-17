@@ -164,23 +164,67 @@ function ensureRepoRootWatchFolder(configObject: SwcObjectExpression) {
   })
 }
 
-const FRONTEND_REPO_ROOT_PREAMBLE = ["const repoRoot = path.resolve(__dirname, '../')", ''].join(
-  '\n',
-)
+function ensureFirebaseCryptoShimResolvers(configObject: SwcObjectExpression) {
+  const buildObject = ensureNestedObjectProperty(configObject, 'build')
+  const buildResolverObject = ensureNestedObjectProperty(buildObject, 'resolver')
+  upsertObjectProperty(buildResolverObject, 'alias', 'cryptoModuleAliases')
+
+  const metroObject = ensureNestedObjectProperty(configObject, 'metro')
+  const metroResolverObject = ensureNestedObjectProperty(metroObject, 'resolver')
+  upsertObjectProperty(
+    metroResolverObject,
+    'conditionNames',
+    "['react-native', 'browser', 'require', 'default']",
+  )
+  upsertObjectProperty(
+    metroResolverObject,
+    'extraNodeModules',
+    "{ crypto: cryptoShimPath, 'node:crypto': cryptoShimPath }",
+  )
+}
+
+const FRONTEND_REPO_ROOT_PREAMBLE = [
+  'const appRoot = process.cwd()',
+  "const repoRoot = path.resolve(appRoot, '../')",
+  '',
+].join('\n')
+
+const FIREBASE_CRYPTO_SHIM_PREAMBLE = [
+  "const cryptoShimPath = path.join(appRoot, 'src/shims/crypto.ts')",
+  'const cryptoModuleAliases = [',
+  '  {',
+  "    from: 'crypto',",
+  '    to: cryptoShimPath,',
+  '    exact: true,',
+  '  },',
+  '  {',
+  "    from: 'node:crypto',",
+  '    to: cryptoShimPath,',
+  '    exact: true,',
+  '  },',
+  ']',
+  '',
+].join('\n')
 
 function createFrontendEnvPreamble(
-  bindings: Array<{ envName: string; identifierName: string; required?: boolean }>,
+  bindings: Array<{
+    envName: string
+    identifierName: string
+    required?: boolean
+    defaultValue?: string
+  }>,
 ) {
   const envNameUnion = bindings.map((binding) => `'${binding.envName}'`).join(' | ')
   const hasOptionalBindings = bindings.some((binding) => binding.required === false)
-  const envStatements = bindings.map(
-    (binding) =>
-      `const ${binding.identifierName} = ${binding.required === false ? 'resolveOptionalMiniappEnv' : 'resolveMiniappEnv'}('${binding.envName}')`,
-  )
+  const envStatements = bindings.map((binding) => {
+    const resolver = binding.required === false ? 'resolveOptionalMiniappEnv' : 'resolveMiniappEnv'
+    const defaultSuffix =
+      binding.defaultValue !== undefined ? ` || ${JSON.stringify(binding.defaultValue)}` : ''
+
+    return `const ${binding.identifierName} = ${resolver}('${binding.envName}')${defaultSuffix}`
+  })
 
   return [
-    'const appRoot = __dirname',
-    '',
     "dotenv.config({ path: path.join(appRoot, '.env') })",
     "dotenv.config({ path: path.join(appRoot, '.env.local'), override: true })",
     '',
@@ -233,7 +277,7 @@ const FRONTEND_PROVIDER_ENV_CONFIG = {
   },
   firebase: {
     pluginSource:
-      'env({ MINIAPP_FIREBASE_API_KEY: miniappFirebaseApiKey, MINIAPP_FIREBASE_AUTH_DOMAIN: miniappFirebaseAuthDomain, MINIAPP_FIREBASE_PROJECT_ID: miniappFirebaseProjectId, MINIAPP_FIREBASE_STORAGE_BUCKET: miniappFirebaseStorageBucket, MINIAPP_FIREBASE_MESSAGING_SENDER_ID: miniappFirebaseMessagingSenderId, MINIAPP_FIREBASE_APP_ID: miniappFirebaseAppId, MINIAPP_FIREBASE_MEASUREMENT_ID: miniappFirebaseMeasurementId }, { dts: false })',
+      'env({ MINIAPP_FIREBASE_API_KEY: miniappFirebaseApiKey, MINIAPP_FIREBASE_AUTH_DOMAIN: miniappFirebaseAuthDomain, MINIAPP_FIREBASE_PROJECT_ID: miniappFirebaseProjectId, MINIAPP_FIREBASE_STORAGE_BUCKET: miniappFirebaseStorageBucket, MINIAPP_FIREBASE_MESSAGING_SENDER_ID: miniappFirebaseMessagingSenderId, MINIAPP_FIREBASE_APP_ID: miniappFirebaseAppId, MINIAPP_FIREBASE_MEASUREMENT_ID: miniappFirebaseMeasurementId, MINIAPP_FIREBASE_FUNCTION_REGION: miniappFirebaseFunctionRegion }, { dts: false })',
     preamble: createFrontendEnvPreamble([
       {
         envName: 'MINIAPP_FIREBASE_API_KEY',
@@ -264,6 +308,12 @@ const FRONTEND_PROVIDER_ENV_CONFIG = {
         identifierName: 'miniappFirebaseMeasurementId',
         required: false,
       },
+      {
+        envName: 'MINIAPP_FIREBASE_FUNCTION_REGION',
+        identifierName: 'miniappFirebaseFunctionRegion',
+        required: false,
+        defaultValue: 'asia-northeast3',
+      },
     ]),
   },
 } as const satisfies Partial<
@@ -291,6 +341,7 @@ function formatGraniteConfigSource(source: string) {
     'const miniappSupabaseUrl =',
     'const miniappSupabasePublishableKey =',
     'const miniappApiBaseUrl =',
+    'const cryptoShimPath =',
     'const miniappFirebaseApiKey =',
     'const miniappFirebaseAuthDomain =',
     'const miniappFirebaseProjectId =',
@@ -333,6 +384,11 @@ export function patchGraniteConfigSource(
     ensureImport(module, 'dotenv', `import dotenv from 'dotenv'`)
     ensureTopLevelStatementBlock(module, frontendEnvConfig.preamble)
     ensureEnvPlugin(ensurePluginsArrayExpression(configObject), frontendEnvConfig.pluginSource)
+  }
+
+  if (serverProvider === 'firebase') {
+    ensureTopLevelStatementBlock(module, FIREBASE_CRYPTO_SHIM_PREAMBLE)
+    ensureFirebaseCryptoShimResolvers(configObject)
   }
 
   return formatGraniteConfigSource(printTypeScriptModule(module))
