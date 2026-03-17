@@ -13,7 +13,6 @@ import { getPackageManagerAdapter, type PackageManager } from '../../package-man
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import { extractJsonPayload } from '../../providers/supabase/provision.js'
 import {
-  FIREBASE_DEFAULT_FUNCTION_NAME,
   FIREBASE_DEFAULT_FUNCTION_REGION,
   patchFirebaseFunctionRegion,
   patchFirebaseServerProjectId,
@@ -56,6 +55,12 @@ type GoogleCloudIamPolicy = {
   bindings?: GoogleCloudIamPolicyBinding[]
 }
 
+type GoogleCloudFirestoreDatabase = {
+  name?: string
+  locationId?: string
+  type?: string
+}
+
 type GoogleCloudCliArchiveSpec = {
   fileName: string
   url: string
@@ -82,8 +87,6 @@ const CREATE_FIREBASE_PROJECT_SENTINEL = '__create_firebase_project__'
 const CREATE_FIREBASE_APP_SENTINEL = '__create_firebase_app__'
 const FIREBASE_CONSOLE_SETTINGS_URL = (projectId: string) =>
   `https://console.firebase.google.com/project/${projectId}/settings/general/`
-const FIREBASE_CLI_DOC_URL = 'https://firebase.google.com/docs/cli'
-const FIREBASE_ADMIN_SETUP_URL = 'https://firebase.google.com/docs/admin/setup'
 const FIREBASE_EXISTING_GCP_PROJECTS_DOC_URL =
   'https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project'
 const FIREBASE_PRICING_URL = 'https://firebase.google.com/pricing'
@@ -101,12 +104,10 @@ const FIREBASE_REQUIRED_BUILD_SERVICE_ACCOUNT_ROLES = [
   'roles/run.builder',
 ] as const
 const CLOUD_BUILD_API_SERVICE = 'cloudbuild.googleapis.com'
+const FIRESTORE_API_SERVICE = 'firestore.googleapis.com'
 const FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_ATTEMPTS = 5
 const FIREBASE_BUILD_SERVICE_ACCOUNT_CHECK_RETRY_DELAY_MS = 750
-const FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES = [
-  'Cloud Functions Developer',
-  'Service Account User',
-] as const
+const FIRESTORE_DEFAULT_DATABASE_ID = '(default)'
 
 const GOOGLE_CLOUD_PROJECT_BILLING_URL = (projectId: string) =>
   `https://console.cloud.google.com/billing/linkedaccount?project=${projectId}`
@@ -350,6 +351,24 @@ function parseGoogleCloudProjectIamPolicyPayload(output: Pick<CommandOutput, 'st
   } satisfies GoogleCloudIamPolicy
 }
 
+function parseGoogleCloudFirestoreDatabasePayload(
+  output: Pick<CommandOutput, 'stdout' | 'stderr'>,
+) {
+  const payload = extractJsonPayload<unknown>(output)
+
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Cloud Firestore database 정보를 해석하지 못했습니다.')
+  }
+
+  const candidate = payload as GoogleCloudFirestoreDatabase
+
+  return {
+    name: candidate.name,
+    locationId: candidate.locationId,
+    type: candidate.type,
+  } satisfies GoogleCloudFirestoreDatabase
+}
+
 function createFirebaseServerEnvValues(
   projectId: string,
   functionRegion: string,
@@ -467,6 +486,10 @@ export function isGoogleCloudServiceDisabledError(message: string, service?: str
   }
 
   return normalized.includes(service.toLowerCase())
+}
+
+export function isFirebaseFirestoreDatabaseMissingError(message: string) {
+  return /does not exist|NOT_FOUND|not found/i.test(message)
 }
 
 export function formatFirebaseBlazeUpgradeMessage(options: {
@@ -708,6 +731,57 @@ async function enableGoogleCloudServices(
     command: gcloudCommand,
     args: ['services', 'enable', ...services, '--project', projectId],
     label: `Google Cloud API 활성화 (${services.join(', ')})`,
+  })
+}
+
+async function describeGoogleCloudFirestoreDatabase(
+  cwd: string,
+  projectId: string,
+  gcloudCommand: string,
+) {
+  const output = await runCommandWithOutput({
+    cwd,
+    command: gcloudCommand,
+    args: [
+      'firestore',
+      'databases',
+      'describe',
+      '--project',
+      projectId,
+      '--database',
+      FIRESTORE_DEFAULT_DATABASE_ID,
+      '--format=json',
+    ],
+    label: 'Cloud Firestore 기본 database 확인',
+  })
+
+  return parseGoogleCloudFirestoreDatabasePayload(output)
+}
+
+async function createGoogleCloudFirestoreDatabase(
+  cwd: string,
+  projectId: string,
+  location: string,
+  gcloudCommand: string,
+) {
+  log.step('Cloud Firestore 기본 database 준비')
+  await runCommandWithOutput({
+    cwd,
+    command: gcloudCommand,
+    args: [
+      'firestore',
+      'databases',
+      'create',
+      '--project',
+      projectId,
+      '--database',
+      FIRESTORE_DEFAULT_DATABASE_ID,
+      '--location',
+      location,
+      '--type',
+      'firestore-native',
+    ],
+    label: 'Cloud Firestore 기본 database 생성',
   })
 }
 
@@ -1077,6 +1151,91 @@ async function addFirebaseToExistingGoogleCloudProject(
   }
 }
 
+export async function ensureFirebaseFirestoreReady(options: {
+  cwd: string
+  projectId: string
+  databaseLocation: string
+  ensureGcloudInstalled?: (cwd: string) => Promise<string>
+  ensureGcloudAuth?: (cwd: string, gcloudCommand: string) => Promise<void>
+  describeFirestoreDatabase?: (
+    cwd: string,
+    projectId: string,
+  ) => Promise<GoogleCloudFirestoreDatabase>
+  enableGoogleCloudServices?: (cwd: string, projectId: string, services: string[]) => Promise<void>
+  createFirestoreDatabase?: (cwd: string, projectId: string, location: string) => Promise<void>
+}) {
+  const gcloudCommand = await (options.ensureGcloudInstalled ?? ensureGcloudCliInstalled)(
+    options.cwd,
+  )
+  const ensureAuth = options.ensureGcloudAuth ?? ensureGcloudAuth
+  const describeFirestoreDatabase =
+    options.describeFirestoreDatabase ??
+    (async (cwd: string, projectId: string) =>
+      await describeGoogleCloudFirestoreDatabase(cwd, projectId, gcloudCommand))
+  const enableServices =
+    options.enableGoogleCloudServices ??
+    (async (cwd: string, projectId: string, services: string[]) =>
+      await enableGoogleCloudServices(cwd, projectId, services, gcloudCommand))
+  const createFirestoreDatabase =
+    options.createFirestoreDatabase ??
+    (async (cwd: string, projectId: string, location: string) =>
+      await createGoogleCloudFirestoreDatabase(cwd, projectId, location, gcloudCommand))
+
+  while (true) {
+    let shouldCreateDatabase = false
+
+    try {
+      await describeFirestoreDatabase(options.cwd, options.projectId)
+      return
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+
+      if (isGoogleCloudServiceDisabledError(message, FIRESTORE_API_SERVICE)) {
+        await enableServices(options.cwd, options.projectId, [FIRESTORE_API_SERVICE])
+        continue
+      }
+
+      if (isGoogleCloudAuthRefreshError(message)) {
+        await ensureAuth(options.cwd, gcloudCommand)
+        continue
+      }
+
+      if (!isFirebaseFirestoreDatabaseMissingError(message)) {
+        throw error
+      }
+
+      shouldCreateDatabase = true
+    }
+
+    if (!shouldCreateDatabase) {
+      return
+    }
+
+    try {
+      await createFirestoreDatabase(options.cwd, options.projectId, options.databaseLocation)
+      return
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+
+      if (isGoogleCloudServiceDisabledError(message, FIRESTORE_API_SERVICE)) {
+        await enableServices(options.cwd, options.projectId, [FIRESTORE_API_SERVICE])
+        continue
+      }
+
+      if (isGoogleCloudAuthRefreshError(message)) {
+        await ensureAuth(options.cwd, gcloudCommand)
+        continue
+      }
+
+      if (/already exists|ALREADY_EXISTS/i.test(message)) {
+        return
+      }
+
+      throw error
+    }
+  }
+}
+
 async function selectFirebaseProject(
   prompt: CliPrompter,
   projects: FirebaseProject[],
@@ -1438,8 +1597,49 @@ export async function writeFirebaseServerLocalEnvFile(options: {
   }
 }
 
+function createFirebaseDeployAuthLines(options: {
+  packageManager: PackageManager
+  projectId: string
+  hasConfiguredToken: boolean
+  hasConfiguredCredentials: boolean
+}) {
+  const missingKeys = [
+    options.hasConfiguredToken ? null : '`FIREBASE_TOKEN`',
+    options.hasConfiguredCredentials ? null : '`GOOGLE_APPLICATION_CREDENTIALS`',
+  ].filter((value): value is string => value !== null)
+
+  if (missingKeys.length === 0) {
+    return [] satisfies string[]
+  }
+
+  const loginCommand = getPackageManagerAdapter(options.packageManager).dlxCommand(
+    'firebase-tools',
+    ['login:ci'],
+  )
+  const summary =
+    missingKeys.length === 2
+      ? `server/.env.local 의 ${missingKeys[0]}과 ${missingKeys[1]}는 비어 있어요.`
+      : `server/.env.local 의 ${missingKeys[0]}은 비어 있어요.`
+  const lines = ['## Firebase deploy auth', '', summary, '아래 값을 넣어 주세요.', '']
+
+  if (!options.hasConfiguredToken) {
+    lines.push(`- \`FIREBASE_TOKEN\`: \`${loginCommand}\``)
+  }
+
+  if (!options.hasConfiguredCredentials) {
+    lines.push(
+      `- \`GOOGLE_APPLICATION_CREDENTIALS\`: ${GOOGLE_CLOUD_SERVICE_ACCOUNTS_URL(options.projectId)}`,
+    )
+  }
+
+  lines.push('- 발급 화면 예시는 `server/README.md`에 넣어뒀어요.')
+
+  return lines
+}
+
 export function formatFirebaseManualSetupNote(options: {
   targetRoot: string
+  packageManager: PackageManager
   hasBackoffice: boolean
   projectId: string
   functionRegion: string
@@ -1482,35 +1682,12 @@ export function formatFirebaseManualSetupNote(options: {
       options.hasConfiguredCredentials ? '<기존 값 유지>' : '',
     ).trimEnd(),
     '',
-    `server/functions/src/index.ts 의 기본 HTTP 함수 이름은 ${FIREBASE_DEFAULT_FUNCTION_NAME} 입니다.`,
-    '',
-    '## Firebase deploy auth',
-    '',
-    '- 브라우저 로그인 없이 CI나 비대화형 배포를 할 때만 필요해요.',
-  )
-
-  if (!options.hasConfiguredToken) {
-    lines.push(
-      '- `FIREBASE_TOKEN`은 `firebase login:ci`로 발급받아 server/.env.local 의 FIREBASE_TOKEN 에 넣어 주세요.',
-      FIREBASE_CLI_DOC_URL,
-    )
-  } else {
-    lines.push('- `FIREBASE_TOKEN`은 기존 값을 그대로 둘게요.')
-  }
-
-  if (!options.hasConfiguredCredentials) {
-    lines.push(
-      '- `GOOGLE_APPLICATION_CREDENTIALS`는 Google Cloud Service Accounts 페이지에서 서비스 계정 JSON 키를 발급받아 파일 경로를 server/.env.local 에 넣어 주세요.',
-      GOOGLE_CLOUD_SERVICE_ACCOUNTS_URL(options.projectId),
-      FIREBASE_ADMIN_SETUP_URL,
-    )
-  } else {
-    lines.push('- `GOOGLE_APPLICATION_CREDENTIALS`는 기존 값을 그대로 둘게요.')
-  }
-
-  lines.push(
-    `- 서비스 계정을 따로 쓸 때는 보통 \`${FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES[0]}\`와 \`${FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES[1]}\` 역할이 먼저 필요해요.`,
-    '- 프로젝트 설정에 따라 Cloud Build, Cloud Run, Artifact Registry 쪽 권한이 더 필요할 수 있고, 이 생성기는 가능한 자동 보정을 먼저 시도해요.',
+    ...createFirebaseDeployAuthLines({
+      packageManager: options.packageManager,
+      projectId: options.projectId,
+      hasConfiguredToken: options.hasConfiguredToken,
+      hasConfiguredCredentials: options.hasConfiguredCredentials,
+    }),
   )
 
   return {
@@ -1610,6 +1787,12 @@ export async function provisionFirebaseProject(
 
   const functionRegion = await selectFirebaseFunctionRegion(options.prompt)
 
+  await ensureFirebaseFirestoreReady({
+    cwd: options.targetRoot,
+    projectId: selectedProjectId,
+    databaseLocation: functionRegion,
+  })
+
   await patchFirebaseServerProjectId(options.targetRoot, selectedProjectId)
   await patchFirebaseFunctionRegion(options.targetRoot, functionRegion)
   await installFirebaseFunctionsDependencies(options.packageManager, functionsRoot)
@@ -1639,6 +1822,7 @@ export async function provisionFirebaseProject(
 
 export async function finalizeFirebaseProvisioning(options: {
   targetRoot: string
+  packageManager: PackageManager
   provisionedProject: ProvisionedFirebaseProject | null
 }) {
   if (!options.provisionedProject) {
@@ -1672,31 +1856,13 @@ export async function finalizeFirebaseProvisioning(options: {
             ? 'frontend/.env.local 과 backoffice/.env.local 에 Firebase Web SDK 연결 값을 적어뒀어요.'
             : 'frontend/.env.local 에 Firebase Web SDK 연결 값을 적어뒀어요.',
           'server/.env.local 에는 Firebase project 메타데이터를 적어뒀어요.',
-          'server/package.json 의 deploy 로 Firebase Functions를 다시 배포할 수 있어요.',
           '',
-          '## Firebase deploy auth',
-          '',
-          '- 브라우저 로그인 없이 CI나 비대화형 배포를 할 때만 필요해요.',
-          serverEnv.hasConfiguredToken
-            ? '- `FIREBASE_TOKEN`은 기존 값을 그대로 둘게요.'
-            : [
-                '- `FIREBASE_TOKEN`은 비어 있어요.',
-                '- `firebase login:ci`로 토큰을 발급받아 필요할 때만 채워 넣어 주세요.',
-                FIREBASE_CLI_DOC_URL,
-              ].join('\n'),
-          serverEnv.hasConfiguredCredentials
-            ? '- `GOOGLE_APPLICATION_CREDENTIALS`는 기존 값을 그대로 둘게요.'
-            : [
-                '- `GOOGLE_APPLICATION_CREDENTIALS`는 비어 있어요.',
-                '- Google Cloud Service Accounts 페이지에서 서비스 계정 JSON 키를 발급받아 파일 경로를 채워 넣어 주세요.',
-                GOOGLE_CLOUD_SERVICE_ACCOUNTS_URL(options.provisionedProject.projectId),
-                FIREBASE_ADMIN_SETUP_URL,
-              ].join('\n'),
-          `- 서비스 계정을 따로 쓸 때는 보통 \`${FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES[0]}\`와 \`${FIREBASE_DEPLOY_SERVICE_ACCOUNT_ROLES[1]}\` 역할이 먼저 필요해요.`,
-          '- 프로젝트 설정에 따라 Cloud Build, Cloud Run, Artifact Registry 쪽 권한이 더 필요할 수 있고, 이 생성기는 가능한 자동 보정을 먼저 시도해요.',
-          '',
-          'Firebase 설정을 다시 확인해야 하면 아래 URL을 보면 돼요.',
-          FIREBASE_CONSOLE_SETTINGS_URL(options.provisionedProject.projectId),
+          ...createFirebaseDeployAuthLines({
+            packageManager: options.packageManager,
+            projectId: options.provisionedProject.projectId,
+            hasConfiguredToken: serverEnv.hasConfiguredToken,
+            hasConfiguredCredentials: serverEnv.hasConfiguredCredentials,
+          }),
         ].join('\n'),
       },
     ] satisfies ProvisioningNote[]
@@ -1705,6 +1871,7 @@ export async function finalizeFirebaseProvisioning(options: {
   return [
     formatFirebaseManualSetupNote({
       targetRoot: options.targetRoot,
+      packageManager: options.packageManager,
       hasBackoffice,
       projectId: options.provisionedProject.projectId,
       functionRegion: options.provisionedProject.functionRegion,

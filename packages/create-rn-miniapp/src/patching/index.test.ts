@@ -1981,7 +1981,10 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   assert.match(readme, /^# server$/m)
   assert.match(readme, /Firebase Functions/)
   assert.match(readme, /server\/functions\/src\/index\.ts/)
+  assert.match(readme, /server\/firestore\.rules/)
+  assert.match(readme, /server\/firestore\.seed\.json/)
   assert.match(readme, /cd server && pnpm deploy/)
+  assert.match(readme, /cd server && pnpm firestore:seed/)
   assert.match(readme, /frontend\/src\/lib\/firebase\.ts/)
   assert.match(readme, /frontend\/src\/lib\/firestore\.ts/)
   assert.match(readme, /frontend\/src\/lib\/storage\.ts/)
@@ -1990,6 +1993,7 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   assert.match(readme, /## Firebase deploy auth/)
   assert.match(readme, /firebase login:ci/)
   assert.match(readme, /GOOGLE_APPLICATION_CREDENTIALS/)
+  assert.match(readme, /Firestore database/)
   assert.match(readme, /Cloud Functions Developer/)
   assert.match(
     readme,

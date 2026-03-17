@@ -7,6 +7,7 @@ import type { CliPrompter } from '../../cli.js'
 import {
   buildFirebaseCommand,
   ensureFirebaseBuildServiceAccountPermissions,
+  ensureFirebaseFirestoreReady,
   ensureFirebaseProjectIsOnBlazePlan,
   finalizeFirebaseProvisioning,
   formatFirebaseAddFirebaseFailureMessage,
@@ -551,6 +552,64 @@ test('isFirebaseFunctionsBuildServiceAccountPermissionError detects Cloud Build 
   )
 })
 
+test('ensureFirebaseFirestoreReady enables Firestore API when it is disabled', async () => {
+  const actions: string[] = []
+
+  await ensureFirebaseFirestoreReady({
+    cwd: '/tmp/ebook',
+    projectId: 'ebook-firebase',
+    databaseLocation: 'asia-northeast3',
+    ensureGcloudInstalled: async () => 'gcloud',
+    describeFirestoreDatabase: async () => {
+      actions.push('describe')
+
+      if (actions.length === 1) {
+        throw new Error(
+          'ERROR: (gcloud.firestore.databases.describe) PERMISSION_DENIED: Cloud Firestore API has not been used in project ebook-firebase before or it is disabled.\nreason: SERVICE_DISABLED\nservice: firestore.googleapis.com',
+        )
+      }
+
+      return {
+        name: 'projects/ebook-firebase/databases/(default)',
+        locationId: 'asia-northeast3',
+      }
+    },
+    enableGoogleCloudServices: async (_cwd, _projectId, services) => {
+      actions.push(`enable:${services.join(',')}`)
+    },
+    createFirestoreDatabase: async () => {
+      actions.push('create')
+    },
+  })
+
+  assert.deepEqual(actions, ['describe', 'enable:firestore.googleapis.com', 'describe'])
+})
+
+test('ensureFirebaseFirestoreReady creates the default Firestore database when it is missing', async () => {
+  const actions: string[] = []
+
+  await ensureFirebaseFirestoreReady({
+    cwd: '/tmp/ebook',
+    projectId: 'ebook-firebase',
+    databaseLocation: 'asia-northeast3',
+    ensureGcloudInstalled: async () => 'gcloud',
+    describeFirestoreDatabase: async () => {
+      actions.push('describe')
+      throw new Error(
+        'ERROR: (gcloud.firestore.databases.describe) NOT_FOUND: Database (default) does not exist for project ebook-firebase.',
+      )
+    },
+    enableGoogleCloudServices: async () => {
+      actions.push('enable')
+    },
+    createFirestoreDatabase: async (_cwd, projectId, location) => {
+      actions.push(`create:${projectId}:${location}`)
+    },
+  })
+
+  assert.deepEqual(actions, ['describe', 'create:ebook-firebase:asia-northeast3'])
+})
+
 test('formatFirebaseFunctionsDeployFailureMessage explains build service account IAM failures', () => {
   const message = formatFirebaseFunctionsDeployFailureMessage({
     projectId: 'miniapp-8000b',
@@ -579,6 +638,7 @@ test('formatFirebaseFunctionsDeployFailureMessage explains build service account
 test('formatFirebaseManualSetupNote includes frontend, backoffice, and server guidance', () => {
   const note = formatFirebaseManualSetupNote({
     targetRoot: '/tmp/ebook-miniapp',
+    packageManager: 'bun',
     hasBackoffice: true,
     projectId: 'ebook-firebase',
     functionRegion: 'asia-northeast3',
@@ -597,10 +657,11 @@ test('formatFirebaseManualSetupNote includes frontend, backoffice, and server gu
   assert.match(note.body, /MINIAPP_FIREBASE_API_KEY=<Firebase Web API key>/)
   assert.match(note.body, /VITE_FIREBASE_APP_ID=<appId>/)
   assert.match(note.body, /## Firebase deploy auth/)
-  assert.match(note.body, /firebase login:ci/)
+  assert.match(note.body, /bunx firebase-tools login:ci/)
   assert.match(note.body, /GOOGLE_APPLICATION_CREDENTIALS/)
-  assert.match(note.body, /Cloud Functions Developer/)
-  assert.match(note.body, /Service Account User/)
+  assert.match(note.body, /server\/README\.md/)
+  assert.doesNotMatch(note.body, /Cloud Functions Developer/)
+  assert.doesNotMatch(note.body, /Service Account User/)
 })
 
 test('writeFirebaseLocalEnvFiles writes frontend and backoffice .env.local files', async () => {
@@ -717,6 +778,7 @@ test('finalizeFirebaseProvisioning writes env files when sdk config is available
   try {
     const notes = await finalizeFirebaseProvisioning({
       targetRoot,
+      packageManager: 'npm',
       provisionedProject: {
         projectId: 'ebook-firebase',
         webAppId: '1:1234567890:web:abc123',
@@ -741,15 +803,17 @@ test('finalizeFirebaseProvisioning writes env files when sdk config is available
     assert.match(serverEnv, /^FIREBASE_FUNCTION_REGION=asia-northeast3$/m)
     assert.match(serverEnv, /^FIREBASE_TOKEN=$/m)
     assert.equal(notes[0]?.title, 'Firebase 연결 값을 적어뒀어요')
-    assert.match(notes[0]?.body ?? '', /server\/package\.json 의 deploy/)
     assert.match(notes[0]?.body ?? '', /## Firebase deploy auth/)
+    assert.match(
+      notes[0]?.body ?? '',
+      /server\/\.env\.local 의 `FIREBASE_TOKEN`과 `GOOGLE_APPLICATION_CREDENTIALS`는 비어 있어요/,
+    )
     assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
-    assert.match(notes[0]?.body ?? '', /firebase login:ci/)
-    assert.match(notes[0]?.body ?? '', /firebase\.google\.com\/docs\/cli/)
-    assert.match(notes[0]?.body ?? '', /`GOOGLE_APPLICATION_CREDENTIALS`는 비어 있어요/)
+    assert.match(notes[0]?.body ?? '', /npx firebase-tools login:ci/)
+    assert.match(notes[0]?.body ?? '', /server\/README\.md/)
     assert.match(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
-    assert.match(notes[0]?.body ?? '', /Cloud Functions Developer/)
-    assert.match(notes[0]?.body ?? '', /Service Account User/)
+    assert.doesNotMatch(notes[0]?.body ?? '', /Cloud Functions Developer/)
+    assert.doesNotMatch(notes[0]?.body ?? '', /Service Account User/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }
@@ -772,6 +836,7 @@ test('finalizeFirebaseProvisioning falls back to manual setup guidance when sdk 
 
     const notes = await finalizeFirebaseProvisioning({
       targetRoot,
+      packageManager: 'npm',
       provisionedProject: {
         projectId: 'ebook-firebase',
         webAppId: '1:1234567890:web:abc123',
@@ -791,9 +856,10 @@ test('finalizeFirebaseProvisioning falls back to manual setup guidance when sdk 
     assert.match(serverEnv, /^FIREBASE_PROJECT_ID=ebook-firebase$/m)
     assert.match(serverEnv, /^FIREBASE_TOKEN=$/m)
     assert.match(serverEnv, /^GOOGLE_APPLICATION_CREDENTIALS=\/tmp\/firebase\.json$/m)
-    assert.match(notes[0]?.body ?? '', /FIREBASE_TOKEN/)
-    assert.match(notes[0]?.body ?? '', /firebase login:ci/)
-    assert.match(notes[0]?.body ?? '', /Cloud Functions Developer/)
+    assert.match(notes[0]?.body ?? '', /server\/\.env\.local 의 `FIREBASE_TOKEN`은 비어 있어요/)
+    assert.match(notes[0]?.body ?? '', /npx firebase-tools login:ci/)
+    assert.match(notes[0]?.body ?? '', /server\/README\.md/)
+    assert.doesNotMatch(notes[0]?.body ?? '', /Cloud Functions Developer/)
     assert.doesNotMatch(notes[0]?.body ?? '', /iam-admin\/serviceaccounts\?project=ebook-firebase/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })

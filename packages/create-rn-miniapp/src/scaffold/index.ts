@@ -205,6 +205,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
   notes.push(
     ...(await maybeFinalizeFirebaseProvisioning({
       targetRoot,
+      packageManager: options.packageManager,
       provisionedProject: provisionedFirebaseProject,
       serverProvider: options.serverProvider,
     })),
@@ -398,6 +399,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     notes.push(
       ...(await maybeFinalizeFirebaseProvisioning({
         targetRoot,
+        packageManager: options.packageManager,
         provisionedProject: provisionedFirebaseProject,
         serverProvider: options.serverProvider,
       })),

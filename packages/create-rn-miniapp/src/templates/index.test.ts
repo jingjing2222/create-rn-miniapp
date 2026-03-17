@@ -570,6 +570,7 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
     await readFile(path.join(targetRoot, 'server', 'package.json'), 'utf8'),
   ) as {
     scripts?: Record<string, string>
+    dependencies?: Record<string, string>
   }
   const serverDbApplyScript = await readFile(
     path.join(targetRoot, 'server', 'scripts', 'supabase-db-apply.mjs'),
@@ -672,6 +673,7 @@ test('applyRootTemplates emits npm-specific workspace manifest and scripts', asy
     await readFile(path.join(targetRoot, 'server', 'package.json'), 'utf8'),
   ) as {
     scripts?: Record<string, string>
+    dependencies?: Record<string, string>
   }
   const serverDbApplyScript = await readFile(
     path.join(targetRoot, 'server', 'scripts', 'supabase-db-apply.mjs'),
@@ -737,6 +739,7 @@ test('applyRootTemplates emits bun-specific workspace manifest and scripts', asy
     await readFile(path.join(targetRoot, 'server', 'package.json'), 'utf8'),
   ) as {
     scripts?: Record<string, string>
+    dependencies?: Record<string, string>
   }
   const serverDbApplyScript = await readFile(
     path.join(targetRoot, 'server', 'scripts', 'supabase-db-apply.mjs'),
@@ -787,6 +790,7 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
     await readFile(path.join(targetRoot, 'server', 'package.json'), 'utf8'),
   ) as {
     scripts?: Record<string, string>
+    dependencies?: Record<string, string>
   }
   const firebaserc = JSON.parse(
     await readFile(path.join(targetRoot, 'server', '.firebaserc'), 'utf8'),
@@ -801,6 +805,10 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
     functions?: Array<{
       predeploy?: string[]
     }>
+    firestore?: {
+      rules?: string
+      indexes?: string
+    }
   }
   const functionsTsconfig = JSON.parse(
     await readFile(path.join(targetRoot, 'server', 'functions', 'tsconfig.json'), 'utf8'),
@@ -815,12 +823,30 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
     dependencies?: Record<string, string>
     devDependencies?: Record<string, string>
   }
+  const serverFirestoreRules = await readFile(
+    path.join(targetRoot, 'server', 'firestore.rules'),
+    'utf8',
+  )
+  const serverFirestoreIndexes = JSON.parse(
+    await readFile(path.join(targetRoot, 'server', 'firestore.indexes.json'), 'utf8'),
+  ) as {
+    indexes?: unknown[]
+    fieldOverrides?: unknown[]
+  }
+  const serverFirestoreSeed = await readFile(
+    path.join(targetRoot, 'server', 'firestore.seed.json'),
+    'utf8',
+  )
   const functionEntry = await readFile(
     path.join(targetRoot, 'server', 'functions', 'src', 'index.ts'),
     'utf8',
   )
   const deployScript = await readFile(
     path.join(targetRoot, 'server', 'scripts', 'firebase-functions-deploy.mjs'),
+    'utf8',
+  )
+  const firestoreSeedScript = await readFile(
+    path.join(targetRoot, 'server', 'scripts', 'firebase-firestore-seed.mjs'),
     'utf8',
   )
 
@@ -838,20 +864,34 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
     'pnpm --dir ./functions install --ignore-workspace && node ./scripts/firebase-functions-deploy.mjs',
   )
   assert.equal(
+    serverPackageJson.scripts?.['firestore:seed'],
+    'node ./scripts/firebase-firestore-seed.mjs',
+  )
+  assert.equal(serverPackageJson.dependencies?.['firebase-admin'], '^13.6.0')
+  assert.equal(
     firebaseJson.functions?.[0]?.predeploy?.[0],
     'pnpm --dir "$RESOURCE_DIR" install --ignore-workspace && pnpm --dir "$RESOURCE_DIR" build',
   )
+  assert.equal(firebaseJson.firestore?.rules, 'firestore.rules')
+  assert.equal(firebaseJson.firestore?.indexes, 'firestore.indexes.json')
   assert.equal(functionsTsconfig.compilerOptions?.skipLibCheck, true)
   assert.equal(functionsPackageJson.dependencies?.['firebase-admin'], '^13.6.0')
   assert.equal(functionsPackageJson.dependencies?.['firebase-functions'], '^7.0.0')
   assert.equal(functionsPackageJson.dependencies?.['@google-cloud/functions-framework'], '^3.4.5')
   assert.equal(functionsPackageJson.devDependencies?.typescript, '^5.7.3')
+  assert.match(serverFirestoreRules, /rules_version = '2'/)
+  assert.deepEqual(serverFirestoreIndexes.indexes, [])
+  assert.deepEqual(serverFirestoreIndexes.fieldOverrides, [])
+  assert.match(serverFirestoreSeed, /meta\/bootstrap/)
   assert.match(functionEntry, /region: 'us-central1'/)
   assert.doesNotMatch(functionEntry, new RegExp(FIREBASE_DEFAULT_FUNCTION_REGION))
   assert.match(deployScript, /FIREBASE_PROJECT_ID/)
+  assert.match(deployScript, /functions,firestore/)
   assert.match(deployScript, /FIREBASE_TOKEN/)
   assert.match(deployScript, /GOOGLE_APPLICATION_CREDENTIALS/)
   assert.match(deployScript, /firebase-tools/)
+  assert.match(firestoreSeedScript, /firebase-admin\/app/)
+  assert.match(firestoreSeedScript, /firestore\.seed\.json/)
 })
 
 test('applyFirebaseServerWorkspaceTemplate emits bun-compatible predeploy commands', async (t) => {

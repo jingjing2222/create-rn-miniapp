@@ -426,7 +426,7 @@ function renderFirebaseFunctionsDeployScript(tokens: TemplateTokens) {
   const command = packageManager.dlx('firebase-tools', [
     'deploy',
     '--only',
-    'functions',
+    'functions,firestore',
     '--config',
     'firebase.json',
     '--project',
@@ -568,7 +568,53 @@ function renderFirebaseJson(tokens: TemplateTokens) {
           predeploy: [predeployCommand],
         },
       ],
+      firestore: {
+        rules: 'firestore.rules',
+        indexes: 'firestore.indexes.json',
+      },
     },
+    null,
+    2,
+  )}\n`
+}
+
+function renderFirebaseFirestoreRules() {
+  return [
+    "rules_version = '2';",
+    'service cloud.firestore {',
+    '  match /databases/{database}/documents {',
+    '    match /{document=**} {',
+    '      allow read, write: if false;',
+    '    }',
+    '  }',
+    '}',
+    '',
+  ].join('\n')
+}
+
+function renderFirebaseFirestoreIndexes() {
+  return `${JSON.stringify(
+    {
+      indexes: [],
+      fieldOverrides: [],
+    },
+    null,
+    2,
+  )}\n`
+}
+
+function renderFirebaseFirestoreSeed() {
+  return `${JSON.stringify(
+    [
+      {
+        path: 'meta/bootstrap',
+        data: {
+          provider: 'firebase',
+          status: 'ready',
+          updatedAt: '__SERVER_TIMESTAMP__',
+        },
+      },
+    ],
     null,
     2,
   )}\n`
@@ -680,6 +726,129 @@ function renderFirebaseFunctionsIndex(region = FIREBASE_DEFAULT_FUNCTION_REGION)
   ].join('\n')
 }
 
+function renderFirebaseFirestoreSeedScript() {
+  return [
+    "import { existsSync, readFileSync } from 'node:fs'",
+    "import path from 'node:path'",
+    "import process from 'node:process'",
+    "import { fileURLToPath } from 'node:url'",
+    "import { cert, getApps, initializeApp } from 'firebase-admin/app'",
+    "import { FieldValue, getFirestore } from 'firebase-admin/firestore'",
+    '',
+    "const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')",
+    "const envPath = path.join(serverRoot, '.env.local')",
+    "const seedPath = path.join(serverRoot, 'firestore.seed.json')",
+    '',
+    'function stripWrappingQuotes(value) {',
+    `  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {`,
+    '    return value.slice(1, -1)',
+    '  }',
+    '',
+    '  return value',
+    '}',
+    '',
+    'function loadLocalEnv(filePath) {',
+    '  if (!existsSync(filePath)) {',
+    '    return',
+    '  }',
+    '',
+    "  const source = readFileSync(filePath, 'utf8')",
+    '',
+    '  for (const line of source.split(/\\r?\\n/)) {',
+    '    const trimmed = line.trim()',
+    '',
+    "    if (!trimmed || trimmed.startsWith('#')) {",
+    '      continue',
+    '    }',
+    '',
+    "    const separatorIndex = trimmed.indexOf('=')",
+    '    if (separatorIndex <= 0) {',
+    '      continue',
+    '    }',
+    '',
+    '    const key = trimmed.slice(0, separatorIndex).trim()',
+    '    const value = stripWrappingQuotes(trimmed.slice(separatorIndex + 1).trim())',
+    '',
+    '    if (process.env[key] === undefined) {',
+    '      process.env[key] = value',
+    '    }',
+    '  }',
+    '}',
+    '',
+    'function replaceSeedTokens(value) {',
+    '  if (Array.isArray(value)) {',
+    '    return value.map(replaceSeedTokens)',
+    '  }',
+    '',
+    "  if (value === '__SERVER_TIMESTAMP__') {",
+    '    return FieldValue.serverTimestamp()',
+    '  }',
+    '',
+    "  if (value && typeof value === 'object') {",
+    '    return Object.fromEntries(',
+    '      Object.entries(value).map(([key, nestedValue]) => [key, replaceSeedTokens(nestedValue)]),',
+    '    )',
+    '  }',
+    '',
+    '  return value',
+    '}',
+    '',
+    'loadLocalEnv(envPath)',
+    '',
+    "const projectId = process.env.FIREBASE_PROJECT_ID?.trim() ?? ''",
+    'if (!projectId) {',
+    "  console.error('[server] FIREBASE_PROJECT_ID is required. Set server/.env.local before running firestore:seed.')",
+    '  process.exit(1)',
+    '}',
+    '',
+    "const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim() ?? ''",
+    'if (!credentials) {',
+    "  console.error('[server] GOOGLE_APPLICATION_CREDENTIALS is required for firestore:seed. Add it to server/.env.local first.')",
+    '  process.exit(1)',
+    '}',
+    '',
+    'const resolvedCredentials = path.isAbsolute(credentials)',
+    '  ? credentials',
+    '  : path.resolve(serverRoot, credentials)',
+    '',
+    'if (!existsSync(resolvedCredentials)) {',
+    "  console.error('[server] GOOGLE_APPLICATION_CREDENTIALS file not found: ' + resolvedCredentials)",
+    '  process.exit(1)',
+    '}',
+    '',
+    'if (!existsSync(seedPath)) {',
+    "  console.error('[server] firestore.seed.json file not found: ' + seedPath)",
+    '  process.exit(1)',
+    '}',
+    '',
+    "const serviceAccount = JSON.parse(readFileSync(resolvedCredentials, 'utf8'))",
+    "const seedEntries = JSON.parse(readFileSync(seedPath, 'utf8'))",
+    '',
+    'if (!Array.isArray(seedEntries)) {',
+    "  console.error('[server] firestore.seed.json must be an array of { path, data } entries.')",
+    '  process.exit(1)',
+    '}',
+    '',
+    'const app = getApps()[0] ?? initializeApp({',
+    '  credential: cert(serviceAccount),',
+    '  projectId,',
+    '})',
+    'const firestore = getFirestore(app)',
+    '',
+    'for (const entry of seedEntries) {',
+    "  if (!entry || typeof entry !== 'object' || typeof entry.path !== 'string' || !('data' in entry)) {",
+    "    console.error('[server] firestore.seed.json entries must include string `path` and `data`.')",
+    '    process.exit(1)',
+    '  }',
+    '',
+    '  await firestore.doc(entry.path).set(replaceSeedTokens(entry.data), { merge: true })',
+    '}',
+    '',
+    "console.log('[server] Firestore seed completed.')",
+    '',
+  ].join('\n')
+}
+
 function renderFirebaseFunctionsInstallCommand(packageManager: PackageManager, directory: string) {
   const adapter = getPackageManagerAdapter(packageManager)
 
@@ -701,12 +870,16 @@ function renderFirebaseServerPackageJson(tokens: TemplateTokens) {
   return {
     name: 'server',
     private: true,
+    dependencies: {
+      'firebase-admin': FIREBASE_ADMIN_VERSION,
+    },
     scripts: {
       dev: `${installFunctionsCommand} && ${packageManager.dlxCommand('firebase-tools', ['emulators:start', '--only', 'functions', '--config', 'firebase.json'])}`,
       build: `${installFunctionsCommand} && ${packageManager.runScriptInDirectoryCommand(functionsDirectory, 'build')}`,
       typecheck: `${installFunctionsCommand} && ${packageManager.runScriptInDirectoryCommand(functionsDirectory, 'typecheck')}`,
       test: `node -e "console.log('firebase server test placeholder')"`,
       deploy: `${installFunctionsCommand} && node ./scripts/firebase-functions-deploy.mjs`,
+      'firestore:seed': 'node ./scripts/firebase-firestore-seed.mjs',
       logs: packageManager.dlxCommand('firebase-tools', ['functions:log']),
     },
   }
@@ -1140,6 +1313,17 @@ export async function applyFirebaseServerWorkspaceTemplate(
     'utf8',
   )
   await writeFile(path.join(serverRoot, 'firebase.json'), renderFirebaseJson(tokens), 'utf8')
+  await writeFile(path.join(serverRoot, 'firestore.rules'), renderFirebaseFirestoreRules(), 'utf8')
+  await writeFile(
+    path.join(serverRoot, 'firestore.indexes.json'),
+    renderFirebaseFirestoreIndexes(),
+    'utf8',
+  )
+  await writeFile(
+    path.join(serverRoot, 'firestore.seed.json'),
+    renderFirebaseFirestoreSeed(),
+    'utf8',
+  )
   await writeFile(path.join(serverRoot, '.gitignore'), renderFirebaseServerGitignore(), 'utf8')
   await writeJsonFile(
     path.join(serverRoot, 'package.json'),
@@ -1149,6 +1333,11 @@ export async function applyFirebaseServerWorkspaceTemplate(
   await writeFile(
     path.join(serverRoot, 'scripts', 'firebase-functions-deploy.mjs'),
     renderFirebaseFunctionsDeployScript(tokens),
+    'utf8',
+  )
+  await writeFile(
+    path.join(serverRoot, 'scripts', 'firebase-firestore-seed.mjs'),
+    renderFirebaseFirestoreSeedScript(),
     'utf8',
   )
   if (tokens.packageManager === 'npm') {
