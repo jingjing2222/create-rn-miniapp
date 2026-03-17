@@ -1,3 +1,17 @@
+## 다음 작업: Supabase create 명령에 프로젝트 이름 positional arg 넣기
+1. 문제
+   - 최신 Supabase CLI는 `supabase projects create [project name]` 형태를 요구한다.
+   - 지금 생성기는 `projects create`까지만 호출해서, 특히 bun 경로에서 `accepts 1 arg(s), received 0`로 바로 실패한다.
+2. 방향
+   - 새 프로젝트 생성 전 이름을 한 번 더 물어보고, 그 값을 positional arg로 넘긴다.
+   - 기본값은 target root 이름을 쓰고, 빈 값은 막는다.
+   - 기존의 create 후 polling 흐름은 그대로 유지한다.
+3. 테스트
+   - create command args에 project name이 포함되는지 먼저 고정한다.
+4. 완료 기준
+   - bun/pnpm/yarn/npm 모두 `supabase projects create <name>` 형태로 실행된다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Supabase 새 프로젝트 생성 직후 재선택 프롬프트를 없애기
 1. 문제
    - `supabase projects create` 직후 프로젝트 목록이 바로 최신화되지 않으면, 방금 만든 프로젝트가 리스트에 안 보여도 다시 고르게 만든다.

@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import {
+  buildCreateSupabaseProjectArgs,
   extractCreatedSupabaseProjectRef,
   extractJsonPayload,
   finalizeSupabaseProvisioning,
@@ -71,6 +72,14 @@ test('extractJsonPayload strips package-manager log lines around JSON output', (
   assert.deepEqual(payload, {
     project: ['one', 'two'],
   })
+})
+
+test('buildCreateSupabaseProjectArgs appends the project name positional arg', () => {
+  assert.deepEqual(buildCreateSupabaseProjectArgs('test-project'), [
+    'projects',
+    'create',
+    'test-project',
+  ])
 })
 
 test('extractCreatedSupabaseProjectRef reads the new ref from create output', () => {

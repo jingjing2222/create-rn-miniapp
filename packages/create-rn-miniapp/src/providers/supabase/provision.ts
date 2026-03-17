@@ -40,6 +40,10 @@ const CREATE_SUPABASE_PROJECT_SENTINEL = '__create_supabase_project__'
 const SUPABASE_ACCESS_TOKENS_DASHBOARD_URL = 'https://supabase.com/dashboard/account/tokens'
 const SUPABASE_MANAGEMENT_API_DOC_URL = 'https://supabase.com/docs/reference/api/introduction'
 
+export function buildCreateSupabaseProjectArgs(projectName: string) {
+  return ['projects', 'create', projectName]
+}
+
 function buildSupabaseCommand(
   packageManager: PackageManager,
   cwd: string,
@@ -427,10 +431,35 @@ async function selectSupabaseProject(
   })
 }
 
-async function createSupabaseProject(packageManager: PackageManager, cwd: string) {
+async function promptSupabaseProjectName(prompt: CliPrompter, targetRoot: string) {
+  return await prompt.text({
+    message: '새 Supabase 프로젝트 이름을 적어 주세요.',
+    placeholder: path.basename(targetRoot),
+    initialValue: path.basename(targetRoot),
+    validate(value) {
+      if (value.trim().length === 0) {
+        return '프로젝트 이름은 비워둘 수 없어요.'
+      }
+
+      return undefined
+    },
+  })
+}
+
+async function createSupabaseProject(
+  packageManager: PackageManager,
+  cwd: string,
+  prompt: CliPrompter,
+) {
   log.step('Supabase 프로젝트를 새로 만들게요')
+  const projectName = (await promptSupabaseProjectName(prompt, cwd)).trim()
   const output = await runCommandWithOutput(
-    buildSupabaseCommand(packageManager, cwd, 'Supabase 프로젝트 만들기', ['projects', 'create']),
+    buildSupabaseCommand(
+      packageManager,
+      cwd,
+      'Supabase 프로젝트 만들기',
+      buildCreateSupabaseProjectArgs(projectName),
+    ),
   )
 
   return extractCreatedSupabaseProjectRef(output)
@@ -536,6 +565,7 @@ export async function provisionSupabaseProject(
     const createdProjectRef = await createSupabaseProject(
       options.packageManager,
       options.targetRoot,
+      options.prompt,
     )
     const refreshedProjects = await ensureSupabaseProjects(
       options.packageManager,
