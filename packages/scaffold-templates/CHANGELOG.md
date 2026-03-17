@@ -1,5 +1,17 @@
 # @create-rn-miniapp/scaffold-templates
 
+## 0.0.20
+
+### Patch Changes
+
+- 98c4fe5: Refine the Supabase server scaffold path.
+
+  - remove Supabase from the supported tRPC provider set and keep `--trpc` Cloudflare-only
+  - replace the Supabase server `typecheck` placeholder with a real Edge Function entrypoint check that runs `deno check`
+  - update generated Supabase docs and READMEs to match the provider-native workflow
+
+- cec93f4: Avoid re-selecting a freshly created Supabase project by polling for the new project ref before continuing.
+
 ## 0.0.19
 
 ### Patch Changes
