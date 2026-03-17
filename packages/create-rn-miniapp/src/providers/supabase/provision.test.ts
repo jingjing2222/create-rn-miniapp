@@ -5,11 +5,10 @@ import path from 'node:path'
 import test from 'node:test'
 import {
   buildCreateSupabaseProjectArgs,
-  extractCreatedSupabaseProjectRef,
   extractJsonPayload,
   finalizeSupabaseProvisioning,
   formatSupabaseManualSetupNote,
-  pollForCreatedSupabaseProject,
+  pollForNewSupabaseProject,
   resolveSupabaseClientApiKey,
   writeSupabaseServerLocalEnvFile,
   writeSupabaseLocalEnvFiles,
@@ -82,27 +81,12 @@ test('buildCreateSupabaseProjectArgs appends the project name positional arg', (
   ])
 })
 
-test('extractCreatedSupabaseProjectRef reads the new ref from create output', () => {
-  const projectRef = extractCreatedSupabaseProjectRef({
-    stdout: [
-      'Created a new project at https://supabase.com/dashboard/project/seqbtbmjhrcdsvmatmwg',
-      '',
-      '   ORG ID               | REFERENCE ID         | NAME | REGION                 | CREATED AT (UTC)',
-      '  ----------------------|----------------------|------|------------------------|---------------------',
-      '   eitbkocnrlydxxerbpws | seqbtbmjhrcdsvmatmwg | test | Northeast Asia (Seoul) | 2026-03-17 05:41:03',
-    ].join('\n'),
-    stderr: '',
-  })
-
-  assert.equal(projectRef, 'seqbtbmjhrcdsvmatmwg')
-})
-
-test('pollForCreatedSupabaseProject waits 1, 2, 4, 5 seconds and stops when the project appears', async () => {
+test('pollForNewSupabaseProject waits 1, 2, 4, 5 seconds and stops when a new project appears', async () => {
   const delays: number[] = []
-  const listedRefs: string[] = []
+  const listedRefGroups: string[][] = []
   let attempt = 0
 
-  const project = await pollForCreatedSupabaseProject('created-ref', {
+  const project = await pollForNewSupabaseProject(['existing-ref'], {
     delaysMs: [1000, 2000, 4000, 5000],
     sleep: async (delayMs) => {
       delays.push(delayMs)
@@ -111,27 +95,39 @@ test('pollForCreatedSupabaseProject waits 1, 2, 4, 5 seconds and stops when the 
       attempt += 1
 
       if (attempt < 3) {
-        listedRefs.push('existing-ref')
-        return [
+        const projects = [
           {
             id: 'existing-ref',
             name: 'existing',
           },
         ]
+
+        listedRefGroups.push(projects.map((candidate) => candidate.id))
+        return projects
       }
 
-      listedRefs.push('created-ref')
-      return [
+      const projects = [
+        {
+          id: 'existing-ref',
+          name: 'existing',
+        },
         {
           id: 'created-ref',
           name: 'created',
         },
       ]
+
+      listedRefGroups.push(projects.map((candidate) => candidate.id))
+      return projects
     },
   })
 
   assert.deepEqual(delays, [1000, 2000, 4000])
-  assert.deepEqual(listedRefs, ['existing-ref', 'existing-ref', 'created-ref'])
+  assert.deepEqual(listedRefGroups, [
+    ['existing-ref'],
+    ['existing-ref'],
+    ['existing-ref', 'created-ref'],
+  ])
   assert.equal(project?.id, 'created-ref')
 })
 

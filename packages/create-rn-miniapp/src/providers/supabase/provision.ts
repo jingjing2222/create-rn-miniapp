@@ -143,14 +143,6 @@ export function extractJsonPayload<T>(output: Pick<CommandOutput, 'stdout' | 'st
   throw new Error('JSON 결과를 해석하지 못했습니다.')
 }
 
-export function extractCreatedSupabaseProjectRef(output: Pick<CommandOutput, 'stdout' | 'stderr'>) {
-  const match = `${output.stdout}\n${output.stderr}`.match(
-    /https:\/\/supabase\.com\/dashboard\/project\/([a-z0-9]+)/i,
-  )
-
-  return match?.[1] ?? null
-}
-
 export function resolveSupabaseClientApiKey(apiKeys: SupabaseApiKey[]) {
   const publishableKey =
     apiKeys.find((key) => key.name?.toLowerCase() === 'publishable')?.api_key ??
@@ -361,8 +353,8 @@ async function sleep(delayMs: number) {
   })
 }
 
-export async function pollForCreatedSupabaseProject(
-  projectRef: string,
+export async function pollForNewSupabaseProject(
+  existingProjectRefs: string[],
   options: {
     delaysMs?: number[]
     listProjects?: () => Promise<SupabaseProject[]>
@@ -382,7 +374,7 @@ export async function pollForCreatedSupabaseProject(
     await wait(delayMs)
 
     const projects = await listProjects()
-    const matchedProject = projects.find((project) => project.id === projectRef)
+    const matchedProject = projects.find((project) => !existingProjectRefs.includes(project.id))
 
     if (matchedProject) {
       return matchedProject
@@ -453,16 +445,11 @@ async function createSupabaseProject(
 ) {
   log.step('Supabase 프로젝트를 새로 만들게요')
   const projectName = (await promptSupabaseProjectName(prompt, cwd)).trim()
-  const output = await runCommandWithOutput(
-    buildSupabaseCommand(
-      packageManager,
-      cwd,
-      'Supabase 프로젝트 만들기',
-      buildCreateSupabaseProjectArgs(projectName),
-    ),
+  await runCommand(
+    buildSupabaseCommand(packageManager, cwd, 'Supabase 프로젝트 만들기', [
+      ...buildCreateSupabaseProjectArgs(projectName),
+    ]),
   )
-
-  return extractCreatedSupabaseProjectRef(output)
 }
 
 async function getSupabaseApiKeys(packageManager: PackageManager, cwd: string, projectRef: string) {
@@ -562,37 +549,32 @@ export async function provisionSupabaseProject(
   }
 
   if (resolvedProjectMode === 'create') {
-    const createdProjectRef = await createSupabaseProject(
-      options.packageManager,
-      options.targetRoot,
-      options.prompt,
-    )
-    const refreshedProjects = await ensureSupabaseProjects(
-      options.packageManager,
-      options.targetRoot,
-    )
-
     const previousProjectIds = new Set(projects.map((project) => project.id))
-    const newlyCreatedProjects = refreshedProjects.filter(
-      (project) => !previousProjectIds.has(project.id),
-    )
+    await createSupabaseProject(options.packageManager, options.targetRoot, options.prompt)
 
-    if (createdProjectRef) {
-      selectedProjectId =
-        newlyCreatedProjects.find((project) => project.id === createdProjectRef)?.id ??
-        (
-          await pollForCreatedSupabaseProject(createdProjectRef, {
-            listProjects: async () =>
-              await ensureSupabaseProjects(options.packageManager, options.targetRoot),
-          })
-        )?.id ??
-        createdProjectRef
-    } else if (newlyCreatedProjects.length === 1) {
-      selectedProjectId = newlyCreatedProjects[0].id
+    const createdProject = await pollForNewSupabaseProject([...previousProjectIds], {
+      listProjects: async () =>
+        await ensureSupabaseProjects(options.packageManager, options.targetRoot),
+    })
+
+    if (createdProject) {
+      selectedProjectId = createdProject.id
     } else {
-      selectedProjectId = await selectSupabaseProject(options.prompt, refreshedProjects, {
-        message: '연결할 Supabase 프로젝트를 골라 주세요.',
-      })
+      const refreshedProjects = await ensureSupabaseProjects(
+        options.packageManager,
+        options.targetRoot,
+      )
+      const newlyCreatedProjects = refreshedProjects.filter(
+        (project) => !previousProjectIds.has(project.id),
+      )
+
+      if (newlyCreatedProjects.length === 1) {
+        selectedProjectId = newlyCreatedProjects[0].id
+      } else {
+        selectedProjectId = await selectSupabaseProject(options.prompt, refreshedProjects, {
+          message: '연결할 Supabase 프로젝트를 골라 주세요.',
+        })
+      }
     }
   } else if (resolvedProjectMode === 'existing' && !selectedProjectId) {
     selectedProjectId = await selectSupabaseProject(options.prompt, projects)
