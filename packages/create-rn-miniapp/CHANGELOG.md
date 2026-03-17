@@ -1,5 +1,26 @@
 # create-rn-miniapp
 
+## 0.0.21
+
+### Patch Changes
+
+- fb8d872: Improve Firebase scaffolds and workspace React alignment.
+
+  - enable the Firestore API and create the default database during Firebase provisioning
+  - generate Firestore-ready server bootstrap files and deploy Firestore rules and indexes alongside Functions
+  - add Firebase frontend Granite crypto shims and resolver aliases so `ait build` works with Firebase SDK crypto imports
+  - align backoffice React and React type packages to the frontend versions to avoid hoist mismatches
+  - clarify that shared tRPC workspaces are Cloudflare-only in the README
+
+- e0106dd: Refine generated Granite config scaffolding.
+
+  - split generated frontend Granite helper logic into `scaffold.preset.ts`
+  - keep `granite.config.ts` thin while preserving visible `plugin-env` usage
+  - move provider env bindings and Firebase resolver helpers behind scaffold-specific exports
+
+- Updated dependencies [fb8d872]
+  - @create-rn-miniapp/scaffold-templates@0.0.21
+
 ## 0.0.20
 
 ### Patch Changes
