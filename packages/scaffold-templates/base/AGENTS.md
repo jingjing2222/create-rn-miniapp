@@ -11,21 +11,22 @@
 5. Docs first: 구조와 규칙이 바뀌면 코드보다 문서를 먼저 맞춘다.
 6. No secrets: 키, 토큰, 내부 URL 같은 민감정보를 코드, 로그, PR에 남기지 않는다.
 7. Official docs first: Granite, `@apps-in-toss/framework`, TDS는 공식 공개 문서를 먼저 확인한다.
+8. Frontend references first: frontend 작업은 `Plan`에 `MiniApp 참고 문서` 섹션을 직접 추가하고, 참고한 framework/TDS 문서를 적기 전 구현 시작 금지.
 <!-- optional-golden-rules:start -->
 <!-- optional-golden-rules:end -->
 
 ## Start Here
-1. `docs/ai/Plan.md`: 목표, 범위, DoD
+1. `docs/ai/Plan.md`: 목표, 범위, 구현 순서, 검증 계획, DoD
 2. `docs/ai/Status.md`: 최신 상태 1페이지
-3. `docs/ai/Implement.md`: 구현 루프와 검증 규칙
-4. `docs/ai/Decisions.md`: 중요한 판단과 트레이드오프
-5. `docs/product/기능명세서.md`: 제품 요구사항
+3. `docs/ai/Decisions.md`: 중요한 판단과 트레이드오프
+4. `docs/product/기능명세서.md`: 제품 요구사항
+5. frontend 기능 구현 전에는 `docs/engineering/하네스-실행가이드.md`의 frontend 체크 순서를 먼저 보고, `Plan`에 `MiniApp 참고 문서` 섹션을 추가한다.
 
 ## 어떤 문서를 볼지
 - `docs/engineering/appsintoss-granite-api-index.md`
-  - MiniApp API 후보를 가장 먼저 찾을 때 보는 빠른 인덱스
+  - MiniApp 기능 축과 존재 여부를 가장 먼저 파악할 때 보는 기능 맵
 - `docs/engineering/appsintoss-granite-full-api-index.md`
-  - 빠른 인덱스로 부족할 때 보는 전체 카탈로그
+  - 정확한 URL, 세부 타입, 에러 문서까지 찾을 때 보는 전체 카탈로그
 - `docs/engineering/granite-ssot.md`
   - 라우팅, 페이지 구조, 검증 규칙처럼 반드시 지켜야 하는 기준
 - `docs/engineering/tds-react-native-index.md`
@@ -52,14 +53,17 @@
 
 ## Working Loop
 1. `Plan`에 목표, 범위, 검증 계획을 적는다.
-2. MiniApp 작업이면 quick index에서 API 후보를 먼저 찾는다.
-3. 라우팅이나 페이지 구조를 건드리면 `granite-ssot.md`를 먼저 확인한다.
-4. UI 작업이면 TDS 문서를 먼저 확인한다.
-5. 실패 테스트 또는 재현 절차를 만든다.
-6. 구현한다.
-7. `{{verifyCommand}}`를 실행한다.
-8. `Status`와 필요하면 `Decisions`를 갱신한다.
-9. 브랜치, 커밋, 푸시, PR 순으로 마무리한다.
+2. 구현이 길어지면 `Plan`에 수정 파일과 구현 순서를 같이 적는다.
+3. frontend 기능 구현이면 `하네스-실행가이드.md`의 frontend 기능 구현 전 체크를 먼저 따르고, `Plan`에 `MiniApp 참고 문서` 섹션을 채운다.
+4. MiniApp 작업이면 기능 맵에서 관련 축이 존재하는지 먼저 확인한다.
+5. 라우팅이나 페이지 구조를 건드리면 `granite-ssot.md`를 먼저 확인한다.
+6. UI 작업이면 TDS 문서를 먼저 확인한다.
+7. 실패 테스트 또는 재현 절차를 만든다.
+8. 구현 경로가 바뀌면 코드를 고치기 전에 `Plan`을 먼저 갱신한다.
+9. 구현한다.
+10. `{{verifyCommand}}`를 실행한다.
+11. `Status`와 필요하면 `Decisions`를 갱신한다.
+12. 브랜치, 커밋, 푸시, PR 순으로 마무리한다.
 
 ## Verify Gate
 - `{{packageManagerRunCommand}} format:check`

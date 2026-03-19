@@ -1,75 +1,125 @@
-# Apps-in-Toss / Granite API Index (Quick)
+# Apps-in-Toss / Granite Feature Map (Quick)
 
-빠르게 API 후보를 찾기 위한 첫 인덱스입니다.
+빠르게 "무슨 기능 축이 존재하는지" 파악하기 위한 첫 문서입니다.
 
-- 마지막 업데이트: 2026-03-14
+- 마지막 업데이트: 2026-03-19
 - 참조 원칙: 공식 문서만 사용한다. (`granite.run`, `developers-apps-in-toss.toss.im`)
-- 역할: "어디서 무엇을 찾아야 하는지"를 빠르게 안내한다.
-- 비역할: 라우팅 규칙이나 페이지 구조 규칙을 정의하지 않는다. 그런 기준은 `granite-ssot.md`가 담당한다.
+- 역할: 기능 축과 존재 여부를 빠르게 확인한다.
+- 비역할: 정확한 URL, 시그니처, 타입, 에러, 세부 제약을 전부 나열하지 않는다.
 
 ## Quick Start
 
-1. 먼저 이 문서에서 기능 카테고리와 후보 API를 찾는다.
-2. 더 넓은 탐색이 필요하면 `appsintoss-granite-full-api-index.md`를 본다.
-3. 최종 구현 전에는 링크된 공식 문서에서 시그니처, 권한, 플랫폼 제약을 다시 확인한다.
-4. 라우팅이나 페이지 구조를 바꾸면 `granite-ssot.md`를 함께 확인한다.
+1. 요구사항과 가장 가까운 기능 축을 이 문서에서 찾는다.
+2. 정확한 URL과 세부 타입/에러 문서는 `appsintoss-granite-full-api-index.md`에서 확인한다.
+3. 라우팅과 페이지 구조 규칙은 `granite-ssot.md`에서 확인한다.
+4. UI 구현이 포함되면 `tds-react-native-index.md`와 원문 TDS 문서를 같이 본다.
 
-## Essential Links
+## Start Here
 
-- AppInToss React Native tutorial: https://developers-apps-in-toss.toss.im/tutorials/react-native.html
-- Granite RN Reference (KR): https://www.granite.run/ko/reference/react-native/
-- Granite `defineConfig`: https://www.granite.run/reference/react-native/config/defineConfig.html
-- Apps-in-Toss Framework Overview: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/시작하기/overview
-- Apps-in-Toss Full LLM export: https://developers-apps-in-toss.toss.im/llms-full.txt
-- Full index: `./appsintoss-granite-full-api-index.md`
+- Full catalog: `./appsintoss-granite-full-api-index.md`
 - Routing and page rules: `./granite-ssot.md`
+- TDS RN index: `./tds-react-native-index.md`
 
-## Granite 우선 API
+## Feature Map
 
-- `defineConfig`: https://www.granite.run/reference/react-native/config/defineConfig.html
-- `useVisibilityChange`: https://www.granite.run/ko/reference/react-native/screen-control/useVisibilityChange.html
-- `Video`: https://www.granite.run/ko/reference/react-native/ui/Video.html
-- `ScrollViewInertialBackground`: https://www.granite.run/ko/reference/react-native/ui/ScrollViewInertialBackground.html
+### 시작 / 코어 / 설정
+- 시작하기 문서가 있다.
+  - tutorial, intro, overview, SDK 2.x migration
+- 앱 설정 문서가 있다.
+  - Config, NavigationBar, permission, env
+- 런타임/코어 문서가 있다.
+  - Bedrock, InitialProps, webview props
 
-## Category → APIs
+### Granite 핵심
+- Granite 설정과 런타임 진입점이 있다.
+  - `defineConfig`
+- visibility/lifecycle 관련 문서가 있다.
+  - `useVisibilityChange`
+- 미디어/UI 관련 문서가 있다.
+  - `Video`, `ScrollViewInertialBackground`
 
-### 화면 이동/제어
-- `routing`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/화면%20이동/routing
-- `openURL`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/화면%20이동/openURL
-- `closeView`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/화면%20제어/closeView
-- `useBackEvent`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/화면%20제어/useBackEvent
+### 화면 이동 / 화면 제어
+- 화면 이동 API가 있다.
+  - `routing`, `openURL`, `closeView`
+- 화면 상태/파라미터 API가 있다.
+  - `useParams`, `useVisibility`, `useVisibilityChange`, `useWaitForReturnNavigator`
+- 레이아웃/보안/디바이스 제어 API가 있다.
+  - `safe-area`, `setDeviceOrientation`, `setIosSwipeGestureEnabled`, `setScreenAwakeMode`, `setSecureScreen`
+- 노출/스크롤 관찰 API가 있다.
+  - `IOFlatList`, `IOScrollView`, `ImpressionArea`, `InView`, `intersection-observer`
 
-### 환경 확인
-- `getPlatformOS`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/환경%20확인/getPlatformOS
-- `getTossAppVersion`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/환경%20확인/getTossAppVersion
-- `isMinVersionSupported`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/환경%20확인/isMinVersionSupported
-- `getSchemeUri`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/환경%20확인/getSchemeUri
+### 이벤트 제어
+- 이벤트 제어 가이드 문서가 있다.
+  - `back-event`
+- 뒤로가기/홈/앱 준비 완료 이벤트를 제어할 수 있다.
+  - `backEvent`, `useBackEvent`, `homeEvent`, `appsInTossEvent`
+- 이벤트 리스너 해제와 에러 핸들링 규칙이 함께 안내된다.
 
-### 권한/보안
-- `permission`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/권한/permission
-- `setSecureScreen`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/화면%20제어/setSecureScreen
+### 환경 / 디바이스 / 네트워크 / 로케일
+- 실행 환경 확인 API가 있다.
+  - `getPlatformOS`, `getTossAppVersion`, `isMinVersionSupported`, `getSchemeUri`
+- 디바이스/운영 환경 확인 API가 있다.
+  - `getServerTime`, `getOperationalEnvironment`, `getDeviceId`
+- 네트워크/로케일 API가 있다.
+  - `http`, `getNetworkStatus`, `getLocale`
 
-### 위치/저장소/네트워크
-- `getCurrentLocation`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/위치%20정보/getCurrentLocation
-- `startUpdateLocation`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/위치%20정보/startUpdateLocation
-- `useGeolocation`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/위치%20정보/useGeolocation
-- `http`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/네트워크/http
-- `Storage`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/저장소/Storage
+### 저장소 / 데이터 / 클립보드
+- 네이티브 저장소 API가 있다.
+  - `Storage`, `getItem`, `setItem`, `removeItem`, `clearItems`
+- 데이터 저장 보조 API가 있다.
+  - `saveBase64Data`
+- 클립보드 API와 permission error 문서가 있다.
+  - `getClipboardText`, `setClipboardText`
 
-### 공유/성장
-- `share`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/공유/share
-- `getTossShareLink`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/공유/getTossShareLink
-- `contactsViral`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/친구초대/contactsViral
+### 위치
+- 단건 위치 조회 API가 있다.
+  - `getCurrentLocation`
+- 연속 위치 추적 API가 있다.
+  - `startUpdateLocation`, `useGeolocation`
+- 위치 타입/권한 에러 문서가 있다.
+  - `Accuracy`, `Location`, `LocationCoords`, permission errors
 
-### 분석/광고/결제
-- `Analytics`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/분석/Analytics
-- `IntegratedAd`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/광고/IntegratedAd
-- `IAP`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/인앱%20결제/IAP
-- `TossPay`: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/토스페이/TossPay
+### 로그인 / 공유 / 성장
+- 로그인 관련 API가 있다.
+  - `appLogin`, `getIsTossLoginIntegratedService`
+- 공유/바이럴 API가 있다.
+  - `share`, `getTossShareLink`, `contactsViral`
+- 리워드/게임 성장 API가 있다.
+  - Reward intro, `getUserKeyForGame`, `grantPromotionRewardForGame`
+
+### 카메라 / 사진 / 연락처
+- 카메라 진입 API가 있다.
+  - `openCamera`
+- 사진/연락처 조회 API가 있다.
+  - `fetchAlbumPhotos`, `fetchContacts`
+- 각 기능의 permission error 문서가 있다.
+
+### UI / Overlay / 인터랙션
+- framework UI 컴포넌트 문서가 있다.
+  - `BlurView`, `ColorPreference`, `Image`, `Text`, `View`, `Layout`, `Lottie`, `Video`, `NavigationBar`
+- overlay 문서가 있다.
+  - `useOverlay`, `useOverlayBase`
+- style-utils 문서가 있다.
+  - `Flex`, `Spacing`, `Stack`, `margin`, `padding`
+- 인터랙션 문서가 있다.
+  - `interaction`, `generateHapticFeedback`
+
+### 분석 / 광고 / 결제 / 게임
+- 분석 문서가 있다.
+  - `init`, `Analytics`, logging helpers
+- 광고 문서가 있다.
+  - `IntegratedAd`, AdMob load/show 계열, banner/interstitial/rewarded, 관련 event/type
+- 결제 문서가 있다.
+  - `IAP`, order lifecycle API, `TossPay`, `checkoutPayment`
+- 게임 문서가 있다.
+  - `getUserKeyForGame`, leaderboard, promotion reward
+
+### 인증
+- TossCert 인증 문서가 있다.
+  - `tosscert`, access token, encrypt, request/result, session key, status
 
 ## Notes
 
-- 이 문서는 구현 결정을 위한 첫 인덱스다.
-- 더 자세한 카탈로그와 실무 메모는 `appsintoss-granite-full-api-index.md`가 담당한다.
+- 이 문서는 "무엇이 있는지"를 빠르게 파악하는 기능 맵이다.
+- 실제 링크 카탈로그는 `appsintoss-granite-full-api-index.md`가 담당한다.
 - 최종 계약은 공식 원문이 기준이다.
-- 로컬 생성 파일이나 패키지 내부 경로를 근거로 문서화하지 않는다.

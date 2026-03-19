@@ -1,3 +1,25 @@
+## 2026-03-19 — Implement.md 제거와 Plan 중심 하네스 정리
+- 상태
+  - 생성 템플릿 문서군에서 `Implement.md`를 제거하고 구현 계획 책임을 `Plan.md`로 흡수했다.
+  - `api-index`는 기능 맵, `full-api-index`는 링크 카탈로그라는 역할 분리도 유지했다.
+- 반영한 변경
+  - `packages/scaffold-templates/base/AGENTS.md`
+    - `Start Here`와 작업 루프에서 `Plan` 중심 흐름으로 재정리
+  - `packages/scaffold-templates/base/docs/ai/Plan.md`
+    - 수정 파일, 구현 순서, 제외 범위, 검증 명령을 담는 실행 계획 템플릿으로 보강
+  - `packages/scaffold-templates/base/docs/ai/Implement.md`
+    - 삭제
+  - `packages/scaffold-templates/base/docs/engineering/하네스-실행가이드.md`
+    - `Plan -> Status -> Decisions` 흐름과 Plan 갱신 타이밍 명시
+  - `packages/scaffold-templates/base/docs/index.md`
+    - AI harness stack에서 `Implement.md` 제거
+  - `packages/scaffold-templates/base/docs/engineering/appsintoss-granite-api-index.md`
+    - 기능 맵 역할 유지
+  - `packages/scaffold-templates/base/docs/engineering/appsintoss-granite-full-api-index.md`
+    - 전체 카탈로그 역할 유지
+- 검증
+  - `pnpm verify` ✅
+
 ## 2026-03-14 — pnpm / Yarn package manager 선택 지원
 - 상태
   - 생성 시작 시 package manager를 먼저 선택하고, 그 선택이 공식 CLI 실행, 루트 템플릿, generated 문서, root install/verify 흐름까지 일관되게 반영되도록 확장했다.
