@@ -1,3 +1,50 @@
+## 다음 작업: 에이전트 친화적인 worktree 기반 스캐폴딩 구조로 개편하기
+1. 문제
+   - 지금 스캐폴더는 `<appName>/` 자체를 곧바로 단일 working tree 루트로 취급해서, 여러 에이전트가 같은 디렉터리에서 작업할 때 브랜치/컨텍스트/임시 파일 충돌을 피하기 어렵다.
+   - git bootstrap도 현재는 루트에서 `git init` 후 `main`만 맞추는 수준이라, bare repo 기반 control root, `main/` worktree, 추가 agent worktree 생성/동기화 규칙이 구조에 내장돼 있지 않다.
+   - `--add`, README, generated `AGENTS.md`, CLI outro 모두 "repo root = 작업 디렉터리"를 전제로 하고 있어서 worktree 구조로 바꾸면 경로 해석과 사용자 안내를 같이 재설계해야 한다.
+   - 새로 생성한 로컬 scaffold는 원격 clone이 아니라서, bare repo + worktree bootstrap을 빈 저장소 상태에서 어떻게 안정적으로 시작할지 먼저 검증해야 한다.
+2. 방향
+   - Git worktree 글의 핵심 원칙을 그대로 따른다: control root는 bare repo와 worktree 관리만 맡고, 실제 앱 소스와 AI 하네스 문서는 `main/` 및 추가 worktree 아래에서만 작업한다.
+   - 1차 도입은 opt-in이 안전하다. `--git-layout single|worktree` 또는 `--worktree` 같은 옵션으로 먼저 넣고, `single-root` 흐름과 병행 검증한 뒤 default 전환 여부를 결정한다.
+   - scaffold 내부 모델을 `controlRoot`와 `workspaceRoot`로 분리한다. control root에는 `.bare/`, `.git` 포인터, worktree helper, 빈 카테고리 디렉터리(`feat/`, `fix/`, `chore/`, `hotfix/`)만 두고, tracked monorepo 파일은 `main/` worktree 아래에만 생성한다.
+   - git bootstrap은 기존 `git init` 2단계 대신 worktree bootstrap plan으로 교체한다. 우선 `git init --bare` + `git worktree add --orphan main` 가능 여부를 spike로 검증하고, 불안정하면 `main/` scaffold 후 초기 커밋 기반 전환을 fallback으로 채택한다.
+   - generated repo에는 외부 Python `wt` 의존성 없이 self-contained worktree helper를 같이 넣는다. 최소 명령은 `status`, `add`, `remove`, `sync(fetch + ff-only)`, `upstream`, `publish`이며, 새 브랜치 첫 push의 upstream 설정과 브랜치 검증을 helper가 맡는다.
+   - generated `AGENTS.md`, README, 하네스 가이드에는 `commit`은 활성 worktree 내부에서만 수행하고, `push`는 helper 또는 helper가 출력하는 표준 절차로 통일한다고 명시한다. control root에서 직접 `git commit`/`git push`하지 않도록 금지 문구도 넣는다.
+   - `--add`와 workspace inspector는 control root와 worktree path를 모두 받을 수 있어야 한다. 사용자가 `<appName>/`를 넘기면 기본 `main/` worktree를 해석하고, 이미 `main/`이나 `feat/*` 내부면 해당 worktree를 실제 workspace root로 사용한다.
+   - generated docs/README/AGENTS/Plan template는 기본 진입점을 `<appName>/main`으로 바꾸고, control root는 "에이전트 worktree를 만들고 동기화하는 곳"으로 명확히 설명한다.
+3. 수정 파일
+   - CLI/options: `packages/create-rn-miniapp/src/cli.ts`, `packages/create-rn-miniapp/src/index.ts`, `packages/create-rn-miniapp/src/scaffold/types.ts`
+   - Git/bootstrap orchestration: `packages/create-rn-miniapp/src/scaffold/index.ts`, `packages/create-rn-miniapp/src/scaffold/orders.ts`, 신규 `packages/create-rn-miniapp/src/scaffold/worktree.ts`
+   - Existing workspace detection: `packages/create-rn-miniapp/src/workspace-inspector.ts`, `packages/create-rn-miniapp/src/workspace-inspector.test.ts`
+   - Generated template/docs: `packages/create-rn-miniapp/src/templates/index.ts`, `packages/create-rn-miniapp/src/templates/index.test.ts`, `packages/scaffold-templates/base/AGENTS.md`, `packages/scaffold-templates/base/docs/**`, `README.md`
+4. 구현 순서
+   1. spike: temp dir에서 bare repo + `main` worktree bootstrap 두 방안(`--orphan` vs 초기 커밋 fallback)을 실험하고, 실패 조건과 선택 근거를 먼저 문서화한다.
+   2. path abstraction: scaffold/patching/template 호출부가 더 이상 단일 `targetRoot`를 가정하지 않도록 `controlRoot`와 `workspaceRoot`를 분리한다.
+   3. git phase refactor: `buildRootGitSetupPlan`과 lifecycle order를 worktree bootstrap 단계로 교체하고 관련 test label을 함께 갱신한다.
+   4. generated helpers: control root용 worktree 관리 스크립트와 package scripts를 만들고, branch/path naming 규칙과 ff-only sync 규칙을 코드로 고정한다.
+   5. docs/UX: CLI help, intro/outro, README 예시, generated `AGENTS.md`/`Plan.md`/`Status.md`를 worktree mode에서 `<appName>/main` 기준 동선으로 다시 쓰고, commit/push/PR 마무리도 같은 흐름으로 안내한다.
+   6. `--add`/inspection: control root 입력 지원, `main/` 자동 해석, worktree 내부에서의 안전한 add 동작을 보강한다.
+   7. smoke/verify: create/add 시나리오를 single-root와 worktree mode 둘 다 검증하고, worktree add/remove/sync happy path는 integration test로 고정한다.
+5. 제외 범위
+   - 기존 single-root scaffold를 bare/worktree 구조로 자동 변환하는 migration command는 이번 범위에서 제외한다.
+   - 에이전트 간 merge conflict 자동 해결, PR 자동 생성, multi-agent task scheduler는 이번 작업 범위가 아니다.
+   - 외부 `wt` Python CLI를 필수 의존성으로 추가하지 않는다. 필요한 동작은 generated Node 스크립트나 현재 CLI 확장으로 흡수한다.
+6. 테스트
+   - CLI test: 새 git layout option parsing, summary, outro 경로가 `main/` 기준으로 바뀌는지 확인한다.
+   - scaffold order test: lifecycle labels가 `루트 git 저장소 만들기` 대신 worktree bootstrap 단계로 바뀌는지 고정한다.
+   - workspace inspector test: control root와 worktree root를 각각 넣었을 때 동일한 workspace metadata를 읽는지 확인한다.
+   - template/scaffold integration test: generated root에 `.bare/`, `.git` 포인터, `main/` workspace, worktree helper, updated docs가 생기는지 고정한다.
+   - git integration test: helper가 upstream 없는 새 브랜치의 첫 publish, ff-only sync, remove/prune 경로를 temp repo에서 안정적으로 처리하는지 확인한다.
+   - generated docs test: README/AGENTS/하네스 가이드가 control root에서 직접 commit/push하지 말고 worktree 기준으로 마무리하라고 안내하는지 확인한다.
+   - `pnpm verify`를 통과한다.
+7. 완료 기준
+   - worktree mode로 생성한 결과물이 `control root + main worktree` 구조를 가진다.
+   - 에이전트는 `main/` 또는 추가 worktree에서 바로 작업할 수 있고, 생성물 문서가 commit/push까지 포함한 worktree 동선을 명확히 안내한다.
+   - `--add`가 control root와 worktree root 둘 다 지원한다.
+   - empty repo bootstrap edge case가 테스트와 문서로 고정된다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Supabase 기존 프로젝트 skip 경로에서 generated Biome/schema와 `.mjs` 스크립트 문법을 정상화하기
 1. 문제
    - 기존 Supabase 프로젝트에서 원격 초기화를 건너뛴 뒤 generated root `biome.json`이 CLI `2.4.8`과 다른 `2.4.7` schema를 가리켜 root `biome check`가 깨진다.
