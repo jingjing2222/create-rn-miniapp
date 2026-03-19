@@ -1,3 +1,224 @@
+## 다음 작업: Granite/TDS 문서 보강분을 두 패키지 patch release로 올리고 한글 PR을 생성하기
+1. 문제
+   - 방금 정리한 Granite 하네스 문서, MiniApp framework 인덱스, TDS 인덱스 보강분을 릴리스 대상으로 묶어야 한다.
+   - 두 publish 패키지(`create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates`) 모두 문서/템플릿 변경 영향을 받으므로 함께 patch release 대상으로 올리는 편이 맞다.
+2. 방향
+   - `.changeset`에 두 패키지를 모두 `patch`로 올리는 한글 changeset을 추가한다.
+   - 변경사항을 커밋하고 현재 브랜치를 원격에 푸시한다.
+   - 변경 목적과 범위를 설명하는 한글 PR 제목/본문으로 PR을 생성한다.
+3. 테스트
+   - changeset frontmatter에 두 패키지명이 정확히 들어가는지 확인한다.
+   - 커밋 전후 `git status`가 의도한 파일만 포함하는지 확인한다.
+   - PR 생성 전 브랜치 푸시와 기본 브랜치 대상 설정이 정상인지 확인한다.
+4. 완료 기준
+   - 두 패키지를 patch로 올리는 changeset이 추가된다.
+   - 관련 변경이 커밋되어 원격 브랜치에 올라간다.
+   - 한글 제목/본문의 PR이 생성된다.
+
+## 다음 작업: TDS RN 문서를 실제 export와 공개 문서 기준으로 재정리하기
+1. 문제
+   - 현재 `tds-react-native-index.md`는 과거 패키지 스캔 기준 인덱스라, 실제 export 중 문서에 빠진 컴포넌트나 문서만 있고 export 정리가 덜 된 항목이 있을 수 있다.
+2. 방향
+   - 현재 기준 TDS RN 패키지에서 실제로 export되는 컴포넌트 이름과 개수를 먼저 뽑는다.
+   - 공개 문서 사이트에서 노출하는 컴포넌트 목록과 개수를 별도로 뽑는다.
+   - 둘을 대조해 문서 누락, 문서-only 항목, 패키지-only 항목을 구분하고 `tds-react-native-index.md` 보강 방향을 정한다.
+3. 테스트
+   - 실제 패키지 export 목록과 문서 사이트 목록을 재현 가능한 방식으로 추출한다.
+   - 필요 시 문서 보강 후 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - 실제 export 컴포넌트 개수와 전체 이름 목록을 설명할 수 있다.
+   - 문서 노출 컴포넌트 개수와 전체 이름 목록을 설명할 수 있다.
+   - 빠진 항목이 있으면 어떤 기준에서 빠졌는지 구분해 정리한다.
+
+## 다음 작업: frontend 전용 참고 문서 강제 규칙을 root AGENTS로 끌어올리고 Plan 템플릿은 공통으로 유지하기
+1. 문제
+   - `Plan.md` 템플릿 자체에 MiniApp 전용 필드를 넣으면 server/backoffice 작업에서도 불필요한 빈칸이 생겨 공통 계획서 역할이 흐려진다.
+   - 반면 frontend 작업은 구현 전에 MiniApp framework/TDS 문서를 실제로 읽었다는 흔적을 남겨야 하므로, root `AGENTS.md` 수준에서 별도 강제 규칙이 필요하다.
+2. 방향
+   - `packages/scaffold-templates/base/docs/ai/Plan.md`는 공통 템플릿으로 유지한다.
+   - root `AGENTS.md`에 frontend 작업 전용 golden rule을 추가해, `Plan`에 `MiniApp 참고 문서` 섹션을 직접 만들고 채우기 전에는 구현을 시작하지 못하게 한다.
+   - `하네스-실행가이드.md`에는 그 섹션에 무엇을 적어야 하는지 구체적으로 적는다.
+3. 테스트
+   - `AGENTS.md`와 `하네스-실행가이드.md`가 frontend 전용 규칙을 같은 의미로 가리키는지 확인한다.
+   - `Plan.md` 템플릿이 공통 구조로 남아 있는지 확인한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - 공통 `Plan.md` 템플릿은 MiniApp 전용 필드 없이 유지된다.
+   - frontend 작업은 root `AGENTS.md`만 읽어도 `Plan`에 참고 문서 섹션을 추가해야 한다는 사실을 알 수 있다.
+   - `pnpm verify` 통과
+
+## 다음 작업: frontend 기능 구현 시작점이 하네스-실행가이드로 자연스럽게 이어지도록 동선을 보강하기
+1. 문제
+   - 현재 문서 구성은 `AGENTS.md`에 진입한 뒤 `하네스-실행가이드.md`까지 흘러갈 수는 있지만, frontend 기능 구현 직전 반드시 그 문서를 보게 만드는 힘은 약하다.
+   - 새 문서를 추가하면 갈라파고스화 위험이 있으므로, 기존 root `AGENTS.md`와 starter 안내 문구 안에서 실행가이드로 더 강하게 유도하는 편이 낫다.
+2. 방향
+   - root `AGENTS.md`의 `Start Here`와 `Working Loop`에 frontend 기능 구현 전 `하네스-실행가이드.md`를 먼저 보라고 명시한다.
+   - `하네스-실행가이드.md` 안에는 frontend 기능 구현 전 체크 섹션을 추가해, 기능 축/라우팅/UI/TDD 순서를 한 번에 보게 만든다.
+   - starter 페이지 안내 문구도 `AGENTS.md`와 `하네스-실행가이드.md`를 먼저 보라고 맞춘다.
+3. 테스트
+   - 관련 문서와 starter 안내 문구가 같은 흐름을 가리키는지 확인한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - root `AGENTS.md`에서 frontend 기능 구현 전 `하네스-실행가이드.md`를 보라는 동선이 명확하다.
+   - `하네스-실행가이드.md`만 읽어도 frontend 기능 구현 직전 체크 순서를 따라갈 수 있다.
+   - starter 안내 문구도 같은 흐름을 따른다.
+   - `pnpm verify` 통과
+
+## 다음 작업: 공식 framework 문서와 로컬 인덱스를 한 번 더 맞춰 마지막 누락을 정리하기
+1. 문제
+   - 이벤트 제어 보강 이후에도 공식 `llms-full.txt` 기준으로 로컬 인덱스에 남은 미세한 누락이 있는지 마지막 확인이 필요하다.
+   - 실제 기능 축 누락과, 같은 문서의 alias 경로 차이, quick feature map에서 빠진 대표 항목을 구분해서 정리해야 한다.
+2. 방향
+   - 공식 `llms-full.txt`의 framework 문서 경로와 로컬 `appsintoss-granite-full-api-index.md`의 링크를 경로 정규화 기준으로 다시 비교한다.
+   - 남는 차이가 있으면 실제 누락인지, alias인지 판별한다.
+   - quick feature map에서 빠진 대표 항목은 함께 보강한다.
+3. 테스트
+   - 추가하는 공식 URL이 실제로 열리는지 확인한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - 공식 export 기준으로 설명 가능한 차이만 남는다.
+   - quick/full index 모두 마지막 누락이 정리된다.
+   - `pnpm verify` 통과
+
+## 다음 작업: granite 문서 QA에서 남은 이벤트 제어 가이드를 반영하기
+1. 문제
+   - 공식 개발자센터를 다시 대조한 결과, 로컬 granite 문서는 `useBackEvent` 자체는 안내하지만 `이벤트 제어하기(back-event)`와 `entry-message-exited` 같은 가이드형 문서가 기능 축으로 드러나지 않는다.
+   - 이 상태면 API 존재는 파악해도, 뒤로가기/홈/앱 진입 완료 이벤트를 어떤 문서에서 통합적으로 확인해야 하는지 빠르게 찾기 어렵다.
+2. 방향
+   - `appsintoss-granite-api-index.md`에 `이벤트 제어` 축을 추가해 back/home/entry 이벤트가 존재함을 먼저 보이게 한다.
+   - `appsintoss-granite-full-api-index.md`에는 공식 `back-event`, `entry-message-exited` 링크와 관련 이벤트 이름을 명시한다.
+   - 문서 QA를 다시 수행한 날짜에 맞춰 `granite-ssot.md`의 검증 기준일도 갱신한다.
+3. 테스트
+   - 추가하는 공식 URL이 실제로 열리는지 확인한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - quick feature map에 `이벤트 제어` 축이 보인다.
+   - full catalog에서 back/home/entry 이벤트 관련 공식 문서를 바로 찾을 수 있다.
+   - `pnpm verify` 통과
+
+## 다음 작업: 개발자센터 기준 granite 문서 QA를 다시 수행하기
+1. 문제
+   - 현재 `appsintoss-granite-api-index.md`와 `appsintoss-granite-full-api-index.md`를 공식 MiniApp 개발자센터 기준으로 다시 점검해, 빠진 축이 없는지와 링크 404가 없는지 재검증할 필요가 있다.
+   - 이전에 링크와 범위를 보강했지만, 실제 공식 문서 구조가 바뀌었거나 특정 링크가 누락됐을 가능성을 QA 관점에서 다시 확인해야 한다.
+2. 방향
+   - 에이전트 3개를 병렬로 사용해 공식 문서 범위, 로컬 문서 범위, 링크 유효성을 분담 검증한다.
+   - 공식 개발자센터 문서 범위와 로컬 문서 범위를 다시 정규화해 누락/중복/오래된 링크를 찾는다.
+   - 로컬 템플릿 문서의 외부 링크는 실제 404 여부를 다시 확인한다.
+3. 테스트
+   - 공식 개발자센터 페이지와 `llms-full.txt` 기준으로 카테고리 및 대표 API/가이드를 재대조한다.
+   - 로컬 granite 문서에 포함된 외부 링크를 실제 요청으로 점검한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - 공식 문서 대비 빠진 기능 축이나 대표 API가 있는지 설명할 수 있다.
+   - 로컬 granite 문서 외부 링크에 404가 남아 있지 않다.
+   - `pnpm verify` 통과
+
+## 다음 작업: Implement.md를 제거하고 Plan.md로 실행 계획을 흡수하기
+1. 문제
+   - 현재 `Implement.md`는 동적인 구현 계획서라기보다 정적인 규칙 요약에 가까워 `AGENTS.md`, `하네스-실행가이드.md`와 역할이 많이 겹친다.
+   - 반면 실제 작업 흐름에서는 `Plan.md`가 이미 목표, 범위, TDD, DoD를 담고 있어 구현 단계와 검증 계획까지 흡수하는 편이 더 단순하다.
+2. 방향
+   - `packages/scaffold-templates/base/docs/ai/Implement.md`를 제거한다.
+   - `packages/scaffold-templates/base/docs/ai/Plan.md` 템플릿에 수정 파일, 구현 순서, 제외 범위, 검증 명령을 담도록 보강한다.
+   - `AGENTS.md`, `하네스-실행가이드.md`, `docs/index.md`에서 `Implement.md` 참조를 제거하고 `Plan.md` 중심 흐름으로 바꾼다.
+3. 테스트
+   - 남아 있는 `Implement.md` 참조가 없는지 확인한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - 생성 템플릿 문서군에 `Implement.md`가 남지 않는다.
+   - 구현 계획은 `Plan.md` 하나로 표현된다.
+   - `pnpm verify` 통과
+
+## 다음 작업: granite api-index를 기능 맵으로 축소하고 full-api-index와 역할을 분리하기
+1. 문제
+   - 현재 `appsintoss-granite-api-index.md`와 `appsintoss-granite-full-api-index.md`가 모두 API 목록을 많이 담고 있어 역할 차이가 충분히 선명하지 않다.
+   - quick index가 링크 카탈로그처럼 비대해지면 에이전트와 개발자가 어떤 문서를 먼저 봐야 하는지 헷갈린다.
+2. 방향
+   - `appsintoss-granite-api-index.md`는 정확한 URL 모음이 아니라 기능 맵 문서로 축소한다.
+   - `appsintoss-granite-full-api-index.md`는 실제 링크, 세부 타입, 에러, 보조 문서를 담는 전체 카탈로그 역할로 유지한다.
+   - `AGENTS.md`, `하네스-실행가이드.md`, `docs/index.md`의 설명도 새 역할에 맞게 맞춘다.
+3. 테스트
+   - 문서 간 링크가 맞는지 확인한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - `api-index`만 읽어도 기능 축을 빠르게 파악할 수 있다.
+   - 정확한 URL을 보려면 `full-api-index`로 가야 한다는 경계가 문서상 명확하다.
+   - `pnpm verify` 통과
+
+## 다음 작업: granite-api 인덱스를 공식 MiniApp framework 범위까지 확장하기
+1. 문제
+   - 현재 `appsintoss-granite-api-index.md`와 `appsintoss-granite-full-api-index.md`는 RN 미니앱의 핵심 happy path는 담고 있지만, 공식 개발자센터의 framework 범위 전체를 기준으로 보면 시작/코어/설정/로그인/카메라/연락처/게임/화면제어 세부 API 등이 빠져 있다.
+   - 문서 제목은 full API index인데 실제 범위가 더 좁아서, 에이전트와 개발자가 로컬 문서를 source of truth처럼 믿고 찾다가 공식 기능을 놓칠 수 있다.
+2. 방향
+   - `llms-full.txt`와 공식 개발자센터 페이지를 기준으로 framework 카테고리와 주요 API/가이드를 다시 정리한다.
+   - quick index는 자주 쓰는 시작점과 대표 API를 더 넓게 보여주되, full index는 공식 카테고리 전반을 빠짐없이 탐색할 수 있게 확장한다.
+   - 기존 Granite 우선 원칙과 공식 문서 우선 원칙은 유지한다.
+3. 테스트
+   - 수정 후 `pnpm verify`를 통과한다.
+   - quick/full index에서 공식 문서의 주요 카테고리와 시작 문서가 빠지지 않았는지 수동 대조한다.
+4. 완료 기준
+   - quick index가 시작/설정/핵심 디바이스 API까지 안내한다.
+   - full index가 공식 framework의 주요 카테고리와 대표 API를 빠짐없이 연결한다.
+   - `pnpm verify` 통과
+
+## 다음 작업: 미니앱 개발자센터 공식 시작 문서와 로컬 granite-api 인덱스를 교차점검하기
+1. 문제
+   - 공식 Bedrock 문서에는 `tutorial`, `시작하기`, `SDK 2.x 마이그레이션`, `공통 설정` 같은 시작 문서가 별도로 존재하는데, 로컬 granite-api 인덱스는 API 카탈로그 중심이라 이 흐름을 충분히 드러내지 못할 수 있다.
+   - 생성기 문서가 시작 가이드를 빠뜨리면 사용자는 API는 찾지만 실제 초기화/설정/마이그레이션 흐름은 놓치게 된다.
+2. 방향
+   - 공식 문서에서 MiniApp 시작에 필요한 페이지를 먼저 수집한다.
+   - 로컬 `appsintoss-granite-api-index.md`와 `appsintoss-granite-full-api-index.md`를 비교해 누락 후보를 추린다.
+   - 공식 URL과 함께, 근거가 확실한 항목과 추측 항목을 분리해 정리한다.
+3. 테스트
+   - 공식 문서의 제목/경로를 기준으로 목록을 작성한다.
+   - 로컬 인덱스에 이미 포함된 항목과 별도 시작 가이드를 구분한다.
+4. 완료 기준
+   - 공식 시작 문서 목록과 로컬 문서의 보완 후보를 분리해서 설명할 수 있다.
+   - 추측은 추측으로 표시한다.
+
+## 다음 작업: create-rn-miniapp의 현재 완성도와 홍보 readiness를 객관적으로 평가하기
+1. 문제
+   - 지금 시점에 이 스캐폴딩 도구가 어느 정도 수준인지, 외부 홍보를 시작해도 되는지 판단 근거가 필요하다.
+   - 감으로 판단하면 과대평가하거나, 반대로 실제 강점을 놓칠 수 있다.
+2. 방향
+   - 코드 구조, 테스트 밀도, 문서 완성도, 릴리스/배포 준비, 실제 검증 흐름을 함께 본다.
+   - `README`, CLI/patch/provision 코드, 테스트, CI/Changesets, `pnpm verify` 결과를 근거로 강점과 리스크를 분리해서 평가한다.
+   - 결과는 "홍보 가능/보완 후 홍보" 수준으로 명확하게 판정한다.
+3. 테스트
+   - `pnpm verify`를 실행해 현재 기준선이 실제로 통과하는지 확인한다.
+   - 필요하면 테스트 파일 수와 핵심 시나리오 커버 범위를 같이 점검한다.
+4. 완료 기준
+   - 근거 기반으로 현재 도구의 성숙도를 설명할 수 있다.
+   - 홍보 전에 꼭 보완할 항목과, 지금 바로 내세워도 되는 강점을 분리해서 제시한다.
+
+## 다음 작업: yarn 스캐폴딩/verify 경로를 실제로 재검증하고 평가 근거를 바로잡기
+1. 문제
+   - 이전 평가에서 `pnpm` 기준 검증과 `--skip-install` 경로 해석이 섞여 보여, 실제 제품 리스크를 더 정확히 구분할 필요가 있다.
+   - 특히 `yarn` 지원은 README에 명시돼 있으므로 실제 생성과 `yarn verify` 통과 여부를 별도로 확인해야 한다.
+2. 방향
+   - `verify.yml`은 이 저장소 자체 CI가 `pnpm`만 도는 사실과 generated repo 지원 범위를 분리해서 설명한다.
+   - `--skip-install`은 "의존성 미설치" 문제가 아니라 "root finalize/format 생략"까지 포함한 옵션인지 실제 생성물로 확인한다.
+   - `--package-manager yarn`으로 실제 스캐폴딩한 뒤 generated repo에서 `yarn verify`까지 실행한다.
+3. 테스트
+   - `yarn` 스캐폴딩 스모크 실행
+   - generated repo에서 `yarn verify` 실행
+4. 완료 기준
+   - `yarn` 경로가 실제로 어느 수준까지 동작하는지 확인했다.
+   - 이전 평가에서 보정할 부분과 유지할 부분을 명확히 설명할 수 있다.
+
+## 다음 작업: 최종 패치 이후 generated repo의 peer dependency warning 잔존 여부 확인하기
+1. 문제
+   - 초기 Granite/AppInToss 설치 단계 경고와 최종 generated repo 상태의 경고를 구분해서 봐야 한다.
+   - 사용자는 마지막 패치 이후에는 peer warning이 정리되었을 가능성을 제기했다.
+2. 방향
+   - 이미 생성된 `pnpm`/`yarn` generated repo에서 최종 상태 기준으로 install을 다시 실행한다.
+   - warning이 남으면 어떤 peer mismatch가 남는지 실제 패키지 기준으로 확인한다.
+3. 테스트
+   - generated pnpm repo에서 `pnpm install`
+   - generated yarn repo에서 `yarn install`
+4. 완료 기준
+   - 최종 패치 이후에도 peer warning이 남는지, 아니면 초기 scaffold 경고만 있었는지 구분해서 설명할 수 있다.
+
 ## 다음 작업: 루트 README의 provider 공통 설명을 실제 생성 구조에 맞게 정리하기
 1. 문제
    - 현재 루트 README의 `Provider 공통 생성` 섹션은 `frontend/src/lib/supabase.ts`, `backoffice/src/lib/supabase.ts`가 모든 provider에서 생기는 것처럼 적혀 있다.

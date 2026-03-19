@@ -2,10 +2,10 @@
 
 - owner: miniapp engineering
 - scope: `frontend` 라우팅, 페이지 구조, 검증 규칙
-- last_verified: 2026-03-14
+- last_verified: 2026-03-19
 
 이 문서는 MiniApp `frontend`에서 반드시 지켜야 하는 규칙 문서입니다.
-API 후보를 찾는 용도는 `appsintoss-granite-api-index.md`와 `appsintoss-granite-full-api-index.md`가 담당하고, 이 문서는 규칙과 금지/허용 기준만 정의합니다.
+기능 축을 파악하는 용도는 `appsintoss-granite-api-index.md`, 정확한 URL과 세부 API를 찾는 용도는 `appsintoss-granite-full-api-index.md`가 담당하고, 이 문서는 규칙과 금지/허용 기준만 정의합니다.
 
 ## 1) Routing Policy
 

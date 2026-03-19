@@ -5,7 +5,7 @@
 ## 구조
 - `product/`: 제품 요구사항과 기능 명세
 - `engineering/`: Granite, `@apps-in-toss/framework`, TDS, 에이전트 전략, 구현 규칙
-- `ai/`: Prompt, Plan, Implement, Status, Decisions
+- `ai/`: Prompt, Plan, Status, Decisions
 
 ## 현재 기준선
 - 루트는 `{{packageManagerCommand}} + nx + biome`
@@ -17,7 +17,7 @@
 - 제품 명세: `product/기능명세서.md`
 - 에이전트 전략: `engineering/에이전트전략.md`
 - 하네스 실행: `engineering/하네스-실행가이드.md`
-- AppsInToss + Granite quick index: `engineering/appsintoss-granite-api-index.md`
+- AppsInToss + Granite feature map: `engineering/appsintoss-granite-api-index.md`
 - AppsInToss + Granite full index: `engineering/appsintoss-granite-full-api-index.md`
 - Granite SSoT: `engineering/granite-ssot.md`
 - TDS RN index: `engineering/tds-react-native-index.md`
@@ -27,13 +27,13 @@
 - AI harness stack
   1. `ai/Plan.md`
   2. `ai/Status.md`
-  3. `ai/Implement.md`
-  4. `ai/Decisions.md`
-  5. `ai/Prompt.md`
+  3. `ai/Decisions.md`
+  4. `ai/Prompt.md`
 
 문서 역할:
-- quick index는 API 후보를 가장 먼저 찾는 문서다.
-- full index는 빠른 인덱스로 부족할 때 보는 전체 카탈로그다.
+- feature map은 어떤 기능 축이 존재하는지 가장 먼저 파악하는 문서다.
+- full index는 정확한 URL, 세부 타입, 에러 문서를 찾는 전체 카탈로그다.
+- `Plan.md`는 목표, 범위, 구현 순서, 검증 계획까지 담는 실행 계획 문서다.
 - `granite-ssot.md`는 라우팅, 페이지 구조, 검증 규칙의 단일 기준 문서다.
 
 ## format and lint
