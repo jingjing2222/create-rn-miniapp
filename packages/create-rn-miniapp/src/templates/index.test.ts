@@ -86,7 +86,7 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   )
   assert.equal(packageJson.devDependencies?.nx, '^22.5.4')
   assert.equal(packageJson.devDependencies?.typescript, '^5.9.3')
-  assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^2.4.7')
+  assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^2.4.8')
   assert.equal(nxJson.$schema, NX_ROOT_SCHEMA_URL)
   assert.deepEqual(nxJson.namedInputs?.sharedGlobals, ['{workspaceRoot}/biome.json'])
   assert.deepEqual(nxJson.targetDefaults?.build?.dependsOn, ['^build'])
@@ -102,7 +102,7 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
     await readFile(path.join(targetRoot, 'pnpm-workspace.yaml'), 'utf8'),
     'packages:\n  - frontend\n',
   )
-  assert.match(biomeJson, /schemas\/2\.4\.7\/schema\.json/)
+  assert.match(biomeJson, /schemas\/2\.4\.8\/schema\.json/)
   assert.match(biomeJson, /noRestrictedImports/)
   assert.match(biomeJson, /@react-native-async-storage\/async-storage/)
   assert.match(biomeJson, /@react-navigation\/\*/)
@@ -597,7 +597,7 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   )
   assert.equal(packageJson.devDependencies?.nx, '^22.5.4')
   assert.equal(packageJson.devDependencies?.typescript, '^5.9.3')
-  assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^2.4.7')
+  assert.equal(packageJson.devDependencies?.['@biomejs/biome'], '^2.4.8')
   assert.equal(frontendProject.$schema, NX_PROJECT_SCHEMA_URL)
   assert.match(gitignore, /^\.yarn\/?$/m)
   assert.match(gitignore, /^\.pnp\.\*$/m)
@@ -641,6 +641,7 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   assert.match(serverDbApplyScript, /SUPABASE_DB_PASSWORD/)
   assert.match(serverDbApplyScript, /baseArgs = \["dlx","supabase","db","push"/)
   assert.match(serverDbApplyScript, /yarn/)
+  assert.doesNotMatch(serverDbApplyScript, /value: string/)
   assert.match(serverTypecheckScript, /const denoCommand =/)
   assert.match(serverTypecheckScript, /\['check'/)
   assert.match(serverTypecheckScript, /path\.join\(serverRoot, 'supabase', 'functions'\)/)
@@ -648,6 +649,7 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   assert.match(serverFunctionsDeployScript, /baseArgs = \["dlx","supabase","functions","deploy"/)
   assert.match(serverFunctionsDeployScript, /--project-ref/)
   assert.match(serverFunctionsDeployScript, /yarn/)
+  assert.doesNotMatch(serverFunctionsDeployScript, /value: string/)
 })
 
 test('applyRootTemplates emits npm-specific workspace manifest and scripts', async (t) => {

@@ -206,7 +206,7 @@ Cloudflare를 선택하면 account를 고른 뒤 기존 Worker 목록을 먼저 
 Firebase를 선택하면 프로젝트 목록을 먼저 보여주고, 마지막 항목에서 새 프로젝트 생성도 바로 선택할 수 있어요. 이후 해당 프로젝트의 Web App 목록도 보여주고, 기존 App을 고르거나 새 Web App을 생성할 수 있어요.
 
 - 기존 프로젝트를 고르면 먼저 원격에 있는 내용을 초기화할지 물어봐요.
-- 기존 프로젝트에서 초기화를 건너뛰면 기존 Web App과 연결값만 정리하고, Firestore 준비나 Functions/Firestore 배포는 자동으로 하지 않아요.
+- 기존 프로젝트에서 초기화를 건너뛰어도 Blaze와 build IAM 확인은 먼저 하고, 기존 Web App과 연결값만 정리한 뒤 Firestore 준비와 Functions/Firestore 배포는 자동으로 하지 않아요.
 - 기존 프로젝트에서 초기화할게요를 고르면 Firestore 준비와 Functions/Firestore 배포까지 이어가요.
 - Web SDK config를 조회할 수 있으면 `frontend/.env.local`과 optional `backoffice/.env.local`에 `FIREBASE_*` 값을 자동으로 써줘요.
 - `server/.env.local`에는 `FIREBASE_PROJECT_ID`, `FIREBASE_FUNCTION_REGION`, `FIREBASE_TOKEN`, `GOOGLE_APPLICATION_CREDENTIALS` 자리를 만들어둬요.

@@ -1,3 +1,37 @@
+## 다음 작업: Supabase 기존 프로젝트 skip 경로에서 generated Biome/schema와 `.mjs` 스크립트 문법을 정상화하기
+1. 문제
+   - 기존 Supabase 프로젝트에서 원격 초기화를 건너뛴 뒤 generated root `biome.json`이 CLI `2.4.8`과 다른 `2.4.7` schema를 가리켜 root `biome check`가 깨진다.
+   - generated `server/scripts/supabase-db-apply.mjs`, `server/scripts/supabase-functions-deploy.mjs`에 TypeScript 타입 문법이 들어가 있어 Biome parse가 실패한다.
+2. 방향
+   - repo root와 generated root template의 Biome schema/version을 `2.4.8` 기준으로 맞춘다.
+   - Supabase generated `.mjs` 스크립트 문자열에서 TypeScript 타입 표기를 제거해 plain ESM으로 유지한다.
+   - 관련 README나 test fixture의 기대값도 새 기준으로 같이 갱신한다.
+3. 테스트
+   - template test에서 generated Biome 버전과 schema가 `2.4.8`인지 고정한다.
+   - generated Supabase `.mjs` 스크립트에 `: string` 같은 TS 문법이 없는지 테스트로 고정한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - Supabase 기존 프로젝트 skip 경로로 생성한 repo가 root `biome check` 단계에서 더 이상 깨지지 않는다.
+   - generated Supabase `.mjs` 스크립트가 Biome parse를 통과한다.
+   - `pnpm verify` 통과
+
+## 다음 작업: 기존 원격 초기화 후속 보정을 별도 릴리스 PR로 분리하기
+1. 문제
+   - `#67` 본체는 이미 main에 머지됐고, 이후 follow-up 수정인 Firebase 기존 프로젝트 권한 유지와 Supabase generated Biome/스크립트 보정만 따로 릴리스해야 한다.
+   - 이 범위를 분리하지 않으면 이미 머지된 변경과 후속 수정의 릴리스 이력이 섞인다.
+2. 방향
+   - 최신 main에서 후속 커밋만 새 브랜치로 분리한다.
+   - 두 publish 패키지를 모두 patch로 올리는 한글 changeset을 추가한다.
+   - 별도 PR로 올리고 `pnpm verify`를 다시 통과시킨다.
+3. 테스트
+   - 새 브랜치 diff가 후속 수정만 담는지 확인한다.
+   - changeset frontmatter가 두 패키지를 모두 patch로 올리는지 확인한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - Firebase/Supabase 후속 보정만 담은 새 PR이 생성된다.
+   - 두 publish 패키지 patch changeset이 포함된다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: 기존 provider 프로젝트 연결 시 원격 초기화 여부를 먼저 묻게 바꾸기
 1. 문제
    - 지금은 기존 provider 프로젝트를 고른 뒤에도 원격 반영 동작이 provider마다 제각각이고, 일부는 바로 deploy나 원격 상태 변경으로 이어진다.
@@ -5,6 +39,7 @@
 2. 방향
    - 기존 `supabase`, `firebase`, `cloudflare` 프로젝트/Worker를 고른 경우에는 공통으로 `원격에 있는 내용을 초기화할까요?`를 먼저 묻는다.
    - `건너뛸게요`를 고르면 provider별 deploy/init 단계는 수행하지 않고, local env와 문서만 준비한다.
+   - Firebase는 기존 프로젝트에서 원격 초기화를 건너뛰어도 Blaze와 build IAM 확인은 계속 하고, Firestore 준비와 deploy만 건너뛴다.
    - `초기화할게요`를 고르면 지금처럼 공식 CLI 경로를 통해 원격 반영을 진행한다.
    - 마지막 note와 README/provider guide/generated server README에도 이번 실행에서 원격 초기화를 건너뛰었는지 남긴다.
 3. 테스트

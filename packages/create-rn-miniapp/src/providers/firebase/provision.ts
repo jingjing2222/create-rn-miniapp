@@ -1674,7 +1674,10 @@ export function formatFirebaseManualSetupNote(options: {
   ]
 
   if (options.didInitializeRemoteContent === false) {
-    lines.push('', '기존 Firebase 프로젝트를 골라서 원격 초기화는 자동으로 건너뛰었어요.')
+    lines.push(
+      '',
+      '기존 Firebase 프로젝트를 골라서 Blaze와 build IAM 확인은 먼저 진행했고, 원격 초기화와 배포는 자동으로 건너뛰었어요.',
+    )
   }
 
   lines.push(
@@ -1772,22 +1775,20 @@ export async function provisionFirebaseProject(
     )
   }
 
+  await ensureFirebaseProjectIsOnBlazePlan({
+    cwd: options.targetRoot,
+    projectId: selectedProjectId,
+    prompt: options.prompt,
+  })
+  await ensureFirebaseBuildServiceAccountPermissions({
+    cwd: options.targetRoot,
+    projectId: selectedProjectId,
+  })
+
   const didInitializeRemoteContent = shouldInitializeFirebaseRemoteContent(
     resolvedProjectMode,
     shouldInitializeExistingRemoteContent,
   )
-
-  if (didInitializeRemoteContent) {
-    await ensureFirebaseProjectIsOnBlazePlan({
-      cwd: options.targetRoot,
-      projectId: selectedProjectId,
-      prompt: options.prompt,
-    })
-    await ensureFirebaseBuildServiceAccountPermissions({
-      cwd: options.targetRoot,
-      projectId: selectedProjectId,
-    })
-  }
 
   const existingApps = await listFirebaseWebApps(
     options.packageManager,
@@ -1907,7 +1908,10 @@ export async function finalizeFirebaseProvisioning(options: {
           'server/.env.local 에는 Firebase project 메타데이터를 적어뒀어요.',
           ...(options.provisionedProject.didInitializeRemoteContent
             ? []
-            : ['', '기존 Firebase 프로젝트를 골라서 원격 초기화는 자동으로 건너뛰었어요.']),
+            : [
+                '',
+                '기존 Firebase 프로젝트를 골라서 Blaze와 build IAM 확인은 먼저 진행했고, 원격 초기화와 배포는 자동으로 건너뛰었어요.',
+              ]),
           '',
           ...createFirebaseDeployAuthLines({
             packageManager: options.packageManager,

@@ -1665,7 +1665,7 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
     path.join(targetRoot, 'biome.json'),
     `${JSON.stringify(
       {
-        $schema: 'https://biomejs.dev/schemas/2.4.7/schema.json',
+        $schema: 'https://biomejs.dev/schemas/2.4.8/schema.json',
         files: {
           includes: ['**', '!!**/.nx', '!!**/node_modules', '!!**/dist'],
         },
