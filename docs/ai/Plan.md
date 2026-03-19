@@ -1,3 +1,20 @@
+## 다음 작업: 기존 Supabase 프로젝트 연결 시 원격 DB/Edge Function 자동 반영을 건너뛰고 안내 노트를 남기기
+1. 문제
+   - 현재 Supabase provisioning은 새 프로젝트와 기존 프로젝트를 같은 흐름으로 처리해서, 기존 프로젝트를 고르면 `supabase db push --include-all`과 기본 Edge Function deploy까지 바로 실행한다.
+   - 기존 프로젝트는 이미 원격 migration history가 있을 수 있어서 `db push`가 실패하기 쉽고, `api` 함수가 이미 있으면 기본 Edge Function deploy도 덮어쓰기 위험이 있다.
+2. 방향
+   - 새 Supabase 프로젝트를 만든 경우에만 원격 `db push`와 기본 Edge Function deploy를 자동으로 적용한다.
+   - 기존 프로젝트를 고른 경우에는 `link`만 진행하고, 원격 DB/Edge Function 반영은 자동으로 건너뛴다.
+   - 마지막 note와 README에 기존 프로젝트 경로에서는 `db:apply`, `functions:deploy`를 직접 하도록 짧게 안내한다.
+3. 테스트
+   - `mode: existing`일 때 원격 DB/Edge Function 자동 반영이 꺼지는 분기 로직을 테스트로 고정한다.
+   - finalize note에 기존 프로젝트용 DB/함수 반영 안내가 들어가는지 테스트한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - 기존 Supabase 프로젝트를 골라도 스캐폴딩이 `db push`나 기본 함수 배포 단계에서 실패하지 않는다.
+   - 새 프로젝트와 기존 프로젝트의 원격 DB/함수 반영 동작 차이가 문서와 note에 반영된다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: Granite/TDS 문서 보강분을 두 패키지 patch release로 올리고 한글 PR을 생성하기
 1. 문제
    - 방금 정리한 Granite 하네스 문서, MiniApp framework 인덱스, TDS 인덱스 보강분을 릴리스 대상으로 묶어야 한다.

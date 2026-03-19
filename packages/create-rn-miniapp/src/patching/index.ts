@@ -1147,6 +1147,7 @@ function renderSupabaseServerReadme(
     '## 운영 메모',
     '',
     '- 원격 SQL push를 계속하려면 `server/.env.local`의 `SUPABASE_DB_PASSWORD`를 채워주세요.',
+    '- 기존 Supabase 프로젝트에 연결했다면 원격 migration history와 기존 함수 상태를 존중해서 DB 반영과 기본 Edge Function 배포를 자동으로 건너뛰어요. 이 경우 필요할 때 `db:apply`, `functions:deploy`를 직접 실행해 주세요.',
     '- 다른 Edge Function을 추가하려면 `supabase functions new <name> --workdir .`로 생성한 뒤 `functions:deploy`를 다시 실행하면 돼요.',
     '- frontend/backoffice의 `.env.local`은 server provisioning 결과와 같은 Supabase project를 가리키게 맞춰두는 걸 권장해요.',
     '',

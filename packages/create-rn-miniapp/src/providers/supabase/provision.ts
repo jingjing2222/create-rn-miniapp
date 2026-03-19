@@ -27,6 +27,8 @@ export type ProvisionedSupabaseProject = {
   projectRef: string
   publishableKey: string | null
   dbPassword: string | null
+  didApplyRemoteDb: boolean
+  didDeployEdgeFunctions: boolean
   mode: ServerProjectMode
 }
 
@@ -128,6 +130,20 @@ function formatSupabaseSecretGuidance(options: {
   return lines
 }
 
+function formatSupabaseRemoteDbSkipGuidance() {
+  return [
+    '기존 Supabase 프로젝트를 골라서 원격 DB 반영은 자동으로 건너뛰었어요.',
+    '필요하면 server/package.json 의 `db:apply`를 직접 실행해 주세요.',
+  ]
+}
+
+function formatSupabaseEdgeFunctionSkipGuidance() {
+  return [
+    '기존 Supabase 프로젝트를 골라서 기본 Edge Function 배포도 자동으로 건너뛰었어요.',
+    '필요하면 server/package.json 의 `functions:deploy`를 직접 실행해 주세요.',
+  ]
+}
+
 function stripAnsi(value: string) {
   let result = ''
 
@@ -205,6 +221,8 @@ export function formatSupabaseManualSetupNote(options: {
   projectRef: string
   hasDbPassword: boolean
   hasAccessToken?: boolean
+  didApplyRemoteDb?: boolean
+  didDeployEdgeFunctions?: boolean
 }): ProvisioningNote {
   const env = createSupabaseEnvValues(
     options.projectRef,
@@ -233,6 +251,14 @@ export function formatSupabaseManualSetupNote(options: {
     createSupabaseServerEnvValues(options.projectRef, '<프로젝트 DB password>').trimEnd(),
   )
 
+  if (options.didApplyRemoteDb === false) {
+    lines.push('', ...formatSupabaseRemoteDbSkipGuidance())
+  }
+
+  if (options.didDeployEdgeFunctions === false) {
+    lines.push('', ...formatSupabaseEdgeFunctionSkipGuidance())
+  }
+
   const secretGuidance = formatSupabaseSecretGuidance({
     projectRef: options.projectRef,
     hasDbPassword: options.hasDbPassword,
@@ -247,6 +273,14 @@ export function formatSupabaseManualSetupNote(options: {
     title: 'Supabase 연결 값을 이렇게 넣어 주세요',
     body: lines.join('\n'),
   }
+}
+
+export function shouldAutoApplySupabaseRemoteDatabase(mode: ServerProjectMode) {
+  return mode === 'create'
+}
+
+export function shouldAutoDeploySupabaseEdgeFunctions(mode: ServerProjectMode) {
+  return mode === 'create'
 }
 
 export async function writeSupabaseLocalEnvFiles(options: {
@@ -629,13 +663,24 @@ export async function provisionSupabaseProject(
   )
 
   await linkSupabaseProject(options.packageManager, serverRoot, selectedProjectId)
-  await pushSupabaseDatabase(options.packageManager, serverRoot)
-  await deploySupabaseFunctions(options.packageManager, serverRoot, selectedProjectId)
+  const didApplyRemoteDb = shouldAutoApplySupabaseRemoteDatabase(resolvedProjectMode)
+
+  if (didApplyRemoteDb) {
+    await pushSupabaseDatabase(options.packageManager, serverRoot)
+  }
+
+  const didDeployEdgeFunctions = shouldAutoDeploySupabaseEdgeFunctions(resolvedProjectMode)
+
+  if (didDeployEdgeFunctions) {
+    await deploySupabaseFunctions(options.packageManager, serverRoot, selectedProjectId)
+  }
 
   return {
     projectRef: selectedProjectId,
     publishableKey,
     dbPassword: createdProjectDbPassword,
+    didApplyRemoteDb,
+    didDeployEdgeFunctions,
     mode: resolvedProjectMode,
   }
 }
@@ -676,6 +721,12 @@ export async function finalizeSupabaseProvisioning(options: {
             ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 적어뒀어요.'
             : 'frontend/.env.local 에 Supabase 연결 값을 적어뒀어요.',
           'server/.env.local 에도 필요한 값을 적어뒀어요.',
+          ...(options.provisionedProject.didApplyRemoteDb
+            ? []
+            : formatSupabaseRemoteDbSkipGuidance()),
+          ...(options.provisionedProject.didDeployEdgeFunctions
+            ? []
+            : formatSupabaseEdgeFunctionSkipGuidance()),
           ...(serverEnv.hasDbPassword && serverEnv.hasAccessToken
             ? []
             : formatSupabaseSecretGuidance({
@@ -695,6 +746,8 @@ export async function finalizeSupabaseProvisioning(options: {
       projectRef: options.provisionedProject.projectRef,
       hasDbPassword: serverEnv.hasDbPassword,
       hasAccessToken: serverEnv.hasAccessToken,
+      didApplyRemoteDb: options.provisionedProject.didApplyRemoteDb,
+      didDeployEdgeFunctions: options.provisionedProject.didDeployEdgeFunctions,
     }),
   ]
 }
