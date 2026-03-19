@@ -58,6 +58,8 @@ pnpm verify
 # 또는 yarn verify / npm run verify / bun run verify
 ```
 
+기본값은 지금처럼 single-root예요. 다만 마지막 git 단계 직전에 `control root + main/ worktree`로 바꿀지 한 번 더 물어봐요. `--worktree`를 주면 그 마지막 질문 없이 바로 opt-in할 수 있고, `--no-git`이면 이 단계는 건너뛰어요.
+
 ## 생성되는 구조
 
 ```text
@@ -106,6 +108,7 @@ pnpm verify
 - `--root-dir <dir>`: `--add`에서 수정할 기존 모노레포 루트예요. 기본값은 현재 디렉터리예요.
 - `--output-dir <dir>`: 생성할 모노레포의 상위 디렉터리예요.
 - `--no-git`: 생성 완료 후 루트 `git init`을 생략해요.
+- `--worktree`: 마지막 git 단계 직전에 결과물을 `control root + main/` worktree 레이아웃으로 전환해요.
 - `--skip-install`: 마지막 루트 package manager install과 Biome 정리를 생략해요.
 - `--yes`: 선택형 질문을 기본값으로 진행해요.
 - `--help`: 도움말을 출력해요.

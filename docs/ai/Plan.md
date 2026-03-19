@@ -6,7 +6,7 @@
    - 새로 생성한 로컬 scaffold는 원격 clone이 아니라서, bare repo + worktree bootstrap을 빈 저장소 상태에서 어떻게 안정적으로 시작할지 먼저 검증해야 한다.
 2. 방향
    - Git worktree 글의 핵심 원칙을 그대로 따른다: control root는 bare repo와 worktree 관리만 맡고, 실제 앱 소스와 AI 하네스 문서는 `main/` 및 추가 worktree 아래에서만 작업한다.
-   - 1차 도입은 opt-in이 안전하다. `--git-layout single|worktree` 또는 `--worktree` 같은 옵션으로 먼저 넣고, `single-root` 흐름과 병행 검증한 뒤 default 전환 여부를 결정한다.
+   - 1차 도입은 opt-in이 안전하다. `--git-layout single|worktree` 또는 `--worktree` 같은 옵션으로 먼저 넣고, create 흐름의 마지막 git 단계 직전에 한 번 더 물어본 뒤 `single-root`와 worktree 흐름을 병행 검증한다. default 전환 여부는 그 이후에 결정한다.
    - scaffold 내부 모델을 `controlRoot`와 `workspaceRoot`로 분리한다. control root에는 `.bare/`, `.git` 포인터, worktree helper, 빈 카테고리 디렉터리(`feat/`, `fix/`, `chore/`, `hotfix/`)만 두고, tracked monorepo 파일은 `main/` worktree 아래에만 생성한다.
    - git bootstrap은 기존 `git init` 2단계 대신 worktree bootstrap plan으로 교체한다. 우선 `git init --bare` + `git worktree add --orphan main` 가능 여부를 spike로 검증하고, 불안정하면 `main/` scaffold 후 초기 커밋 기반 전환을 fallback으로 채택한다.
    - generated repo에는 외부 Python `wt` 의존성 없이 self-contained worktree helper를 같이 넣는다. 최소 명령은 `status`, `add`, `remove`, `sync(fetch + ff-only)`, `upstream`, `publish`이며, 새 브랜치 첫 push의 upstream 설정과 브랜치 검증을 helper가 맡는다.

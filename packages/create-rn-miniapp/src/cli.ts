@@ -19,6 +19,7 @@ export type ParsedCliArgs = {
   name?: string
   displayName?: string
   noGit?: boolean
+  worktree?: boolean
   serverProvider?: ServerProvider
   serverProjectMode?: ServerProjectMode
   trpc?: boolean
@@ -72,6 +73,8 @@ export type ResolvedCliOptions = {
   appName: string
   displayName: string
   noGit: boolean
+  yes: boolean
+  worktree?: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
@@ -135,6 +138,10 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
       default: true,
       describe: '생성 완료 후 루트 git init 수행',
     })
+    .option('worktree', {
+      type: 'boolean',
+      describe: '마지막 git 단계 직전에 control root + main worktree 레이아웃으로 전환',
+    })
     .option('server-provider', {
       choices: SERVER_PROVIDERS,
       describe: '`server` 워크스페이스 제공자 지정',
@@ -189,6 +196,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     name: argv.name,
     displayName: argv.displayName,
     noGit: argv.git === false,
+    worktree: argv.worktree,
     serverProvider: argv.serverProvider,
     serverProjectMode: argv.serverProjectMode,
     trpc: argv.trpc,
@@ -215,6 +223,7 @@ export function formatCliHelp() {
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
     '  --no-git                       생성 완료 후 루트 git init 생략',
+    '  --worktree                     마지막 git 단계 직전에 control root + main worktree로 전환',
     `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
     '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
     '  --trpc                         `cloudflare` server provider 위에 tRPC overlay 추가',
@@ -472,6 +481,8 @@ export async function resolveCliOptions(
     appName,
     displayName,
     noGit: argv.noGit ?? false,
+    yes: argv.yes,
+    worktree: argv.worktree,
     serverProvider: normalizedServerProvider,
     serverProjectMode,
     skipServerProvisioning,

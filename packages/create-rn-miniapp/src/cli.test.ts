@@ -66,6 +66,13 @@ test('parseCliArgs parses trpc overlay flag', async () => {
   assert.equal(argv.trpc, true)
 })
 
+test('parseCliArgs parses worktree opt-in flag', async () => {
+  const argv = await parseCliArgs(['--name', 'ebook-miniapp', '--worktree'], '/workspace')
+
+  assert.equal(argv.name, 'ebook-miniapp')
+  assert.equal(argv.worktree, true)
+})
+
 test('parseCliArgs rejects the removed with-server flag', async () => {
   await assert.rejects(
     () => parseCliArgs(['--with-server'], '/workspace'),

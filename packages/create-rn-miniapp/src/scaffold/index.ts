@@ -31,6 +31,7 @@ import {
   resolveRootWorkspaces,
 } from './helpers.js'
 import type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
+import { convertSingleRootToWorktreeLayout, resolveCreateWorktreeLayout } from './worktree.js'
 
 export type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
 export {
@@ -48,6 +49,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     displayName: options.displayName,
     packageManager: options.packageManager,
   })
+  let workspaceRoot = targetRoot
 
   await ensureEmptyDirectory(targetRoot)
 
@@ -211,16 +213,29 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     })),
   )
 
+  const shouldUseWorktreeLayout = await resolveCreateWorktreeLayout({
+    prompt: options.prompt,
+    noGit: options.noGit,
+    yes: options.yes,
+    explicitWorktree: options.worktree,
+  })
+
   if (!options.noGit) {
-    for (const command of buildRootGitSetupPlan({ targetRoot })) {
-      log.step(command.label)
-      await runCommand(command)
+    if (shouldUseWorktreeLayout) {
+      log.step('루트를 `main/` worktree 레이아웃으로 바꿔둘게요')
+      const convertedWorkspace = await convertSingleRootToWorktreeLayout(targetRoot)
+      workspaceRoot = convertedWorkspace.workspaceRoot
+    } else {
+      for (const command of buildRootGitSetupPlan({ targetRoot })) {
+        log.step(command.label)
+        await runCommand(command)
+      }
     }
   }
 
   if (!options.skipInstall) {
     for (const command of buildRootFinalizePlan({
-      targetRoot,
+      targetRoot: workspaceRoot,
       packageManager: options.packageManager,
     })) {
       log.step(command.label)
@@ -228,7 +243,12 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     }
   }
 
-  return { targetRoot, notes }
+  return {
+    targetRoot,
+    workspaceRoot,
+    notes,
+    worktree: shouldUseWorktreeLayout,
+  }
 }
 
 export async function addWorkspaces(options: AddWorkspaceOptions) {
