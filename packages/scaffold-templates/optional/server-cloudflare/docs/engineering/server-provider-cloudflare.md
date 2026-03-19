@@ -40,6 +40,7 @@ Worker URL이 바뀌면 `.env.local`과 배포 경로를 같이 확인해야 해
 - `GET /`로 ready JSON을 확인하고, 실제 router 호출은 `/trpc` endpoint로 보면 돼요.
 
 ## 작업할 때 먼저 확인할 것
+- 기존 Worker에 연결했다면 원격 초기화를 건너뛰었는지, 아니면 이번 실행에서 Worker 재배포와 `workers.dev` 활성화까지 반영했는지
 - `server/.env.local`에 `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_NAME`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_R2_BUCKET_NAME`이 있는가
 - `server/.env.local`에 `CLOUDFLARE_API_TOKEN`이 필요하면 채워져 있는가
 - `wrangler.jsonc`에 `DB`, `STORAGE` binding이 현재 리소스를 가리키는가

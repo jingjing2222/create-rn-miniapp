@@ -49,6 +49,7 @@
 Functions는 server에서 배포하고, 앱은 project 설정과 SDK config를 받아서 사용해요.
 
 ## 작업할 때 먼저 확인할 것
+- 기존 프로젝트에 연결했다면 원격 초기화를 건너뛰었는지, 아니면 이번 실행에서 Firestore 준비와 deploy까지 반영했는지
 - project가 Blaze 요금제인지
 - build service account IAM이 맞는지
 - Firestore API와 `(default)` database가 준비됐는지

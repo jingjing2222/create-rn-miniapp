@@ -66,7 +66,7 @@ test('isCloudflareR2DisabledErrorMessage detects R2 dashboard enablement failure
 test('formatCloudflareR2EnableMessage includes the dashboard URL and retry guidance', () => {
   const message = formatCloudflareR2EnableMessage('account-123')
 
-  assert.match(message, /R2를 먼저 활성화/)
+  assert.match(message, /R2를 먼저 켜야/)
   assert.match(message, /https:\/\/dash\.cloudflare\.com\/account-123\/r2\/overview/)
   assert.match(message, /다시 확인/)
 })
@@ -77,10 +77,13 @@ test('buildCloudflareProvisionExecutionOrder ensures workers.dev onboarding befo
     'deploy-worker',
     'enable-worker-subdomain',
   ])
-  assert.deepEqual(buildCloudflareProvisionExecutionOrder('existing'), [
+  assert.deepEqual(buildCloudflareProvisionExecutionOrder('existing'), [])
+  assert.deepEqual(buildCloudflareProvisionExecutionOrder('existing', true), [
     'ensure-account-subdomain',
+    'deploy-worker',
     'enable-worker-subdomain',
   ])
+  assert.deepEqual(buildCloudflareProvisionExecutionOrder('existing', false), [])
 })
 
 test('formatCloudflareDeployFailureMessage rewrites email verification failures', () => {
@@ -295,6 +298,7 @@ test('finalizeCloudflareProvisioning writes env files when api base url is avail
         d1DatabaseName: 'ebook-db',
         r2BucketName: 'ebook-storage',
         mode: 'existing',
+        didInitializeRemoteContent: true,
       },
     })
 
@@ -356,6 +360,7 @@ test('finalizeCloudflareProvisioning skips token guidance when server api token 
         d1DatabaseName: 'ebook-db',
         r2BucketName: 'ebook-storage',
         mode: 'existing',
+        didInitializeRemoteContent: true,
       },
     })
 
@@ -379,6 +384,7 @@ test('finalizeCloudflareProvisioning falls back to manual setup guidance when ap
         d1DatabaseName: 'ebook-db',
         r2BucketName: 'ebook-storage',
         mode: 'existing',
+        didInitializeRemoteContent: false,
       },
     })
 

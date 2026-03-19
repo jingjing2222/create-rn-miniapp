@@ -11,6 +11,7 @@ import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import { pathExists } from '../../templates/index.js'
+import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
 
 type SupabaseProject = {
   id: string
@@ -275,12 +276,18 @@ export function formatSupabaseManualSetupNote(options: {
   }
 }
 
-export function shouldAutoApplySupabaseRemoteDatabase(mode: ServerProjectMode) {
-  return mode === 'create'
+export function shouldAutoApplySupabaseRemoteDatabase(
+  mode: ServerProjectMode,
+  shouldInitializeExistingRemoteContent = false,
+) {
+  return mode === 'create' || shouldInitializeExistingRemoteContent
 }
 
-export function shouldAutoDeploySupabaseEdgeFunctions(mode: ServerProjectMode) {
-  return mode === 'create'
+export function shouldAutoDeploySupabaseEdgeFunctions(
+  mode: ServerProjectMode,
+  shouldInitializeExistingRemoteContent = false,
+) {
+  return mode === 'create' || shouldInitializeExistingRemoteContent
 }
 
 export async function writeSupabaseLocalEnvFiles(options: {
@@ -600,6 +607,7 @@ export async function provisionSupabaseProject(
   let selectedProjectId: string | null = null
   let resolvedProjectMode = options.projectMode
   let createdProjectDbPassword: string | null = null
+  let shouldInitializeExistingRemoteContent = false
 
   if (resolvedProjectMode === null) {
     const selectedProject = await selectSupabaseProject(options.prompt, projects, {
@@ -656,6 +664,13 @@ export async function provisionSupabaseProject(
     throw new Error('연결할 Supabase 프로젝트를 정하지 못했어요.')
   }
 
+  if (resolvedProjectMode === 'existing') {
+    shouldInitializeExistingRemoteContent = await promptShouldInitializeExistingRemoteContent(
+      options.prompt,
+      '이 Supabase 프로젝트의 원격에 있는 내용을 초기화할까요?',
+    )
+  }
+
   const publishableKey = await tryGetSupabasePublishableKey(
     options.packageManager,
     options.targetRoot,
@@ -663,13 +678,19 @@ export async function provisionSupabaseProject(
   )
 
   await linkSupabaseProject(options.packageManager, serverRoot, selectedProjectId)
-  const didApplyRemoteDb = shouldAutoApplySupabaseRemoteDatabase(resolvedProjectMode)
+  const didApplyRemoteDb = shouldAutoApplySupabaseRemoteDatabase(
+    resolvedProjectMode,
+    shouldInitializeExistingRemoteContent,
+  )
 
   if (didApplyRemoteDb) {
     await pushSupabaseDatabase(options.packageManager, serverRoot)
   }
 
-  const didDeployEdgeFunctions = shouldAutoDeploySupabaseEdgeFunctions(resolvedProjectMode)
+  const didDeployEdgeFunctions = shouldAutoDeploySupabaseEdgeFunctions(
+    resolvedProjectMode,
+    shouldInitializeExistingRemoteContent,
+  )
 
   if (didDeployEdgeFunctions) {
     await deploySupabaseFunctions(options.packageManager, serverRoot, selectedProjectId)

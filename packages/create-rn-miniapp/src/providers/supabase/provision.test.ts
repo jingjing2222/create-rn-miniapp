@@ -86,11 +86,15 @@ test('buildCreateSupabaseProjectArgs appends only the project name positional ar
 test('shouldAutoApplySupabaseRemoteDatabase only enables remote db push for new projects', () => {
   assert.equal(shouldAutoApplySupabaseRemoteDatabase('create'), true)
   assert.equal(shouldAutoApplySupabaseRemoteDatabase('existing'), false)
+  assert.equal(shouldAutoApplySupabaseRemoteDatabase('existing', true), true)
+  assert.equal(shouldAutoApplySupabaseRemoteDatabase('existing', false), false)
 })
 
 test('shouldAutoDeploySupabaseEdgeFunctions only enables auto deploy for new projects', () => {
   assert.equal(shouldAutoDeploySupabaseEdgeFunctions('create'), true)
   assert.equal(shouldAutoDeploySupabaseEdgeFunctions('existing'), false)
+  assert.equal(shouldAutoDeploySupabaseEdgeFunctions('existing', true), true)
+  assert.equal(shouldAutoDeploySupabaseEdgeFunctions('existing', false), false)
 })
 
 test('pollForNewSupabaseProject waits 1, 2, 4, 5 seconds and stops when a new project appears', async () => {

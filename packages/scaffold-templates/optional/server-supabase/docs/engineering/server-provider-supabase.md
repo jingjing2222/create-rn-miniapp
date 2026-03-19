@@ -37,7 +37,7 @@ DB schema와 Edge Functions를 server workspace에서 관리하고, 앱은 publi
 
 ## 작업할 때 먼저 확인할 것
 - `server/.env.local`에 `SUPABASE_PROJECT_REF`가 있는가
-- 기존 프로젝트에 연결했다면 원격 DB와 기본 Edge Function 배포를 자동으로 건너뛰었는가, 그리고 지금 `db:apply`, `functions:deploy`를 직접 해야 하는가
+- 기존 프로젝트에 연결했다면 원격 초기화를 건너뛰었는가, 아니면 지금 실행에서 `db:apply`, `functions:deploy`까지 반영했는가
 - 함수 변경이면 `functions:deploy`까지 같이 해야 하는가
 
 자세한 구조와 스크립트는 `server/README.md`를 같이 봐요.

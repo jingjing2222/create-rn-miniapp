@@ -1,3 +1,21 @@
+## 다음 작업: 기존 provider 프로젝트 연결 시 원격 초기화 여부를 먼저 묻게 바꾸기
+1. 문제
+   - 지금은 기존 provider 프로젝트를 고른 뒤에도 원격 반영 동작이 provider마다 제각각이고, 일부는 바로 deploy나 원격 상태 변경으로 이어진다.
+   - 사용자 입장에서는 "기존 프로젝트"에 붙는 것과 "원격 내용을 스캐폴드 기본값으로 초기화하는 것"이 다른데, 이 선택이 provisioning UI에 드러나지 않는다.
+2. 방향
+   - 기존 `supabase`, `firebase`, `cloudflare` 프로젝트/Worker를 고른 경우에는 공통으로 `원격에 있는 내용을 초기화할까요?`를 먼저 묻는다.
+   - `건너뛸게요`를 고르면 provider별 deploy/init 단계는 수행하지 않고, local env와 문서만 준비한다.
+   - `초기화할게요`를 고르면 지금처럼 공식 CLI 경로를 통해 원격 반영을 진행한다.
+   - 마지막 note와 README/provider guide/generated server README에도 이번 실행에서 원격 초기화를 건너뛰었는지 남긴다.
+3. 테스트
+   - 공통 prompt helper를 테스트로 고정한다.
+   - provider별 finalize note가 skip/apply 결과를 반영하는지 테스트한다.
+   - `pnpm verify`를 통과한다.
+4. 완료 기준
+   - 기존 provider 프로젝트를 고르면 원격 초기화 여부를 먼저 선택할 수 있다.
+   - `건너뛸게요`를 고르면 불필요한 원격 deploy/init가 발생하지 않는다.
+   - `pnpm verify` 통과
+
 ## 다음 작업: 기존 Supabase 프로젝트 연결 시 원격 DB/Edge Function 자동 반영을 건너뛰고 안내 노트를 남기기
 1. 문제
    - 현재 Supabase provisioning은 새 프로젝트와 기존 프로젝트를 같은 흐름으로 처리해서, 기존 프로젝트를 고르면 `supabase db push --include-all`과 기본 Edge Function deploy까지 바로 실행한다.

@@ -22,6 +22,7 @@ import {
   isFirebaseFunctionsBuildServiceAccountPermissionError,
   isFirebaseProjectIdConflictError,
   resolveGoogleCloudCliArchiveSpec,
+  shouldInitializeFirebaseRemoteContent,
   writeFirebaseLocalEnvFiles,
   writeFirebaseServerLocalEnvFile,
 } from './provision.js'
@@ -76,6 +77,13 @@ test('buildFirebaseFunctionsDeployCommand deploys functions and firestore resour
       label: 'Firebase Functions 배포',
     },
   )
+})
+
+test('shouldInitializeFirebaseRemoteContent only auto-initializes existing projects when user allows it', () => {
+  assert.equal(shouldInitializeFirebaseRemoteContent('create'), true)
+  assert.equal(shouldInitializeFirebaseRemoteContent('existing'), false)
+  assert.equal(shouldInitializeFirebaseRemoteContent('existing', true), true)
+  assert.equal(shouldInitializeFirebaseRemoteContent('existing', false), false)
 })
 
 test('resolveGoogleCloudCliArchiveSpec picks the correct official archive per platform', () => {
@@ -809,6 +817,7 @@ test('finalizeFirebaseProvisioning writes env files when sdk config is available
         webAppId: '1:1234567890:web:abc123',
         functionRegion: 'asia-northeast3',
         mode: 'existing',
+        didInitializeRemoteContent: false,
         config: {
           apiKey: 'api-key',
           authDomain: 'ebook-firebase.firebaseapp.com',
@@ -867,6 +876,7 @@ test('finalizeFirebaseProvisioning falls back to manual setup guidance when sdk 
         webAppId: '1:1234567890:web:abc123',
         functionRegion: 'asia-northeast3',
         mode: 'existing',
+        didInitializeRemoteContent: false,
         config: null,
       },
     })

@@ -13,6 +13,7 @@ import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import { pathExists } from '../../templates/index.js'
+import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
 
 type WranglerAuth = {
   oauthToken: string
@@ -64,6 +65,7 @@ export type ProvisionedCloudflareWorker = {
   d1DatabaseName: string
   r2BucketName: string
   mode: ServerProjectMode
+  didInitializeRemoteContent: boolean
 }
 
 type ProvisionCloudflareWorkerOptions = {
@@ -798,10 +800,17 @@ export function buildCloudflareWorkersDevUrl(workerName: string, accountSubdomai
   return `https://${workerName}.${accountSubdomain}.workers.dev`
 }
 
-export function buildCloudflareProvisionExecutionOrder(projectMode: ServerProjectMode) {
+export function buildCloudflareProvisionExecutionOrder(
+  projectMode: ServerProjectMode,
+  shouldInitializeExistingRemoteContent = false,
+) {
+  if (projectMode === 'existing' && !shouldInitializeExistingRemoteContent) {
+    return [] as const
+  }
+
   return projectMode === 'create'
     ? (['ensure-account-subdomain', 'deploy-worker', 'enable-worker-subdomain'] as const)
-    : (['ensure-account-subdomain', 'enable-worker-subdomain'] as const)
+    : (['ensure-account-subdomain', 'deploy-worker', 'enable-worker-subdomain'] as const)
 }
 
 export function canRecoverCloudflareDeployFailure(options: {
@@ -825,13 +834,21 @@ export function formatCloudflareManualSetupNote(options: {
   d1DatabaseId: string
   d1DatabaseName: string
   r2BucketName: string
+  didInitializeRemoteContent?: boolean
 }): ProvisioningNote {
   const lines = [
     `Cloudflare Worker \`${options.workerName}\`의 배포 URL을 확인한 뒤 아래 파일에 직접 넣어 주세요.`,
+  ]
+
+  if (options.didInitializeRemoteContent === false) {
+    lines.push('', '기존 Cloudflare Worker를 골라서 원격 초기화는 자동으로 건너뛰었어요.')
+  }
+
+  lines.push(
     '',
     path.join(options.targetRoot, 'frontend', '.env.local'),
     'MINIAPP_API_BASE_URL=<배포된 Worker URL>',
-  ]
+  )
 
   if (options.hasBackoffice) {
     lines.push(
@@ -1023,6 +1040,7 @@ export async function provisionCloudflareWorker(
 
   let resolvedProjectMode = options.projectMode
   let workerName: string | null = null
+  let shouldInitializeExistingRemoteContent = false
 
   if (resolvedProjectMode === null) {
     const selectedWorker = await selectCloudflareWorker(options.prompt, existingWorkerNames, {
@@ -1058,12 +1076,24 @@ export async function provisionCloudflareWorker(
     throw new Error('연결할 Cloudflare Worker를 정하지 못했어요.')
   }
 
+  if (resolvedProjectMode === 'existing') {
+    shouldInitializeExistingRemoteContent = await promptShouldInitializeExistingRemoteContent(
+      options.prompt,
+      '이 Cloudflare Worker의 원격에 있는 내용을 초기화할까요?',
+    )
+  }
+
+  const allowRemoteInitialization =
+    resolvedProjectMode === 'create' || shouldInitializeExistingRemoteContent
+
   const existingD1Databases = await withAuthRetry((authToken) =>
     listCloudflareD1Databases(authToken, accountId),
   )
   const selectedD1Database = await selectCloudflareD1Database(options.prompt, existingD1Databases, {
-    includeCreateOption: true,
-    message: '사용할 Cloudflare D1 database를 골라 주세요. 새 database도 바로 만들 수 있어요.',
+    includeCreateOption: allowRemoteInitialization,
+    message: allowRemoteInitialization
+      ? '사용할 Cloudflare D1 database를 골라 주세요. 새 database도 바로 만들 수 있어요.'
+      : '사용할 Cloudflare D1 database를 골라 주세요.',
   })
   const d1Database =
     selectedD1Database === CREATE_CLOUDFLARE_D1_DATABASE_SENTINEL
@@ -1092,8 +1122,10 @@ export async function provisionCloudflareWorker(
     withAuthRetry((authToken) => listCloudflareR2Buckets(authToken, accountId)),
   )
   const selectedR2Bucket = await selectCloudflareR2Bucket(options.prompt, existingR2Buckets, {
-    includeCreateOption: true,
-    message: '사용할 Cloudflare R2 bucket을 골라 주세요. 새 bucket도 바로 만들 수 있어요.',
+    includeCreateOption: allowRemoteInitialization,
+    message: allowRemoteInitialization
+      ? '사용할 Cloudflare R2 bucket을 골라 주세요. 새 bucket도 바로 만들 수 있어요.'
+      : '사용할 Cloudflare R2 bucket을 골라 주세요.',
   })
   const r2BucketName =
     selectedR2Bucket === CREATE_CLOUDFLARE_R2_BUCKET_SENTINEL
@@ -1130,7 +1162,10 @@ export async function provisionCloudflareWorker(
     r2BucketName,
   })
 
-  const executionOrder = buildCloudflareProvisionExecutionOrder(resolvedProjectMode)
+  const executionOrder = buildCloudflareProvisionExecutionOrder(
+    resolvedProjectMode,
+    shouldInitializeExistingRemoteContent,
+  )
   let accountSubdomain: string | null = null
 
   for (const step of executionOrder) {
@@ -1192,6 +1227,7 @@ export async function provisionCloudflareWorker(
         d1DatabaseName: d1Database.name,
         r2BucketName,
         mode: resolvedProjectMode,
+        didInitializeRemoteContent: allowRemoteInitialization,
       }
     }
   }
@@ -1206,6 +1242,7 @@ export async function provisionCloudflareWorker(
     d1DatabaseName: d1Database.name,
     r2BucketName,
     mode: resolvedProjectMode,
+    didInitializeRemoteContent: allowRemoteInitialization,
   }
 }
 
@@ -1252,7 +1289,9 @@ export async function finalizeCloudflareProvisioning(options: {
             ? 'frontend/.env.local 과 backoffice/.env.local 에 Cloudflare API URL을 적어뒀어요.'
             : 'frontend/.env.local 에 Cloudflare API URL을 적어뒀어요.',
           'server/.env.local 에는 Cloudflare Worker, D1, R2 메타데이터를 적어뒀어요.',
-          'server/package.json 의 deploy 로 원격 Worker를 다시 배포할 수 있어요.',
+          ...(options.provisionedWorker.didInitializeRemoteContent
+            ? ['server/package.json 의 deploy 로 원격 Worker를 다시 배포할 수 있어요.']
+            : ['기존 Cloudflare Worker를 골라서 원격 초기화는 자동으로 건너뛰었어요.']),
           `Cloudflare D1 binding은 ${CLOUDFLARE_D1_BINDING_NAME}, R2 binding은 ${CLOUDFLARE_R2_BINDING_NAME} 을 써요.`,
           ...(!hasApiToken ? ['', ...buildCloudflareApiTokenGuideLines()] : []),
         ].join('\n'),
@@ -1269,6 +1308,7 @@ export async function finalizeCloudflareProvisioning(options: {
       d1DatabaseId: options.provisionedWorker.d1DatabaseId,
       d1DatabaseName: options.provisionedWorker.d1DatabaseName,
       r2BucketName: options.provisionedWorker.r2BucketName,
+      didInitializeRemoteContent: options.provisionedWorker.didInitializeRemoteContent,
     }),
   ]
 }

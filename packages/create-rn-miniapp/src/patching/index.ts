@@ -1147,7 +1147,9 @@ function renderSupabaseServerReadme(
     '## 운영 메모',
     '',
     '- 원격 SQL push를 계속하려면 `server/.env.local`의 `SUPABASE_DB_PASSWORD`를 채워주세요.',
-    '- 기존 Supabase 프로젝트에 연결했다면 원격 migration history와 기존 함수 상태를 존중해서 DB 반영과 기본 Edge Function 배포를 자동으로 건너뛰어요. 이 경우 필요할 때 `db:apply`, `functions:deploy`를 직접 실행해 주세요.',
+    '- 기존 Supabase 프로젝트에 연결하면 먼저 원격 초기화 여부를 물어봐요.',
+    '- 기존 프로젝트에서 원격 초기화를 건너뛰었다면 DB 반영과 기본 Edge Function 배포는 자동으로 하지 않아요. 이 경우 필요할 때 `db:apply`, `functions:deploy`를 직접 실행해 주세요.',
+    '- 기존 프로젝트에서 원격 초기화를 허용했다면 `db:apply`, `functions:deploy`까지 이어서 반영해요.',
     '- 다른 Edge Function을 추가하려면 `supabase functions new <name> --workdir .`로 생성한 뒤 `functions:deploy`를 다시 실행하면 돼요.',
     '- frontend/backoffice의 `.env.local`은 server provisioning 결과와 같은 Supabase project를 가리키게 맞춰두는 걸 권장해요.',
     '',
@@ -1243,6 +1245,7 @@ function renderCloudflareServerReadme(
     '',
     '- `worker-configuration.d.ts`는 `wrangler types`가 생성하는 파일이에요.',
     '- `server/.env.local`은 Cloudflare account/worker/D1/R2 메타데이터를 기록해요.',
+    '- 기존 Worker에 연결하면 먼저 원격 초기화 여부를 물어봐요. 원격 초기화를 건너뛰면 Worker 재배포와 `workers.dev` 활성화는 자동으로 하지 않아요.',
     '- `wrangler.jsonc`는 원격 deploy 기준 설정이고, `wrangler.vitest.jsonc`는 local D1/R2 binding으로 테스트를 돌리기 위한 설정이에요.',
     ...(trpcEnabled
       ? [
@@ -1325,6 +1328,7 @@ function renderFirebaseServerReadme(
     '## 운영 메모',
     '',
     '- `server/.env.local`의 `FIREBASE_PROJECT_ID`, `FIREBASE_FUNCTION_REGION`은 배포 기준 메타데이터예요.',
+    '- 기존 Firebase 프로젝트에 연결하면 먼저 원격 초기화 여부를 물어봐요. 원격 초기화를 건너뛰면 Firestore 준비와 Functions/Firestore 배포는 자동으로 하지 않아요.',
     '- `server/.env.local`의 `FIREBASE_TOKEN` 또는 `GOOGLE_APPLICATION_CREDENTIALS`를 채우면 비대화형 deploy에 사용할 수 있어요.',
     '- `server/functions/package.json`의 Node runtime은 Firebase 지원 범위에 맞춰 `22`를 사용해요.',
     '- `server/functions/src/index.ts`는 `api` HTTP 함수와 `getPublicStatus` callable function을 함께 배포해요.',

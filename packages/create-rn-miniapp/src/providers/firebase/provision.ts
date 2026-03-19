@@ -12,6 +12,7 @@ import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import { extractJsonPayload } from '../../providers/supabase/provision.js'
+import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
 import {
   FIREBASE_DEFAULT_FUNCTION_REGION,
   patchFirebaseFunctionRegion,
@@ -72,6 +73,7 @@ export type ProvisionedFirebaseProject = {
   config: FirebaseWebSdkConfig | null
   functionRegion: string
   mode: ServerProjectMode
+  didInitializeRemoteContent: boolean
 }
 
 type ProvisionFirebaseProjectOptions = {
@@ -1653,6 +1655,7 @@ export function formatFirebaseManualSetupNote(options: {
   functionRegion: string
   hasConfiguredToken: boolean
   hasConfiguredCredentials: boolean
+  didInitializeRemoteContent?: boolean
 }) {
   const env = createFirebaseEnvValues(
     {
@@ -1668,12 +1671,19 @@ export function formatFirebaseManualSetupNote(options: {
 
   const lines = [
     'Firebase Web SDK 설정을 자동으로 가져오지 못했어요. 아래 URL에서 앱 설정을 확인한 뒤 직접 넣어 주세요.',
+  ]
+
+  if (options.didInitializeRemoteContent === false) {
+    lines.push('', '기존 Firebase 프로젝트를 골라서 원격 초기화는 자동으로 건너뛰었어요.')
+  }
+
+  lines.push(
     '',
     FIREBASE_CONSOLE_SETTINGS_URL(options.projectId),
     '',
     path.join(options.targetRoot, 'frontend', '.env.local'),
     env.frontend.trimEnd(),
-  ]
+  )
 
   if (options.hasBackoffice) {
     lines.push(
@@ -1707,6 +1717,13 @@ export function formatFirebaseManualSetupNote(options: {
   } satisfies ProvisioningNote
 }
 
+export function shouldInitializeFirebaseRemoteContent(
+  mode: ServerProjectMode,
+  shouldInitializeExistingRemoteContent = false,
+) {
+  return mode === 'create' || shouldInitializeExistingRemoteContent
+}
+
 export async function provisionFirebaseProject(
   options: ProvisionFirebaseProjectOptions,
 ): Promise<ProvisionedFirebaseProject | null> {
@@ -1716,6 +1733,7 @@ export async function provisionFirebaseProject(
 
   let selectedProjectId: string | null = null
   let resolvedProjectMode = options.projectMode
+  let shouldInitializeExistingRemoteContent = false
 
   if (resolvedProjectMode === null) {
     const selectedProject = await selectFirebaseProject(options.prompt, projects, {
@@ -1747,15 +1765,29 @@ export async function provisionFirebaseProject(
     throw new Error('연결할 Firebase 프로젝트를 정하지 못했어요.')
   }
 
-  await ensureFirebaseProjectIsOnBlazePlan({
-    cwd: options.targetRoot,
-    projectId: selectedProjectId,
-    prompt: options.prompt,
-  })
-  await ensureFirebaseBuildServiceAccountPermissions({
-    cwd: options.targetRoot,
-    projectId: selectedProjectId,
-  })
+  if (resolvedProjectMode === 'existing') {
+    shouldInitializeExistingRemoteContent = await promptShouldInitializeExistingRemoteContent(
+      options.prompt,
+      '이 Firebase 프로젝트의 원격에 있는 내용을 초기화할까요?',
+    )
+  }
+
+  const didInitializeRemoteContent = shouldInitializeFirebaseRemoteContent(
+    resolvedProjectMode,
+    shouldInitializeExistingRemoteContent,
+  )
+
+  if (didInitializeRemoteContent) {
+    await ensureFirebaseProjectIsOnBlazePlan({
+      cwd: options.targetRoot,
+      projectId: selectedProjectId,
+      prompt: options.prompt,
+    })
+    await ensureFirebaseBuildServiceAccountPermissions({
+      cwd: options.targetRoot,
+      projectId: selectedProjectId,
+    })
+  }
 
   const existingApps = await listFirebaseWebApps(
     options.packageManager,
@@ -1764,8 +1796,10 @@ export async function provisionFirebaseProject(
   )
   let selectedAppId: string | null = null
   const selectedApp = await selectFirebaseWebApp(options.prompt, existingApps, {
-    includeCreateOption: true,
-    message: '사용할 Firebase Web App을 골라 주세요. 새 Web App도 바로 만들 수 있어요.',
+    includeCreateOption: didInitializeRemoteContent,
+    message: didInitializeRemoteContent
+      ? '사용할 Firebase Web App을 골라 주세요. 새 Web App도 바로 만들 수 있어요.'
+      : '사용할 Firebase Web App을 골라 주세요.',
   })
 
   if (selectedApp === CREATE_FIREBASE_APP_SENTINEL) {
@@ -1798,16 +1832,18 @@ export async function provisionFirebaseProject(
 
   const functionRegion = await selectFirebaseFunctionRegion(options.prompt)
 
-  await ensureFirebaseFirestoreReady({
-    cwd: options.targetRoot,
-    projectId: selectedProjectId,
-    databaseLocation: functionRegion,
-  })
-
   await patchFirebaseServerProjectId(options.targetRoot, selectedProjectId)
   await patchFirebaseFunctionRegion(options.targetRoot, functionRegion)
   await installFirebaseFunctionsDependencies(options.packageManager, functionsRoot)
-  await deployFirebaseFunctions(options.packageManager, serverRoot, selectedProjectId)
+
+  if (didInitializeRemoteContent) {
+    await ensureFirebaseFirestoreReady({
+      cwd: options.targetRoot,
+      projectId: selectedProjectId,
+      databaseLocation: functionRegion,
+    })
+    await deployFirebaseFunctions(options.packageManager, serverRoot, selectedProjectId)
+  }
 
   let config: FirebaseWebSdkConfig | null = null
 
@@ -1828,6 +1864,7 @@ export async function provisionFirebaseProject(
     config,
     functionRegion,
     mode: resolvedProjectMode,
+    didInitializeRemoteContent,
   }
 }
 
@@ -1868,6 +1905,9 @@ export async function finalizeFirebaseProvisioning(options: {
             ? 'frontend/.env.local 과 backoffice/.env.local 에 Firebase Web SDK 연결 값을 적어뒀어요.'
             : 'frontend/.env.local 에 Firebase Web SDK 연결 값을 적어뒀어요.',
           'server/.env.local 에는 Firebase project 메타데이터를 적어뒀어요.',
+          ...(options.provisionedProject.didInitializeRemoteContent
+            ? []
+            : ['', '기존 Firebase 프로젝트를 골라서 원격 초기화는 자동으로 건너뛰었어요.']),
           '',
           ...createFirebaseDeployAuthLines({
             packageManager: options.packageManager,
@@ -1889,6 +1929,7 @@ export async function finalizeFirebaseProvisioning(options: {
       functionRegion: options.provisionedProject.functionRegion,
       hasConfiguredToken: serverEnv.hasConfiguredToken,
       hasConfiguredCredentials: serverEnv.hasConfiguredCredentials,
+      didInitializeRemoteContent: options.provisionedProject.didInitializeRemoteContent,
     }),
   ]
 }
