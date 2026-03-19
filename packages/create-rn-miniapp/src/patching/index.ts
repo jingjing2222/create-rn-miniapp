@@ -1328,7 +1328,7 @@ function renderFirebaseServerReadme(
     '## 운영 메모',
     '',
     '- `server/.env.local`의 `FIREBASE_PROJECT_ID`, `FIREBASE_FUNCTION_REGION`은 배포 기준 메타데이터예요.',
-    '- 기존 Firebase 프로젝트에 연결하면 먼저 원격 초기화 여부를 물어봐요. 원격 초기화를 건너뛰면 Firestore 준비와 Functions/Firestore 배포는 자동으로 하지 않아요.',
+    '- 기존 Firebase 프로젝트에 연결하면 먼저 원격 초기화 여부를 물어봐요. 원격 초기화를 건너뛰어도 Blaze와 build IAM 확인은 먼저 하고, Firestore 준비와 Functions/Firestore 배포만 자동으로 건너뛰어요.',
     '- `server/.env.local`의 `FIREBASE_TOKEN` 또는 `GOOGLE_APPLICATION_CREDENTIALS`를 채우면 비대화형 deploy에 사용할 수 있어요.',
     '- `server/functions/package.json`의 Node runtime은 Firebase 지원 범위에 맞춰 `22`를 사용해요.',
     '- `server/functions/src/index.ts`는 `api` HTTP 함수와 `getPublicStatus` callable function을 함께 배포해요.',

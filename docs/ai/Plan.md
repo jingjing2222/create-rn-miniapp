@@ -5,6 +5,7 @@
 2. 방향
    - 기존 `supabase`, `firebase`, `cloudflare` 프로젝트/Worker를 고른 경우에는 공통으로 `원격에 있는 내용을 초기화할까요?`를 먼저 묻는다.
    - `건너뛸게요`를 고르면 provider별 deploy/init 단계는 수행하지 않고, local env와 문서만 준비한다.
+   - Firebase는 기존 프로젝트에서 원격 초기화를 건너뛰어도 Blaze와 build IAM 확인은 계속 하고, Firestore 준비와 deploy만 건너뛴다.
    - `초기화할게요`를 고르면 지금처럼 공식 CLI 경로를 통해 원격 반영을 진행한다.
    - 마지막 note와 README/provider guide/generated server README에도 이번 실행에서 원격 초기화를 건너뛰었는지 남긴다.
 3. 테스트
