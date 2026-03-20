@@ -135,6 +135,18 @@ function getMarkdownNodeText(node: MarkdownNode) {
   return mdastToString(node as never).trim()
 }
 
+function getMarkdownNodeOwnText(node: MarkdownNode) {
+  if (!Array.isArray(node.children)) {
+    return getMarkdownNodeText(node)
+  }
+
+  return node.children
+    .filter((child) => child.type !== 'list')
+    .map((child) => getMarkdownNodeText(child))
+    .join(' ')
+    .trim()
+}
+
 function filterHeadingSections(
   root: MarkdownRoot,
   shouldKeepSection: (headingText: string) => boolean,
@@ -199,7 +211,10 @@ function filterMarkdownNode(
   }
 
   if (node.type === 'listItem') {
-    if (text === 'import boundary:' && !children.some((child) => child.type === 'list')) {
+    if (
+      getMarkdownNodeOwnText({ ...node, children }) === 'import boundary:' &&
+      !children.some((child) => child.type === 'list')
+    ) {
       return null
     }
 
@@ -351,7 +366,9 @@ function renderDynamicMarkdownSource(
           case 'frontend ↔ server 직접 import 금지':
             return options.serverProvider !== null
           case 'backoffice가 기대하는 env와 연결값을 제공한다.':
+            return options.hasBackoffice
           case 'backoffice ↔ server 직접 import 금지':
+            return options.hasBackoffice && options.serverProvider !== null
           case 'Backoffice React workflow: .agents/skills/optional/backoffice-react/SKILL.md':
             return options.hasBackoffice
           case 'shared contract가 필요하면 packages/contracts, packages/app-router로 올린다.':

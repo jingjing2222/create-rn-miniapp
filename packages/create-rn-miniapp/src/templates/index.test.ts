@@ -535,6 +535,7 @@ test('applyDocsTemplates omits optional workspace and skill references for base-
   assert.doesNotMatch(workspaceTopology, /optional provider workspace/)
   assert.doesNotMatch(workspaceTopology, /backoffice/)
   assert.doesNotMatch(workspaceTopology, /packages\/contracts/)
+  assert.doesNotMatch(workspaceTopology, /import boundary:/)
   assert.doesNotMatch(workspaceTopology, /provider 운영 가이드/)
   assert.equal(
     await pathExists(path.join(targetRoot, 'docs', 'engineering', 'repo-contract.md')),
@@ -604,6 +605,28 @@ test('applyDocsTemplates includes only the selected optional workspace and skill
   )
   assert.match(workspaceTopology, /Cloudflare provider 운영 가이드/)
   assert.doesNotMatch(workspaceTopology, /Supabase provider 운영 가이드/)
+})
+
+test('applyDocsTemplates keeps backoffice-only workspaces free of server-only topology text', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+  await materializeDocsWorkspaceState(targetRoot, {
+    hasBackoffice: true,
+  })
+
+  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+
+  const workspaceTopology = await readFile(
+    path.join(targetRoot, 'docs', 'engineering', 'workspace-topology.md'),
+    'utf8',
+  )
+
+  assert.match(workspaceTopology, /### backoffice/)
+  assert.match(workspaceTopology, /Backoffice React workflow/)
+  assert.doesNotMatch(workspaceTopology, /### server/)
+  assert.doesNotMatch(workspaceTopology, /server runtime 구현을 직접 import하지 않는다/)
+  assert.doesNotMatch(workspaceTopology, /backoffice ↔ server 직접 import 금지/)
+  assert.doesNotMatch(workspaceTopology, /provider workspace가 값을 정의/)
 })
 
 test('applyDocsTemplates can rerender docs after optional workspaces are added later', async (t) => {

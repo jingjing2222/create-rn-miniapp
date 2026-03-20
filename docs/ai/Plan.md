@@ -1,3 +1,20 @@
+## 다음 작업: markdown AST 문서 렌더 후속 리뷰 지적 2건 수정하기
+1. 문제
+   - base-only scaffold에서 `docs/engineering/workspace-topology.md`에 빈 `- import boundary:` bullet이 남는다.
+   - backoffice-only scaffold에서 실제 `server/` workspace가 없는데도 `backoffice ↔ server 직접 import 금지`가 남아 no-server 출력 요구를 깨뜨린다.
+2. 방향
+   - 두 현상을 실제 generated markdown 기준으로 재현하는 테스트를 먼저 추가한다.
+   - `workspace-topology` AST 필터에서 parent list item의 자식 제거 여부를 문자열 비교가 아니라 child structure 기준으로 판단한다.
+   - backoffice 관련 bullet 중 server workspace를 전제로 하는 문구는 `hasBackoffice`만이 아니라 실제 server 존재 조건도 함께 보게 수정한다.
+3. 테스트
+   - base-only docs 렌더 테스트에 `import boundary:` 잔재 부재를 실패 테스트로 추가한다.
+   - backoffice-only docs 렌더 테스트를 추가해 `server` 관련 문구와 `backoffice ↔ server` 경계 문장이 없는지 확인한다.
+   - 수정 후 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - base-only 출력에 빈 `import boundary:` bullet이 남지 않는다.
+   - backoffice-only 출력에 존재하지 않는 `server` workspace를 전제한 문구가 남지 않는다.
+   - `pnpm verify`를 통과한다.
+
 ## 다음 작업: optional workspace에 맞춰 계약 문서와 skill 라우팅도 markdown AST 기준으로 동적 생성하기
 1. 문제
    - 지금 워킹트리의 동적 문서 렌더링은 marker comment를 템플릿 본문에 심고 string replace로 잘라내는 방식이라 템플릿 가독성이 떨어지고 유지보수성이 약하다.
