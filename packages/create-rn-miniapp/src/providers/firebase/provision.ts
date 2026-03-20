@@ -2,23 +2,23 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { log } from '@clack/prompts'
+import type { CliPrompter } from '../../cli.js'
 import {
-  runCommand,
-  runCommandWithOutput,
   type CommandOutput,
   type CommandSpec,
+  runCommand,
+  runCommandWithOutput,
 } from '../../commands.js'
-import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
-import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import { extractJsonPayload } from '../../providers/supabase/provision.js'
-import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
+import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import {
   FIREBASE_DEFAULT_FUNCTION_REGION,
   patchFirebaseFunctionRegion,
   patchFirebaseServerProjectId,
   pathExists,
 } from '../../templates/index.js'
+import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
 
 type FirebaseProject = {
   projectId: string

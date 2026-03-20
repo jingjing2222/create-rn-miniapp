@@ -4,6 +4,7 @@ import { log } from '@clack/prompts'
 import { buildAddCommandPhases, buildCreateCommandPhases, runCommand } from '../commands.js'
 import { getPackageManagerAdapter } from '../package-manager.js'
 import { patchBackofficeWorkspace, patchFrontendWorkspace } from '../patching/index.js'
+import type { ProvisioningNote } from '../server-project.js'
 import {
   applyDocsTemplates,
   applyRootTemplates,
@@ -12,7 +13,14 @@ import {
   syncOptionalDocsTemplates,
   syncRootWorkspaceManifest,
 } from '../templates/index.js'
-import type { ProvisioningNote } from '../server-project.js'
+import {
+  createTemplateTokens,
+  maybePatchServerWorkspace,
+  maybePrepareServerWorkspace,
+  maybePrepareTrpcWorkspace,
+  maybeWriteNpmWorkspaceConfig,
+  resolveRootWorkspaces,
+} from './helpers.js'
 import { buildRootFinalizePlan, buildRootGitSetupPlan } from './orders.js'
 import {
   maybeFinalizeCloudflareProvisioning,
@@ -22,14 +30,6 @@ import {
   maybeProvisionFirebaseProject,
   maybeProvisionSupabaseProject,
 } from './provisioning.js'
-import {
-  createTemplateTokens,
-  maybePrepareTrpcWorkspace,
-  maybeWriteNpmWorkspaceConfig,
-  maybePatchServerWorkspace,
-  maybePrepareServerWorkspace,
-  resolveRootWorkspaces,
-} from './helpers.js'
 import type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
 import {
   createWorktreeLayoutNote,
@@ -37,12 +37,13 @@ import {
   MAIN_WORKTREE_DIRECTORY,
 } from './worktree.js'
 
-export type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
 export {
+  buildCreateExecutionOrder,
+  buildCreateLifecycleOrder,
   buildRootFinalizePlan,
   buildRootGitSetupPlan,
 } from './orders.js'
-export { buildCreateExecutionOrder, buildCreateLifecycleOrder } from './orders.js'
+export type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
 
 export async function scaffoldWorkspace(options: ScaffoldOptions) {
   const controlRoot = path.resolve(options.outputDir, options.appName)
@@ -171,7 +172,10 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
   }
 
   if (options.withBackoffice && (await pathExists(path.join(workspaceRoot, 'backoffice')))) {
-    await maybeWriteNpmWorkspaceConfig(path.join(workspaceRoot, 'backoffice'), options.packageManager)
+    await maybeWriteNpmWorkspaceConfig(
+      path.join(workspaceRoot, 'backoffice'),
+      options.packageManager,
+    )
   }
 
   if (options.withBackoffice || trpcEnabled) {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -465,7 +465,11 @@ test('resolveCliOptions accepts an explicit server-provider without extra server
   assert.equal(resolved.withServer, true)
   assert.equal(resolved.serverProvider, 'cloudflare')
   assert.equal(resolved.serverProjectMode, null)
-  assert.deepEqual(selectMessages, ['`tRPC`도 같이 이어드릴까요?', '`backoffice`도 같이 만들까요?', '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?'])
+  assert.deepEqual(selectMessages, [
+    '`tRPC`도 같이 이어드릴까요?',
+    '`backoffice`도 같이 만들까요?',
+    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+  ])
 })
 
 test('resolveCliOptions rejects server-project-mode without server-provider', async () => {
@@ -1366,7 +1370,9 @@ test('createClackPrompter turns prompt cancellation into a user-facing error', a
 
 test('resolveCliOptions resolves worktree to false when yes flag is set', async () => {
   const prompts: CliPrompter = {
-    async text() { return '' },
+    async text() {
+      return ''
+    },
     async select(options) {
       return options.options[0]?.value as never
     },
@@ -1393,7 +1399,9 @@ test('resolveCliOptions resolves worktree to false when yes flag is set', async 
 
 test('resolveCliOptions resolves worktree to true when explicit worktree flag is set', async () => {
   const prompts: CliPrompter = {
-    async text() { return '' },
+    async text() {
+      return ''
+    },
     async select(options) {
       return options.options[0]?.value as never
     },

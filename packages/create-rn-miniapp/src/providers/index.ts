@@ -1,14 +1,14 @@
 import path from 'node:path'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import {
-  ensureBackofficeFirebaseBootstrap,
   ensureBackofficeCloudflareBootstrap,
+  ensureBackofficeFirebaseBootstrap,
   ensureBackofficeSupabaseBootstrap,
-  ensureFrontendFirebaseBootstrap,
   ensureFrontendCloudflareBootstrap,
+  ensureFrontendFirebaseBootstrap,
   ensureFrontendSupabaseBootstrap,
-  patchFirebaseServerWorkspace,
   patchCloudflareServerWorkspace,
+  patchFirebaseServerWorkspace,
   patchSupabaseServerWorkspace,
 } from '../patching/index.js'
 import {

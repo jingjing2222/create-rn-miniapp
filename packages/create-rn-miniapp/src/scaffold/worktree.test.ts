@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 import type { CliPrompter } from '../cli.js'
 import {
-  initBareWorktreeLayout,
   createWorktreeLayoutNote,
+  initBareWorktreeLayout,
   MAIN_WORKTREE_DIRECTORY,
   resolveCreateWorktreeLayout,
 } from './worktree.js'
@@ -116,7 +116,10 @@ test('initBareWorktreeLayout creates a bare repo with a main worktree and contro
     assert.ok((await stat(workspaceRoot)).isDirectory())
     assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /cd main/)
     assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /wt status/)
-    assert.match(await readFile(path.join(controlRoot, 'README.md'), 'utf8'), /실제 MiniApp repo는 `main\/` 아래에 있어요/)
+    assert.match(
+      await readFile(path.join(controlRoot, 'README.md'), 'utf8'),
+      /실제 MiniApp repo는 `main\/` 아래에 있어요/,
+    )
     assert.equal(runGit(workspaceRoot, ['symbolic-ref', '--short', 'HEAD']), 'main')
     assert.match(runGit(controlRoot, ['worktree', 'list', '--porcelain']), /main$/m)
   } finally {

@@ -1,5 +1,4 @@
 import {
-  type SwcExpression,
   cloneAstNode,
   isCallExpression,
   isIdentifier,
@@ -9,6 +8,7 @@ import {
   parseStatements,
   parseTypeScriptModule,
   printTypeScriptModule,
+  type SwcExpression,
 } from './shared.js'
 
 function isDocumentGetElementByIdRoot(expression: SwcExpression | undefined) {

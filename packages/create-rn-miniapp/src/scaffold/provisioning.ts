@@ -1,24 +1,24 @@
 import path from 'node:path'
 import type { CliPrompter } from '../cli.js'
 import type { PackageManager } from '../package-manager.js'
-import type { ProvisioningNote, ServerProjectMode } from '../server-project.js'
-import type { ServerProvider } from '../providers/index.js'
-import { pathExists } from '../templates/index.js'
 import {
   finalizeCloudflareProvisioning,
-  provisionCloudflareWorker,
   type ProvisionedCloudflareWorker,
+  provisionCloudflareWorker,
 } from '../providers/cloudflare/provision.js'
 import {
   finalizeFirebaseProvisioning,
-  provisionFirebaseProject,
   type ProvisionedFirebaseProject,
+  provisionFirebaseProject,
 } from '../providers/firebase/provision.js'
+import type { ServerProvider } from '../providers/index.js'
 import {
   finalizeSupabaseProvisioning,
-  provisionSupabaseProject,
   type ProvisionedSupabaseProject,
+  provisionSupabaseProject,
 } from '../providers/supabase/provision.js'
+import type { ProvisioningNote, ServerProjectMode } from '../server-project.js'
+import { pathExists } from '../templates/index.js'
 
 export async function maybeProvisionSupabaseProject(options: {
   targetRoot: string

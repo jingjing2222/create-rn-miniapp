@@ -1,13 +1,13 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { log } from '@clack/prompts'
+import type { CliPrompter } from '../../cli.js'
 import {
-  runCommand,
-  runCommandWithOutput,
   type CommandOutput,
   type CommandSpec,
+  runCommand,
+  runCommandWithOutput,
 } from '../../commands.js'
-import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import { pathExists } from '../../templates/index.js'

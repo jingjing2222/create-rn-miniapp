@@ -114,9 +114,7 @@ function assertMinimumGitVersion(minimum: string) {
   const [minMajor, minMinor] = minimum.split('.').map(Number)
 
   if (curMajor < minMajor || (curMajor === minMajor && curMinor < minMinor)) {
-    throw new Error(
-      `worktree 레이아웃에는 git ${minimum} 이상이 필요해요. 현재: ${current}`,
-    )
+    throw new Error(`worktree 레이아웃에는 git ${minimum} 이상이 필요해요. 현재: ${current}`)
   }
 }
 

@@ -1,7 +1,7 @@
 import type { CliPrompter } from '../cli.js'
 import type { PackageManager } from '../package-manager.js'
-import type { ServerProjectMode } from '../server-project.js'
 import type { ServerProvider } from '../providers/index.js'
+import type { ServerProjectMode } from '../server-project.js'
 
 export type ScaffoldOptions = {
   prompt: CliPrompter

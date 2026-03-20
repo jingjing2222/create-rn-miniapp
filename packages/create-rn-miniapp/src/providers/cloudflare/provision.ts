@@ -4,13 +4,13 @@ import path from 'node:path'
 import process from 'node:process'
 import { log } from '@clack/prompts'
 import { parse } from 'jsonc-parser'
+import type { CliPrompter } from '../../cli.js'
+import { type CommandSpec, runCommand, runCommandWithOutput } from '../../commands.js'
+import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import {
   createCloudflareVitestWranglerConfigSource,
   patchWranglerConfigSource,
 } from '../../patching/jsonc.js'
-import { runCommand, runCommandWithOutput, type CommandSpec } from '../../commands.js'
-import type { CliPrompter } from '../../cli.js'
-import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import { pathExists } from '../../templates/index.js'
 import { promptShouldInitializeExistingRemoteContent } from '../shared.js'

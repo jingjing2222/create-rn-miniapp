@@ -4,8 +4,8 @@ import test from 'node:test'
 import {
   buildCreateExecutionOrder,
   buildCreateLifecycleOrder,
-  buildRootGitSetupPlan,
   buildRootFinalizePlan,
+  buildRootGitSetupPlan,
 } from './index.js'
 
 test('buildRootFinalizePlan keeps pnpm root finalize steps minimal', () => {

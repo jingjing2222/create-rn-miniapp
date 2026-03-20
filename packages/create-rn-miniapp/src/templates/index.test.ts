@@ -1129,7 +1129,10 @@ test('syncOptionalDocsTemplates injects worktree docs and golden rule when workt
   assert.match(agents, /8\. Worktree discipline:/)
   assert.match(docsIndex, /Worktree workflow/)
   assert.match(harnessGuide, /wt add -c/)
-  assert.doesNotMatch(harnessGuide, /14\. 브랜치 생성, 커밋, 브랜치 푸시, PR 생성 순으로 마무리한다\./)
+  assert.doesNotMatch(
+    harnessGuide,
+    /14\. 브랜치 생성, 커밋, 브랜치 푸시, PR 생성 순으로 마무리한다\./,
+  )
   assert.equal(
     await pathExists(path.join(targetRoot, 'docs', 'engineering', 'worktree-workflow.md')),
     true,

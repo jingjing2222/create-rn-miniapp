@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { getPackageManagerAdapter } from '../package-manager.js'
 import type { PackageManager } from '../package-manager.js'
+import { getPackageManagerAdapter } from '../package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
 import type { TemplateTokens } from './index.js'
 

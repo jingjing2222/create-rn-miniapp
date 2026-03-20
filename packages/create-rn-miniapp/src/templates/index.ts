@@ -1,12 +1,12 @@
-import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { patchRootPackageJsonSource } from '../patching/package-json.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import { patchRootPackageJsonSource } from '../patching/package-json.js'
 import {
   APP_ROUTER_WORKSPACE_PATH,
-  CONTRACTS_WORKSPACE_PATH,
   applyTrpcWorkspaceTemplate as applyTrpcWorkspaceTemplateImpl,
+  CONTRACTS_WORKSPACE_PATH,
 } from './trpc.js'
 
 const ROOT_WORKSPACE_ORDER = [
