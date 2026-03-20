@@ -43,7 +43,6 @@ export type PackageManagerAdapter = {
   rootFormatScript(): string
   rootFormatCheckScript(): string
   rootLintScript(): string
-  rootVerifyScript(): string
   verifyCommand(): string
 }
 
@@ -152,9 +151,6 @@ const pnpmAdapter: PackageManagerAdapter = {
   rootLintScript() {
     return 'pnpm exec biome lint .'
   },
-  rootVerifyScript() {
-    return 'pnpm format:check && pnpm lint && pnpm typecheck && pnpm test'
-  },
   verifyCommand() {
     return 'pnpm verify'
   },
@@ -245,9 +241,6 @@ const yarnAdapter: PackageManagerAdapter = {
   rootLintScript() {
     return 'yarn exec biome lint .'
   },
-  rootVerifyScript() {
-    return 'yarn format:check && yarn lint && yarn typecheck && yarn test'
-  },
   verifyCommand() {
     return 'yarn verify'
   },
@@ -335,9 +328,6 @@ const npmAdapter: PackageManagerAdapter = {
   rootLintScript() {
     return 'npm exec -- biome lint .'
   },
-  rootVerifyScript() {
-    return 'npm run format:check && npm run lint && npm run typecheck && npm run test'
-  },
   verifyCommand() {
     return 'npm run verify'
   },
@@ -420,9 +410,6 @@ const bunAdapter: PackageManagerAdapter = {
   },
   rootLintScript() {
     return 'bunx biome lint .'
-  },
-  rootVerifyScript() {
-    return 'bun run format:check && bun run lint && bun run typecheck && bun run test'
   },
   verifyCommand() {
     return 'bun run verify'

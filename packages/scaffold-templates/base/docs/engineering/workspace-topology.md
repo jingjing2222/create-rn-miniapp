@@ -1,9 +1,9 @@
 # Workspace Topology
 
-## {{workspaceTopologyRootHeading}}
+## 루트 구조
 
-## {{workspaceTopologyRolesHeading}}
+## 역할 분리
 
-## {{workspaceTopologyOwnershipHeading}}
+## ownership
 
-## {{workspaceTopologySkillsHeading}}
+## 참고 Skill

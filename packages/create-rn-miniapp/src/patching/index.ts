@@ -4,8 +4,17 @@ import path from 'node:path'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
 import {
+  createCloudflareServerScriptCatalog,
+  createFirebaseServerScriptCatalog,
+  createServerScriptRecord,
+  createSupabaseServerScriptCatalog,
+  renderServerReadmeScriptLines,
+  type ServerScriptCatalogEntry,
+} from '../server-script-catalog.js'
+import {
   applyServerPackageTemplate,
   applyWorkspaceProjectTemplate,
+  FIREBASE_DEFAULT_FUNCTION_REGION,
   getFirebaseWebSdkVersion,
   pathExists,
   removePathIfExists,
@@ -1097,12 +1106,16 @@ function renderCloudflareVitestConfigSource() {
   ].join('\n')
 }
 
-function renderSupabaseServerReadme(
-  tokens: TemplateTokens,
-  options?: {
-    accessTokenGuideImagePaths?: string[] | null
-  },
-) {
+function renderSupabaseServerReadme(options?: {
+  packageManagerRunCommand: string
+  scriptCatalog: ServerScriptCatalogEntry[]
+  accessTokenGuideImagePaths?: string[] | null
+}) {
+  const scriptLines = renderServerReadmeScriptLines(
+    options?.scriptCatalog ?? [],
+    options?.packageManagerRunCommand ?? 'pnpm',
+  )
+
   return [
     '# server',
     '',
@@ -1124,14 +1137,7 @@ function renderSupabaseServerReadme(
     '',
     '## 주요 스크립트',
     '',
-    `- \`cd server && ${tokens.packageManagerRunCommand} dev\`: 로컬 Supabase stack을 시작해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} typecheck\`: \`supabase/functions/*/index.ts\` entrypoint를 \`deno check\`로 정적 검사해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} db:apply\`: \`server/.env.local\`의 \`SUPABASE_DB_PASSWORD\`를 사용해 linked remote project에 migration을 적용해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} functions:serve\`: \`server/.env.local\`을 주입해 Edge Functions를 로컬에서 serve해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} functions:deploy\`: \`server/.env.local\`의 \`SUPABASE_PROJECT_REF\`를 사용해 Edge Functions를 원격 Supabase project에 배포해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} db:apply:local\`: 로컬 Supabase DB에 migration을 적용해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} db:reset\`: 로컬 Supabase DB를 리셋해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} test\`: placeholder 테스트를 실행해요.`,
+    ...scriptLines,
     '',
     '## Miniapp / Backoffice 연결',
     '',
@@ -1176,14 +1182,17 @@ function renderSupabaseServerReadme(
   ].join('\n')
 }
 
-function renderCloudflareServerReadme(
-  tokens: TemplateTokens,
-  options?: {
-    tokenGuideImagePath?: string | null
-    trpc?: boolean
-  },
-) {
+function renderCloudflareServerReadme(options?: {
+  packageManagerRunCommand: string
+  scriptCatalog: ServerScriptCatalogEntry[]
+  tokenGuideImagePath?: string | null
+  trpc?: boolean
+}) {
   const trpcEnabled = options?.trpc === true
+  const scriptLines = renderServerReadmeScriptLines(
+    options?.scriptCatalog ?? [],
+    options?.packageManagerRunCommand ?? 'pnpm',
+  )
 
   return [
     '# server',
@@ -1206,11 +1215,7 @@ function renderCloudflareServerReadme(
     '',
     '## 주요 스크립트',
     '',
-    `- \`cd server && ${tokens.packageManagerRunCommand} dev\`: 로컬 Worker 개발 서버를 실행해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} build\`: \`wrangler deploy --dry-run\`으로 번들을 검증해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} typecheck\`: \`wrangler types\`와 TypeScript 검사를 함께 실행해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} deploy\`: \`server/.env.local\`의 auth 값을 읽고 \`wrangler.jsonc\` 기준으로 원격 Worker를 배포해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} test\`: \`wrangler.vitest.jsonc\`의 local D1/R2 binding으로 Worker 테스트를 실행해요.`,
+    ...scriptLines,
     '',
     '## Miniapp / Backoffice 연결',
     '',
@@ -1275,13 +1280,17 @@ function renderCloudflareServerReadme(
   ].join('\n')
 }
 
-function renderFirebaseServerReadme(
-  tokens: TemplateTokens,
-  options?: {
-    loginCiGuideImagePath?: string | null
-    serviceAccountGuideImagePaths?: string[] | null
-  },
-) {
+function renderFirebaseServerReadme(options?: {
+  packageManagerRunCommand: string
+  scriptCatalog: ServerScriptCatalogEntry[]
+  loginCiGuideImagePath?: string | null
+  serviceAccountGuideImagePaths?: string[] | null
+}) {
+  const scriptLines = renderServerReadmeScriptLines(
+    options?.scriptCatalog ?? [],
+    options?.packageManagerRunCommand ?? 'pnpm',
+  )
+
   return [
     '# server',
     '',
@@ -1307,14 +1316,7 @@ function renderFirebaseServerReadme(
     '',
     '## 주요 스크립트',
     '',
-    `- \`cd server && ${tokens.packageManagerRunCommand} build\`: \`server/functions\`의 TypeScript를 빌드해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} typecheck\`: \`server/functions\` 타입 검사를 실행해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} firestore:ensure\`: Firestore API를 확인하고 없으면 \`(default)\` DB를 \`asia-northeast3\`에 만들어요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} deploy:firestore\`: Firestore rules와 indexes를 현재 project에 배포해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} seed:public-status\`: frontend가 읽을 \`publicAppStatus/current\` 문서를 Firestore에 써요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} setup:public-status\`: Firestore 생성, rules 배포, seed 문서 작성을 한 번에 실행해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} deploy\`: \`server/.env.local\`의 auth 값을 읽고 Firebase Functions + Firestore 리소스를 현재 project로 배포해요.`,
-    `- \`cd server && ${tokens.packageManagerRunCommand} logs\`: Firebase Functions 로그를 확인해요.`,
+    ...scriptLines,
     '',
     '## Miniapp / Backoffice 연결',
     '',
@@ -2241,10 +2243,13 @@ export async function patchSupabaseServerWorkspace(
     options.accessTokenGuideImageSourcePaths ?? [],
     SUPABASE_ACCESS_TOKEN_GUIDE_ASSET_CANDIDATES,
   )
+  const supabaseScriptCatalog = createSupabaseServerScriptCatalog(tokens.packageManager)
   await applyServerPackageTemplate(targetRoot, tokens)
   await writeTextFile(
     path.join(serverRoot, 'README.md'),
-    renderSupabaseServerReadme(tokens, {
+    renderSupabaseServerReadme({
+      packageManagerRunCommand: tokens.packageManagerRunCommand,
+      scriptCatalog: supabaseScriptCatalog,
       accessTokenGuideImagePaths,
     }),
   )
@@ -2268,6 +2273,23 @@ export async function patchCloudflareServerWorkspace(
     serverRoot,
     options.tokenGuideImageSourcePath,
   )
+  const cloudflareScripts = createCloudflareServerScriptCatalog({
+    devCommand: options.trpc
+      ? prefixTrpcWorkspaceBuild(packageJson.scripts?.dev ?? 'wrangler dev', options.packageManager)
+      : (packageJson.scripts?.dev ?? 'wrangler dev'),
+    buildCommand: options.trpc
+      ? prefixTrpcWorkspaceBuild('wrangler deploy --dry-run', options.packageManager)
+      : 'wrangler deploy --dry-run',
+    typecheckCommand: options.trpc
+      ? prefixTrpcWorkspaceBuild('wrangler types && tsc --noEmit', options.packageManager)
+      : 'wrangler types && tsc --noEmit',
+    deployCommand: options.trpc
+      ? prefixTrpcWorkspaceBuild('node ./scripts/cloudflare-deploy.mjs', options.packageManager)
+      : 'node ./scripts/cloudflare-deploy.mjs',
+    testCommand: packageJson.scripts?.test
+      ? normalizeVitestTestScript(packageJson.scripts.test)
+      : null,
+  })
 
   await patchPackageJsonFile(packageJsonPath, {
     upsertTopLevel: [
@@ -2277,34 +2299,7 @@ export async function patchCloudflareServerWorkspace(
       },
     ],
     upsertSections: {
-      scripts: {
-        ...(options.trpc
-          ? {
-              dev: prefixTrpcWorkspaceBuild(
-                packageJson.scripts?.dev ?? 'wrangler dev',
-                options.packageManager,
-              ),
-              deploy: prefixTrpcWorkspaceBuild(
-                'node ./scripts/cloudflare-deploy.mjs',
-                options.packageManager,
-              ),
-              build: prefixTrpcWorkspaceBuild('wrangler deploy --dry-run', options.packageManager),
-              typecheck: prefixTrpcWorkspaceBuild(
-                'wrangler types && tsc --noEmit',
-                options.packageManager,
-              ),
-            }
-          : {
-              deploy: 'node ./scripts/cloudflare-deploy.mjs',
-              build: 'wrangler deploy --dry-run',
-              typecheck: 'wrangler types && tsc --noEmit',
-            }),
-        ...(packageJson.scripts?.test === 'vitest'
-          ? {
-              test: normalizeVitestTestScript(packageJson.scripts.test),
-            }
-          : {}),
-      },
+      scripts: createServerScriptRecord(cloudflareScripts),
       ...(options.trpc
         ? {
             dependencies: {
@@ -2323,7 +2318,9 @@ export async function patchCloudflareServerWorkspace(
   await writeCloudflareVitestConfigFiles(serverRoot)
   await writeTextFile(
     path.join(serverRoot, 'README.md'),
-    renderCloudflareServerReadme(tokens, {
+    renderCloudflareServerReadme({
+      packageManagerRunCommand: tokens.packageManagerRunCommand,
+      scriptCatalog: cloudflareScripts,
       tokenGuideImagePath,
       trpc: options.trpc,
     }),
@@ -2374,10 +2371,16 @@ export async function patchFirebaseServerWorkspace(
     options.serviceAccountGuideImageSourcePaths ?? [],
     FIREBASE_SERVICE_ACCOUNT_GUIDE_ASSET_CANDIDATES,
   )
+  const firebaseScriptCatalog = createFirebaseServerScriptCatalog({
+    packageManager: tokens.packageManager,
+    firestoreRegion: FIREBASE_DEFAULT_FUNCTION_REGION,
+  })
 
   await writeTextFile(
     path.join(serverRoot, 'README.md'),
-    renderFirebaseServerReadme(tokens, {
+    renderFirebaseServerReadme({
+      packageManagerRunCommand: tokens.packageManagerRunCommand,
+      scriptCatalog: firebaseScriptCatalog,
       loginCiGuideImagePath,
       serviceAccountGuideImagePaths,
     }),

@@ -131,24 +131,19 @@ test('docs templates keep markdown source free of optional marker comments', asy
   }
 })
 
-test('dynamic docs templates keep generated sections empty behind shared heading tokens', async () => {
+test('dynamic docs templates keep generated sections empty without anchor tokens', async () => {
   const dynamicTemplateSections = [
     {
       templateFile: 'AGENTS.md',
-      headingTokens: ['{{agentsWorkspaceModelHeading}}', '{{agentsSkillRoutingHeading}}'],
+      headings: ['Workspace Model', 'Skill Routing'],
     },
     {
       templateFile: 'docs/index.md',
-      headingTokens: ['{{docsIndexSkillStructureHeading}}'],
+      headings: ['Skill 구조'],
     },
     {
       templateFile: 'docs/engineering/workspace-topology.md',
-      headingTokens: [
-        '{{workspaceTopologyRootHeading}}',
-        '{{workspaceTopologyRolesHeading}}',
-        '{{workspaceTopologyOwnershipHeading}}',
-        '{{workspaceTopologySkillsHeading}}',
-      ],
+      headings: ['루트 구조', '역할 분리', 'ownership', '참고 Skill'],
     },
   ]
 
@@ -160,9 +155,14 @@ test('dynamic docs templates keep generated sections empty behind shared heading
       'utf8',
     )
 
-    for (const headingToken of template.headingTokens) {
-      assert.match(templateSource, new RegExp(`^## ${escapeRegExp(headingToken)}$`, 'm'))
-      assert.match(templateSource, new RegExp(`^## ${escapeRegExp(headingToken)}\\n(?:\\n|$)`, 'm'))
+    assert.doesNotMatch(
+      templateSource,
+      /\{\{(?:agents|docsIndex|workspaceTopology)[A-Za-z]+Heading\}\}/,
+    )
+
+    for (const heading of template.headings) {
+      assert.match(templateSource, new RegExp(`^## ${escapeRegExp(heading)}$`, 'm'))
+      assert.equal(getMarkdownSectionBody(templateSource, heading), '')
     }
   }
 })
@@ -202,6 +202,25 @@ test('root package template keeps packageManager field tokenized', async () => {
 
   assert.match(templateSource, /"packageManager": "\{\{packageManagerField\}\}"/)
   assert.doesNotMatch(templateSource, /pnpm@\d/)
+})
+
+test('package manager adapters do not expose the legacy rootVerifyScript helper', () => {
+  for (const packageManager of PACKAGE_MANAGERS) {
+    assert.equal('rootVerifyScript' in getPackageManagerAdapter(packageManager), false)
+  }
+})
+
+test('README defers generated repo onboarding order to AGENTS Start Here', async () => {
+  const readmeSource = await readFile(
+    fileURLToPath(new URL('../../../../README.md', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(readmeSource, /`AGENTS\.md`의 `Start Here`/)
+  assert.doesNotMatch(
+    readmeSource,
+    /docs\/product\/기능명세서\.md.*docs\/ai\/Plan\.md.*docs\/index\.md/s,
+  )
 })
 
 test('root package template keeps generated scripts out of template source', async () => {

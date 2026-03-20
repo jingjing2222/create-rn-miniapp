@@ -103,7 +103,7 @@ pnpm verify
 
 즉 이 저장소가 만드는 건 단순 폴더 구조가 아니라, MiniApp이 Granite, `@apps-in-toss/framework`, TDS를 원활하게 사용할 수 있도록 계약 문서, Skill, adapter, 설정까지 포함한 작업 컨텍스트예요.
 
-생성이 끝나면 바로 구현부터 들어가기보다, 먼저 `docs/product/기능명세서.md`에 만들 기능을 정리해두는 걸 권장해요. 그다음 `docs/ai/Plan.md`와 `docs/index.md`를 보고, 해당 작업에 맞는 `.agents/skills/*`를 선택해서 구현을 이끌어가면 돼요.
+생성이 끝나면 생성물 루트 `AGENTS.md`의 `Start Here` 순서를 먼저 따라가세요. 그 흐름대로 `docs/ai/*`, `docs/index.md`, `docs/product/기능명세서.md`를 확인한 뒤, 해당 작업에 맞는 `.agents/skills/*`를 선택해서 구현을 이끌어가면 돼요.
 
 ## CLI 옵션
 

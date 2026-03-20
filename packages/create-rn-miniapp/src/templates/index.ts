@@ -1,12 +1,17 @@
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { toString as mdastToString } from 'mdast-util-to-string'
 import remarkParse from 'remark-parse'
 import remarkStringify from 'remark-stringify'
 import { unified } from 'unified'
 import { patchRootPackageJsonSource } from '../patching/package-json.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import {
+  createFirebaseServerScriptCatalog,
+  createServerScriptRecord,
+  createSupabaseServerScriptCatalog,
+  renderFirebaseFunctionsInstallCommand,
+} from '../server-script-catalog.js'
 import {
   APP_ROUTER_WORKSPACE_PATH,
   CONTRACTS_WORKSPACE_PATH,
@@ -57,8 +62,6 @@ type MarkdownRoot = MarkdownNode & {
 }
 
 type MarkdownSectionDefinition = {
-  headingToken: string
-  heading: string
   render: (options: GeneratedWorkspaceOptions) => string
 }
 
@@ -305,26 +308,14 @@ const WORKSPACE_FEATURE_DEFINITIONS: WorkspaceFeatureDefinition[] = [
   },
 ]
 
-const AGENTS_WORKSPACE_MODEL_HEADING_TOKEN = '{{agentsWorkspaceModelHeading}}'
-const AGENTS_SKILL_ROUTING_HEADING_TOKEN = '{{agentsSkillRoutingHeading}}'
-const DOCS_INDEX_SKILL_STRUCTURE_HEADING_TOKEN = '{{docsIndexSkillStructureHeading}}'
-const WORKSPACE_TOPOLOGY_ROOT_HEADING_TOKEN = '{{workspaceTopologyRootHeading}}'
-const WORKSPACE_TOPOLOGY_ROLES_HEADING_TOKEN = '{{workspaceTopologyRolesHeading}}'
-const WORKSPACE_TOPOLOGY_OWNERSHIP_HEADING_TOKEN = '{{workspaceTopologyOwnershipHeading}}'
-const WORKSPACE_TOPOLOGY_SKILLS_HEADING_TOKEN = '{{workspaceTopologySkillsHeading}}'
-
 const DYNAMIC_DOC_DEFINITIONS: DynamicDocDefinition[] = [
   {
     relativePath: 'AGENTS.md',
     sections: [
       {
-        headingToken: AGENTS_WORKSPACE_MODEL_HEADING_TOKEN,
-        heading: 'Workspace Model',
         render: renderAgentsWorkspaceModelSection,
       },
       {
-        headingToken: AGENTS_SKILL_ROUTING_HEADING_TOKEN,
-        heading: 'Skill Routing',
         render: renderAgentsSkillRoutingSection,
       },
     ],
@@ -333,8 +324,6 @@ const DYNAMIC_DOC_DEFINITIONS: DynamicDocDefinition[] = [
     relativePath: 'docs/index.md',
     sections: [
       {
-        headingToken: DOCS_INDEX_SKILL_STRUCTURE_HEADING_TOKEN,
-        heading: 'Skill 구조',
         render: renderDocsIndexSkillStructureSection,
       },
     ],
@@ -343,23 +332,15 @@ const DYNAMIC_DOC_DEFINITIONS: DynamicDocDefinition[] = [
     relativePath: 'docs/engineering/workspace-topology.md',
     sections: [
       {
-        headingToken: WORKSPACE_TOPOLOGY_ROOT_HEADING_TOKEN,
-        heading: '루트 구조',
         render: renderTopologyRootSection,
       },
       {
-        headingToken: WORKSPACE_TOPOLOGY_ROLES_HEADING_TOKEN,
-        heading: '역할 분리',
         render: renderTopologyRolesSection,
       },
       {
-        headingToken: WORKSPACE_TOPOLOGY_OWNERSHIP_HEADING_TOKEN,
-        heading: 'ownership',
         render: renderTopologyOwnershipSection,
       },
       {
-        headingToken: WORKSPACE_TOPOLOGY_SKILLS_HEADING_TOKEN,
-        heading: '참고 Skill',
         render: renderTopologySkillsSection,
       },
     ],
@@ -402,14 +383,7 @@ function replaceTemplateTokens(source: string, tokens: TemplateTokens) {
     tokens.packageManagerField ??
     getPackageManagerAdapter(tokens.packageManager).packageManagerField
 
-  let renderedSource = source
-  for (const definition of DYNAMIC_DOC_DEFINITIONS) {
-    for (const section of definition.sections) {
-      renderedSource = renderedSource.replaceAll(section.headingToken, section.heading)
-    }
-  }
-
-  return renderedSource
+  return source
     .replaceAll('{{appName}}', tokens.appName)
     .replaceAll('{{displayName}}', tokens.displayName)
     .replaceAll('{{packageManager}}', tokens.packageManager)
@@ -419,10 +393,6 @@ function replaceTemplateTokens(source: string, tokens: TemplateTokens) {
     .replaceAll('{{packageManagerExecCommand}}', tokens.packageManagerExecCommand)
     .replaceAll('{{verifyCommand}}', tokens.verifyCommand)
     .replaceAll(ROOT_VERIFY_STEPS_TOKEN, renderRootVerifyStepsMarkdown(tokens.packageManager))
-}
-
-function getMarkdownNodeText(node: MarkdownNode) {
-  return mdastToString(node as never).trim()
 }
 
 function resolveSelectedOptionalSkillDefinitions(options: GeneratedWorkspaceOptions) {
@@ -548,42 +518,62 @@ function parseMarkdownChildren(source: string) {
   return (MARKDOWN_RENDERER.parse(source) as MarkdownRoot).children
 }
 
-function replaceSectionBody(
-  root: MarkdownRoot,
-  definition: MarkdownSectionDefinition,
-  options: GeneratedWorkspaceOptions,
-) {
-  const startIndex = root.children.findIndex(
-    (node) => node.type === 'heading' && getMarkdownNodeText(node) === definition.heading,
-  )
+function collectEmptyHeadingSections(root: MarkdownRoot, depth: number) {
+  const sections: Array<{ startIndex: number; endIndex: number }> = []
 
-  if (startIndex === -1) {
-    throw new Error(`동적 문서 섹션을 찾지 못했습니다: ${definition.heading}`)
-  }
-
-  const startNode = root.children[startIndex]
-  const startDepth = startNode?.type === 'heading' ? startNode.depth : undefined
-
-  if (typeof startDepth !== 'number') {
-    throw new Error(`동적 문서 섹션 depth를 읽지 못했습니다: ${definition.heading}`)
-  }
-
-  let endIndex = startIndex + 1
-  while (endIndex < root.children.length) {
-    const node = root.children[endIndex]
-
-    if (node.type === 'heading' && typeof node.depth === 'number' && node.depth <= startDepth) {
-      break
+  for (let index = 0; index < root.children.length; index += 1) {
+    const node = root.children[index]
+    if (node.type !== 'heading' || node.depth !== depth) {
+      continue
     }
 
-    endIndex += 1
+    let endIndex = index + 1
+    while (endIndex < root.children.length) {
+      const nextNode = root.children[endIndex]
+      if (
+        nextNode.type === 'heading' &&
+        typeof nextNode.depth === 'number' &&
+        nextNode.depth <= depth
+      ) {
+        break
+      }
+      endIndex += 1
+    }
+
+    if (endIndex === index + 1) {
+      sections.push({ startIndex: index, endIndex })
+    }
   }
 
-  root.children = [
-    ...root.children.slice(0, startIndex + 1),
-    ...parseMarkdownChildren(definition.render(options)),
-    ...root.children.slice(endIndex),
-  ]
+  return sections
+}
+
+function replaceEmptySectionBodies(
+  root: MarkdownRoot,
+  definition: DynamicDocDefinition,
+  options: GeneratedWorkspaceOptions,
+) {
+  const emptySections = collectEmptyHeadingSections(root, 2)
+
+  if (emptySections.length !== definition.sections.length) {
+    throw new Error(
+      `동적 문서 섹션 수가 맞지 않습니다: ${definition.relativePath} (expected ${definition.sections.length}, received ${emptySections.length})`,
+    )
+  }
+
+  for (let index = definition.sections.length - 1; index >= 0; index -= 1) {
+    const section = definition.sections[index]
+    const targetSection = emptySections[index]
+    if (!section || !targetSection) {
+      continue
+    }
+
+    root.children = [
+      ...root.children.slice(0, targetSection.startIndex + 1),
+      ...parseMarkdownChildren(section.render(options)),
+      ...root.children.slice(targetSection.endIndex),
+    ]
+  }
 }
 
 function renderAgentsWorkspaceModelSection(options: GeneratedWorkspaceOptions) {
@@ -680,9 +670,7 @@ function renderDynamicMarkdownSource(
 
   const root = MARKDOWN_RENDERER.parse(source) as MarkdownRoot
 
-  for (const section of definition.sections) {
-    replaceSectionBody(root, section, options)
-  }
+  replaceEmptySectionBodies(root, definition, options)
 
   return String(MARKDOWN_RENDERER.stringify(root as never))
 }
@@ -1719,22 +1707,12 @@ function renderFirebaseEnsureFirestoreScript(tokens: TemplateTokens) {
   ].join('\n')
 }
 
-function renderFirebaseFunctionsInstallCommand(packageManager: PackageManager, directory: string) {
-  const adapter = getPackageManagerAdapter(packageManager)
-
-  if (packageManager === 'pnpm') {
-    return `${adapter.installInDirectoryCommand(directory)} --ignore-workspace`
-  }
-
-  return adapter.installInDirectoryCommand(directory)
-}
-
 function renderFirebaseServerPackageJson(tokens: TemplateTokens) {
-  const packageManager = getPackageManagerAdapter(tokens.packageManager)
-  const functionsDirectory = './functions'
-  const installFunctionsCommand = renderFirebaseFunctionsInstallCommand(
-    tokens.packageManager,
-    functionsDirectory,
+  const scripts = createServerScriptRecord(
+    createFirebaseServerScriptCatalog({
+      packageManager: tokens.packageManager,
+      firestoreRegion: FIREBASE_DEFAULT_FUNCTION_REGION,
+    }),
   )
 
   return {
@@ -1743,19 +1721,7 @@ function renderFirebaseServerPackageJson(tokens: TemplateTokens) {
     dependencies: {
       'google-auth-library': '^10.6.1',
     },
-    scripts: {
-      dev: `${installFunctionsCommand} && ${packageManager.dlxCommand('firebase-tools', ['emulators:start', '--only', 'functions,firestore', '--config', 'firebase.json'])}`,
-      build: `${installFunctionsCommand} && ${packageManager.runScriptInDirectoryCommand(functionsDirectory, 'build')}`,
-      typecheck: `${installFunctionsCommand} && ${packageManager.runScriptInDirectoryCommand(functionsDirectory, 'typecheck')}`,
-      test: `${installFunctionsCommand} && ${packageManager.runScriptInDirectoryCommand(functionsDirectory, 'test')}`,
-      'firestore:ensure': 'node ./scripts/firebase-ensure-firestore.mjs',
-      deploy: `${installFunctionsCommand} && node ./scripts/firebase-functions-deploy.mjs`,
-      'deploy:firestore':
-        'node ./scripts/firebase-functions-deploy.mjs --only firestore:rules,firestore:indexes',
-      'seed:public-status': `${installFunctionsCommand} && ${packageManager.runScriptInDirectoryCommand(functionsDirectory, 'seed:public-status')}`,
-      'setup:public-status': `${packageManager.runScript('firestore:ensure')} && ${packageManager.runScript('deploy:firestore')} && ${packageManager.runScript('seed:public-status')}`,
-      logs: packageManager.dlxCommand('firebase-tools', ['functions:log']),
-    },
+    scripts,
   }
 }
 
@@ -2017,42 +1983,17 @@ export async function applyWorkspaceProjectTemplate(
 
 export async function applyServerPackageTemplate(targetRoot: string, tokens: TemplateTokens) {
   const templatesRoot = resolveTemplatesPackageRoot()
-  const packageManager = getPackageManagerAdapter(tokens.packageManager)
   const serverRoot = path.join(targetRoot, 'server')
   const packageJson = await readJsonTemplate<ServerPackageJson>(
     path.join(templatesRoot, 'root', 'server.package.json'),
     tokens,
   )
+  const scripts = createServerScriptRecord(createSupabaseServerScriptCatalog(tokens.packageManager))
 
-  packageJson.scripts ??= {}
-  packageJson.scripts.dev = packageManager.dlxCommand('supabase', ['start', '--workdir', '.'])
-  packageJson.scripts.build = packageManager.runScript('typecheck')
-  packageJson.scripts.typecheck = 'node ./scripts/supabase-functions-typecheck.mjs'
-  packageJson.scripts['db:apply'] = 'node ./scripts/supabase-db-apply.mjs'
-  packageJson.scripts['db:apply:remote'] = 'node ./scripts/supabase-db-apply.mjs'
-  packageJson.scripts['functions:serve'] = packageManager.dlxCommand('supabase', [
-    'functions',
-    'serve',
-    '--env-file',
-    './.env.local',
-    '--workdir',
-    '.',
-  ])
-  packageJson.scripts['functions:deploy'] = 'node ./scripts/supabase-functions-deploy.mjs'
-  packageJson.scripts['db:apply:local'] = packageManager.dlxCommand('supabase', [
-    'db',
-    'push',
-    '--local',
-    '--workdir',
-    '.',
-  ])
-  packageJson.scripts['db:reset'] = packageManager.dlxCommand('supabase', [
-    'db',
-    'reset',
-    '--local',
-    '--workdir',
-    '.',
-  ])
+  packageJson.scripts = {
+    ...(packageJson.scripts ?? {}),
+    ...scripts,
+  }
 
   await writeJsonFile(path.join(serverRoot, 'package.json'), packageJson)
   if (tokens.packageManager === 'npm') {

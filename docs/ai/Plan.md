@@ -1,3 +1,26 @@
+## 다음 작업: dynamic doc anchor와 provider script catalog를 다시 단일화하기
+1. 문제
+   - `AGENTS.md`, `docs/index.md`, `workspace-topology.md`의 dynamic section은 heading wording은 줄었지만 template token과 renderer definition이 여전히 같은 section identity를 양쪽에서 들고 있다.
+   - Supabase/Cloudflare/Firebase server README는 `server/package.json` scripts와 같은 catalog를 prose로 다시 적고 있어 script rename/change 시 문서와 생성물이 같이 drift할 수 있다.
+   - `package-manager.ts`의 `rootVerifyScript()`는 더 이상 실제 verify source가 아닌데 adapter interface와 구현에 남아 있어 dead second source가 됐다.
+   - root README도 generated repo onboarding 순서를 `AGENTS.md`와 별도로 다시 설명해 이미 순서가 어긋나 있다.
+2. 방향
+   - dynamic docs는 template literal token에 section anchor를 맡기지 않고, empty section slot를 순서 기반으로 채우거나 code-owned renderer로 올려 section identity를 한 군데로 줄인다.
+   - provider별 server script catalog를 shared metadata/helper로 올리고, `server/package.json` scripts와 README의 `주요 스크립트`가 같은 metadata에서 렌더되게 만든다.
+   - `package-manager.ts`에서 더 이상 쓰이지 않는 `rootVerifyScript()` interface/implementation을 제거한다.
+   - README onboarding 문구는 generated `AGENTS.md`의 `Start Here`를 source of truth로만 가리키게 줄인다.
+3. 테스트
+   - dynamic doc template source에 section anchor token이 남아 있지 않고 empty section 기반으로 렌더된다는 실패 테스트를 먼저 추가한다.
+   - provider README의 script bullets가 shared script catalog helper와 일치한다는 실패 테스트를 추가한다.
+   - adapter가 legacy `rootVerifyScript`를 더 이상 노출하지 않는지와 README가 `AGENTS.md` `Start Here`를 참조하는지 고정한다.
+   - 수정 후 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - dynamic doc section identity가 template token과 renderer 양쪽에서 따로 관리되지 않는다.
+   - provider server README와 generated scripts가 같은 metadata를 공유한다.
+   - `rootVerifyScript()` dead source가 제거된다.
+   - README onboarding 순서가 `AGENTS.md`와 다시 단일화된다.
+   - `pnpm verify`를 통과한다.
+
 ## 다음 작업: verify/doc anchor/package manager source를 다시 단일화하기
 1. 문제
    - root verify 파이프라인은 generator code가 소유하지만, `docs/index.md`와 `docs/engineering/repo-contract.md`가 같은 단계 목록을 별도로 열거해 관리 포인트가 둘 이상이다.

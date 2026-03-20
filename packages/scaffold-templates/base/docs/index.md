@@ -12,7 +12,7 @@
 - `engineering/frontend-policy.md`
 - `engineering/workspace-topology.md`
 
-## {{docsIndexSkillStructureHeading}}
+## Skill 구조
 
 ## verify
 {{rootVerifyStepsMarkdown}}
