@@ -1254,7 +1254,7 @@ function renderOptionalGoldenRulesSection(options: OptionalDocsOptions) {
 
   if (options.hasWorktreePolicy) {
     lines.push(
-      `${ruleNumber}. Worktree discipline: plain clone 상태라면 README의 bootstrap 절차를 먼저 실행하고, 새 작업은 반드시 control root에서 \`git -C main worktree add -b <branch> ../<branch-dir> main\`으로 시작하며, \`<branch-dir>\`는 브랜치명의 \`/\`를 \`-\`로 바꾼 1-depth 디렉토리명을 쓰고, \`main/\`과 sibling worktree에서만 작업하며, 구현, 커밋, 푸시, PR 생성은 그 worktree 안에서만 진행한다.`,
+      `${ruleNumber}. Worktree discipline: plain clone 상태라면 README의 bootstrap 절차를 먼저 실행하고, 새 작업은 반드시 control root에서 \`git -C main worktree add -b <branch-name> ../<branch-name> main\`으로 시작하며, 브랜치명에는 \`/\`를 쓰지 않고 1-depth kebab-case를 쓰며, \`main/\`과 sibling worktree에서만 작업하며, 구현, 커밋, 푸시, PR 생성은 그 worktree 안에서만 진행한다.`,
     )
     ruleNumber++
   }
@@ -1533,7 +1533,7 @@ export async function syncOptionalDocsTemplates(
       startMarker: OPTIONAL_WORKTREE_WORKFLOW_START_MARKER,
       endMarker: OPTIONAL_WORKTREE_WORKFLOW_END_MARKER,
       renderedSection: options.hasWorktreePolicy
-        ? '14. 이 repo는 control root worktree 운영을 기준으로 한다. plain clone 상태라면 README bootstrap을 먼저 실행하고, 새 브랜치 작업은 control root에서 `git -C main worktree add -b <branch> ../<branch-dir> main`으로 시작하며, `<branch-dir>`는 브랜치명의 `/`를 `-`로 바꾼 1-depth 디렉토리명을 쓴다.'
+        ? '14. 이 repo는 control root worktree 운영을 기준으로 한다. plain clone 상태라면 README bootstrap을 먼저 실행하고, 새 브랜치 작업은 control root에서 `git -C main worktree add -b <branch-name> ../<branch-name> main`으로 시작하며, 브랜치명에는 `/`를 쓰지 않고 1-depth kebab-case를 쓴다.'
         : '',
       fallbackAnchor: SINGLE_ROOT_FINALIZE_LINE,
     })

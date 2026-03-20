@@ -5,12 +5,16 @@
 - `--worktree` 경로에서 실제 repo root인 `main/` 기준 문서와 에이전트 진입 파일을 다시 맞춘다.
 - 임시 planning/spec 문서인 `docs/superpowers`는 Git 추적에서 빼고 로컬 전용으로 돌린다.
 - 생성 직후 worktree note도 README bootstrap과 같은 실제 절차를 가리키게 맞춘다.
+- worktree 브랜치/경로 규칙을 `/` 없는 1-depth 브랜치명 기준으로 단순화한다.
+- committed README의 bootstrap 섹션은 항상 맨 위에 오게 고정한다.
 
 ### 확인된 문제
 - worktree scaffold 시 committed repo root(`main/`)에 `.claude/CLAUDE.md`가 빠져 plain clone과 `main/` 직접 진입 동선이 깨져 있다.
 - 공개 README가 `--worktree`에서도 `cd my-miniapp && pnpm verify`만 안내해서 control root에서 verify를 치게 만든다.
 - worktree note가 control root에서 상대경로로 잘못된 `docs/engineering/worktree-workflow.md`를 가리킨다.
 - worktree note가 plain clone bootstrap을 `bootstrap-control-root.mjs` 단독 실행으로 오해하게 쓴다.
+- worktree 문서가 브랜치명에 `/`를 허용하는 예시를 계속 남겨 두고 있다.
+- bootstrap 섹션은 현재 prepend되지만, marker가 아래에 있으면 그 위치를 유지해서 “항상 맨 위”를 보장하지 못한다.
 - README에 제거된 `Implement.md`가 아직 남아 있다.
 - `docs/superpowers/**`가 PR에 같이 올라가면서 폐기된 `.bare` 설계를 계속 노출하고 있다.
 
@@ -25,14 +29,19 @@
    - repo root용 `.claude/CLAUDE.md` 생성 helper를 추가한다.
    - worktree note 문구를 control-root 기준 상대경로로 수정한다.
    - worktree note가 README bootstrap의 전체 2단계 절차를 가리키게 고친다.
+   - bootstrap 섹션이 기존 marker 위치와 무관하게 README 맨 위로 올라가게 고친다.
+   - worktree 기본 명령과 stub 문구를 `/` 없는 브랜치명 기준으로 바꾼다.
 4. `packages/create-rn-miniapp/src/scaffold/index.ts`
    - single-root/worktree 여부와 무관하게 실제 repo root에 `.claude/CLAUDE.md`를 생성한다.
 5. `README.md`
    - quick start에서 single-root와 `--worktree` verify 경로를 분리한다.
    - `Implement.md` 언급을 제거하고 `Plan/Status/Decisions/Prompt` 기준으로 정리한다.
+   - worktree 시작 명령과 예시를 `/` 없는 1-depth 브랜치명 기준으로 갱신한다.
 6. `.gitignore`
    - `docs/superpowers/`를 ignore에 추가한다.
    - tracked 상태인 `docs/superpowers/**`는 index에서 제거한다.
+7. `packages/create-rn-miniapp/src/templates/index.ts`와 optional worktree docs/script
+   - golden rule, harness guide, workflow doc, bootstrap stub를 `/` 없는 브랜치명 기준으로 같이 갱신한다.
 
 ### 검증 계획
 - 우선: `pnpm --filter create-rn-miniapp test -- src/scaffold/worktree.test.ts src/release.test.ts`

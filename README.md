@@ -115,8 +115,8 @@ single-root 기본값은 이렇습니다.
   feat-login/
 ```
 
-- 새 작업은 control root에서 `git -C main worktree add -b <branch> ../<branch-dir> main`으로 시작해요.
-- worktree path는 항상 1-depth slug를 써요. 예를 들어 `feat/test` 브랜치는 `feat-test`처럼 만들어요.
+- 새 작업은 control root에서 `git -C main worktree add -b <branch-name> ../<branch-name> main`으로 시작해요.
+- 브랜치명에는 `/`를 쓰지 않고 1-depth kebab-case만 써요. 예: `feat-login`.
 - worktree는 control root 바로 아래 sibling path에 만들어요.
 - `main/`에는 scaffold baseline commit이 이미 있어서 이 명령을 바로 실행할 수 있어요.
 - 구현, 커밋, 푸시, PR 생성은 새 worktree 안에서 진행해요.

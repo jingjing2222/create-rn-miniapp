@@ -103,8 +103,8 @@ test('createWorktreePolicyNote explains the control-root workflow', () => {
   assert.equal(note.title, 'worktree 워크플로우를 기본 규칙으로 설정했어요')
   assert.match(note.body, /control root: \/tmp\/ebook/)
   assert.match(note.body, /기본 checkout: \/tmp\/ebook\/main/)
-  assert.match(note.body, /git -C main worktree add -b <branch> \.\.\/<branch-dir> main/)
-  assert.match(note.body, /feat\/test` -> `feat-test/)
+  assert.match(note.body, /git -C main worktree add -b <branch-name> \.\.\/<branch-name> main/)
+  assert.match(note.body, /브랜치명에는 `\/`를 쓰지 말고 1-depth kebab-case/)
   assert.match(note.body, /git clone --separate-git-dir=\.gitdata <repo-url> main/)
   assert.match(note.body, /bootstrap-control-root\.mjs/)
   assert.match(note.body, /post-merge hook으로 같이 정리돼요/)
@@ -206,12 +206,32 @@ test('ensureWorktreeBootstrapReadme prepends the control-root bootstrap section'
   const readmePath = path.join(workspaceRoot, 'README.md')
 
   try {
-    await writeFile(readmePath, '# Existing README\n\nbody\n', 'utf8')
+    await writeFile(
+      readmePath,
+      [
+        '# Existing README',
+        '',
+        'body',
+        '',
+        '<!-- worktree-bootstrap:start -->',
+        'old section',
+        '<!-- worktree-bootstrap:end -->',
+        '',
+        'tail',
+        '',
+      ].join('\n'),
+      'utf8',
+    )
     await ensureWorktreeBootstrapReadme(workspaceRoot)
 
     const readme = await readFile(readmePath, 'utf8')
 
-    assert.match(readme, /^## Worktree Bootstrap/m)
+    assert.equal(
+      readme.startsWith(
+        '<!-- worktree-bootstrap:start -->\n## Worktree Bootstrap\n\n이 repo를 AI/멀티-agent용 control root 구조로 운영하려면',
+      ),
+      true,
+    )
     assert.match(readme, /git clone --separate-git-dir=\.gitdata <repo-url> main/)
     assert.match(readme, /node main\/scripts\/worktree\/bootstrap-control-root\.mjs/)
     assert.match(readme, /# Existing README/)

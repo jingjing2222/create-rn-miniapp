@@ -15,7 +15,8 @@ function renderControlRootAgentsStub() {
     '# AGENTS.md',
     '',
     '- 실제 작업 루트는 `main/`이에요.',
-    '- 새 작업은 control root에서 `git -C main worktree add -b <branch> ../<branch-dir> main`으로 시작해요.',
+    '- 새 작업은 control root에서 `git -C main worktree add -b <branch-name> ../<branch-name> main`으로 시작해요.',
+    '- 브랜치명에는 `/`를 쓰지 않고 1-depth kebab-case만 써요. 예: `feat-login`.',
     '- 구현, 커밋, 푸시, PR 생성은 `main/`이 아니라 새 sibling worktree 안에서 진행해요.',
     '- 자세한 규칙은 `main/AGENTS.md`와 `main/docs/engineering/worktree-workflow.md`를 먼저 읽어주세요.',
     '',
@@ -27,7 +28,8 @@ function renderControlRootReadmeStub() {
     '# Control Root',
     '',
     '이 디렉토리는 local control root예요.',
-    '기본 checkout은 `main/`이고, 새 작업은 control root에서 `git -C main worktree add -b <branch> ../<branch-dir> main`으로 시작해요.',
+    '기본 checkout은 `main/`이고, 새 작업은 control root에서 `git -C main worktree add -b <branch-name> ../<branch-name> main`으로 시작해요.',
+    '브랜치명에는 `/`를 쓰지 않고 1-depth kebab-case만 써요. 예: `feat-login`.',
     '자세한 안내는 `main/README.md`, `main/AGENTS.md`, `main/docs/engineering/worktree-workflow.md`를 먼저 확인해 주세요.',
     '',
   ].join('\n')
@@ -54,7 +56,8 @@ function renderWorktreeBootstrapSection() {
     '```',
     '',
     'bootstrap이 끝나면 local control root에는 `.gitdata/`, `main/`, root stub(`AGENTS.md`, `.claude/CLAUDE.md`, `README.md`)가 생겨요.',
-    '이후 새 작업은 control root에서 `git -C main worktree add -b <branch> ../<branch-dir> main`으로 시작해요.',
+    '이후 새 작업은 control root에서 `git -C main worktree add -b <branch-name> ../<branch-name> main`으로 시작해요.',
+    '브랜치명에는 `/`를 쓰지 않고 1-depth kebab-case만 써요. 예: `feat-login`.',
     WORKTREE_BOOTSTRAP_END_MARKER,
   ].join('\n')
 }
@@ -64,9 +67,14 @@ function replaceMarkedSection(source: string, renderedSection: string) {
   const endIndex = source.indexOf(WORKTREE_BOOTSTRAP_END_MARKER)
 
   if (startIndex >= 0 && endIndex >= startIndex) {
-    return `${source.slice(0, startIndex)}${renderedSection}${source.slice(
+    const withoutMarkedSection = `${source.slice(0, startIndex)}${source.slice(
       endIndex + WORKTREE_BOOTSTRAP_END_MARKER.length,
     )}`.replace(/^\n+/, '')
+    const remainingSource = withoutMarkedSection.trimStart()
+
+    return remainingSource.length > 0
+      ? `${renderedSection}\n\n${remainingSource}`
+      : `${renderedSection}\n`
   }
 
   return `${renderedSection}\n\n${source}`
@@ -133,8 +141,8 @@ export function createWorktreePolicyNote(options: { controlRoot: string; workspa
       `기본 checkout: ${options.workspaceRoot}`,
       '`main/`에는 scaffold 결과를 담은 baseline commit을 먼저 만들어 두었어요.',
       'plain clone 상태라면 README bootstrap 절차(`git clone --separate-git-dir=.gitdata <repo-url> main` 후 `node main/scripts/worktree/bootstrap-control-root.mjs`)를 먼저 실행해 주세요.',
-      '표준 시작: `git -C main worktree add -b <branch> ../<branch-dir> main`',
-      '`<branch-dir>`는 브랜치명의 `/`를 `-`로 바꾼 1-depth 디렉토리명을 써 주세요. 예: `feat/test` -> `feat-test`',
+      '표준 시작: `git -C main worktree add -b <branch-name> ../<branch-name> main`',
+      '브랜치명에는 `/`를 쓰지 말고 1-depth kebab-case만 써 주세요. 예: `feat-login`',
       '새 worktree는 control root 바로 아래 sibling으로 만들어요.',
       '상태 확인: `git -C main worktree list`',
       '`main/` 최신화는 보통 control root에서 `git -C main pull --ff-only`를 써 주세요. 이 표준 경로로 갱신하면 main에 반영된 clean worktree는 post-merge hook으로 같이 정리돼요.',

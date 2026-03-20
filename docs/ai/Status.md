@@ -4,24 +4,37 @@
   - public README는 single-root와 `--worktree`의 verify 진입 경로를 분리해 안내하고, 제거된 `Implement.md` 언급을 지웠다.
   - 생성 직후 worktree note는 control root 기준으로 `main/AGENTS.md`, `main/docs/engineering/worktree-workflow.md`를 가리키게 수정했다.
   - 생성 직후 worktree note가 plain clone bootstrap을 스크립트 단독 실행으로 오해하게 쓰던 문구도 README bootstrap의 전체 2단계 절차로 고쳤다.
+  - worktree 브랜치 규칙은 `/` 없는 1-depth kebab-case branch name으로 단순화했다.
+  - committed README bootstrap 섹션은 marker가 이미 아래에 있더라도 항상 맨 위로 올라가게 고쳤다.
   - `docs/superpowers/**`는 `.gitignore`에 넣고 Git 추적에서 제거해서 PR에서 더 이상 폐기된 설계를 노출하지 않게 했다.
 - 반영한 변경
   - `packages/create-rn-miniapp/src/scaffold/worktree.ts`
     - repo root용 `.claude/CLAUDE.md` helper 추가
     - worktree policy note 경로 수정
     - worktree policy note bootstrap 문구를 실제 clone 절차에 맞게 수정
+    - bootstrap 섹션 상단 고정 처리 추가
+    - branch name 규칙을 `/` 없는 1-depth kebab-case로 정리
   - `packages/create-rn-miniapp/src/scaffold/index.ts`
     - single-root / control-root 모두 실제 repo root에 `.claude/CLAUDE.md`를 생성하도록 정리
   - `packages/create-rn-miniapp/src/scaffold/worktree.test.ts`
     - repo root Claude guide와 note 경로 회귀 테스트 추가
     - note가 `git clone --separate-git-dir=.gitdata ...` 절차까지 가리키는지 검증 추가
+    - bootstrap 섹션이 README 맨 위로 이동하는지 검증 추가
   - `packages/create-rn-miniapp/src/release.test.ts`
     - README quick start와 `Implement.md` 제거 회귀 테스트 추가
+    - README와 workflow 문서의 branch name 규칙 회귀 테스트 추가
+  - `packages/create-rn-miniapp/src/templates/index.ts`
+    - AGENTS golden rule과 하네스 실행가이드의 worktree branch 규칙 정리
+  - `packages/scaffold-templates/optional/worktree/docs/engineering/worktree-workflow.md`
+  - `packages/scaffold-templates/optional/worktree/scripts/worktree/bootstrap-control-root.mjs`
+    - `/` 없는 branch name 규칙으로 문구 통일
   - `README.md`
     - quick start와 AI docs 설명 정리
+    - worktree 시작 명령과 예시를 branch name 기준으로 정리
   - `.gitignore`
     - `docs/superpowers/` ignore 추가
 - 검증
+  - `pnpm --filter create-rn-miniapp test -- src/scaffold/worktree.test.ts src/templates/index.test.ts src/release.test.ts` ✅
   - `pnpm --filter create-rn-miniapp test -- src/scaffold/worktree.test.ts src/release.test.ts` ✅
   - `pnpm verify` ✅
 
