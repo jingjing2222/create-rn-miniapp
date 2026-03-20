@@ -1,3 +1,12 @@
+## 2026-03-20 — README bootstrap 문구 정리
+- 상태
+  - 공개 README의 worktree bootstrap 안내 문장이 `plain clone 대신 빈 디렉토리에서...` 형태라 실제 운영 규칙보다 덜 직접적으로 읽혔다.
+- 반영한 변경
+  - `README.md`
+    - worktree bootstrap 안내 문장을 `일반적인 clone이 아닌 다음 과정을 통해 clone을 받아야해요` 기준으로 정리
+- 검증
+  - `pnpm verify` ✅
+
 ## 2026-03-20 — worktree cleanup hook 관리 포인트 단일화
 - 상태
   - cleanup hook 본문이 `create-rn-miniapp` 생성기와 generated `bootstrap-control-root.mjs` 안에 중복돼 있었다.
