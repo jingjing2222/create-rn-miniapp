@@ -141,7 +141,7 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
     })
     .option('worktree', {
       type: 'boolean',
-      describe: 'scaffold 시작 시 control root + main worktree 레이아웃으로 세팅',
+      describe: '에이전트가 repo root 기준 worktree workflow를 기본으로 사용하게 하는 규칙 활성화',
     })
     .option('server-provider', {
       choices: SERVER_PROVIDERS,
@@ -224,7 +224,7 @@ export function formatCliHelp() {
     '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
     '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
     '  --no-git                       생성 완료 후 루트 git init 생략',
-    '  --worktree                     scaffold 시작 시 control root + main worktree로 세팅',
+    '  --worktree                     에이전트가 repo root 기준 worktree workflow를 기본으로 사용하게 하는 규칙 활성화',
     `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
     '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
     '  --trpc                         `cloudflare` server provider 위에 tRPC overlay 추가',

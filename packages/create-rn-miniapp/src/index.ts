@@ -31,14 +31,14 @@ function describeWorkspaceLayout(options: {
 
 function describeWorktreeSelection(options: { noGit: boolean; worktree: boolean }) {
   if (options.noGit) {
-    return 'git을 안 만들기 때문에 이번엔 건너뛸게요'
+    return 'git을 안 만들기 때문에 이번엔 적용하지 않을게요'
   }
 
   if (options.worktree) {
-    return '네, `main/` worktree로 세팅할게요'
+    return '네, 에이전트는 새 작업을 worktree에서 시작할게요'
   }
 
-  return '아니요, single-root로 둘게요'
+  return '아니요, 에이전트는 기본 checkout에서 시작할게요'
 }
 
 export async function main() {
@@ -106,7 +106,7 @@ export async function main() {
         `만들 위치: ${resolved.outputDir}/${resolved.appName}`,
         `만들 구조: ${describeWorkspaceLayout(resolved)}`,
         `루트 git 초기화: ${String(!resolved.noGit)}`,
-        `worktree 전환: ${describeWorktreeSelection(resolved)}`,
+        `worktree 규칙: ${describeWorktreeSelection(resolved)}`,
         `server 포함: ${String(resolved.withServer)}`,
         `server 제공자: ${resolved.serverProvider ?? '이번엔 안 만들어요'}`,
         `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '이번엔 건너뛸게요' : (resolved.serverProjectMode ?? '목록에서 고를게요')) : '해당 없어요'}`,

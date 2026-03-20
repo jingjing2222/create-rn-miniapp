@@ -1234,7 +1234,7 @@ function renderOptionalAgentsSection(options: OptionalDocsOptions) {
   if (options.hasWorktree) {
     lines.push(
       '- `docs/engineering/worktree-workflow.md`',
-      '  - worktree 레이아웃에서 브랜치 생성, 동기화, 정리 흐름을 먼저 보는 문서',
+      '  - repo root 기준 worktree 시작, 조회, 정리 규칙을 먼저 보는 문서',
     )
   }
 
@@ -1254,7 +1254,7 @@ function renderOptionalGoldenRulesSection(options: OptionalDocsOptions) {
 
   if (options.hasWorktree) {
     lines.push(
-      `${ruleNumber}. Worktree discipline: 새 작업은 \`git worktree add\`로 worktree를 만들어 시작하고, control root에서 직접 commit하지 않는다.`,
+      `${ruleNumber}. Worktree discipline: 새 작업은 반드시 repo root에서 \`git worktree add -b <branch> ../<branch> main\`으로 시작하고, 구현, 커밋, 푸시, PR 생성은 그 worktree 안에서만 진행한다.`,
     )
     ruleNumber++
   }
@@ -1533,16 +1533,16 @@ export async function syncOptionalDocsTemplates(
       startMarker: OPTIONAL_WORKTREE_WORKFLOW_START_MARKER,
       endMarker: OPTIONAL_WORKTREE_WORKFLOW_END_MARKER,
       renderedSection: options.hasWorktree
-        ? [
-            '14. worktree 안에서 `git worktree add -b <branch> ../<branch> main`으로 새 worktree를 만들고, 그 안에서 구현, 커밋, 푸시, PR 생성.',
-            '15. 작업이 끝나면 `git worktree remove <path>`로 정리.',
-          ].join('\n')
+        ? '14. 새 브랜치 작업은 repo root에서 `git worktree add -b <branch> ../<branch> main`으로 worktree를 만들고, 구현, 커밋, 푸시, PR 생성은 그 worktree 안에서 진행한다.'
         : '',
       fallbackAnchor: SINGLE_ROOT_FINALIZE_LINE,
     })
 
     if (options.hasWorktree && nextHarnessSource.includes(SINGLE_ROOT_FINALIZE_LINE)) {
-      nextHarnessSource = nextHarnessSource.replace(`\n${SINGLE_ROOT_FINALIZE_LINE}`, '')
+      nextHarnessSource = nextHarnessSource.replace(
+        SINGLE_ROOT_FINALIZE_LINE,
+        '15. 브랜치 생성, 커밋, 브랜치 푸시, PR 생성 순으로 마무리한다.',
+      )
     }
 
     await writeFile(harnessGuidePath, nextHarnessSource, 'utf8')

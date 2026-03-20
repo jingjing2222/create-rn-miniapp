@@ -1,62 +1,35 @@
-import { execFileSync } from 'node:child_process'
-import { chmod, mkdir, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { CliPrompter } from '../cli.js'
-import { runCommand } from '../commands.js'
 import type { ProvisioningNote } from '../server-project.js'
 
 export const MAIN_WORKTREE_DIRECTORY = 'main'
 
-function createControlRootAgentsStub(workspaceDirectory: string) {
-  return [
-    '# AGENTS.md',
-    '',
-    '이 경로는 create-rn-miniapp이 만든 worktree control root예요.',
-    `실제 repo root와 하네스 문서는 \`${workspaceDirectory}/\` 아래에 있어요.`,
-    '',
-    '## Start Here',
-    `- 지금 기본 브랜치에서 바로 시작하려면 \`cd ${workspaceDirectory}\``,
-    '- 상태 확인: `git worktree list`',
-    `- 새 worktree 만들기 (control root에서): \`git worktree add -b <branch> ./<branch> ${workspaceDirectory}\``,
-    '- 작업할 worktree 안의 `AGENTS.md`를 먼저 읽어요.',
-    '',
-    '## Cleanup',
-    '- 작업이 끝난 worktree 정리: `git worktree remove <path>`',
-    `- \`${workspaceDirectory}/\`에서 \`git pull\` 하면 merged된 worktree가 자동으로 정리돼요 (post-merge hook).`,
-    '- 변경사항이 남아있는 worktree는 건너뛰어요.',
-    '',
-    '## Do Not',
-    '- control root에서 `git commit`',
-    '- control root에서 `git push`',
-    '',
-  ].join('\n')
-}
-
-function createControlRootReadmeStub(workspaceDirectory: string) {
-  return [
-    '# Worktree Control Root',
-    '',
-    '이 경로는 로컬 worktree를 관리하는 control root예요.',
-    `실제 MiniApp repo는 \`${workspaceDirectory}/\` 아래에 있어요.`,
-    '',
-    '## Start',
-    '- 상태 확인: `git worktree list`',
-    `- 새 worktree 만들기 (control root에서): \`git worktree add -b <branch> ./<branch> ${workspaceDirectory}\``,
-    '- 정리: `git worktree remove <path>`',
-    `- \`${workspaceDirectory}/\`에서 \`git pull\` 하면 merged된 worktree가 자동 정리돼요.`,
-    `- 기본 브랜치에서 바로 시작하려면 \`cd ${workspaceDirectory}\``,
-    '',
-  ].join('\n')
+export function createWorktreePolicyNote(options: { workspaceRoot: string }) {
+  return {
+    title: 'worktree 워크플로우를 기본 규칙으로 설정했어요',
+    body: [
+      `repo root: ${options.workspaceRoot}`,
+      '표준 시작: `git worktree add -b <branch> ../<branch> main`',
+      '상태 확인: `git worktree list`',
+      '`main`에서 `git pull --ff-only` 하면 merge된 clean worktree는 post-merge hook으로 같이 정리돼요.',
+      '구현, 커밋, 푸시, PR 생성은 그 worktree 안에서 진행해 주세요.',
+      '자세한 규칙은 `docs/engineering/worktree-workflow.md`를 먼저 확인해 주세요.',
+    ].join('\n'),
+  } satisfies ProvisioningNote
 }
 
 export function createPostMergeHook() {
   return `#!/usr/bin/env bash
-# post-merge: merged된 worktree 자동 정리
-# squash/rebase merge도 감지하기 위해 git cherry를 사용
 set -euo pipefail
 
-control_root="$(git rev-parse --show-toplevel)/.."
-cd "$control_root"
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+current_branch="$(git branch --show-current)"
+if [ "$current_branch" != "main" ]; then
+  exit 0
+fi
 
 git worktree list --porcelain | while IFS= read -r line; do
   case "$line" in
@@ -65,18 +38,16 @@ git worktree list --porcelain | while IFS= read -r line; do
       branch="\${line#branch refs/heads/}"
       [ "$branch" = "main" ] && continue
 
-      # git cherry: +는 미반영, -는 반영됨. +가 하나라도 있으면 아직 merge 안 된 것
       if git cherry main "$branch" 2>/dev/null | grep -q '^+'; then
         continue
       fi
 
-      # dirty worktree는 건너뜀
       if [ -n "$(git -C "$current_wt" status --porcelain 2>/dev/null)" ]; then
         echo "post-merge: $branch worktree에 변경사항이 있어서 건너뛰었어요"
         continue
       fi
 
-      echo "post-merge: merged된 worktree 정리 — $branch"
+      echo "post-merge: merged된 worktree 정리 - $branch"
       git worktree remove "$current_wt" 2>/dev/null || true
       git branch -d "$branch" 2>/dev/null || true
       ;;
@@ -85,38 +56,33 @@ done
 `
 }
 
-async function writeControlRootShims(controlRoot: string) {
-  await writeFile(
-    path.join(controlRoot, 'AGENTS.md'),
-    createControlRootAgentsStub(MAIN_WORKTREE_DIRECTORY),
-    'utf8',
-  )
+async function resolveGitDir(workspaceRoot: string) {
+  const gitPath = path.join(workspaceRoot, '.git')
+  const gitStat = await stat(gitPath)
 
-  await writeFile(
-    path.join(controlRoot, 'README.md'),
-    createControlRootReadmeStub(MAIN_WORKTREE_DIRECTORY),
-    'utf8',
-  )
+  if (gitStat.isDirectory()) {
+    return gitPath
+  }
 
-  const hooksDir = path.join(controlRoot, '.bare', 'hooks')
+  const gitPointer = await readFile(gitPath, 'utf8')
+  const match = gitPointer.match(/^gitdir:\s*(.+)\s*$/m)
+
+  if (!match) {
+    throw new Error(`git dir 포인터를 읽지 못했어요: ${gitPath}`)
+  }
+
+  return path.resolve(workspaceRoot, match[1])
+}
+
+export async function installWorktreeHooks(workspaceRoot: string) {
+  const gitDir = await resolveGitDir(workspaceRoot)
+  const hooksDir = path.join(gitDir, 'hooks')
+
   await mkdir(hooksDir, { recursive: true })
+
   const hookPath = path.join(hooksDir, 'post-merge')
   await writeFile(hookPath, createPostMergeHook(), 'utf8')
   await chmod(hookPath, 0o755)
-}
-
-export function createWorktreeLayoutNote(options: { controlRoot: string; workspaceRoot: string }) {
-  return {
-    title: 'worktree 레이아웃으로 준비했어요',
-    body: [
-      `control root: ${options.controlRoot}`,
-      `main worktree: ${options.workspaceRoot}`,
-      '상태 확인: `git worktree list`',
-      '새 worktree 만들기 (control root에서): `git worktree add -b <branch> ./<branch> main`',
-      '`main/`에서 `git pull` 하면 merged된 worktree가 자동으로 정리돼요.',
-      '실제 repo 작업은 `main/` 또는 추가 worktree 안에서 진행해 주세요.',
-    ].join('\n'),
-  } satisfies ProvisioningNote
 }
 
 export async function resolveCreateWorktreeLayout(options: {
@@ -139,50 +105,12 @@ export async function resolveCreateWorktreeLayout(options: {
 
   return (
     (await options.prompt.select({
-      message: '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+      message: '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
       options: [
-        { label: '아니요, 지금은 single-root로 둘게요', value: 'single-root' },
-        { label: '네, `main/` worktree로 바꿔둘게요', value: 'worktree' },
+        { label: '아니요, 기본 checkout에서 시작할게요', value: 'single-root' },
+        { label: '네, worktree를 쓰게 할게요', value: 'worktree' },
       ],
       initialValue: 'single-root',
     })) === 'worktree'
   )
-}
-
-function assertMinimumGitVersion(minimum: string) {
-  const raw = execFileSync('git', ['--version'], { encoding: 'utf8' }).trim()
-  const match = raw.match(/(\d+\.\d+\.\d+)/)
-  const current = match?.[1] ?? '0.0.0'
-
-  const [curMajor, curMinor] = current.split('.').map(Number)
-  const [minMajor, minMinor] = minimum.split('.').map(Number)
-
-  if (curMajor < minMajor || (curMajor === minMajor && curMinor < minMinor)) {
-    throw new Error(`worktree 레이아웃에는 git ${minimum} 이상이 필요해요. 현재: ${current}`)
-  }
-}
-
-export async function initBareWorktreeLayout(controlRoot: string) {
-  assertMinimumGitVersion('2.38.0')
-
-  await runCommand({
-    cwd: controlRoot,
-    command: 'git',
-    args: ['init', '--bare', '.bare'],
-    label: 'worktree control root git 저장소 만들기',
-  })
-  await writeFile(path.join(controlRoot, '.git'), 'gitdir: ./.bare\n', 'utf8')
-  await runCommand({
-    cwd: controlRoot,
-    command: 'git',
-    args: ['symbolic-ref', 'HEAD', 'refs/heads/main'],
-    label: 'bare repo 기본 브랜치를 main으로 맞추기',
-  })
-  await runCommand({
-    cwd: controlRoot,
-    command: 'git',
-    args: ['worktree', 'add', '--orphan', MAIN_WORKTREE_DIRECTORY],
-    label: '`main` worktree 만들기',
-  })
-  await writeControlRootShims(controlRoot)
 }

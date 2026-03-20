@@ -169,7 +169,7 @@ test('resolveCliOptions asks for missing values when interactive input is needed
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
     '`backoffice`도 같이 만들까요?',
-    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+    '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
   ])
 })
 
@@ -225,7 +225,7 @@ test('resolveCliOptions does not ask for a cloudflare worker mode when cloudflar
     '`server` 제공자를 골라 주세요.',
     '`tRPC`도 같이 이어드릴까요?',
     '`backoffice`도 같이 만들까요?',
-    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+    '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
   ])
 })
 
@@ -278,7 +278,7 @@ test('resolveCliOptions does not ask for trpc when firebase is selected', async 
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
     '`backoffice`도 같이 만들까요?',
-    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+    '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
   ])
 })
 
@@ -468,7 +468,7 @@ test('resolveCliOptions accepts an explicit server-provider without extra server
   assert.deepEqual(selectMessages, [
     '`tRPC`도 같이 이어드릴까요?',
     '`backoffice`도 같이 만들까요?',
-    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+    '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
   ])
 })
 
@@ -654,7 +654,7 @@ test('resolveCliOptions skips package-manager prompt when pnpm create invoked th
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
     '`backoffice`도 같이 만들까요?',
-    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+    '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
   ])
 })
 
@@ -706,7 +706,7 @@ test('resolveCliOptions skips package-manager prompt when yarn create invoked th
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
     '`backoffice`도 같이 만들까요?',
-    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+    '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
   ])
 })
 
@@ -760,7 +760,7 @@ test('resolveCliOptions skips package-manager prompt when npm create invoked the
     '`server` 제공자를 골라 주세요.',
     '`tRPC`도 같이 이어드릴까요?',
     '`backoffice`도 같이 만들까요?',
-    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+    '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
   ])
 })
 
@@ -812,7 +812,7 @@ test('resolveCliOptions skips package-manager prompt when bun create invoked the
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
     '`backoffice`도 같이 만들까요?',
-    '`main` 브랜치로 마무리하기 전에 worktree 레이아웃으로 바꿔둘까요?',
+    '에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)',
   ])
 })
 

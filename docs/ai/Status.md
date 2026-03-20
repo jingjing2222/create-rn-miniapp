@@ -1,3 +1,32 @@
+## 2026-03-20 — control root 제거, `--worktree`는 정책 플래그로 유지
+- 상태
+  - 새 scaffold 결과는 항상 일반 single-root repo로 생성되도록 정리했다.
+  - `--worktree`를 고른 경우에는 repo 구조를 바꾸지 않고, AGENTS / 하네스 문서 / 생성 직후 note가 "새 작업은 반드시 repo root에서 worktree로 시작" 규칙을 가리키게 바꿨다.
+  - merge 또는 squash merge 뒤 `main` checkout에서 `git pull --ff-only`를 하면 merged된 clean worktree를 정리하는 `post-merge` hook을 repo root 기준으로 다시 붙였다.
+- 반영한 변경
+  - `packages/create-rn-miniapp/src/scaffold/worktree.ts`
+    - control root / bare repo 초기화 로직 제거
+    - repo-root 기준 worktree note와 `post-merge` hook 설치 로직으로 재구성
+  - `packages/create-rn-miniapp/src/scaffold/index.ts`
+    - 생성 루트를 항상 single-root로 유지
+    - `--worktree`일 때는 일반 git init 뒤 hook 설치와 note만 추가
+  - `packages/create-rn-miniapp/src/cli.ts`
+  - `packages/create-rn-miniapp/src/index.ts`
+    - `--worktree` 설명과 interactive 문구를 정책 의미에 맞게 변경
+  - `packages/create-rn-miniapp/src/templates/index.ts`
+    - worktree golden rule을 repo-root 기준 강제 규칙으로 변경
+    - `하네스-실행가이드.md`의 공통 PR 마무리 라인은 유지하고, worktree 단계만 앞에 추가
+  - `packages/scaffold-templates/optional/worktree/docs/engineering/worktree-workflow.md`
+    - control root 설명 제거
+    - repo-root 기준 시작/조회/동기화/정리 절차로 재작성
+  - `packages/create-rn-miniapp/src/cli.test.ts`
+  - `packages/create-rn-miniapp/src/scaffold/worktree.test.ts`
+  - `packages/create-rn-miniapp/src/templates/index.test.ts`
+    - 새 정책과 hook 설치 기준으로 테스트 갱신
+- 검증
+  - `pnpm test -- packages/create-rn-miniapp/src/cli.test.ts packages/create-rn-miniapp/src/templates/index.test.ts packages/create-rn-miniapp/src/scaffold/worktree.test.ts` ✅
+  - `pnpm verify` ✅
+
 ## 2026-03-19 — Implement.md 제거와 Plan 중심 하네스 정리
 - 상태
   - 생성 템플릿 문서군에서 `Implement.md`를 제거하고 구현 계획 책임을 `Plan.md`로 흡수했다.

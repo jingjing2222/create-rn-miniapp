@@ -31,11 +31,7 @@ import {
   maybeProvisionSupabaseProject,
 } from './provisioning.js'
 import type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
-import {
-  createWorktreeLayoutNote,
-  initBareWorktreeLayout,
-  MAIN_WORKTREE_DIRECTORY,
-} from './worktree.js'
+import { createWorktreePolicyNote, installWorktreeHooks } from './worktree.js'
 
 export {
   buildCreateExecutionOrder,
@@ -58,15 +54,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
 
   await ensureEmptyDirectory(controlRoot)
 
-  let workspaceRoot: string
-
-  if (useWorktree) {
-    log.step('control root + main worktree 레이아웃 세팅')
-    await initBareWorktreeLayout(controlRoot)
-    workspaceRoot = path.join(controlRoot, MAIN_WORKTREE_DIRECTORY)
-  } else {
-    workspaceRoot = controlRoot
-  }
+  const workspaceRoot = controlRoot
 
   if (options.serverProvider) {
     await mkdir(path.join(workspaceRoot, 'server'), { recursive: true })
@@ -218,11 +206,15 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     })
   }
 
-  if (!options.noGit && !useWorktree) {
+  if (!options.noGit) {
     for (const command of buildRootGitSetupPlan({ targetRoot: workspaceRoot })) {
       log.step(command.label)
       await runCommand(command)
     }
+  }
+
+  if (useWorktree) {
+    await installWorktreeHooks(workspaceRoot)
   }
 
   notes.push(
@@ -250,8 +242,7 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
 
   if (useWorktree) {
     notes.unshift(
-      createWorktreeLayoutNote({
-        controlRoot,
+      createWorktreePolicyNote({
         workspaceRoot,
       }),
     )
@@ -265,22 +256,6 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
       log.step(command.label)
       await runCommand(command)
     }
-  }
-
-  if (useWorktree) {
-    log.step('worktree initial commit 만들기')
-    await runCommand({
-      cwd: workspaceRoot,
-      command: 'git',
-      args: ['add', '.'],
-      label: 'worktree 파일 스테이징',
-    })
-    await runCommand({
-      cwd: workspaceRoot,
-      command: 'git',
-      args: ['commit', '-m', 'chore: initial scaffold'],
-      label: 'worktree initial commit',
-    })
   }
 
   return {

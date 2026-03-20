@@ -1,39 +1,19 @@
 # Worktree 워크플로우
 
-## 레이아웃 구조
+## 기준
 
-이 프로젝트는 worktree 레이아웃으로 만들어졌어요.
+이 repo는 일반 single-root git 저장소예요.
+`--worktree`로 생성했다면 새 작업은 반드시 repo root에서 worktree로 시작해요.
 
-```
-project/
-  .bare/          ← bare git 저장소
-  .git            ← gitdir: ./.bare
-  AGENTS.md       ← control root 안내 (git에 안 올라감)
-  README.md       ← control root 안내 (git에 안 올라감)
-  main/           ← 기본 브랜치 worktree (실제 작업 공간)
-    package.json
-    frontend/
-    server/
-    docs/
-```
-
-`main/` 안이 실제 git repo의 루트예요. GitHub에서는 `main/` 없이 flat하게 보여요.
-
-## 새 작업 시작
-
-worktree 안(예: `main/`)에서 실행:
+표준 시작 명령:
 
 ```bash
 git worktree add -b <branch-name> ../<branch-name> main
 ```
 
-control root에서 실행:
-
-```bash
-git worktree add -b <branch-name> ./<branch-name> main
-```
-
-`main/`과 같은 레벨에 새 worktree가 생겨요.
+- 이 명령은 repo root에서 실행해요.
+- 새 브랜치용 worktree는 repo root 옆 경로에 만들어요.
+- 구현, 커밋, 푸시, PR 생성은 새로 만든 worktree 안에서만 진행해요.
 
 ## 상태 확인
 
@@ -41,29 +21,28 @@ git worktree add -b <branch-name> ./<branch-name> main
 git worktree list
 ```
 
-모든 worktree의 경로와 브랜치를 볼 수 있어요.
+현재 연결된 worktree 경로와 브랜치를 확인해요.
 
 ## 동기화
 
-```bash
-git fetch --all
-```
+repo root로 돌아와 기본 브랜치를 최신 상태로 맞출 때:
 
-remote 변경사항을 가져와요.
+```bash
+git switch main
+git pull --ff-only
+```
 
 ## 정리
 
-`main/`에서 `git pull` 하면 merged된 worktree가 자동으로 정리돼요 (post-merge hook). 변경사항이 남아있는 worktree는 건너뛰어요.
-
-수동으로 정리하려면:
+머지 후 worktree를 정리할 때:
 
 ```bash
-git worktree remove <path>
+git worktree remove ../<branch-name>
 git branch -d <branch-name>
 ```
 
-## 주의사항
+## 금지 규칙
 
-- control root에서 직접 `git commit`이나 `git push`를 하지 마세요.
-- 실제 작업은 항상 `main/` 또는 추가 worktree 안에서 진행하세요.
-- 각 worktree 안의 `AGENTS.md`를 먼저 읽고 시작하세요.
+- repo root `main` checkout에서 기능 구현을 시작하지 않아요.
+- worktree를 만들지 않고 바로 브랜치를 파서 작업하지 않아요.
+- 구현, 커밋, 푸시, PR 생성을 repo root `main` checkout에서 진행하지 않아요.
