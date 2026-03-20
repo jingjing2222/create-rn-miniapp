@@ -26,27 +26,32 @@ git worktree list
 
 ## 동기화
 
-repo root로 돌아와 기본 브랜치를 최신 상태로 맞출 때:
+repo root로 돌아와 기본 브랜치를 최신 상태로 맞출 때는 아래 경로를 표준으로 써요:
 
 ```bash
 git switch main
 git pull --ff-only
 ```
 
-## 정리
+- 다른 갱신 방식도 쓸 수 있지만, 자동 정리는 이 표준 경로를 기준으로 설명해요.
 
-머지 후에는 repo root `main` checkout에서 아래처럼 최신 상태를 받으면:
+## 자동 정리
+
+원격 PR이 merge되었거나 squash merge되었더라도, repo root `main` checkout에서 아래처럼 최신 상태를 받으면:
 
 ```bash
 git switch main
 git pull --ff-only
 ```
 
-merged된 clean worktree는 post-merge hook이 자동으로 정리해요.
+main에 이미 반영된 clean worktree는 post-merge hook이 자동으로 정리해요.
 
 - 변경사항이 남아있는 worktree는 자동 정리하지 않아요.
 - 아직 merge되지 않은 브랜치도 자동 정리하지 않아요.
-- 정말 수동 정리가 필요할 때만 아래 명령을 써요.
+
+## 예외적 수동 정리
+
+자동 정리 대상이 아니지만 직접 닫아야 할 때만 아래 명령을 써요.
 
 ```bash
 git worktree remove ../<branch-name>

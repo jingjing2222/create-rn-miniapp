@@ -43,6 +43,7 @@
    - `--worktree` 생성 시 scaffold 결과를 담은 초기 baseline commit을 `main`에 자동 생성해, 문서가 안내하는 표준 `git worktree add ... main` 시작 명령이 즉시 동작하게 만든다
    - `workspace-inspector`가 기존 repo의 worktree 정책 활성화 여부를 감지하고, `--add`도 그 상태를 그대로 유지하게 만든다
    - 현재 single-root에서 같은 값을 가리키는 `controlRoot`/`workspaceRoot` 표현은 줄이고, worktree 관련 불리언 이름도 정책 의미가 드러나게 정리한다
+   - `git pull --ff-only`는 hook이 기대하는 권장 표준 경로로만 설명하고, 문서가 필수 규칙처럼 읽히지 않게 톤을 낮춘다
 
 ### 파일별 작업 계획
 1. `packages/create-rn-miniapp/src/scaffold/worktree.ts`

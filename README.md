@@ -91,7 +91,7 @@ pnpm verify
 - 새 작업은 repo root에서 `git worktree add -b <branch> ../<branch> main`으로 시작해요.
 - `main`에는 scaffold baseline commit이 이미 있어서 이 명령을 바로 실행할 수 있어요.
 - 구현, 커밋, 푸시, PR 생성은 새 worktree 안에서 진행해요.
-- `main` checkout에서 `git pull --ff-only` 하면 merged된 clean worktree는 post-merge hook으로 같이 정리돼요.
+- `main` checkout 최신화는 보통 `git pull --ff-only`를 권장해요. 이 표준 경로로 갱신하면 main에 반영된 clean worktree는 post-merge hook으로 같이 정리돼요.
 - 자세한 규칙은 생성된 repo의 `docs/engineering/worktree-workflow.md`를 보면 돼요.
 
 `docs/`는 단순 샘플 문서가 아니라, 생성 직후부터 작업 기준을 맞추기 위한 컨텍스트 문서예요.

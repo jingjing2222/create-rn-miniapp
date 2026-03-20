@@ -15,7 +15,7 @@ export function createWorktreePolicyNote(options: { workspaceRoot: string }) {
       '`main`에는 scaffold 결과를 담은 baseline commit을 먼저 만들어 두었어요.',
       '표준 시작: `git worktree add -b <branch> ../<branch> main`',
       '상태 확인: `git worktree list`',
-      '`main`에서 `git pull --ff-only` 하면 merge된 clean worktree는 post-merge hook으로 같이 정리돼요.',
+      '`main` 최신화는 보통 `git pull --ff-only`를 써 주세요. 이 표준 경로로 갱신하면 main에 반영된 clean worktree는 post-merge hook으로 같이 정리돼요.',
       '구현, 커밋, 푸시, PR 생성은 그 worktree 안에서 진행해 주세요.',
       '자세한 규칙은 `docs/engineering/worktree-workflow.md`를 먼저 확인해 주세요.',
     ].join('\n'),
