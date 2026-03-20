@@ -1,6 +1,6 @@
 {
   "name": "create-rn-miniapp",
-  "version": "0.0.26",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
   "bin": {
