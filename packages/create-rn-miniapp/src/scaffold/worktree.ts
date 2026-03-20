@@ -43,21 +43,29 @@ function renderWorkspaceClaudeGuide() {
   return '프로젝트 안내는 `AGENTS.md`를 읽어주세요.\n'
 }
 
-function renderWorktreeBootstrapSection() {
+function resolveControlRootAppName(workspaceRoot: string) {
+  const currentBaseName = path.basename(workspaceRoot)
+
+  if (currentBaseName === MAIN_WORKTREE_DIRECTORY) {
+    return path.basename(path.dirname(workspaceRoot))
+  }
+
+  return currentBaseName
+}
+
+function renderWorktreeBootstrapSection(appName: string) {
   return [
     WORKTREE_BOOTSTRAP_START_MARKER,
     '## Worktree Bootstrap',
     '',
-    '이 repo를 AI/멀티-agent용 control root 구조로 운영하려면, plain clone 대신 빈 디렉토리에서 아래 순서로 시작해요.',
+    '이 repo를 AI/멀티-agent용 control root 구조로 운영해야해요, plain clone 대신 빈 디렉토리에서 아래 순서로 시작해요.',
     '',
     '```bash',
+    `mkdir ${appName}`,
+    `cd ${appName}`,
     'git clone --separate-git-dir=.gitdata <repo-url> main',
     'node main/scripts/worktree/bootstrap-control-root.mjs',
     '```',
-    '',
-    'bootstrap이 끝나면 local control root에는 `.gitdata/`, `main/`, root stub(`AGENTS.md`, `.claude/CLAUDE.md`, `README.md`)가 생겨요.',
-    '이후 새 작업은 control root에서 `git -C main worktree add -b <branch-name> ../<branch-name> main`으로 시작해요.',
-    '브랜치명에는 `/`를 쓰지 않고 1-depth kebab-case만 써요. 예: `feat-login`.',
     WORKTREE_BOOTSTRAP_END_MARKER,
   ].join('\n')
 }
@@ -98,6 +106,7 @@ export async function ensureWorkspaceClaudeGuide(workspaceRoot: string) {
 
 export async function ensureWorktreeBootstrapReadme(workspaceRoot: string) {
   const readmePath = path.join(workspaceRoot, 'README.md')
+  const appName = resolveControlRootAppName(workspaceRoot)
   let source = '# Project\n'
 
   try {
@@ -108,7 +117,7 @@ export async function ensureWorktreeBootstrapReadme(workspaceRoot: string) {
 
   await writeFile(
     readmePath,
-    replaceMarkedSection(source, renderWorktreeBootstrapSection()),
+    replaceMarkedSection(source, renderWorktreeBootstrapSection(appName)),
     'utf8',
   )
 }
@@ -140,7 +149,7 @@ export function createWorktreePolicyNote(options: { controlRoot: string; workspa
       `control root: ${options.controlRoot}`,
       `기본 checkout: ${options.workspaceRoot}`,
       '`main/`에는 scaffold 결과를 담은 baseline commit을 먼저 만들어 두었어요.',
-      'plain clone 상태라면 README bootstrap 절차(`git clone --separate-git-dir=.gitdata <repo-url> main` 후 `node main/scripts/worktree/bootstrap-control-root.mjs`)를 먼저 실행해 주세요.',
+      'plain clone 상태라면 `main/README.md` 맨 위 bootstrap 절차를 먼저 실행해 주세요.',
       '표준 시작: `git -C main worktree add -b <branch-name> ../<branch-name> main`',
       '브랜치명에는 `/`를 쓰지 말고 1-depth kebab-case만 써 주세요. 예: `feat-login`',
       '새 worktree는 control root 바로 아래 sibling으로 만들어요.',

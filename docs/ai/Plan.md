@@ -7,6 +7,9 @@
 - 생성 직후 worktree note도 README bootstrap과 같은 실제 절차를 가리키게 맞춘다.
 - worktree 브랜치/경로 규칙을 `/` 없는 1-depth 브랜치명 기준으로 단순화한다.
 - committed README의 bootstrap 섹션은 항상 맨 위에 오게 고정한다.
+- generated README bootstrap 첫 문장을 사람이 읽기 쉬운 강한 안내 문장으로 다듬는다.
+- generated README bootstrap 섹션에서 과한 설명 문장을 걷어내고, 실제 시작 명령만 남긴다.
+- generated README와 공개 README bootstrap 예시에 `mkdir <appName>`/`cd <appName>` 단계까지 포함한다.
 
 ### 확인된 문제
 - worktree scaffold 시 committed repo root(`main/`)에 `.claude/CLAUDE.md`가 빠져 plain clone과 `main/` 직접 진입 동선이 깨져 있다.
@@ -31,12 +34,15 @@
    - worktree note가 README bootstrap의 전체 2단계 절차를 가리키게 고친다.
    - bootstrap 섹션이 기존 marker 위치와 무관하게 README 맨 위로 올라가게 고친다.
    - worktree 기본 명령과 stub 문구를 `/` 없는 브랜치명 기준으로 바꾼다.
+   - bootstrap 첫 문장을 `운영해야해요` 톤으로 조정한다.
+   - bootstrap 섹션에 app 이름 기반 `mkdir`/`cd` 예시를 넣고, 코드 블록 뒤 군더더기 설명은 제거한다.
 4. `packages/create-rn-miniapp/src/scaffold/index.ts`
    - single-root/worktree 여부와 무관하게 실제 repo root에 `.claude/CLAUDE.md`를 생성한다.
 5. `README.md`
    - quick start에서 single-root와 `--worktree` verify 경로를 분리한다.
    - `Implement.md` 언급을 제거하고 `Plan/Status/Decisions/Prompt` 기준으로 정리한다.
    - worktree 시작 명령과 예시를 `/` 없는 1-depth 브랜치명 기준으로 갱신한다.
+   - 공개 bootstrap 예시도 빈 디렉토리 생성부터 시작하도록 맞춘다.
 6. `.gitignore`
    - `docs/superpowers/`를 ignore에 추가한다.
    - tracked 상태인 `docs/superpowers/**`는 index에서 제거한다.

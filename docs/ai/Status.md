@@ -6,6 +6,10 @@
   - 생성 직후 worktree note가 plain clone bootstrap을 스크립트 단독 실행으로 오해하게 쓰던 문구도 README bootstrap의 전체 2단계 절차로 고쳤다.
   - worktree 브랜치 규칙은 `/` 없는 1-depth kebab-case branch name으로 단순화했다.
   - committed README bootstrap 섹션은 marker가 이미 아래에 있더라도 항상 맨 위로 올라가게 고쳤다.
+  - generated README bootstrap 첫 문장은 `운영해야해요` 톤으로 다시 다듬었다.
+  - generated README bootstrap 섹션은 app 이름 기준 `mkdir`/`cd`를 포함한 실제 시작 명령만 남기고, 뒤에 붙던 설명 문장은 제거했다.
+  - public README bootstrap 예시도 `mkdir my-miniapp`부터 시작하도록 맞췄다.
+  - worktree policy note는 고정 명령열 대신 `main/README.md` 맨 위 bootstrap 절차를 보라고 정리했다.
   - `docs/superpowers/**`는 `.gitignore`에 넣고 Git 추적에서 제거해서 PR에서 더 이상 폐기된 설계를 노출하지 않게 했다.
 - 반영한 변경
   - `packages/create-rn-miniapp/src/scaffold/worktree.ts`
@@ -14,12 +18,17 @@
     - worktree policy note bootstrap 문구를 실제 clone 절차에 맞게 수정
     - bootstrap 섹션 상단 고정 처리 추가
     - branch name 규칙을 `/` 없는 1-depth kebab-case로 정리
+    - generated README bootstrap 첫 문장 톤 조정
+    - generated README bootstrap에 app 이름 기반 `mkdir`/`cd` 단계 추가
+    - generated README bootstrap 뒤 군더더기 설명 제거
+    - worktree policy note를 `main/README.md` bootstrap 참조로 단순화
   - `packages/create-rn-miniapp/src/scaffold/index.ts`
     - single-root / control-root 모두 실제 repo root에 `.claude/CLAUDE.md`를 생성하도록 정리
   - `packages/create-rn-miniapp/src/scaffold/worktree.test.ts`
     - repo root Claude guide와 note 경로 회귀 테스트 추가
     - note가 `git clone --separate-git-dir=.gitdata ...` 절차까지 가리키는지 검증 추가
     - bootstrap 섹션이 README 맨 위로 이동하는지 검증 추가
+    - generated README bootstrap 첫 문장 회귀 테스트 갱신
   - `packages/create-rn-miniapp/src/release.test.ts`
     - README quick start와 `Implement.md` 제거 회귀 테스트 추가
     - README와 workflow 문서의 branch name 규칙 회귀 테스트 추가
@@ -31,6 +40,7 @@
   - `README.md`
     - quick start와 AI docs 설명 정리
     - worktree 시작 명령과 예시를 branch name 기준으로 정리
+    - control-root bootstrap 예시를 `mkdir my-miniapp`부터 시작하도록 정리
   - `.gitignore`
     - `docs/superpowers/` ignore 추가
 - 검증

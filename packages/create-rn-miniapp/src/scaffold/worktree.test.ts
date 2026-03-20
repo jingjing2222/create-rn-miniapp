@@ -105,8 +105,7 @@ test('createWorktreePolicyNote explains the control-root workflow', () => {
   assert.match(note.body, /기본 checkout: \/tmp\/ebook\/main/)
   assert.match(note.body, /git -C main worktree add -b <branch-name> \.\.\/<branch-name> main/)
   assert.match(note.body, /브랜치명에는 `\/`를 쓰지 말고 1-depth kebab-case/)
-  assert.match(note.body, /git clone --separate-git-dir=\.gitdata <repo-url> main/)
-  assert.match(note.body, /bootstrap-control-root\.mjs/)
+  assert.match(note.body, /`main\/README\.md` 맨 위 bootstrap 절차/)
   assert.match(note.body, /post-merge hook으로 같이 정리돼요/)
   assert.match(note.body, /control root 바로 아래 sibling으로/)
   assert.match(note.body, /구현, 커밋, 푸시, PR 생성은 그 worktree 안에서 진행/)
@@ -202,10 +201,12 @@ test('ensureWorkspaceClaudeGuide writes the committed Claude guide into the repo
 })
 
 test('ensureWorktreeBootstrapReadme prepends the control-root bootstrap section', async () => {
-  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-worktree-readme-'))
+  const controlRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-worktree-readme-'))
+  const workspaceRoot = path.join(controlRoot, 'main')
   const readmePath = path.join(workspaceRoot, 'README.md')
 
   try {
+    await mkdir(workspaceRoot, { recursive: true })
     await writeFile(
       readmePath,
       [
@@ -228,15 +229,20 @@ test('ensureWorktreeBootstrapReadme prepends the control-root bootstrap section'
 
     assert.equal(
       readme.startsWith(
-        '<!-- worktree-bootstrap:start -->\n## Worktree Bootstrap\n\n이 repo를 AI/멀티-agent용 control root 구조로 운영하려면',
+        '<!-- worktree-bootstrap:start -->\n## Worktree Bootstrap\n\n이 repo를 AI/멀티-agent용 control root 구조로 운영해야해요, plain clone 대신 빈 디렉토리에서 아래 순서로 시작해요.',
       ),
       true,
     )
+    assert.match(readme, /mkdir create-rn-miniapp-worktree-readme-[^/\n]+/)
+    assert.match(readme, /cd create-rn-miniapp-worktree-readme-[^/\n]+/)
     assert.match(readme, /git clone --separate-git-dir=\.gitdata <repo-url> main/)
     assert.match(readme, /node main\/scripts\/worktree\/bootstrap-control-root\.mjs/)
+    assert.doesNotMatch(readme, /bootstrap이 끝나면 local control root에는/)
+    assert.doesNotMatch(readme, /이후 새 작업은 control root에서/)
+    assert.doesNotMatch(readme, /브랜치명에는 `\/`를 쓰지 않고/)
     assert.match(readme, /# Existing README/)
   } finally {
-    await rm(workspaceRoot, { recursive: true, force: true })
+    await rm(controlRoot, { recursive: true, force: true })
   }
 })
 

@@ -65,9 +65,11 @@ pnpm dlx create-rn-miniapp \
 
 기본값은 worktree 미사용이에요. 마지막 git 단계 직전에 `에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)`라고 한 번 더 물어봐요. `--worktree`를 주면 그 질문 없이 바로 활성화되고, `--no-git`이면 이 단계는 건너뛰어요.
 
-이미 만들어진 repo를 clone해서 control root 구조로 쓰고 싶다면, plain clone 대신 빈 디렉토리에서 bootstrap하는 방식을 권장해요.
+이 repo를 AI/멀티-agent용 control root 구조로 운영해야해요. plain clone 대신 빈 디렉토리에서 아래 순서로 시작해요.
 
 ```bash
+mkdir my-miniapp
+cd my-miniapp
 git clone --separate-git-dir=.gitdata <repo-url> main
 node main/scripts/worktree/bootstrap-control-root.mjs
 ```
