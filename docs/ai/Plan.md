@@ -2772,3 +2772,13 @@ docs/
    - non-`index.ts` pure forwarding facade module이 존재하면 실패하도록 검증
 4. 완료 기준
    - `pnpm verify` 통과
+
+## 현재 runtime monolith 실분리
+1. `templates/runtime.ts`, `patching/runtime.ts` 같은 집합 구현 파일을 제거한다.
+2. `templates/docs.ts`, `templates/root.ts`, `templates/server.ts`, `templates/filesystem.ts`, `templates/skills.ts`, `templates/types.ts`, `templates/trpc-entry.ts`, `patching/frontend.ts`, `patching/backoffice.ts`, `patching/server.ts`가 각자 구현을 직접 가진다.
+3. 호출부는 re-export/facade를 거치지 않고 해당 구현 파일을 직접 import 한다.
+4. 테스트 범위
+   - `runtime.ts` 집합 구현 파일이 남아 있으면 실패
+   - non-`index.ts` forwarding facade 금지 규칙 유지
+5. 완료 기준
+   - `pnpm verify` 통과

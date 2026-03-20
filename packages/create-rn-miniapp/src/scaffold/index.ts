@@ -3,15 +3,12 @@ import path from 'node:path'
 import { log } from '@clack/prompts'
 import { buildAddCommandPhases, buildCreateCommandPhases, runCommand } from '../commands.js'
 import { getPackageManagerAdapter } from '../package-manager.js'
-import { patchBackofficeWorkspace, patchFrontendWorkspace } from '../patching/runtime.js'
-import {
-  applyDocsTemplates,
-  applyRootTemplates,
-  ensureEmptyDirectory,
-  pathExists,
-  syncGeneratedSkills,
-  syncRootWorkspaceManifest,
-} from '../templates/runtime.js'
+import { patchBackofficeWorkspace } from '../patching/backoffice.js'
+import { patchFrontendWorkspace } from '../patching/frontend.js'
+import { ensureEmptyDirectory, pathExists } from '../templates/filesystem.js'
+import { applyRootTemplates, syncRootWorkspaceManifest } from '../templates/root.js'
+import { syncGeneratedSkills } from '../templates/skills.js'
+import { applyDocsTemplates } from '../templates/docs.js'
 import type { ProvisioningNote } from '../server-project.js'
 import { buildRootFinalizePlan, buildRootGitSetupPlan } from './orders.js'
 import {

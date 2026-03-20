@@ -2,14 +2,10 @@ import path from 'node:path'
 import { log } from '@clack/prompts'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import { getServerProviderAdapter, type ServerProvider } from '../providers/index.js'
-import {
-  applyTrpcWorkspaceTemplate,
-  pathExists,
-  writeWorkspaceNpmrc,
-  type TemplateTokens,
-  type WorkspaceName,
-} from '../templates/runtime.js'
+import { pathExists, writeWorkspaceNpmrc } from '../templates/filesystem.js'
+import { applyTrpcWorkspaceTemplate } from '../templates/trpc.js'
 import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from '../templates/trpc.js'
+import type { TemplateTokens, WorkspaceName } from '../templates/types.js'
 
 export function createTemplateTokens(options: {
   appName: string

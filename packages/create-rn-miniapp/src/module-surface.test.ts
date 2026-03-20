@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { fileURLToPath } from 'node:url'
 
 const SRC_ROOT = fileURLToPath(new URL('../src/', import.meta.url))
+const FORBIDDEN_RUNTIME_MODULES = ['templates/runtime.ts', 'patching/runtime.ts'] as const
 
 async function listSourceFiles(currentDir: string): Promise<string[]> {
   const { readdir } = await import('node:fs/promises')
@@ -168,6 +169,19 @@ test('non-index source modules are not pure forwarding facades', async () => {
       isPureForwardingModule(source),
       false,
       `forwarding facade found in ${path.relative(SRC_ROOT, filePath)}`,
+    )
+  }
+})
+
+test('source tree does not keep runtime monolith modules', async () => {
+  const sourceFiles = await listSourceFiles(SRC_ROOT)
+  const relativePaths = new Set(sourceFiles.map((filePath) => path.relative(SRC_ROOT, filePath)))
+
+  for (const relativePath of FORBIDDEN_RUNTIME_MODULES) {
+    assert.equal(
+      relativePaths.has(relativePath),
+      false,
+      `runtime monolith found in ${relativePath}`,
     )
   }
 })
