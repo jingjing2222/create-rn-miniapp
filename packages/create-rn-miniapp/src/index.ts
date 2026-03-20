@@ -11,6 +11,7 @@ import {
   resolveCliOptions,
 } from './cli.js'
 import { addWorkspaces, scaffoldWorkspace } from './scaffold/index.js'
+import { TRPC_WORKSPACE_PATHS } from './trpc-workspace-metadata.js'
 import { inspectWorkspace } from './workspace-inspector.js'
 
 const require = createRequire(import.meta.url)
@@ -24,7 +25,7 @@ function describeWorkspaceLayout(options: {
   return [
     'frontend',
     ...(options.withServer ? ['server'] : []),
-    ...(options.withTrpc ? ['packages/contracts', 'packages/app-router'] : []),
+    ...(options.withTrpc ? TRPC_WORKSPACE_PATHS : []),
     ...(options.withBackoffice ? ['backoffice'] : []),
   ].join(', ')
 }

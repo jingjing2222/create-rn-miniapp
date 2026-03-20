@@ -1,3 +1,5 @@
+import type { TrpcWorkspacePath } from './trpc-workspace-metadata.js'
+
 export const PACKAGE_MANAGERS = ['pnpm', 'yarn', 'npm', 'bun'] as const
 
 export type PackageManager = (typeof PACKAGE_MANAGERS)[number]
@@ -36,7 +38,7 @@ export type PackageManagerAdapter = {
   runScriptInDirectoryCommand(directory: string, script: string): string
   dlxCommand(packageName: string, args: string[]): string
   workspaceRunCommand(
-    workspace: 'frontend' | 'backoffice' | 'server' | 'packages/app-router' | 'packages/contracts',
+    workspace: 'frontend' | 'backoffice' | 'server' | TrpcWorkspacePath,
     script: string,
   ): string
   runScript(script: string): string

@@ -1,6 +1,6 @@
 import path from 'node:path'
+import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from '../trpc-workspace-metadata.js'
 import { pathExists } from './filesystem.js'
-import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from './trpc.js'
 import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions } from './types.js'
 
 export async function resolveGeneratedWorkspaceOptions(

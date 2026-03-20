@@ -98,6 +98,22 @@ function escapeRegExp(source: string) {
   return source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function getSourceSlice(source: string, startMarker: string, endMarker?: string) {
+  const startIndex = source.indexOf(startMarker)
+
+  assert.notEqual(startIndex, -1, `missing source marker: ${startMarker}`)
+
+  if (!endMarker) {
+    return source.slice(startIndex)
+  }
+
+  const endIndex = source.indexOf(endMarker, startIndex + startMarker.length)
+
+  assert.notEqual(endIndex, -1, `missing source marker: ${endMarker}`)
+
+  return source.slice(startIndex, endIndex)
+}
+
 function getMarkdownSectionBody(source: string, heading: string) {
   const headingPattern = new RegExp(`^## ${escapeRegExp(heading)}\\n`, 'm')
   const match = headingPattern.exec(source)
@@ -229,6 +245,30 @@ test('docs module keeps code-owned doc definitions in a single manifest', async 
   assert.doesNotMatch(docsSource, /const CODE_OWNED_DOCS_INSIDE_DOCS/)
 })
 
+test('docs module derives rendered doc lists from shared document metadata', async () => {
+  const docsSource = await readFile(fileURLToPath(new URL('./docs.ts', import.meta.url)), 'utf8')
+  const agentsSource = getSourceSlice(
+    docsSource,
+    'function renderAgentsMarkdown',
+    'function renderDocsIndexMarkdown',
+  )
+  const docsIndexSource = getSourceSlice(
+    docsSource,
+    'function renderDocsIndexMarkdown',
+    'function renderWorkspaceTopologyMarkdown',
+  )
+
+  assert.match(docsSource, /const DOCUMENT_DEFINITIONS/)
+  assert.doesNotMatch(agentsSource, /docs\/ai\/Plan\.md/)
+  assert.doesNotMatch(agentsSource, /docs\/ai\/Status\.md/)
+  assert.doesNotMatch(agentsSource, /docs\/ai\/Decisions\.md/)
+  assert.doesNotMatch(agentsSource, /docs\/index\.md/)
+  assert.doesNotMatch(agentsSource, /docs\/product\/기능명세서\.md/)
+  assert.doesNotMatch(docsIndexSource, /engineering\/repo-contract\.md/)
+  assert.doesNotMatch(docsIndexSource, /engineering\/frontend-policy\.md/)
+  assert.doesNotMatch(docsIndexSource, /engineering\/workspace-topology\.md/)
+})
+
 test('tRPC workspace descriptors come from templates/trpc metadata', async () => {
   const featureCatalogSource = await readFile(
     fileURLToPath(new URL('./feature-catalog.ts', import.meta.url)),
@@ -244,6 +284,24 @@ test('tRPC workspace descriptors come from templates/trpc metadata', async () =>
   assert.doesNotMatch(featureCatalogSource, /`packages\/app-router`/)
   assert.doesNotMatch(patchingServerSource, /boundary schema의 source of truth예요/)
   assert.doesNotMatch(patchingServerSource, /route shape와 `AppRouter` 타입의 source of truth예요/)
+})
+
+test('tRPC workspace paths are not hardcoded outside the shared workspace metadata', async () => {
+  const cliSource = await readFile(fileURLToPath(new URL('../index.ts', import.meta.url)), 'utf8')
+  const packageManagerSource = await readFile(
+    fileURLToPath(new URL('../package-manager.ts', import.meta.url)),
+    'utf8',
+  )
+  const patchingSharedSource = await readFile(
+    fileURLToPath(new URL('../patching/shared.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(cliSource, /packages\/contracts/)
+  assert.doesNotMatch(cliSource, /packages\/app-router/)
+  assert.doesNotMatch(packageManagerSource, /packages\/contracts/)
+  assert.doesNotMatch(packageManagerSource, /packages\/app-router/)
+  assert.doesNotMatch(patchingSharedSource, /\.\.\/packages\/app-router/)
 })
 
 test('verify docs templates source uses the shared verify token', async () => {
@@ -319,6 +377,26 @@ test('README does not hand-maintain generated root tree, helper scripts, or prov
   )
 })
 
+test('root helper script names come from shared metadata instead of scattered literals', async () => {
+  const frontendPolicySource = await readFile(
+    fileURLToPath(new URL('./frontend-policy.ts', import.meta.url)),
+    'utf8',
+  )
+  const claudeSource = await readFile(
+    fileURLToPath(new URL('../../../scaffold-templates/base/CLAUDE.md', import.meta.url)),
+    'utf8',
+  )
+  const checkSkillsSource = await readFile(
+    fileURLToPath(new URL('../../../scaffold-templates/root/check-skills.mjs', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(frontendPolicySource, /frontend:policy:check/)
+  assert.doesNotMatch(claudeSource, /skills:check/)
+  assert.doesNotMatch(claudeSource, /skills:sync/)
+  assert.doesNotMatch(checkSkillsSource, /skills:sync/)
+})
+
 test('root package template keeps generated scripts out of template source', async () => {
   const templateSource = await readFile(
     fileURLToPath(new URL('../../../scaffold-templates/root/package.json', import.meta.url)),
@@ -345,6 +423,64 @@ test('AGENTS markdown delegates detailed repository contract rules to repo-contr
   assert.doesNotMatch(agents, /Self-verify first:/)
   assert.doesNotMatch(agents, /No secrets:/)
   assert.doesNotMatch(agents, /Official scaffold first:/)
+})
+
+test('secondary agent docs defer onboarding rules to AGENTS instead of restating them', async () => {
+  const claudeSource = await readFile(
+    fileURLToPath(new URL('../../../scaffold-templates/base/CLAUDE.md', import.meta.url)),
+    'utf8',
+  )
+  const copilotSource = await readFile(
+    fileURLToPath(
+      new URL('../../../scaffold-templates/base/.github/copilot-instructions.md', import.meta.url),
+    ),
+    'utf8',
+  )
+
+  assert.match(claudeSource, /AGENTS\.md/)
+  assert.match(copilotSource, /AGENTS\.md/)
+  assert.doesNotMatch(claudeSource, /hard rules와 done 기준/)
+  assert.doesNotMatch(copilotSource, /강제 규칙:/)
+  assert.doesNotMatch(copilotSource, /작업 전 `docs\/ai\/Plan\.md`를 갱신한다\./)
+})
+
+test('starter pages defer onboarding order to AGENTS instead of restating a sequence', async () => {
+  const frontendPatchingSource = await readFile(
+    fileURLToPath(new URL('../patching/frontend.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(frontendPatchingSource, /1\. `docs\/product`에 기능 명세를 적어요\./)
+  assert.doesNotMatch(
+    frontendPatchingSource,
+    /2\. `AGENTS\.md`의 `Start Here` 순서를 먼저 따라가요\./,
+  )
+  assert.doesNotMatch(
+    frontendPatchingSource,
+    /3\. 필요한 화면부터 `frontend\/src\/pages`에서 만들어요\./,
+  )
+  assert.doesNotMatch(frontendPatchingSource, /`AGENTS\.md`의 `Start Here`와 `docs\/index\.md`/)
+})
+
+test('frontend policy derives restriction prose and enforcement from a shared manifest', async () => {
+  const frontendPolicySource = await readFile(
+    fileURLToPath(new URL('./frontend-policy.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(frontendPolicySource, /const FRONTEND_POLICY_RESTRICTION_DEFINITIONS/)
+  assert.doesNotMatch(
+    frontendPolicySource,
+    /export const FRONTEND_POLICY_REACT_NATIVE_IMPORT_NAMES = \[/,
+  )
+  assert.doesNotMatch(
+    frontendPolicySource,
+    /export const FRONTEND_POLICY_NATIVE_IMPORT_PATTERNS: .* = \[/,
+  )
+  assert.equal(
+    (frontendPolicySource.match(/docs\/engineering\/frontend-policy\.md/g) ?? []).length,
+    1,
+  )
 })
 
 test('resolveGeneratedWorkspaceOptions derives optional docs state from the actual workspace tree', async (t) => {

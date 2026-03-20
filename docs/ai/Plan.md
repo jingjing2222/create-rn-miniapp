@@ -1,3 +1,23 @@
+## 다음 작업: 남은 doc/script/onboarding/trpc metadata 중복 정리
+1. 문제
+   - code-owned doc manifest가 생겼지만 `AGENTS.md`와 `docs/index.md`의 Start Here / engineering 문서 목록은 아직 함수 안에 따로 박혀 있다.
+   - tRPC workspace path와 root helper script 이름이 `templates/*`, `patching/*`, CLI 요약, template 문서에 흩어져 있다.
+   - secondary agent docs와 starter page가 `AGENTS.md` 밖에서 onboarding 순서를 다시 적고 있고, frontend policy도 restriction surface를 여러 mini-manifest로 쪼개 들고 있다.
+2. 방향
+   - 문서 manifest를 code-owned/copy-owned 전체 관점으로 넓혀서 Start Here, engineering doc list, copy skip set을 같은 정의에서 파생시킨다.
+   - tRPC workspace metadata와 root helper script catalog를 shared 모듈로 올리고, CLI 요약 / patching / template 문서 / generated messages가 그 정의만 사용하게 만든다.
+   - `CLAUDE.md`, Copilot instructions, starter copy는 generated `AGENTS.md`와 `repo-contract.md`를 참조만 하게 줄인다.
+   - frontend policy는 restriction manifest 하나에서 prose, Biome message, direct native import pattern message를 같이 만든다.
+3. 테스트
+   - `src/templates/index.test.ts`에 문서 manifest 파생, tRPC path reuse, helper script catalog tokenization, agent doc deferral, starter onboarding deferral, frontend restriction manifest red 테스트를 먼저 추가한다.
+   - red를 확인한 뒤 구현하고 `pnpm verify`까지 통과한다.
+4. 완료 기준
+   - code-owned doc inventory와 rendered doc list가 같은 manifest를 source of truth로 쓴다.
+   - tRPC workspace path와 root helper script 이름을 바꿀 때 production file 여러 곳을 수동으로 같이 고치지 않아도 된다.
+   - secondary agent docs / starter copy가 onboarding 순서를 다시 적지 않는다.
+   - frontend policy restriction surface가 단일 manifest에서 파생된다.
+   - `pnpm verify`를 통과한다.
+
 ## 다음 작업: 남은 repo contract / frontend policy / tRPC metadata 중복 정리
 1. 문제
    - frontend policy는 문서 renderer와 route verify script가 같은 규칙을 따로 들고 있고, core skill entrypoint도 policy module에 다시 하드코딩돼 있다.

@@ -6,6 +6,10 @@ import { pathExists, removePathIfExists } from '../templates/filesystem.js'
 import { getFirebaseWebSdkVersion } from '../templates/server.js'
 import type { TemplateTokens } from '../templates/types.js'
 import {
+  APP_ROUTER_WORKSPACE_PATH,
+  resolveWorkspaceRelativeTrpcPath,
+} from '../trpc-workspace-metadata.js'
+import {
   patchBackofficeAppSource,
   patchBackofficeMainSource,
   patchGraniteConfigSource,
@@ -261,7 +265,7 @@ export function normalizeVitestTestScript(script: string) {
 
 function renderTrpcWorkspaceBuildCommand(packageManager: PackageManager) {
   return getPackageManagerAdapter(packageManager).runScriptInDirectoryCommand(
-    '../packages/app-router',
+    resolveWorkspaceRelativeTrpcPath(APP_ROUTER_WORKSPACE_PATH),
     'build',
   )
 }

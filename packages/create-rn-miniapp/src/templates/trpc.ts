@@ -3,12 +3,11 @@ import path from 'node:path'
 import { getPackageManagerAdapter } from '../package-manager.js'
 import type { PackageManager } from '../package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
+import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from '../trpc-workspace-metadata.js'
 import type { TemplateTokens } from './types.js'
 
-export const APP_ROUTER_WORKSPACE_PATH = 'packages/app-router' as const
 export const APP_ROUTER_PACKAGE_NAME = '@workspace/app-router'
 export const APP_ROUTER_WORKSPACE_DEPENDENCY = 'workspace:*'
-export const CONTRACTS_WORKSPACE_PATH = 'packages/contracts' as const
 export const CONTRACTS_PACKAGE_NAME = '@workspace/contracts'
 export const CONTRACTS_WORKSPACE_DEPENDENCY = 'workspace:*'
 export const TRPC_CLIENT_VERSION = '^11.13.4'

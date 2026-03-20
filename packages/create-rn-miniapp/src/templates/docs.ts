@@ -15,8 +15,18 @@ import { createRootTemplateExtraTokens, renderRootVerifyStepsMarkdown } from './
 import { CORE_SKILL_DEFINITIONS } from './skills.js'
 import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
 
-type CodeOwnedDocDefinition = {
+type DocumentDefinition = {
   relativePath: string
+  ownership: 'code' | 'template'
+  render?: (tokens: TemplateTokens, options: GeneratedWorkspaceOptions) => string
+  startHereOrder?: number
+  engineeringDoc?: {
+    agentsRepositoryLabel: string
+  }
+}
+
+type CodeOwnedDocDefinition = DocumentDefinition & {
+  ownership: 'code'
   render: (tokens: TemplateTokens, options: GeneratedWorkspaceOptions) => string
 }
 
@@ -113,38 +123,78 @@ function renderTopologySkillsSection(options: GeneratedWorkspaceOptions) {
   return renderBulletList(items)
 }
 
+function formatDocumentPath(relativePath: string) {
+  return `\`${relativePath}\``
+}
+
+function formatDocsRelativePath(relativePath: string) {
+  return formatDocumentPath(relativePath.replace(/^docs\//, ''))
+}
+
+function getDocumentDefinition(relativePath: string) {
+  const definition = DOCUMENT_DEFINITIONS.find((document) => document.relativePath === relativePath)
+
+  if (!definition) {
+    throw new Error(`알 수 없는 document path입니다: ${relativePath}`)
+  }
+
+  return definition
+}
+
+function resolveStartHereDocuments() {
+  return DOCUMENT_DEFINITIONS.filter(
+    (document) => typeof document.startHereOrder === 'number',
+  ).sort((left, right) => (left.startHereOrder ?? 0) - (right.startHereOrder ?? 0))
+}
+
+function resolveEngineeringDocuments() {
+  return DOCUMENT_DEFINITIONS.filter((document) => document.engineeringDoc)
+}
+
 function renderAgentsMarkdown(_tokens: TemplateTokens, options: GeneratedWorkspaceOptions) {
+  const repositoryContractLines = resolveEngineeringDocuments().map(
+    (document) =>
+      `- ${document.engineeringDoc?.agentsRepositoryLabel}: ${formatDocumentPath(document.relativePath)}`,
+  )
+  const startHereLines = resolveStartHereDocuments().map(
+    (document, index) => `${index + 1}. ${formatDocumentPath(document.relativePath)}`,
+  )
+  const repoContractPath = formatDocumentPath(
+    getDocumentDefinition('docs/engineering/repo-contract.md').relativePath,
+  )
+  const frontendPolicyPath = formatDocumentPath(
+    getDocumentDefinition('docs/engineering/frontend-policy.md').relativePath,
+  )
+
   return [
     '# AGENTS.md',
     '',
-    '이 문서는 생성물 루트의 빠른 진입점입니다. 상세 저장소 계약과 완료 기준은 `docs/engineering/repo-contract.md`가 소유하고, workspace별 정책은 `docs/engineering/*`가 소유합니다.',
+    `이 문서는 생성물 루트의 빠른 진입점입니다. 상세 저장소 계약과 완료 기준은 ${repoContractPath}가 소유하고, workspace별 정책은 \`docs/engineering/*\`가 소유합니다.`,
     '',
     '## Repository Contract',
-    '- 상세 저장소 계약: `docs/engineering/repo-contract.md`',
-    '- frontend 정책: `docs/engineering/frontend-policy.md`',
-    '- workspace 구조: `docs/engineering/workspace-topology.md`',
+    ...repositoryContractLines,
     '- canonical skills: `.agents/skills/*`',
     '- Claude mirror: `.claude/skills/*`',
     '',
     '## Start Here',
-    '1. `docs/ai/Plan.md`',
-    '2. `docs/ai/Status.md`',
-    '3. `docs/ai/Decisions.md`',
-    '4. `docs/index.md`',
-    '5. `docs/product/기능명세서.md`',
+    ...startHereLines,
     '',
     renderSection('Workspace Model', renderAgentsWorkspaceModelSection(options)),
     '',
     renderSection('Skill Routing', renderAgentsSkillRoutingSection(options)),
     '',
     '## Done',
-    '- 세부 완료 기준은 `docs/engineering/repo-contract.md`를 따른다.',
-    '- frontend 변경은 `docs/engineering/frontend-policy.md`까지 같이 확인한다.',
+    `- 세부 완료 기준은 ${repoContractPath}를 따른다.`,
+    `- frontend 변경은 ${frontendPolicyPath}까지 같이 확인한다.`,
     '',
   ].join('\n')
 }
 
 function renderDocsIndexMarkdown(tokens: TemplateTokens, options: GeneratedWorkspaceOptions) {
+  const engineeringDocLines = resolveEngineeringDocuments().map(
+    (document) => `- ${formatDocsRelativePath(document.relativePath)}`,
+  )
+
   return [
     '# docs index',
     '',
@@ -156,9 +206,7 @@ function renderDocsIndexMarkdown(tokens: TemplateTokens, options: GeneratedWorks
     '- `engineering/`: 강제 규칙과 구조 정책',
     '',
     '## engineering 문서',
-    '- `engineering/repo-contract.md`',
-    '- `engineering/frontend-policy.md`',
-    '- `engineering/workspace-topology.md`',
+    ...engineeringDocLines,
     '',
     renderSection('Skill 구조', renderDocsIndexSkillStructureSection(options)),
     '',
@@ -186,24 +234,67 @@ function renderWorkspaceTopologyMarkdown(options: GeneratedWorkspaceOptions) {
   ].join('\n')
 }
 
-const CODE_OWNED_DOC_DEFINITIONS: CodeOwnedDocDefinition[] = [
+const DOCUMENT_DEFINITIONS: DocumentDefinition[] = [
   {
     relativePath: 'AGENTS.md',
+    ownership: 'code',
     render: renderAgentsMarkdown,
   },
   {
-    relativePath: 'docs/index.md',
-    render: renderDocsIndexMarkdown,
+    relativePath: 'docs/ai/Plan.md',
+    ownership: 'template',
+    startHereOrder: 1,
   },
   {
-    relativePath: 'docs/engineering/workspace-topology.md',
-    render: (_tokens, options) => renderWorkspaceTopologyMarkdown(options),
+    relativePath: 'docs/ai/Status.md',
+    ownership: 'template',
+    startHereOrder: 2,
+  },
+  {
+    relativePath: 'docs/ai/Decisions.md',
+    ownership: 'template',
+    startHereOrder: 3,
+  },
+  {
+    relativePath: 'docs/index.md',
+    ownership: 'code',
+    render: renderDocsIndexMarkdown,
+    startHereOrder: 4,
+  },
+  {
+    relativePath: 'docs/product/기능명세서.md',
+    ownership: 'template',
+    startHereOrder: 5,
+  },
+  {
+    relativePath: 'docs/engineering/repo-contract.md',
+    ownership: 'template',
+    engineeringDoc: {
+      agentsRepositoryLabel: '상세 저장소 계약',
+    },
   },
   {
     relativePath: 'docs/engineering/frontend-policy.md',
-    render: (tokens) => renderFrontendPolicyMarkdown(tokens.packageManagerRunCommand),
+    ownership: 'code',
+    render: (tokens) => renderFrontendPolicyMarkdown(tokens.packageManager),
+    engineeringDoc: {
+      agentsRepositoryLabel: 'frontend 정책',
+    },
+  },
+  {
+    relativePath: 'docs/engineering/workspace-topology.md',
+    ownership: 'code',
+    render: (_tokens, options) => renderWorkspaceTopologyMarkdown(options),
+    engineeringDoc: {
+      agentsRepositoryLabel: 'workspace 구조',
+    },
   },
 ]
+
+const CODE_OWNED_DOC_DEFINITIONS: CodeOwnedDocDefinition[] = DOCUMENT_DEFINITIONS.filter(
+  (document): document is CodeOwnedDocDefinition =>
+    document.ownership === 'code' && typeof document.render === 'function',
+)
 
 function resolveCodeOwnedDocsInsideDocsSet() {
   return new Set(

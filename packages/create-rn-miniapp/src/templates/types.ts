@@ -1,5 +1,5 @@
 import type { PackageManager } from '../package-manager.js'
-import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from './trpc.js'
+import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from '../trpc-workspace-metadata.js'
 
 export const ROOT_WORKSPACE_ORDER = [
   'frontend',

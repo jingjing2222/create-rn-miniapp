@@ -14,19 +14,18 @@ import {
   resolveTemplatesPackageRoot,
   replaceTemplateTokens,
 } from './filesystem.js'
+import {
+  createRootHelperScriptExtraTokens,
+  FRONTEND_POLICY_CHECK_SCRIPT_COMMAND,
+  FRONTEND_POLICY_CHECK_SCRIPT_NAME,
+  ROOT_VERIFY_STEP_SCRIPT_NAMES,
+  SKILLS_CHECK_SCRIPT_COMMAND,
+  SKILLS_CHECK_SCRIPT_NAME,
+  SKILLS_SYNC_SCRIPT_COMMAND,
+  SKILLS_SYNC_SCRIPT_NAME,
+} from './root-script-catalog.js'
 import type { TemplateTokens, WorkspaceName } from './types.js'
 
-const FRONTEND_POLICY_CHECK_SCRIPT = 'node ./scripts/verify-frontend-routes.mjs'
-const SKILLS_SYNC_SCRIPT = 'node ./scripts/sync-skills.mjs'
-const SKILLS_CHECK_SCRIPT = 'node ./scripts/check-skills.mjs'
-const ROOT_VERIFY_STEP_SCRIPT_NAMES = [
-  'format:check',
-  'lint',
-  'typecheck',
-  'test',
-  'frontend:policy:check',
-  'skills:check',
-] as const
 const NORMALIZED_PACKAGE_WORKSPACE = 'packages/*' as const
 const NORMALIZED_ROOT_WORKSPACE_ORDER = [
   'frontend',
@@ -57,6 +56,7 @@ export function renderRootVerifyStepsMarkdown(packageManager: PackageManager) {
 export function createRootTemplateExtraTokens(packageManager: PackageManager) {
   return {
     [ROOT_VERIFY_STEPS_TOKEN]: renderRootVerifyStepsMarkdown(packageManager),
+    ...createRootHelperScriptExtraTokens(packageManager),
   }
 }
 
@@ -70,9 +70,9 @@ function renderRootScripts(packageManager: PackageManager) {
     format: adapter.rootFormatScript(),
     'format:check': adapter.rootFormatCheckScript(),
     lint: adapter.rootLintScript(),
-    'frontend:policy:check': FRONTEND_POLICY_CHECK_SCRIPT,
-    'skills:sync': SKILLS_SYNC_SCRIPT,
-    'skills:check': SKILLS_CHECK_SCRIPT,
+    [FRONTEND_POLICY_CHECK_SCRIPT_NAME]: FRONTEND_POLICY_CHECK_SCRIPT_COMMAND,
+    [SKILLS_SYNC_SCRIPT_NAME]: SKILLS_SYNC_SCRIPT_COMMAND,
+    [SKILLS_CHECK_SCRIPT_NAME]: SKILLS_CHECK_SCRIPT_COMMAND,
     verify: renderRootVerifyScript(packageManager),
   }
 }

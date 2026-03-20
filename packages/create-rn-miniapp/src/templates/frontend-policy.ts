@@ -1,8 +1,18 @@
+import type { PackageManager } from '../package-manager.js'
+import { resolveRootHelperScriptCommands } from './root-script-catalog.js'
 import { getCoreSkillDefinition } from './skills.js'
 
 type NativeImportPatternRule = {
   group: string[]
   message: string
+}
+
+type FrontendPolicyRestrictionDefinition = {
+  id: string
+  policyRules: string[]
+  message: string
+  nativeImportPatternGroups?: string[][]
+  reactNativeImportNames?: string[]
 }
 
 const MINIAPP_CORE_SKILL = getCoreSkillDefinition('miniapp')
@@ -29,6 +39,71 @@ export const FRONTEND_POLICY_DOC_PATH = 'docs/engineering/frontend-policy.md'
 export const FRONTEND_POLICY_TDS_REFERENCE_PATH =
   TDS_CORE_SKILL.referenceCatalogPath ?? TDS_CORE_SKILL.frontendPolicyReferencePath
 
+const FRONTEND_POLICY_DOC_REFERENCE = `자세한 기준은 \`${FRONTEND_POLICY_DOC_PATH}\`를 먼저 봐 주세요.`
+const FRONTEND_POLICY_GRANITE_NATIVE_MESSAGE = `직접 import하지 말고 \`@granite-js/native\` 경로를 써 주세요. ${FRONTEND_POLICY_DOC_REFERENCE}`
+const FRONTEND_POLICY_ASYNC_STORAGE_BASE_MESSAGE =
+  'AsyncStorage는 쓰면 안 돼요. 대신 `@apps-in-toss/framework` storage API를 써 주세요.'
+const FRONTEND_POLICY_REACT_NATIVE_BASE_MESSAGE = `\`react-native\` 기본 UI 컴포넌트는 바로 쓰지 말고 TDS나 Granite가 제공하는 컴포넌트를 먼저 써 주세요. 특히 \`Text\` 대신 TDS \`Txt\`를 써 주세요. \`Pressable\`이 정말 필요하면 \`biome-ignore\`에 이유를 같이 남겨 주세요. 먼저 \`${FRONTEND_POLICY_TDS_REFERENCE_PATH}\`를 확인해 주세요.`
+
+const FRONTEND_POLICY_RESTRICTION_DEFINITIONS: FrontendPolicyRestrictionDefinition[] = [
+  {
+    id: 'granite-native',
+    policyRules: [
+      '네이티브 연동은 `@granite-js/native`가 re-export한 경로만 사용한다.',
+      '`react-native-webview`, `react-native-video` 같은 개별 native 패키지를 직접 import하지 않는다.',
+    ],
+    message: FRONTEND_POLICY_GRANITE_NATIVE_MESSAGE,
+    nativeImportPatternGroups: [
+      ['@react-navigation/*'],
+      ['@react-native-community/*'],
+      ['react-native-*'],
+      ['@shopify/flash-list', 'lottie-react-native', 'fingerprint'],
+    ],
+  },
+  {
+    id: 'async-storage',
+    policyRules: [
+      'AsyncStorage는 예외 없이 금지하고 `@apps-in-toss/framework` storage API를 사용한다.',
+    ],
+    message: `${FRONTEND_POLICY_ASYNC_STORAGE_BASE_MESSAGE} ${FRONTEND_POLICY_DOC_REFERENCE}`,
+  },
+  {
+    id: 'react-native-ui',
+    policyRules: [
+      '`react-native` 기본 UI primitive는 직접 import하지 않는다.',
+      '대표 금지 대상: `ActivityIndicator`, `Alert`, `Button`, `Modal`, `Switch`, `Text`, `TextInput`, `Touchable*`',
+      '`Pressable`은 정말 필요한 경우에만 이유를 남기고 사용한다.',
+      'UI는 TDS 또는 Granite가 제공하는 컴포넌트를 우선한다.',
+    ],
+    message: `${FRONTEND_POLICY_REACT_NATIVE_BASE_MESSAGE} ${FRONTEND_POLICY_DOC_REFERENCE}`,
+    reactNativeImportNames: [
+      'Button',
+      'Modal',
+      'Switch',
+      'TextInput',
+      'Text',
+      'ActivityIndicator',
+      'Alert',
+      'TouchableOpacity',
+      'TouchableHighlight',
+      'TouchableWithoutFeedback',
+      'Pressable',
+    ],
+  },
+]
+
+function getFrontendPolicyRestrictionDefinition(id: string) {
+  const definition = FRONTEND_POLICY_RESTRICTION_DEFINITIONS.find(
+    (restriction) => restriction.id === id,
+  )
+
+  if (!definition) {
+    throw new Error(`알 수 없는 frontend policy restriction id입니다: ${id}`)
+  }
+
+  return definition
+}
+
 export const FRONTEND_POLICY_ROUTE_RULES = [
   'App Router 스타일 동적 세그먼트(`/$param`)는 금지한다.',
   'Granite router의 `:param` path params와 `validateParams`는 허용한다.',
@@ -47,15 +122,9 @@ export const FRONTEND_POLICY_PAGE_STRUCTURE_RULES = [
   '파일명과 route path는 고정 경로 또는 Granite `:param` 규칙과 정합해야 한다.',
 ]
 
-export const FRONTEND_POLICY_NATIVE_UI_RULES = [
-  '네이티브 연동은 `@granite-js/native`가 re-export한 경로만 사용한다.',
-  '`react-native-webview`, `react-native-video` 같은 개별 native 패키지를 직접 import하지 않는다.',
-  'AsyncStorage는 예외 없이 금지하고 `@apps-in-toss/framework` storage API를 사용한다.',
-  '`react-native` 기본 UI primitive는 직접 import하지 않는다.',
-  '대표 금지 대상: `ActivityIndicator`, `Alert`, `Button`, `Modal`, `Switch`, `Text`, `TextInput`, `Touchable*`',
-  '`Pressable`은 정말 필요한 경우에만 이유를 남기고 사용한다.',
-  'UI는 TDS 또는 Granite가 제공하는 컴포넌트를 우선한다.',
-]
+export const FRONTEND_POLICY_NATIVE_UI_RULES = FRONTEND_POLICY_RESTRICTION_DEFINITIONS.flatMap(
+  (restriction) => restriction.policyRules,
+)
 
 export const FRONTEND_POLICY_REFERENCE_PATHS = [
   {
@@ -80,46 +149,21 @@ export const FRONTEND_POLICY_COMPLETION_CHECKS = [
 ]
 
 export const FRONTEND_POLICY_ASYNC_STORAGE_MESSAGE =
-  'AsyncStorage는 쓰면 안 돼요. 대신 `@apps-in-toss/framework` storage API를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.'
+  getFrontendPolicyRestrictionDefinition('async-storage').message
 
-export const FRONTEND_POLICY_REACT_NATIVE_IMPORT_NAMES = [
-  'Button',
-  'Modal',
-  'Switch',
-  'TextInput',
-  'Text',
-  'ActivityIndicator',
-  'Alert',
-  'TouchableOpacity',
-  'TouchableHighlight',
-  'TouchableWithoutFeedback',
-  'Pressable',
-]
+export const FRONTEND_POLICY_REACT_NATIVE_IMPORT_NAMES =
+  getFrontendPolicyRestrictionDefinition('react-native-ui').reactNativeImportNames ?? []
 
-export const FRONTEND_POLICY_REACT_NATIVE_MESSAGE = `\`react-native\` 기본 UI 컴포넌트는 바로 쓰지 말고 TDS나 Granite가 제공하는 컴포넌트를 먼저 써 주세요. 특히 \`Text\` 대신 TDS \`Txt\`를 써 주세요. \`Pressable\`이 정말 필요하면 \`biome-ignore\`에 이유를 같이 남겨 주세요. 먼저 \`${FRONTEND_POLICY_TDS_REFERENCE_PATH}\`와 \`${FRONTEND_POLICY_DOC_PATH}\`를 확인해 주세요.`
+export const FRONTEND_POLICY_REACT_NATIVE_MESSAGE =
+  getFrontendPolicyRestrictionDefinition('react-native-ui').message
 
-export const FRONTEND_POLICY_NATIVE_IMPORT_PATTERNS: NativeImportPatternRule[] = [
-  {
-    group: ['@react-navigation/*'],
-    message:
-      'react-navigation 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
-  },
-  {
-    group: ['@react-native-community/*'],
-    message:
-      'react-native community 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
-  },
-  {
-    group: ['react-native-*'],
-    message:
-      'react-native 네이티브 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
-  },
-  {
-    group: ['@shopify/flash-list', 'lottie-react-native', 'fingerprint'],
-    message:
-      '이 네이티브 모듈은 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
-  },
-]
+export const FRONTEND_POLICY_NATIVE_IMPORT_PATTERNS: NativeImportPatternRule[] =
+  FRONTEND_POLICY_RESTRICTION_DEFINITIONS.flatMap((restriction) =>
+    (restriction.nativeImportPatternGroups ?? []).map((group) => ({
+      group,
+      message: restriction.message,
+    })),
+  )
 
 const FRONTEND_POLICY_FILENAME_DOLLAR_GUIDANCE =
   "파일명에 $param 세그먼트를 쓰면 안 돼요. 대신 '/book-detail'이나 '/book/:bookId'처럼 Granite가 이해하는 경로 기준으로 바꿔 주세요."
@@ -131,7 +175,7 @@ const FRONTEND_POLICY_ROUTE_SUMMARY_GUIDANCE =
   "MiniApp 라우트에서는 $param 대신 Granite가 지원하는 '/book/:bookId'나 `createRoute(... validateParams ...)` 조합을 써 주세요."
 
 export function renderFrontendPolicyVerifierSource() {
-  const placeholder = (identifier: string) => `$` + `{${identifier}}`
+  const placeholder = (identifier: string) => ['$', `{${identifier}}`].join('')
   const displayPathExpr = placeholder('displayPath')
   const filenameRuleIdExpr = placeholder('FILENAME_DOLLAR_PATTERN_RULE_ID')
   const filenameGuidanceExpr = placeholder('FILENAME_DOLLAR_GUIDANCE')
@@ -268,7 +312,7 @@ export function renderFrontendPolicyVerifierSource() {
     '',
     "  console.error('[frontend policy] frontend 라우트에서 $param 패턴을 찾았어요.')",
     '  for (const error of normalizedErrors) {',
-    '    console.error(`- ' + errorExpr + '`)',
+    `    console.error(\`- ${errorExpr}\`)`,
     '  }',
     '  console.error(',
     '    `- ' +
@@ -285,7 +329,9 @@ export function renderFrontendPolicyVerifierSource() {
   ].join('\n')
 }
 
-export function renderFrontendPolicyMarkdown(packageManagerRunCommand: string) {
+export function renderFrontendPolicyMarkdown(packageManager: PackageManager) {
+  const helperScriptCommands = resolveRootHelperScriptCommands(packageManager)
+
   return [
     '# Frontend Policy',
     '',
@@ -304,7 +350,7 @@ export function renderFrontendPolicyMarkdown(packageManagerRunCommand: string) {
     ...FRONTEND_POLICY_NATIVE_UI_RULES.map((rule, index) => `${index + 1}. ${rule}`),
     '',
     '## 정책 검사 스크립트',
-    `- \`$param\` route 패턴 검사는 \`${packageManagerRunCommand} frontend:policy:check\`가 담당한다.`,
+    `- \`$param\` route 패턴 검사는 \`${helperScriptCommands.frontendPolicyCheck}\`가 담당한다.`,
     '- import/UI 경계 규칙은 root `biome.json`이 막는다.',
     '',
     '## 구현 전 참고 경로',

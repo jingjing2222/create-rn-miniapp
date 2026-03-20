@@ -1,11 +1,12 @@
 # CLAUDE.md
 
-이 저장소의 기본 계약은 `AGENTS.md`가 소유합니다. Claude 계열 에이전트는 아래 순서로 작업합니다.
+이 저장소의 기본 계약과 onboarding 순서는 `AGENTS.md`가 소유합니다. Claude 계열 에이전트는 생성물 루트 `AGENTS.md`의 `Start Here`와 `Done`을 그대로 따릅니다.
 
-1. 먼저 `AGENTS.md`를 읽고 hard rules와 done 기준을 따른다.
-2. 현재 목표와 범위는 `docs/ai/Plan.md`, 최신 상태는 `docs/ai/Status.md`에서 확인한다.
-3. 작업 플레이북과 외부 플랫폼 지식은 `.claude/skills/` 아래 mirror된 Skill을 사용한다.
-4. `.claude/skills/`는 `.agents/skills/`의 mirror이므로, drift가 의심되면 `{{packageManagerRunCommand}} skills:check` 또는 `{{packageManagerRunCommand}} skills:sync`를 먼저 실행한다.
+추가 규칙:
+- 상세 저장소 계약과 완료 기준은 `docs/engineering/repo-contract.md`를 따른다.
+- workspace별 세부 정책은 `docs/engineering/*`를 따른다.
+- 작업 플레이북과 외부 플랫폼 지식은 `.claude/skills/` 아래 mirror된 Skill을 사용한다.
+- `.claude/skills/`는 `.agents/skills/`의 mirror이므로, drift가 의심되면 `{{skillsCheckCommand}}` 또는 `{{skillsSyncCommand}}`를 먼저 실행한다.
 
 우선순위:
 - 계약/정책: `AGENTS.md`, `docs/index.md`, `docs/engineering/*`

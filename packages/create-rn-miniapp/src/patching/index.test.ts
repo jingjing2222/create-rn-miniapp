@@ -348,7 +348,7 @@ test('patchFrontendWorkspace replaces Granite starter pages that use touchables'
   assert.doesNotMatch(indexPage, /const STARTER_HERO_LOTTIE = \{/)
   assert.doesNotMatch(indexPage, /AppInToss MiniApp starter/)
   assert.match(indexPage, /안내 페이지 보기/)
-  assert.match(indexPage, /먼저 이 순서로 보면 돼요/)
+  assert.match(indexPage, /먼저 여기부터 보면 돼요/)
   assert.match(indexPage, /`AGENTS\.md`의 `Start Here`/)
   assert.match(aboutPage, /`AGENTS\.md`의 `Start Here`/)
   assert.doesNotMatch(indexPage, /docs\/index\.md`, `\.agents\/skills\/core\/miniapp\/SKILL\.md/)
