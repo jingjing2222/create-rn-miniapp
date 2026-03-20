@@ -105,6 +105,7 @@ test('createWorktreePolicyNote explains the control-root workflow', () => {
   assert.match(note.body, /기본 checkout: \/tmp\/ebook\/main/)
   assert.match(note.body, /git -C main worktree add -b <branch> \.\.\/<branch-dir> main/)
   assert.match(note.body, /feat\/test` -> `feat-test/)
+  assert.match(note.body, /git clone --separate-git-dir=\.gitdata <repo-url> main/)
   assert.match(note.body, /bootstrap-control-root\.mjs/)
   assert.match(note.body, /post-merge hook으로 같이 정리돼요/)
   assert.match(note.body, /control root 바로 아래 sibling으로/)

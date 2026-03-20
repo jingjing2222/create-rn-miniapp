@@ -132,7 +132,7 @@ export function createWorktreePolicyNote(options: { controlRoot: string; workspa
       `control root: ${options.controlRoot}`,
       `기본 checkout: ${options.workspaceRoot}`,
       '`main/`에는 scaffold 결과를 담은 baseline commit을 먼저 만들어 두었어요.',
-      'plain clone을 control root 구조로 바꾸려면 `node main/scripts/worktree/bootstrap-control-root.mjs`를 먼저 실행해 주세요.',
+      'plain clone 상태라면 README bootstrap 절차(`git clone --separate-git-dir=.gitdata <repo-url> main` 후 `node main/scripts/worktree/bootstrap-control-root.mjs`)를 먼저 실행해 주세요.',
       '표준 시작: `git -C main worktree add -b <branch> ../<branch-dir> main`',
       '`<branch-dir>`는 브랜치명의 `/`를 `-`로 바꾼 1-depth 디렉토리명을 써 주세요. 예: `feat/test` -> `feat-test`',
       '새 worktree는 control root 바로 아래 sibling으로 만들어요.',

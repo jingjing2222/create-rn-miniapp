@@ -4,11 +4,13 @@
 - PR 리뷰에서 잡힌 문서/온보딩 회귀를 모두 제거한다.
 - `--worktree` 경로에서 실제 repo root인 `main/` 기준 문서와 에이전트 진입 파일을 다시 맞춘다.
 - 임시 planning/spec 문서인 `docs/superpowers`는 Git 추적에서 빼고 로컬 전용으로 돌린다.
+- 생성 직후 worktree note도 README bootstrap과 같은 실제 절차를 가리키게 맞춘다.
 
 ### 확인된 문제
 - worktree scaffold 시 committed repo root(`main/`)에 `.claude/CLAUDE.md`가 빠져 plain clone과 `main/` 직접 진입 동선이 깨져 있다.
 - 공개 README가 `--worktree`에서도 `cd my-miniapp && pnpm verify`만 안내해서 control root에서 verify를 치게 만든다.
 - worktree note가 control root에서 상대경로로 잘못된 `docs/engineering/worktree-workflow.md`를 가리킨다.
+- worktree note가 plain clone bootstrap을 `bootstrap-control-root.mjs` 단독 실행으로 오해하게 쓴다.
 - README에 제거된 `Implement.md`가 아직 남아 있다.
 - `docs/superpowers/**`가 PR에 같이 올라가면서 폐기된 `.bare` 설계를 계속 노출하고 있다.
 
@@ -22,6 +24,7 @@
 3. `packages/create-rn-miniapp/src/scaffold/worktree.ts`
    - repo root용 `.claude/CLAUDE.md` 생성 helper를 추가한다.
    - worktree note 문구를 control-root 기준 상대경로로 수정한다.
+   - worktree note가 README bootstrap의 전체 2단계 절차를 가리키게 고친다.
 4. `packages/create-rn-miniapp/src/scaffold/index.ts`
    - single-root/worktree 여부와 무관하게 실제 repo root에 `.claude/CLAUDE.md`를 생성한다.
 5. `README.md`
