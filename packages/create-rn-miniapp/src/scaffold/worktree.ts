@@ -86,11 +86,13 @@ done
 }
 
 async function writeControlRootShims(controlRoot: string) {
-  await writeFile(
-    path.join(controlRoot, 'AGENTS.md'),
-    createControlRootAgentsStub(MAIN_WORKTREE_DIRECTORY),
-    'utf8',
-  )
+  const stub = createControlRootAgentsStub(MAIN_WORKTREE_DIRECTORY)
+  await writeFile(path.join(controlRoot, 'AGENTS.md'), stub, 'utf8')
+
+  const claudeDir = path.join(controlRoot, '.claude')
+  await mkdir(claudeDir, { recursive: true })
+  await writeFile(path.join(claudeDir, 'CLAUDE.md'), stub, 'utf8')
+
   await writeFile(
     path.join(controlRoot, 'README.md'),
     createControlRootReadmeStub(MAIN_WORKTREE_DIRECTORY),
