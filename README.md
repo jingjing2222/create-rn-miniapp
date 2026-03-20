@@ -56,7 +56,11 @@ pnpm dlx create-rn-miniapp \
 - `--worktree`라면 `cd my-miniapp/main` 뒤에 `pnpm verify`를 실행해요.
 - package manager가 다르면 `yarn verify`, `npm run verify`, `bun run verify`로 바꿔서 실행해요.
 
-기본 생성 결과는 single-root예요. 다만 `--worktree`를 고르거나 마지막 질문에서 worktree를 선택하면 local 구조를 control root로 만들어 줘요.
+기본 생성 결과는 single-root예요.
+
+## Worktree 운영
+
+`--worktree`를 고르거나 마지막 질문에서 worktree를 선택하면 local 구조를 control root로 만들어 줘요.
 
 - root에 `.gitdata/`, local stub `AGENTS.md`, `.claude/CLAUDE.md`, `README.md`를 만들어요.
 - 실제 기본 checkout은 `main/`에 두고, 새 작업용 worktree는 control root 바로 아래 sibling으로 만들게 유도해요.
@@ -65,7 +69,7 @@ pnpm dlx create-rn-miniapp \
 
 기본값은 worktree 미사용이에요. 마지막 git 단계 직전에 `에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)`라고 한 번 더 물어봐요. `--worktree`를 주면 그 질문 없이 바로 활성화되고, `--no-git`이면 이 단계는 건너뛰어요.
 
-이 repo를 AI/멀티-agent용 control root 구조로 운영해야해요. plain clone 대신 빈 디렉토리에서 아래 순서로 시작해요.
+이미 있는 repo를 AI/멀티-agent용 control root 구조로 운영해야 한다면, 일반적인 clone이 아닌 다음 과정을 통해 clone을 받아야해요.
 
 ```bash
 mkdir my-miniapp
