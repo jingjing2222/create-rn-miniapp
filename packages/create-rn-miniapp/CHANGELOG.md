@@ -1,5 +1,21 @@
 # create-rn-miniapp
 
+## 0.0.26
+
+### Patch Changes
+
+- chore: version bump to 0.0.26
+- Updated dependencies
+  - @create-rn-miniapp/scaffold-templates@0.0.26
+
+## 0.0.25
+
+### Patch Changes
+
+- revert: control-root 기반 --worktree scaffold 되돌림
+- Updated dependencies
+  - @create-rn-miniapp/scaffold-templates@0.0.25
+
 ## 0.0.24
 
 ### Patch Changes
