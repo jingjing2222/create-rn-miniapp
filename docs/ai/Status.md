@@ -1,3 +1,17 @@
+## 2026-03-20 — plain clone bootstrap cleanup hook 누락 수정
+- 상태
+  - user 재현 기준으로 plain clone 후 `bootstrap-control-root.mjs`를 실행한 repo에서는 cleanup hook이 설치되지 않아, `main` pull 뒤 merged clean worktree가 자동 정리되지 않는 문제를 확인했다.
+  - 원인은 bootstrap script가 local stub만 만들고 `.gitdata/hooks/post-merge`는 쓰지 않는 데 있었다.
+- 반영한 변경
+  - `packages/create-rn-miniapp/src/scaffold/worktree.test.ts`
+    - plain clone bootstrap script가 `.gitdata/hooks/post-merge`를 실제로 설치하고 실행 권한까지 주는지 확인하는 회귀 테스트 추가
+  - `packages/scaffold-templates/optional/worktree/scripts/worktree/bootstrap-control-root.mjs`
+    - separate git dir 포인터를 읽어 실제 git dir를 찾는 helper 추가
+    - bootstrap 시 cleanup `post-merge` hook 설치 및 실행 권한 부여 추가
+- 검증
+  - `pnpm --filter create-rn-miniapp test -- src/scaffold/worktree.test.ts` ✅
+  - `pnpm verify` ✅
+
 ## 2026-03-20 — worktree control-root PR 마감 메타데이터 정리
 - 상태
   - changeset을 최종 control-root 방향과 맞게 다시 정리했다.

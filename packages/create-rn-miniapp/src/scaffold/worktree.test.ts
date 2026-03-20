@@ -28,6 +28,8 @@ import {
   resolveWorktreePolicySelection,
 } from './worktree.js'
 
+const repoRoot = path.resolve(import.meta.dirname, '../../../..')
+
 test('resolveWorktreePolicySelection returns explicit worktree selection without prompting', async () => {
   const prompt: CliPrompter = {
     async text() {
@@ -135,6 +137,44 @@ test('installWorktreeHooks writes an executable post-merge hook into the repo ro
     assert.match(await readFile(hookPath, 'utf8'), /git worktree remove/)
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
+test('bootstrap-control-root script installs the cleanup hook for plain-clone bootstrap', async () => {
+  const controlRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-bootstrap-hook-'))
+  const workspaceRoot = path.join(controlRoot, 'main')
+  const scriptPath = path.join(workspaceRoot, 'scripts', 'worktree', 'bootstrap-control-root.mjs')
+  const templateScriptPath = path.join(
+    repoRoot,
+    'packages',
+    'scaffold-templates',
+    'optional',
+    'worktree',
+    'scripts',
+    'worktree',
+    'bootstrap-control-root.mjs',
+  )
+
+  try {
+    await mkdir(path.dirname(scriptPath), { recursive: true })
+    await initializeWorktreeControlRoot({
+      controlRoot,
+      workspaceRoot,
+    })
+    await writeFile(scriptPath, await readFile(templateScriptPath, 'utf8'), 'utf8')
+
+    execFileSync('node', [scriptPath], {
+      cwd: workspaceRoot,
+      stdio: 'ignore',
+    })
+
+    const hookPath = path.join(controlRoot, GITDATA_DIRECTORY, 'hooks', 'post-merge')
+
+    assert.ok((await stat(hookPath)).isFile())
+    await access(hookPath, constants.X_OK)
+    assert.match(await readFile(hookPath, 'utf8'), /git worktree remove/)
+  } finally {
+    await rm(controlRoot, { recursive: true, force: true })
   }
 })
 

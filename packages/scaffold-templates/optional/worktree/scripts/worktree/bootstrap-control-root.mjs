@@ -1,9 +1,43 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const controlRoot = path.resolve(workspaceRoot, '..')
+const postMergeHook = `#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+current_branch="$(git branch --show-current)"
+if [ "$current_branch" != "main" ]; then
+  exit 0
+fi
+
+git worktree list --porcelain | while IFS= read -r line; do
+  case "$line" in
+    worktree\\ *) current_wt="\${line#worktree }" ;;
+    branch\\ refs/heads/*)
+      branch="\${line#branch refs/heads/}"
+      [ "$branch" = "main" ] && continue
+
+      if git cherry main "$branch" 2>/dev/null | grep -q '^+'; then
+        continue
+      fi
+
+      if [ -n "$(git -C "$current_wt" status --porcelain 2>/dev/null)" ]; then
+        echo "post-merge: $branch worktree에 변경사항이 있어서 건너뛰었어요"
+        continue
+      fi
+
+      echo "post-merge: merged된 worktree 정리 - $branch"
+      git worktree remove "$current_wt" 2>/dev/null || true
+      git branch -d "$branch" 2>/dev/null || true
+      ;;
+  esac
+done
+`
 
 const controlRootAgents = [
   '# AGENTS.md',
@@ -26,6 +60,34 @@ const controlRootReadme = [
   '',
 ].join('\n')
 
+async function resolveGitDir(targetWorkspaceRoot) {
+  const gitPath = path.join(targetWorkspaceRoot, '.git')
+  const gitStat = await stat(gitPath)
+
+  if (gitStat.isDirectory()) {
+    return gitPath
+  }
+
+  const gitPointer = await readFile(gitPath, 'utf8')
+  const match = gitPointer.match(/^gitdir:\s*(.+)\s*$/m)
+
+  if (!match) {
+    throw new Error(`git dir 포인터를 읽지 못했어요: ${gitPath}`)
+  }
+
+  return path.resolve(targetWorkspaceRoot, match[1])
+}
+
+async function installWorktreeHooks(targetWorkspaceRoot) {
+  const gitDir = await resolveGitDir(targetWorkspaceRoot)
+  const hooksDir = path.join(gitDir, 'hooks')
+  const hookPath = path.join(hooksDir, 'post-merge')
+
+  await mkdir(hooksDir, { recursive: true })
+  await writeFile(hookPath, postMergeHook, 'utf8')
+  await chmod(hookPath, 0o755)
+}
+
 await mkdir(path.join(controlRoot, '.claude'), { recursive: true })
 await writeFile(path.join(controlRoot, 'AGENTS.md'), controlRootAgents, 'utf8')
 await writeFile(path.join(controlRoot, 'README.md'), controlRootReadme, 'utf8')
@@ -34,3 +96,4 @@ await writeFile(
   '프로젝트 안내는 `../AGENTS.md`와 `../main/AGENTS.md`를 먼저 읽어주세요.\n',
   'utf8',
 )
+await installWorktreeHooks(workspaceRoot)
