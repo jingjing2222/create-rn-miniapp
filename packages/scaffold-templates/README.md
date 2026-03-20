@@ -12,8 +12,10 @@
 - `root/yarnrc.yml`
 - `root/nx.json`
 - `root/*.project.json`
-- `base/AGENTS.md`
+- `base/CLAUDE.md`
+- `base/.github/copilot-instructions.md`
 - `base/docs/ai/*`
+- `base/docs/engineering/repo-contract.md`
 - `base/docs/product/기능명세서.md`
 - `optional/*`
   - backoffice, server provider처럼 선택된 워크스페이스에만 복사하는 문서 템플릿

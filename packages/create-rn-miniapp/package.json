@@ -29,10 +29,6 @@
     "@create-rn-miniapp/scaffold-templates": "workspace:*",
     "@swc/core": "^1.15.18",
     "jsonc-parser": "^3.3.1",
-    "mdast-util-to-string": "^4.0.0",
-    "remark-parse": "^11.0.0",
-    "remark-stringify": "^11.0.0",
-    "unified": "^11.0.5",
     "yargs": "^18.0.0"
   },
   "devDependencies": {

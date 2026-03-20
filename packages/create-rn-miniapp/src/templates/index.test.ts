@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -118,61 +118,81 @@ test('template module does not expose the legacy optional docs sync entrypoint',
   assert.equal('syncOptionalDocsTemplates' in templateModule, false)
 })
 
-test('docs templates keep markdown source free of optional marker comments', async () => {
-  const templateFiles = ['AGENTS.md', 'docs/index.md', 'docs/engineering/workspace-topology.md']
+test('remaining markdown templates keep source free of optional marker comments', async () => {
+  async function collectMarkdownTemplateFiles(
+    rootDir: string,
+    relativeDir = '',
+  ): Promise<string[]> {
+    const entries = await readdir(path.join(rootDir, relativeDir), { withFileTypes: true })
+    const filePaths: string[] = []
+
+    for (const entry of entries) {
+      const nextRelativePath = path.posix.join(relativeDir, entry.name)
+
+      if (entry.isDirectory()) {
+        filePaths.push(...(await collectMarkdownTemplateFiles(rootDir, nextRelativePath)))
+        continue
+      }
+
+      if (entry.isFile() && nextRelativePath.endsWith('.md')) {
+        filePaths.push(nextRelativePath)
+      }
+    }
+
+    return filePaths
+  }
+
+  const baseTemplateRoot = fileURLToPath(
+    new URL('../../../scaffold-templates/base', import.meta.url),
+  )
+  const templateFiles = await collectMarkdownTemplateFiles(baseTemplateRoot)
 
   for (const templateFile of templateFiles) {
-    const templateSource = await readFile(
-      fileURLToPath(new URL(`../../../scaffold-templates/base/${templateFile}`, import.meta.url)),
-      'utf8',
-    )
-
+    const templateSource = await readFile(path.join(baseTemplateRoot, templateFile), 'utf8')
     assert.doesNotMatch(templateSource, /<!--\s*optional-[a-z-]+:(?:start|end)\s*-->/)
   }
 })
 
-test('dynamic docs templates keep generated sections empty without anchor tokens', async () => {
-  const dynamicTemplateSections = [
-    {
-      templateFile: 'AGENTS.md',
-      headings: ['Workspace Model', 'Skill Routing'],
-    },
-    {
-      templateFile: 'docs/index.md',
-      headings: ['Skill 구조'],
-    },
-    {
-      templateFile: 'docs/engineering/workspace-topology.md',
-      headings: ['루트 구조', '역할 분리', 'ownership', '참고 Skill'],
-    },
+test('dynamic docs and frontend policy are code-owned instead of shipped as template markdown', async () => {
+  const codeOwnedDocs = [
+    'AGENTS.md',
+    'docs/index.md',
+    'docs/engineering/workspace-topology.md',
+    'docs/engineering/frontend-policy.md',
   ]
 
-  for (const template of dynamicTemplateSections) {
-    const templateSource = await readFile(
-      fileURLToPath(
-        new URL(`../../../scaffold-templates/base/${template.templateFile}`, import.meta.url),
+  for (const templateFile of codeOwnedDocs) {
+    assert.equal(
+      await pathExists(
+        fileURLToPath(new URL(`../../../scaffold-templates/base/${templateFile}`, import.meta.url)),
       ),
-      'utf8',
+      false,
     )
-
-    assert.doesNotMatch(
-      templateSource,
-      /\{\{(?:agents|docsIndex|workspaceTopology)[A-Za-z]+Heading\}\}/,
-    )
-
-    for (const heading of template.headings) {
-      assert.match(templateSource, new RegExp(`^## ${escapeRegExp(heading)}$`, 'm'))
-      assert.equal(getMarkdownSectionBody(templateSource, heading), '')
-    }
   }
+})
+
+test('docs and skills modules do not keep separate optional feature manifests', async () => {
+  const docsSource = await readFile(fileURLToPath(new URL('./docs.ts', import.meta.url)), 'utf8')
+  const skillsSource = await readFile(
+    fileURLToPath(new URL('./skills.ts', import.meta.url)),
+    'utf8',
+  )
+  const sharedFeatureSource = await readFile(
+    fileURLToPath(new URL('./feature-catalog.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(docsSource, /WORKSPACE_FEATURE_DEFINITIONS/)
+  assert.doesNotMatch(skillsSource, /OPTIONAL_SKILL_DEFINITIONS/)
+  assert.match(sharedFeatureSource, /optional\/backoffice-react/)
+  assert.match(sharedFeatureSource, /optional\/server-cloudflare/)
+  assert.match(sharedFeatureSource, /optional\/server-supabase/)
+  assert.match(sharedFeatureSource, /optional\/server-firebase/)
+  assert.match(sharedFeatureSource, /optional\/trpc-boundary/)
 })
 
 test('verify docs templates source uses the shared verify token', async () => {
   const verifyTemplateSections = [
-    {
-      templateFile: 'docs/index.md',
-      heading: 'verify',
-    },
     {
       templateFile: 'docs/engineering/repo-contract.md',
       heading: 'Verify 정의',
@@ -220,6 +240,27 @@ test('README defers generated repo onboarding order to AGENTS Start Here', async
   assert.doesNotMatch(
     readmeSource,
     /docs\/product\/기능명세서\.md.*docs\/ai\/Plan\.md.*docs\/index\.md/s,
+  )
+})
+
+test('README does not hand-maintain generated root tree, helper scripts, or provider file details', async () => {
+  const readmeSource = await readFile(
+    fileURLToPath(new URL('../../../../README.md', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(readmeSource, /<appName>\/[\s\S]*scripts\//)
+  assert.doesNotMatch(
+    readmeSource,
+    /verify-frontend-routes\.mjs|sync-skills\.mjs|check-skills\.mjs/,
+  )
+  assert.doesNotMatch(
+    readmeSource,
+    /SUPABASE_PROJECT_REF|CLOUDFLARE_ACCOUNT_ID|FIREBASE_PROJECT_ID|workers\.dev|supabase\/functions\/api\/index\.ts/,
+  )
+  assert.match(
+    readmeSource,
+    /정확한 생성 구조와 provider별 세부 파일\/스크립트\/env 키는 생성된 repo 문서를 source of truth로 봐야 해요\./,
   )
 })
 

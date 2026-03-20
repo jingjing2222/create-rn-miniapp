@@ -3,6 +3,12 @@ import path from 'node:path'
 import { patchRootPackageJsonSource } from '../patching/package-json.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import {
+  FRONTEND_POLICY_ASYNC_STORAGE_MESSAGE,
+  FRONTEND_POLICY_NATIVE_IMPORT_PATTERNS,
+  FRONTEND_POLICY_REACT_NATIVE_IMPORT_NAMES,
+  FRONTEND_POLICY_REACT_NATIVE_MESSAGE,
+} from './frontend-policy.js'
+import {
   copyFileWithTokens,
   resolveTemplatesPackageRoot,
   replaceTemplateTokens,
@@ -20,8 +26,6 @@ const ROOT_VERIFY_STEP_SCRIPT_NAMES = [
   'frontend:policy:check',
   'skills:check',
 ] as const
-const ROOT_BIOME_REACT_NATIVE_MESSAGE =
-  '`react-native` 기본 UI 컴포넌트는 바로 쓰지 말고 TDS나 Granite가 제공하는 컴포넌트를 먼저 써 주세요. 특히 `Text` 대신 TDS `Txt`를 써 주세요. `Pressable`이 정말 필요하면 `biome-ignore`에 이유를 같이 남겨 주세요. 먼저 `.agents/skills/core/tds/references/catalog.md`와 `docs/engineering/frontend-policy.md`를 확인해 주세요.'
 const NORMALIZED_PACKAGE_WORKSPACE = 'packages/*' as const
 const NORMALIZED_ROOT_WORKSPACE_ORDER = [
   'frontend',
@@ -95,48 +99,15 @@ function renderRootBiomeSource(adapter: ReturnType<typeof getPackageManagerAdapt
               options: {
                 paths: {
                   '@react-native-async-storage/async-storage':
-                    'AsyncStorage는 쓰면 안 돼요. 대신 `@apps-in-toss/framework` storage API를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
+                    FRONTEND_POLICY_ASYNC_STORAGE_MESSAGE,
                   '@granite-js/native/@react-native-async-storage/async-storage':
-                    'AsyncStorage는 쓰면 안 돼요. 대신 `@apps-in-toss/framework` storage API를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
+                    FRONTEND_POLICY_ASYNC_STORAGE_MESSAGE,
                   'react-native': {
-                    message: ROOT_BIOME_REACT_NATIVE_MESSAGE,
-                    importNames: [
-                      'Button',
-                      'Modal',
-                      'Switch',
-                      'TextInput',
-                      'Text',
-                      'ActivityIndicator',
-                      'Alert',
-                      'TouchableOpacity',
-                      'TouchableHighlight',
-                      'TouchableWithoutFeedback',
-                      'Pressable',
-                    ],
+                    message: FRONTEND_POLICY_REACT_NATIVE_MESSAGE,
+                    importNames: FRONTEND_POLICY_REACT_NATIVE_IMPORT_NAMES,
                   },
                 },
-                patterns: [
-                  {
-                    group: ['@react-navigation/*'],
-                    message:
-                      'react-navigation 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
-                  },
-                  {
-                    group: ['@react-native-community/*'],
-                    message:
-                      'react-native community 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
-                  },
-                  {
-                    group: ['react-native-*'],
-                    message:
-                      'react-native 네이티브 패키지는 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
-                  },
-                  {
-                    group: ['@shopify/flash-list', 'lottie-react-native', 'fingerprint'],
-                    message:
-                      '이 네이티브 모듈은 직접 import하지 말고 `@granite-js/native` 경로를 써 주세요. 자세한 기준은 `docs/engineering/frontend-policy.md`를 먼저 봐 주세요.',
-                  },
-                ],
+                patterns: FRONTEND_POLICY_NATIVE_IMPORT_PATTERNS,
               },
             },
           },

@@ -1,196 +1,25 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import remarkParse from 'remark-parse'
-import remarkStringify from 'remark-stringify'
-import { unified } from 'unified'
 import {
+  resolveTemplatesPackageRoot,
   copyDirectoryWithTokens,
   copyFileWithTokens,
-  replaceTemplateTokens,
-  resolveTemplatesPackageRoot,
 } from './filesystem.js'
+import {
+  resolveEnabledWorkspaceFeatures,
+  resolveSelectedOptionalSkillDefinitions,
+} from './feature-catalog.js'
+import { renderFrontendPolicyMarkdown } from './frontend-policy.js'
 import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
-import { createRootTemplateExtraTokens } from './root.js'
-import { CORE_SKILL_DEFINITIONS, resolveSelectedOptionalSkillDefinitions } from './skills.js'
+import { createRootTemplateExtraTokens, renderRootVerifyStepsMarkdown } from './root.js'
+import { CORE_SKILL_DEFINITIONS } from './skills.js'
 import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
 
-type MarkdownNode = {
-  type: string
-  depth?: number
-  children?: MarkdownNode[]
-}
-
-type MarkdownRoot = MarkdownNode & {
-  children: MarkdownNode[]
-}
-
-type MarkdownSectionDefinition = {
-  render: (options: GeneratedWorkspaceOptions) => string
-}
-
-type DynamicDocDefinition = {
-  relativePath: string
-  sections: MarkdownSectionDefinition[]
-}
-
-type WorkspaceRoleSectionDefinition = {
-  heading: string
-  lines: (options: GeneratedWorkspaceOptions) => string[]
-}
-
-type WorkspaceFeatureDefinition = {
-  enabled: (options: GeneratedWorkspaceOptions) => boolean
-  agentsLines?: string[]
-  topologyRootLines?: string[]
-  roleSections?: WorkspaceRoleSectionDefinition[]
-  ownershipLines?: (options: GeneratedWorkspaceOptions) => string[]
-  importBoundaryRules?: (options: GeneratedWorkspaceOptions) => string[]
-}
-
-const MARKDOWN_RENDERER = unified().use(remarkParse).use(remarkStringify, {
-  bullet: '-',
-  listItemIndent: 'one',
-})
-
-const WORKSPACE_FEATURE_DEFINITIONS: WorkspaceFeatureDefinition[] = [
-  {
-    enabled: () => true,
-    agentsLines: ['`frontend`: AppInToss + Granite 기반 MiniApp'],
-    topologyRootLines: ['`frontend`: AppInToss + Granite 기반 MiniApp'],
-    roleSections: [
-      {
-        heading: 'frontend',
-        lines: (options) => [
-          '- MiniApp UI, route, client integration을 담당한다.',
-          ...(options.serverProvider !== null
-            ? [
-                '- provider 연결값은 각 workspace의 `.env.local`에서 읽는다.',
-                '- server runtime 구현을 직접 import하지 않는다.',
-              ]
-            : []),
-        ],
-      },
-    ],
-    importBoundaryRules: (options) =>
-      options.serverProvider !== null ? ['`frontend` ↔ `server` 직접 import 금지'] : [],
-  },
-  {
-    enabled: (options) => options.serverProvider !== null,
-    agentsLines: ['`server`: optional provider workspace'],
-    topologyRootLines: ['`server`: optional provider workspace'],
-    roleSections: [
-      {
-        heading: 'server',
-        lines: (options) => [
-          '- provider별 원격 리소스 운영과 server-side runtime을 담당한다.',
-          '- deploy, db/functions, rules/indexes 같은 운영 스크립트의 source다.',
-          '- frontend가 기대하는 env와 연결값을 제공한다.',
-          ...(options.hasBackoffice ? ['- backoffice가 기대하는 env와 연결값을 제공한다.'] : []),
-        ],
-      },
-    ],
-    ownershipLines: () => [
-      '- API / base URL ownership: provider workspace가 값을 정의하고 consumer workspace가 읽는다.',
-    ],
-  },
-  {
-    enabled: (options) => options.hasBackoffice,
-    agentsLines: ['`backoffice`: optional Vite 기반 운영 도구'],
-    topologyRootLines: ['`backoffice`: optional Vite + React 운영 도구'],
-    roleSections: [
-      {
-        heading: 'backoffice',
-        lines: (options) => [
-          '- 브라우저 기반 운영 화면을 담당한다.',
-          '- MiniApp 전용 runtime 대신 browser/client 패턴을 따른다.',
-          ...(options.serverProvider !== null
-            ? ['- server runtime 구현을 직접 import하지 않는다.']
-            : []),
-        ],
-      },
-    ],
-    importBoundaryRules: (options) =>
-      options.serverProvider !== null ? ['`backoffice` ↔ `server` 직접 import 금지'] : [],
-  },
-  {
-    enabled: (options) => options.hasTrpc,
-    agentsLines: [
-      '`packages/contracts`, `packages/app-router`: optional shared tRPC boundary packages',
-    ],
-    topologyRootLines: [
-      '`packages/contracts`: optional tRPC boundary schema / type source',
-      '`packages/app-router`: optional tRPC router / `AppRouter` source',
-    ],
-    roleSections: [
-      {
-        heading: 'packages/contracts',
-        lines: () => [
-          '- boundary input/output schema와 경계 타입의 source of truth다.',
-          '- consumer는 root import만 사용하고 src 상대 경로를 내려가지 않는다.',
-        ],
-      },
-      {
-        heading: 'packages/app-router',
-        lines: () => [
-          '- route shape와 `AppRouter` 타입의 source of truth다.',
-          '- Worker runtime과 client는 이 package를 기준으로 타입을 맞춘다.',
-        ],
-      },
-    ],
-    importBoundaryRules: () => [
-      'shared contract가 필요하면 `packages/contracts`, `packages/app-router`로 올린다.',
-    ],
-  },
-]
-
-const DYNAMIC_DOC_DEFINITIONS: DynamicDocDefinition[] = [
-  {
-    relativePath: 'AGENTS.md',
-    sections: [
-      {
-        render: renderAgentsWorkspaceModelSection,
-      },
-      {
-        render: renderAgentsSkillRoutingSection,
-      },
-    ],
-  },
-  {
-    relativePath: 'docs/index.md',
-    sections: [
-      {
-        render: renderDocsIndexSkillStructureSection,
-      },
-    ],
-  },
-  {
-    relativePath: 'docs/engineering/workspace-topology.md',
-    sections: [
-      {
-        render: renderTopologyRootSection,
-      },
-      {
-        render: renderTopologyRolesSection,
-      },
-      {
-        render: renderTopologyOwnershipSection,
-      },
-      {
-        render: renderTopologySkillsSection,
-      },
-    ],
-  },
-]
-
-const DYNAMIC_DOCS_INSIDE_DOCS = new Set(
-  DYNAMIC_DOC_DEFINITIONS.map((definition) => definition.relativePath)
-    .filter((relativePath) => relativePath.startsWith('docs/'))
-    .map((relativePath) => relativePath.slice('docs/'.length)),
-)
-
-function resolveEnabledWorkspaceFeatures(options: GeneratedWorkspaceOptions) {
-  return WORKSPACE_FEATURE_DEFINITIONS.filter((feature) => feature.enabled(options))
-}
+const CODE_OWNED_DOCS_INSIDE_DOCS = new Set([
+  'index.md',
+  'engineering/frontend-policy.md',
+  'engineering/workspace-topology.md',
+])
 
 function renderBulletList(items: string[]) {
   if (items.length === 0) {
@@ -200,70 +29,8 @@ function renderBulletList(items: string[]) {
   return `${items.map((item) => `- ${item}`).join('\n')}\n`
 }
 
-function renderMarkdownBlocks(blocks: Array<string | null>) {
-  return `${blocks.filter((block): block is string => block !== null).join('\n\n')}\n`
-}
-
-function parseMarkdownChildren(source: string) {
-  return (MARKDOWN_RENDERER.parse(source) as MarkdownRoot).children
-}
-
-function collectEmptyHeadingSections(root: MarkdownRoot, depth: number) {
-  const sections: Array<{ startIndex: number; endIndex: number }> = []
-
-  for (let index = 0; index < root.children.length; index += 1) {
-    const node = root.children[index]
-    if (node.type !== 'heading' || node.depth !== depth) {
-      continue
-    }
-
-    let endIndex = index + 1
-    while (endIndex < root.children.length) {
-      const nextNode = root.children[endIndex]
-      if (
-        nextNode.type === 'heading' &&
-        typeof nextNode.depth === 'number' &&
-        nextNode.depth <= depth
-      ) {
-        break
-      }
-      endIndex += 1
-    }
-
-    if (endIndex === index + 1) {
-      sections.push({ startIndex: index, endIndex })
-    }
-  }
-
-  return sections
-}
-
-function replaceEmptySectionBodies(
-  root: MarkdownRoot,
-  definition: DynamicDocDefinition,
-  options: GeneratedWorkspaceOptions,
-) {
-  const emptySections = collectEmptyHeadingSections(root, 2)
-
-  if (emptySections.length !== definition.sections.length) {
-    throw new Error(
-      `동적 문서 섹션 수가 맞지 않습니다: ${definition.relativePath} (expected ${definition.sections.length}, received ${emptySections.length})`,
-    )
-  }
-
-  for (let index = definition.sections.length - 1; index >= 0; index -= 1) {
-    const section = definition.sections[index]
-    const targetSection = emptySections[index]
-    if (!section || !targetSection) {
-      continue
-    }
-
-    root.children = [
-      ...root.children.slice(0, targetSection.startIndex + 1),
-      ...parseMarkdownChildren(section.render(options)),
-      ...root.children.slice(targetSection.endIndex),
-    ]
-  }
+function renderSection(title: string, body: string) {
+  return `## ${title}\n${body.trimEnd()}`
 }
 
 function renderAgentsWorkspaceModelSection(options: GeneratedWorkspaceOptions) {
@@ -314,7 +81,7 @@ function renderTopologyRolesSection(options: GeneratedWorkspaceOptions) {
     ),
   )
 
-  return renderMarkdownBlocks(blocks)
+  return `${blocks.join('\n\n')}\n`
 }
 
 function renderTopologyOwnershipSection(options: GeneratedWorkspaceOptions) {
@@ -347,41 +114,94 @@ function renderTopologySkillsSection(options: GeneratedWorkspaceOptions) {
   return renderBulletList(items)
 }
 
-function renderDynamicMarkdownSource(
-  relativePath: string,
-  source: string,
-  options: GeneratedWorkspaceOptions,
-) {
-  const definition = DYNAMIC_DOC_DEFINITIONS.find((doc) => doc.relativePath === relativePath)
-
-  if (!definition) {
-    return source
-  }
-
-  const root = MARKDOWN_RENDERER.parse(source) as MarkdownRoot
-
-  replaceEmptySectionBodies(root, definition, options)
-
-  return String(MARKDOWN_RENDERER.stringify(root as never))
+function renderAgentsMarkdown(tokens: TemplateTokens, options: GeneratedWorkspaceOptions) {
+  return [
+    '# AGENTS.md',
+    '',
+    '이 문서는 생성물 루트 계약서입니다. 강제 규칙은 여기와 `docs/engineering/*`에 남기고, 반복 작업법과 외부 플랫폼 카탈로그는 `.agents/skills/*`로 분리합니다.',
+    '',
+    '## Repository Contract',
+    `- 루트 툴체인: \`${tokens.packageManagerCommand} + nx + biome\``,
+    `- 단일 검증 진입점: \`${tokens.verifyCommand}\``,
+    '- 계약/정책 문서: `AGENTS.md`, `docs/index.md`, `docs/engineering/*`',
+    '- canonical skills: `.agents/skills/*`',
+    '- Claude mirror: `.claude/skills/*`',
+    '',
+    '## Hard Rules',
+    '1. Plan first: 작업 전 `docs/ai/Plan.md`를 먼저 갱신한다.',
+    '2. TDD first: 로직 변경과 버그 수정은 실패 테스트나 재현 절차부터 남긴다.',
+    `3. Self-verify first: \`${tokens.verifyCommand}\`를 통과해야 완료로 본다.`,
+    '4. Small diffs: 한 커밋과 한 PR은 하나의 목적만 가진다.',
+    '5. Docs first: 구조, 경로, 규칙이 바뀌면 코드보다 문서와 Skill 경로를 먼저 맞춘다.',
+    '6. No secrets: 키, 토큰, 내부 URL 같은 민감정보를 코드, 로그, PR에 남기지 않는다.',
+    '7. Official scaffold first: Granite, `@apps-in-toss/framework`, Vite, provider 공식 CLI와 공식 문서를 먼저 확인한다.',
+    '',
+    '## Start Here',
+    '1. `docs/ai/Plan.md`',
+    '2. `docs/ai/Status.md`',
+    '3. `docs/ai/Decisions.md`',
+    '4. `docs/index.md`',
+    '5. `docs/product/기능명세서.md`',
+    '',
+    renderSection('Workspace Model', renderAgentsWorkspaceModelSection(options)),
+    '',
+    renderSection('Skill Routing', renderAgentsSkillRoutingSection(options)),
+    '',
+    '## Done',
+    '- `Plan`과 필요 시 `Status`, `Decisions`가 최신이다.',
+    '- 테스트 또는 재현 절차가 먼저 남아 있다.',
+    '- 문서/Skill 경로 설명과 실파일이 일치한다.',
+    `- \`${tokens.verifyCommand}\`가 통과한다.`,
+    '',
+  ].join('\n')
 }
 
-async function renderDynamicMarkdownTemplate(
-  baseTemplateDir: string,
-  sourcePath: string,
-  targetPath: string,
-  tokens: TemplateTokens,
-  options: GeneratedWorkspaceOptions,
-) {
-  const contents = await readFile(sourcePath, 'utf8')
-  const relativePath = path.relative(baseTemplateDir, sourcePath).split(path.sep).join('/')
-  const renderedSource = renderDynamicMarkdownSource(
-    relativePath,
-    replaceTemplateTokens(contents, tokens, createRootTemplateExtraTokens(tokens.packageManager)),
-    options,
-  )
+function renderDocsIndexMarkdown(tokens: TemplateTokens, options: GeneratedWorkspaceOptions) {
+  return [
+    '# docs index',
+    '',
+    '문서 루트는 얇게 유지하고, 상세 규칙은 하위 문서와 Skill로 분리합니다.',
+    '',
+    '## 문서 구조',
+    '- `ai/`: `Plan`, `Status`, `Decisions`, `Prompt`',
+    '- `product/`: 제품 요구사항',
+    '- `engineering/`: 강제 규칙과 구조 정책',
+    '',
+    '## engineering 문서',
+    '- `engineering/repo-contract.md`',
+    '- `engineering/frontend-policy.md`',
+    '- `engineering/workspace-topology.md`',
+    '',
+    renderSection('Skill 구조', renderDocsIndexSkillStructureSection(options)),
+    '',
+    renderSection('verify', renderRootVerifyStepsMarkdown(tokens.packageManager)),
+    '',
+    '## 운영 메모',
+    '- 새 규칙은 먼저 `engineering/*`에 들어갈지, Skill로 분리할지 구분한다.',
+    '- 문서 경로를 바꾸면 `AGENTS.md`, `CLAUDE.md`, Copilot instructions, Skill 경로를 같이 갱신한다.',
+    '',
+  ].join('\n')
+}
 
+function renderWorkspaceTopologyMarkdown(options: GeneratedWorkspaceOptions) {
+  return [
+    '# Workspace Topology',
+    '',
+    renderSection('루트 구조', renderTopologyRootSection(options)),
+    '',
+    renderSection('역할 분리', renderTopologyRolesSection(options)),
+    '',
+    renderSection('ownership', renderTopologyOwnershipSection(options)),
+    '',
+    renderSection('참고 Skill', renderTopologySkillsSection(options)),
+    '',
+  ].join('\n')
+}
+
+async function writeCodeOwnedMarkdown(targetRoot: string, relativePath: string, source: string) {
+  const targetPath = path.join(targetRoot, ...relativePath.split('/'))
   await mkdir(path.dirname(targetPath), { recursive: true })
-  await writeFile(targetPath, renderedSource, 'utf8')
+  await writeFile(targetPath, source, 'utf8')
 }
 
 export async function applyDocsTemplates(
@@ -410,16 +230,26 @@ export async function applyDocsTemplates(
     path.join(baseTemplateDir, 'docs'),
     path.join(targetRoot, 'docs'),
     tokens,
-    { skipRelativePaths: DYNAMIC_DOCS_INSIDE_DOCS, extraTokens },
+    {
+      skipRelativePaths: CODE_OWNED_DOCS_INSIDE_DOCS,
+      extraTokens,
+    },
   )
 
-  for (const definition of DYNAMIC_DOC_DEFINITIONS) {
-    await renderDynamicMarkdownTemplate(
-      baseTemplateDir,
-      path.join(baseTemplateDir, ...definition.relativePath.split('/')),
-      path.join(targetRoot, ...definition.relativePath.split('/')),
-      tokens,
-      options,
-    )
-  }
+  await writeCodeOwnedMarkdown(targetRoot, 'AGENTS.md', renderAgentsMarkdown(tokens, options))
+  await writeCodeOwnedMarkdown(
+    targetRoot,
+    'docs/index.md',
+    renderDocsIndexMarkdown(tokens, options),
+  )
+  await writeCodeOwnedMarkdown(
+    targetRoot,
+    'docs/engineering/workspace-topology.md',
+    renderWorkspaceTopologyMarkdown(options),
+  )
+  await writeCodeOwnedMarkdown(
+    targetRoot,
+    'docs/engineering/frontend-policy.md',
+    renderFrontendPolicyMarkdown(tokens.packageManagerRunCommand),
+  )
 }

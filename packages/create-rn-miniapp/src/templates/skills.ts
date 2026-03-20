@@ -1,16 +1,12 @@
 import path from 'node:path'
 import { mkdir, rm } from 'node:fs/promises'
 import { copyDirectory, copyDirectoryWithTokens, resolveSkillsPackageRoot } from './filesystem.js'
+import {
+  resolveSelectedOptionalSkillDefinitions,
+  type SkillReferenceDefinition,
+} from './feature-catalog.js'
 import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
 import type { GeneratedWorkspaceOptions, GeneratedWorkspaceHints, TemplateTokens } from './types.js'
-
-export type SkillReferenceDefinition = {
-  templateDir: string
-  docsPath: string
-  agentsLabel: string
-  topologyLabel: string
-  enabled?: (options: GeneratedWorkspaceOptions) => boolean
-}
 
 export const CORE_SKILL_DEFINITIONS: SkillReferenceDefinition[] = [
   {
@@ -32,48 +28,6 @@ export const CORE_SKILL_DEFINITIONS: SkillReferenceDefinition[] = [
     topologyLabel: 'TDS UI selection',
   },
 ]
-
-export const OPTIONAL_SKILL_DEFINITIONS: SkillReferenceDefinition[] = [
-  {
-    templateDir: 'optional/backoffice-react',
-    docsPath: '.agents/skills/optional/backoffice-react/SKILL.md',
-    agentsLabel: 'backoffice React 작업',
-    topologyLabel: 'Backoffice React workflow',
-    enabled: (options) => options.hasBackoffice,
-  },
-  {
-    templateDir: 'optional/server-cloudflare',
-    docsPath: '.agents/skills/optional/server-cloudflare/SKILL.md',
-    agentsLabel: 'Cloudflare provider 작업',
-    topologyLabel: 'Cloudflare provider 운영 가이드',
-    enabled: (options) => options.serverProvider === 'cloudflare',
-  },
-  {
-    templateDir: 'optional/server-supabase',
-    docsPath: '.agents/skills/optional/server-supabase/SKILL.md',
-    agentsLabel: 'Supabase provider 작업',
-    topologyLabel: 'Supabase provider 운영 가이드',
-    enabled: (options) => options.serverProvider === 'supabase',
-  },
-  {
-    templateDir: 'optional/server-firebase',
-    docsPath: '.agents/skills/optional/server-firebase/SKILL.md',
-    agentsLabel: 'Firebase provider 작업',
-    topologyLabel: 'Firebase provider 운영 가이드',
-    enabled: (options) => options.serverProvider === 'firebase',
-  },
-  {
-    templateDir: 'optional/trpc-boundary',
-    docsPath: '.agents/skills/optional/trpc-boundary/SKILL.md',
-    agentsLabel: 'tRPC boundary 변경',
-    topologyLabel: 'tRPC boundary change flow',
-    enabled: (options) => options.hasTrpc,
-  },
-]
-
-export function resolveSelectedOptionalSkillDefinitions(options: GeneratedWorkspaceOptions) {
-  return OPTIONAL_SKILL_DEFINITIONS.filter((skill) => skill.enabled?.(options) ?? true)
-}
 
 function resolveGeneratedSkillTemplates(options: GeneratedWorkspaceOptions) {
   return [

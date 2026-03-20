@@ -1,3 +1,22 @@
+## 다음 작업: code-owned docs와 feature catalog를 단일 source로 정리
+1. 문제
+   - `AGENTS.md`, `docs/index.md`, `workspace-topology.md`, `frontend-policy.md`가 template markdown와 renderer code 사이에 반쯤 걸쳐 있어 section identity와 정책 wording이 둘 이상에서 관리된다.
+   - optional workspace/skill catalog가 `docs.ts`와 `skills.ts`에 따로 있어 feature 추가나 rename 시 함께 바꿔야 한다.
+   - 루트 `README.md`가 generated tree, helper scripts, provider별 파일/env 세부사항을 다시 적고 있어 생성 결과물과 drift할 수 있다.
+2. 방향
+   - dynamic docs와 frontend policy를 code-owned renderer로 올리고, scaffold template package에서는 해당 markdown source를 제거한다.
+   - optional feature metadata를 shared catalog 모듈로 옮겨 docs/skills가 같은 정의를 사용하게 만든다.
+   - root README는 exact generated output 설명을 줄이고, 생성된 repo 문서를 source of truth로만 가리키게 정리한다.
+3. 테스트
+   - `src/templates/index.test.ts`의 새 red 테스트를 먼저 통과시킨다.
+   - scaffold template tarball/release 테스트를 현재 source ownership에 맞게 갱신한다.
+   - 최종적으로 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - code-owned docs가 template markdown 없이 생성된다.
+   - optional feature catalog가 한 곳에서만 관리된다.
+   - README가 generated file/env/script catalog를 별도로 들고 있지 않다.
+   - `pnpm verify`를 통과한다.
+
 ## 다음 작업: main 대비 diff 기준 minor changeset과 한국어 PR 초안 정리
 1. 문제
    - 현재 브랜치는 skill 기반 scaffold 구조, dynamic docs, runtime 실분리까지 포함해 publish 대상 패키지 변경 폭이 크다.

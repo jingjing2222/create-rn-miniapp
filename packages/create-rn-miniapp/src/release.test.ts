@@ -164,16 +164,28 @@ test('scaffold templates tarball keeps the root assets and new contract docs', (
     false,
   )
   assert.equal(
-    packResult.files.some((file) => file.path === 'base/CLAUDE.md'),
-    true,
-  )
-  assert.equal(
     packResult.files.some((file) => file.path === 'base/.github/copilot-instructions.md'),
     true,
   )
   assert.equal(
-    packResult.files.some((file) => file.path === 'base/docs/engineering/frontend-policy.md'),
+    packResult.files.some((file) => file.path === 'base/CLAUDE.md'),
     true,
+  )
+  assert.equal(
+    packResult.files.some((file) => file.path === 'base/AGENTS.md'),
+    false,
+  )
+  assert.equal(
+    packResult.files.some((file) => file.path === 'base/docs/index.md'),
+    false,
+  )
+  assert.equal(
+    packResult.files.some((file) => file.path === 'base/docs/engineering/frontend-policy.md'),
+    false,
+  )
+  assert.equal(
+    packResult.files.some((file) => file.path === 'base/docs/engineering/workspace-topology.md'),
+    false,
   )
   assert.equal(
     packResult.files.some(
