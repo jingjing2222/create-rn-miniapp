@@ -123,8 +123,6 @@ test('initBareWorktreeLayout creates a bare repo with a main worktree and contro
     assert.ok((await stat(workspaceRoot)).isDirectory())
     assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /cd main/)
     assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /git worktree list/)
-    const claudeMd = await readFile(path.join(controlRoot, '.claude', 'CLAUDE.md'), 'utf8')
-    assert.match(claudeMd, /AGENTS\.md/)
     assert.match(
       await readFile(path.join(controlRoot, 'README.md'), 'utf8'),
       /실제 MiniApp repo는 `main\/` 아래에 있어요/,

@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { log } from '@clack/prompts'
 import { buildAddCommandPhases, buildCreateCommandPhases, runCommand } from '../commands.js'
@@ -186,6 +186,15 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     )
   }
   await applyDocsTemplates(workspaceRoot, tokens)
+
+  const claudeDir = path.join(controlRoot, '.claude')
+  await mkdir(claudeDir, { recursive: true })
+  await writeFile(
+    path.join(claudeDir, 'CLAUDE.md'),
+    '프로젝트 안내는 `AGENTS.md`를 읽어주세요.\n',
+    'utf8',
+  )
+
   await syncOptionalDocsTemplates(workspaceRoot, tokens, {
     hasBackoffice:
       options.withBackoffice && (await pathExists(path.join(workspaceRoot, 'backoffice'))),

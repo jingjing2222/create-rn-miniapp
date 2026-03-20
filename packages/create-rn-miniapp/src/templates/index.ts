@@ -1471,14 +1471,6 @@ export async function applyDocsTemplates(targetRoot: string, tokens: TemplateTok
     tokens,
   )
 
-  const claudeDir = path.join(targetRoot, '.claude')
-  await mkdir(claudeDir, { recursive: true })
-  await writeFile(
-    path.join(claudeDir, 'CLAUDE.md'),
-    '프로젝트 안내는 `AGENTS.md`를 읽어주세요.\n',
-    'utf8',
-  )
-
   await copyDirectoryWithTokens(
     path.join(baseTemplateDir, 'docs'),
     path.join(targetRoot, 'docs'),

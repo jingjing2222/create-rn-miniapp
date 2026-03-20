@@ -92,14 +92,6 @@ async function writeControlRootShims(controlRoot: string) {
     'utf8',
   )
 
-  const claudeDir = path.join(controlRoot, '.claude')
-  await mkdir(claudeDir, { recursive: true })
-  await writeFile(
-    path.join(claudeDir, 'CLAUDE.md'),
-    '프로젝트 안내는 `AGENTS.md`를 읽어주세요.\n',
-    'utf8',
-  )
-
   await writeFile(
     path.join(controlRoot, 'README.md'),
     createControlRootReadmeStub(MAIN_WORKTREE_DIRECTORY),

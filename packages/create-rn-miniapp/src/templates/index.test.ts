@@ -403,10 +403,8 @@ test('applyDocsTemplates keeps optional workspace docs out of the base copy', as
   await applyDocsTemplates(targetRoot, tokens)
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
-  const claudeMd = await readFile(path.join(targetRoot, '.claude', 'CLAUDE.md'), 'utf8')
   const docsIndex = await readFile(path.join(targetRoot, 'docs', 'index.md'), 'utf8')
 
-  assert.match(claudeMd, /AGENTS\.md/)
   assert.doesNotMatch(agents, /backoffice-react-best-practices/)
   assert.doesNotMatch(agents, /server-provider-supabase/)
   assert.doesNotMatch(agents, /server-provider-cloudflare/)
