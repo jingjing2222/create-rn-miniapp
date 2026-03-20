@@ -50,38 +50,37 @@ function createControlRootReadmeStub(workspaceDirectory: string) {
 }
 
 export function createPostMergeHook() {
-  // heredoc으로 스크립트를 생성해서 따옴표 이스케이핑 문제를 피함
   return `#!/usr/bin/env bash
 # post-merge: merged된 worktree 자동 정리
+# squash/rebase merge도 감지하기 위해 git cherry를 사용
 set -euo pipefail
 
 control_root="$(git rev-parse --show-toplevel)/.."
 cd "$control_root"
 
-git branch --merged main | while IFS= read -r branch; do
-  branch="$(echo "$branch" | sed 's/^[* ]*//')"
-  [ "$branch" = "main" ] && continue
-  [ -z "$branch" ] && continue
+git worktree list --porcelain | while IFS= read -r line; do
+  case "$line" in
+    worktree\\ *) current_wt="\${line#worktree }" ;;
+    branch\\ refs/heads/*)
+      branch="\${line#branch refs/heads/}"
+      [ "$branch" = "main" ] && continue
 
-  worktree_path=""
-  current_wt=""
-  while IFS= read -r line; do
-    case "$line" in
-      worktree\\ *) current_wt="\${line#worktree }" ;;
-      branch\\ refs/heads/"$branch") worktree_path="$current_wt" ;;
-    esac
-  done < <(git worktree list --porcelain)
-  [ -z "$worktree_path" ] && continue
+      # git cherry: +는 미반영, -는 반영됨. +가 하나라도 있으면 아직 merge 안 된 것
+      if git cherry main "$branch" 2>/dev/null | grep -q '^+'; then
+        continue
+      fi
 
-  # dirty worktree는 건너뜀
-  if [ -n "$(git -C "$worktree_path" status --porcelain 2>/dev/null)" ]; then
-    echo "post-merge: $branch worktree에 변경사항이 있어서 건너뛰었어요"
-    continue
-  fi
+      # dirty worktree는 건너뜀
+      if [ -n "$(git -C "$current_wt" status --porcelain 2>/dev/null)" ]; then
+        echo "post-merge: $branch worktree에 변경사항이 있어서 건너뛰었어요"
+        continue
+      fi
 
-  echo "post-merge: merged된 worktree 정리 — $branch"
-  git worktree remove "$worktree_path" 2>/dev/null || true
-  git branch -d "$branch" 2>/dev/null || true
+      echo "post-merge: merged된 worktree 정리 — $branch"
+      git worktree remove "$current_wt" 2>/dev/null || true
+      git branch -d "$branch" 2>/dev/null || true
+      ;;
+  esac
 done
 `
 }
