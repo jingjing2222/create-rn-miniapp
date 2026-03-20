@@ -41,7 +41,7 @@ const EXPECTED_DOCS_TREE = [
 
 const EXPECTED_SCRIPTS_TREE = ['check-skills.mjs', 'sync-skills.mjs', 'verify-frontend-routes.mjs']
 
-const CORE_SKILLS = ['core/granite', 'core/miniapp', 'core/tds']
+const CORE_SKILLS = ['granite', 'miniapp', 'tds']
 const REMOVED_ENGINEERING_DOCS = [
   'appsintoss-granite-api-index.md',
   'appsintoss-granite-full-api-index.md',
@@ -154,35 +154,35 @@ test('migration scaffold combinations generate docs, skills, and the claude mirr
       serverProvider: null,
       withBackoffice: true,
       withTrpc: false,
-      expectedOptionalSkills: ['optional/backoffice-react'],
+      expectedOptionalSkills: ['backoffice-react'],
     },
     {
       label: 'base + server-cloudflare',
       serverProvider: 'cloudflare',
       withBackoffice: false,
       withTrpc: false,
-      expectedOptionalSkills: ['optional/server-cloudflare'],
+      expectedOptionalSkills: ['server-cloudflare'],
     },
     {
       label: 'base + server-supabase',
       serverProvider: 'supabase',
       withBackoffice: false,
       withTrpc: false,
-      expectedOptionalSkills: ['optional/server-supabase'],
+      expectedOptionalSkills: ['server-supabase'],
     },
     {
       label: 'base + server-firebase',
       serverProvider: 'firebase',
       withBackoffice: false,
       withTrpc: false,
-      expectedOptionalSkills: ['optional/server-firebase'],
+      expectedOptionalSkills: ['server-firebase'],
     },
     {
       label: 'base + trpc',
       serverProvider: 'cloudflare',
       withBackoffice: false,
       withTrpc: true,
-      expectedOptionalSkills: ['optional/server-cloudflare', 'optional/trpc-boundary'],
+      expectedOptionalSkills: ['server-cloudflare', 'trpc-boundary'],
     },
   ]
 
@@ -208,7 +208,9 @@ test('migration scaffold combinations generate docs, skills, and the claude mirr
       combo.label,
     )
 
-    const expectedSkills = [...CORE_SKILLS, ...combo.expectedOptionalSkills]
+    const expectedSkills = [...CORE_SKILLS, ...combo.expectedOptionalSkills].sort((left, right) =>
+      left.localeCompare(right),
+    )
     assert.deepEqual(
       await listSkillDirectories(path.join(targetRoot, '.agents', 'skills')),
       expectedSkills,

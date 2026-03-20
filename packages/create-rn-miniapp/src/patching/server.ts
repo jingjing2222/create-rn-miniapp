@@ -77,22 +77,22 @@ const FIREBASE_YARN_PACKAGE_EXTENSION_BLOCK = [
 const SUPABASE_ACCESS_TOKENS_DASHBOARD_URL = 'https://supabase.com/dashboard/account/tokens'
 const SUPABASE_MANAGEMENT_API_DOC_URL = 'https://supabase.com/docs/reference/api/introduction'
 const SUPABASE_ACCESS_TOKEN_GUIDE_ASSET_CANDIDATES = [
-  'optional/server-supabase/assets/supabase-access-token-guide1.png',
-  'optional/server-supabase/assets/supabase-access-token-guide2.png',
+  'server-supabase/assets/supabase-access-token-guide1.png',
+  'server-supabase/assets/supabase-access-token-guide2.png',
 ] as const
 const CLOUDFLARE_TOKEN_GUIDE_ASSET_CANDIDATES = [
-  'optional/server-cloudflare/assets/cloudflare-api-token-guide.png',
-  'optional/server-cloudflare/assets/cloudflare-api-token-guide.jpg',
-  'optional/server-cloudflare/assets/cloudflare-api-token-guide.jpeg',
-  'optional/server-cloudflare/assets/cloudflare-api-token-guide.webp',
-  'optional/server-cloudflare/assets/cloudflare-api-token-guide.gif',
+  'server-cloudflare/assets/cloudflare-api-token-guide.png',
+  'server-cloudflare/assets/cloudflare-api-token-guide.jpg',
+  'server-cloudflare/assets/cloudflare-api-token-guide.jpeg',
+  'server-cloudflare/assets/cloudflare-api-token-guide.webp',
+  'server-cloudflare/assets/cloudflare-api-token-guide.gif',
 ] as const
 const FIREBASE_LOGIN_CI_GUIDE_ASSET_CANDIDATES = [
-  'optional/server-firebase/assets/firebase-login-ci-guide.png',
+  'server-firebase/assets/firebase-login-ci-guide.png',
 ] as const
 const FIREBASE_SERVICE_ACCOUNT_GUIDE_ASSET_CANDIDATES = [
-  'optional/server-firebase/assets/firebase-service-account-guide1.png',
-  'optional/server-firebase/assets/firebase-service-account-guide2.png',
+  'server-firebase/assets/firebase-service-account-guide1.png',
+  'server-firebase/assets/firebase-service-account-guide2.png',
 ] as const
 const SERVER_GUIDE_ASSET_TARGET_DIR = 'assets'
 const FIREBASE_CLI_DOC_URL = 'https://firebase.google.com/docs/cli'

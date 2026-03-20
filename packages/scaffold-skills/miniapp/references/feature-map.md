@@ -12,13 +12,13 @@
 1. 요구사항과 가장 가까운 기능 축을 이 문서에서 찾는다.
 2. 정확한 URL과 세부 타입/에러 문서는 `full-index.md`에서 확인한다.
 3. 라우팅과 페이지 구조 규칙은 `docs/engineering/frontend-policy.md`에서 확인한다.
-4. UI 구현이 포함되면 `.agents/skills/core/tds/references/catalog.md`와 원문 TDS 문서를 같이 본다.
+4. UI 구현이 포함되면 `.agents/skills/tds/references/catalog.md`와 원문 TDS 문서를 같이 본다.
 
 ## Start Here
 
 - Full catalog: `./full-index.md`
 - Routing and page rules: `docs/engineering/frontend-policy.md`
-- TDS catalog: `.agents/skills/core/tds/references/catalog.md`
+- TDS catalog: `.agents/skills/tds/references/catalog.md`
 
 ## Feature Map
 

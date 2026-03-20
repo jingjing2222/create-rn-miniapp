@@ -18,7 +18,7 @@ description: MiniApp feature discovery, official Apps-in-Toss and Granite capabi
 1. `references/feature-map.md`에서 필요한 기능 축이 존재하는지 먼저 찾는다.
 2. 정확한 URL, 타입, 에러, 제약은 `references/full-index.md`에서 확인한다.
 3. 라우팅, import, UI boundary 같은 강제 규칙은 `docs/engineering/frontend-policy.md`를 따른다.
-4. 페이지/route 설계는 `core/granite`, UI 컴포넌트 선택은 `core/tds` Skill로 넘긴다.
+4. 페이지/route 설계는 `granite`, UI 컴포넌트 선택은 `tds` Skill로 넘긴다.
 
 ## 구현 전 체크
 

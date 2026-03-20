@@ -17,7 +17,7 @@ description: TDS React Native component selection, input/form patterns, and docu
 
 1. `references/catalog.md`에서 component slug, export, 문서 여부를 먼저 확인한다.
 2. 강제 import/UI boundary는 `docs/engineering/frontend-policy.md`를 따른다.
-3. MiniApp capability 확인이 먼저 필요하면 `core/miniapp` Skill로 돌아간다.
+3. MiniApp capability 확인이 먼저 필요하면 `miniapp` Skill로 돌아간다.
 
 ## 구현 전 체크
 

@@ -31,40 +31,38 @@
 
   .agents/
     skills/
-      core/
-        miniapp/
-          SKILL.md
-          references/
-          assets/
-        granite/
-          SKILL.md
-          references/
-          assets/
-        tds/
-          SKILL.md
-          references/
-          assets/
-      optional/
-        backoffice-react/
-          SKILL.md
-          references/
-          assets/
-        server-cloudflare/
-          SKILL.md
-          references/
-          assets/
-        server-supabase/
-          SKILL.md
-          references/
-          assets/
-        server-firebase/
-          SKILL.md
-          references/
-          assets/
-        trpc-boundary/
-          SKILL.md
-          references/
-          assets/
+      miniapp/
+        SKILL.md
+        references/
+        assets/
+      granite/
+        SKILL.md
+        references/
+        assets/
+      tds/
+        SKILL.md
+        references/
+        assets/
+      backoffice-react/
+        SKILL.md
+        references/
+        assets/
+      server-cloudflare/
+        SKILL.md
+        references/
+        assets/
+      server-supabase/
+        SKILL.md
+        references/
+        assets/
+      server-firebase/
+        SKILL.md
+        references/
+        assets/
+      trpc-boundary/
+        SKILL.md
+        references/
+        assets/
 
   .claude/
     skills/
@@ -123,22 +121,22 @@
 
 ## 기존 문서 → 새 위치 매핑
 
-- [x] `base/docs/engineering/appsintoss-granite-api-index.md` → `.agents/skills/core/miniapp/references/feature-map.md`
-- [x] `base/docs/engineering/appsintoss-granite-full-api-index.md` → `.agents/skills/core/miniapp/references/full-index.md`
+- [x] `base/docs/engineering/appsintoss-granite-api-index.md` → `.agents/skills/miniapp/references/feature-map.md`
+- [x] `base/docs/engineering/appsintoss-granite-full-api-index.md` → `.agents/skills/miniapp/references/full-index.md`
 - [x] `base/docs/engineering/granite-ssot.md`
   - [x] 강제 규칙 → `docs/engineering/frontend-policy.md`
-  - [x] 사용 패턴/예시 → `.agents/skills/core/granite/references/patterns.md`
+  - [x] 사용 패턴/예시 → `.agents/skills/granite/references/patterns.md`
 - [x] `base/docs/engineering/native-modules-policy.md` → `docs/engineering/frontend-policy.md`
-- [x] `base/docs/engineering/tds-react-native-index.md` → `.agents/skills/core/tds/references/catalog.md`
+- [x] `base/docs/engineering/tds-react-native-index.md` → `.agents/skills/tds/references/catalog.md`
 - [x] `base/docs/engineering/에이전트전략.md` → 삭제 후 `AGENTS.md` / `repo-contract.md`로 흡수
 - [x] `base/docs/engineering/하네스-실행가이드.md` → 삭제 후 `AGENTS.md` / `repo-contract.md`로 흡수
-- [x] `optional/backoffice/docs/engineering/backoffice-react-best-practices.md` → `.agents/skills/optional/backoffice-react/references/best-practices.md`
-- [x] `optional/server-cloudflare/docs/engineering/server-provider-cloudflare.md` → `.agents/skills/optional/server-cloudflare/references/provider-guide.md`
-- [x] `optional/server-supabase/docs/engineering/server-provider-supabase.md` → `.agents/skills/optional/server-supabase/references/provider-guide.md`
-- [x] `optional/server-firebase/docs/engineering/server-provider-firebase.md` → `.agents/skills/optional/server-firebase/references/provider-guide.md`
+- [x] `optional/backoffice/docs/engineering/backoffice-react-best-practices.md` → `.agents/skills/backoffice-react/references/best-practices.md`
+- [x] `optional/server-cloudflare/docs/engineering/server-provider-cloudflare.md` → `.agents/skills/server-cloudflare/references/provider-guide.md`
+- [x] `optional/server-supabase/docs/engineering/server-provider-supabase.md` → `.agents/skills/server-supabase/references/provider-guide.md`
+- [x] `optional/server-firebase/docs/engineering/server-provider-firebase.md` → `.agents/skills/server-firebase/references/provider-guide.md`
 - [x] `optional/trpc/docs/engineering/server-api-ssot-trpc.md`
   - [x] 구조 사실 → `docs/engineering/workspace-topology.md`
-  - [x] 변경 절차 → `.agents/skills/optional/trpc-boundary/references/change-flow.md`
+  - [x] 변경 절차 → `.agents/skills/trpc-boundary/references/change-flow.md`
 
 ---
 
@@ -255,14 +253,14 @@
 
 ### 새 디렉터리 생성
 
-- [x] `packages/scaffold-skills/core/miniapp/`
-- [x] `packages/scaffold-skills/core/granite/`
-- [x] `packages/scaffold-skills/core/tds/`
-- [x] `packages/scaffold-skills/optional/backoffice-react/`
-- [x] `packages/scaffold-skills/optional/server-cloudflare/`
-- [x] `packages/scaffold-skills/optional/server-supabase/`
-- [x] `packages/scaffold-skills/optional/server-firebase/`
-- [x] `packages/scaffold-skills/optional/trpc-boundary/`
+- [x] `packages/scaffold-skills/miniapp/`
+- [x] `packages/scaffold-skills/granite/`
+- [x] `packages/scaffold-skills/tds/`
+- [x] `packages/scaffold-skills/backoffice-react/`
+- [x] `packages/scaffold-skills/server-cloudflare/`
+- [x] `packages/scaffold-skills/server-supabase/`
+- [x] `packages/scaffold-skills/server-firebase/`
+- [x] `packages/scaffold-skills/trpc-boundary/`
 
 ### 각 Skill 디렉터리 공통 구조
 
@@ -340,8 +338,7 @@
 - [x] `scaffold-templates/root/` 정리
 - [x] `scaffold-templates/base/` 정리
 - [x] `scaffold-templates/optional/*/assets` 정리
-- [x] `scaffold-skills/core/*` 추가
-- [x] `scaffold-skills/optional/*` 추가
+- [x] `scaffold-skills/*` flat 구조 추가
 
 ### 완료 기준
 
@@ -483,7 +480,7 @@
 - [x] `CLAUDE.md` 생성 확인
 - [x] `.github/copilot-instructions.md` 생성 확인
 - [x] `docs/engineering`에 3개만 있는지 확인
-- [x] `.agents/skills/core/*` 3개 생성 확인
+- [x] `.agents/skills`에 core skill 3개가 flat하게 생성되는지 확인
 - [x] `.claude/skills` mirror 생성 확인
 - [x] optional 선택에 맞는 skill만 생성되는지 확인
 - [x] old engineering docs 미생성 확인

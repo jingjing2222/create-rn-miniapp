@@ -203,11 +203,11 @@ test('docs and skills modules do not keep separate optional feature manifests', 
 
   assert.doesNotMatch(docsSource, /WORKSPACE_FEATURE_DEFINITIONS/)
   assert.doesNotMatch(skillsSource, /OPTIONAL_SKILL_DEFINITIONS/)
-  assert.match(sharedFeatureSource, /optional\/backoffice-react/)
-  assert.match(sharedFeatureSource, /optional\/server-cloudflare/)
-  assert.match(sharedFeatureSource, /optional\/server-supabase/)
-  assert.match(sharedFeatureSource, /optional\/server-firebase/)
-  assert.match(sharedFeatureSource, /optional\/trpc-boundary/)
+  assert.match(sharedFeatureSource, /templateDir: 'backoffice-react'/)
+  assert.match(sharedFeatureSource, /templateDir: 'server-cloudflare'/)
+  assert.match(sharedFeatureSource, /templateDir: 'server-supabase'/)
+  assert.match(sharedFeatureSource, /templateDir: 'server-firebase'/)
+  assert.match(sharedFeatureSource, /templateDir: 'trpc-boundary'/)
 })
 
 test('frontend policy derives core skill references from the core skill catalog', async () => {
@@ -216,10 +216,10 @@ test('frontend policy derives core skill references from the core skill catalog'
     'utf8',
   )
 
-  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/core\/miniapp\/SKILL\.md/)
-  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/core\/granite\/SKILL\.md/)
-  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/core\/tds\/SKILL\.md/)
-  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/core\/tds\/references\/catalog\.md/)
+  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/miniapp\/SKILL\.md/)
+  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/granite\/SKILL\.md/)
+  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/tds\/SKILL\.md/)
+  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/tds\/references\/catalog\.md/)
 })
 
 test('frontend route verifier is rendered from frontend policy metadata instead of template source', async () => {
@@ -592,7 +592,7 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   assert.match(biomeJson, /Text/)
   assert.match(biomeJson, /TDS `Txt`/)
   assert.match(biomeJson, /docs\/engineering\/frontend-policy\.md/)
-  assert.match(biomeJson, /\.agents\/skills\/core\/tds\/references\/catalog\.md/)
+  assert.match(biomeJson, /\.agents\/skills\/tds\/references\/catalog\.md/)
 })
 
 test('applyRootTemplates emits shared react-native guidance across package managers', async (t) => {
@@ -984,7 +984,7 @@ test('applyDocsTemplates omits optional workspace and skill references for base-
   )
 
   assert.match(agents, /Repository Contract/)
-  assert.match(agents, /\.agents\/skills\/core\/miniapp\/SKILL\.md/)
+  assert.match(agents, /\.agents\/skills\/miniapp\/SKILL\.md/)
   assert.doesNotMatch(agents, /optional provider workspace/)
   assert.doesNotMatch(agents, /backoffice React 작업/)
   assert.doesNotMatch(agents, /provider 운영 가이드/)
@@ -1139,40 +1139,32 @@ test('syncGeneratedSkills copies core skills, selected optional skills, and the 
 
   assert.equal(checkResult.status, 0, checkResult.stderr)
   assert.equal(
-    await pathExists(path.join(targetRoot, '.agents', 'skills', 'core', 'miniapp', 'SKILL.md')),
+    await pathExists(path.join(targetRoot, '.agents', 'skills', 'miniapp', 'SKILL.md')),
     true,
   )
   assert.equal(
-    await pathExists(
-      path.join(targetRoot, '.agents', 'skills', 'optional', 'backoffice-react', 'SKILL.md'),
-    ),
+    await pathExists(path.join(targetRoot, '.agents', 'skills', 'backoffice-react', 'SKILL.md')),
     true,
   )
   assert.equal(
-    await pathExists(
-      path.join(targetRoot, '.agents', 'skills', 'optional', 'server-firebase', 'SKILL.md'),
-    ),
+    await pathExists(path.join(targetRoot, '.agents', 'skills', 'server-firebase', 'SKILL.md')),
     true,
   )
   assert.equal(
-    await pathExists(
-      path.join(targetRoot, '.agents', 'skills', 'optional', 'server-supabase', 'SKILL.md'),
-    ),
+    await pathExists(path.join(targetRoot, '.agents', 'skills', 'server-supabase', 'SKILL.md')),
     false,
   )
   assert.equal(
-    await pathExists(
-      path.join(targetRoot, '.claude', 'skills', 'optional', 'server-firebase', 'SKILL.md'),
-    ),
+    await pathExists(path.join(targetRoot, '.claude', 'skills', 'server-firebase', 'SKILL.md')),
     true,
   )
   assert.equal(
     await readFile(
-      path.join(targetRoot, '.agents', 'skills', 'core', 'miniapp', 'references', 'feature-map.md'),
+      path.join(targetRoot, '.agents', 'skills', 'miniapp', 'references', 'feature-map.md'),
       'utf8',
     ),
     await readFile(
-      path.join(targetRoot, '.claude', 'skills', 'core', 'miniapp', 'references', 'feature-map.md'),
+      path.join(targetRoot, '.claude', 'skills', 'miniapp', 'references', 'feature-map.md'),
       'utf8',
     ),
   )
@@ -1189,27 +1181,19 @@ test('syncGeneratedSkills selects the provider and trpc skills without leaving s
   await syncGeneratedSkills(targetRoot, tokens, createDocsHints({ serverProvider: 'cloudflare' }))
 
   assert.equal(
-    await pathExists(
-      path.join(targetRoot, '.agents', 'skills', 'optional', 'server-cloudflare', 'SKILL.md'),
-    ),
+    await pathExists(path.join(targetRoot, '.agents', 'skills', 'server-cloudflare', 'SKILL.md')),
     true,
   )
   assert.equal(
-    await pathExists(
-      path.join(targetRoot, '.agents', 'skills', 'optional', 'trpc-boundary', 'SKILL.md'),
-    ),
+    await pathExists(path.join(targetRoot, '.agents', 'skills', 'trpc-boundary', 'SKILL.md')),
     true,
   )
   assert.equal(
-    await pathExists(
-      path.join(targetRoot, '.agents', 'skills', 'optional', 'server-supabase', 'SKILL.md'),
-    ),
+    await pathExists(path.join(targetRoot, '.agents', 'skills', 'server-supabase', 'SKILL.md')),
     false,
   )
   assert.equal(
-    await pathExists(
-      path.join(targetRoot, '.claude', 'skills', 'optional', 'trpc-boundary', 'SKILL.md'),
-    ),
+    await pathExists(path.join(targetRoot, '.claude', 'skills', 'trpc-boundary', 'SKILL.md')),
     true,
   )
 })

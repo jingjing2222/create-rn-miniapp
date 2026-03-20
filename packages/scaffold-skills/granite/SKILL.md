@@ -17,7 +17,7 @@ description: Granite route, navigation, params, and page implementation patterns
 
 1. `references/patterns.md`에서 route/page/navigation 패턴을 확인한다.
 2. 강제 규칙과 금지 import는 `docs/engineering/frontend-policy.md`를 기준으로 본다.
-3. 기능 존재 여부는 `core/miniapp`, UI 선택은 `core/tds` Skill로 넘긴다.
+3. 기능 존재 여부는 `miniapp`, UI 선택은 `tds` Skill로 넘긴다.
 
 ## 핵심 원칙
 

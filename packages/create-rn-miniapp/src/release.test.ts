@@ -195,7 +195,7 @@ test('scaffold templates tarball keeps the root assets and new contract docs', (
   )
 })
 
-test('scaffold skills tarball keeps core and optional skill sources', () => {
+test('scaffold skills tarball keeps flat skill sources', () => {
   const packJson = execFileSync('npm', ['pack', '--dry-run', '--json'], {
     cwd: path.join(repoRoot, 'packages/scaffold-skills'),
     encoding: 'utf8',
@@ -206,21 +206,19 @@ test('scaffold skills tarball keeps core and optional skill sources', () => {
 
   assert.ok(packResult)
   assert.equal(
-    packResult.files.some((file) => file.path === 'core/miniapp/SKILL.md'),
+    packResult.files.some((file) => file.path === 'miniapp/SKILL.md'),
     true,
   )
   assert.equal(
-    packResult.files.some((file) => file.path === 'core/miniapp/references/feature-map.md'),
+    packResult.files.some((file) => file.path === 'miniapp/references/feature-map.md'),
     true,
   )
   assert.equal(
-    packResult.files.some((file) => file.path === 'optional/server-firebase/SKILL.md'),
+    packResult.files.some((file) => file.path === 'server-firebase/SKILL.md'),
     true,
   )
   assert.equal(
-    packResult.files.some(
-      (file) => file.path === 'optional/trpc-boundary/references/change-flow.md',
-    ),
+    packResult.files.some((file) => file.path === 'trpc-boundary/references/change-flow.md'),
     true,
   )
 })

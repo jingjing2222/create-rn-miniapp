@@ -1,3 +1,19 @@
+## 다음 작업: scaffold skill 구조를 flat하게 재편하기
+1. 문제
+   - 현재 canonical skill source와 generated mirror가 `core/*`, `optional/*` 중간 디렉터리를 끼고 있어 에이전트가 skill을 찾을 때 인식률이 떨어진다.
+   - generated `.agents/skills/*`, `.claude/skills/*` 경로와 skill reference, asset copy path, tarball/release 테스트도 이 계층 구조에 묶여 있다.
+2. 방향
+   - canonical source `packages/scaffold-skills`부터 flat하게 바꿔서 `miniapp`, `granite`, `tds`, `server-supabase` 같은 디렉터리가 바로 루트 아래 오게 만든다.
+   - generated mirror도 `.agents/skills/<skill-id>`, `.claude/skills/<skill-id>`로 맞추고, docs/render/patching/release/test의 경로 참조를 shared metadata 기준으로 모두 갱신한다.
+3. 테스트
+   - `src/templates/index.test.ts`, `src/scaffold/index.test.ts`, `src/release.test.ts`에서 flat skill path를 기대하는 red 테스트를 먼저 만든다.
+   - red를 확인한 뒤 source/mirror/asset/release 경로를 바꾸고 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - canonical source와 generated mirror 모두 `core/optional` 없는 flat skill 구조를 사용한다.
+   - `.agents/skills/tds/SKILL.md`, `.claude/skills/tds/SKILL.md` 같은 경로가 실제 생성된다.
+   - docs, patching, release/test 경로가 새 flat 구조와 일치한다.
+   - `pnpm verify`를 통과한다.
+
 ## 다음 작업: generated supabase-install-deno script parse bug 고치기
 1. 문제
    - generated `server/scripts/supabase-install-deno.mjs`가 `String.raw` 기반 렌더링 때문에 템플릿 리터럴 backtick 앞의 `\`까지 그대로 출력하고 있다.
@@ -324,7 +340,7 @@
    - 생성기는 contract/docs/skills/workspace asset 렌더링 책임으로 쪼개고, `.agents/skills` 정본과 `.claude/skills` mirror를 함께 생성한다.
    - `verify`에는 skills mirror drift 검사를 추가하고, README/테스트/스냅샷을 새 출력 구조 기준으로 갱신한다.
 3. 테스트
-   - 템플릿 테스트에서 base scaffold가 `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/engineering/{repo-contract,frontend-policy,workspace-topology}.md`, `.agents/skills/core/*`, `.claude/skills/*`를 생성하는지 먼저 실패 테스트로 고정한다.
+   - 템플릿 테스트에서 base scaffold가 `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/engineering/{repo-contract,frontend-policy,workspace-topology}.md`, `.agents/skills/{miniapp,granite,tds}`, `.claude/skills/*`를 생성하는지 먼저 실패 테스트로 고정한다.
    - optional 조합 테스트에서 선택한 feature에 맞는 optional skill만 생기고, 기존 engineering 카탈로그 문서는 생성되지 않는지 고정한다.
    - `scripts/check-skills.mjs` 테스트와 `release` 테스트에서 새 package/file publish 구성이 유지되는지 검증한다.
    - 최종적으로 `pnpm verify`를 통과한다.

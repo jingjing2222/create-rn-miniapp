@@ -5,7 +5,7 @@
 - last_verified: 2026-03-19
 
 이 문서는 MiniApp `frontend`의 route, page, navigation 패턴을 빠르게 보는 참고 문서입니다.
-강제 규칙은 `docs/engineering/frontend-policy.md`가 소유하고, 기능 축은 `core/miniapp/references/feature-map.md`, 전체 카탈로그는 `core/miniapp/references/full-index.md`가 담당합니다.
+강제 규칙은 `docs/engineering/frontend-policy.md`가 소유하고, 기능 축은 `miniapp/references/feature-map.md`, 전체 카탈로그는 `miniapp/references/full-index.md`가 담당합니다.
 
 ## 1) Routing Policy
 
@@ -93,8 +93,8 @@
 
 ## 6) References
 
-- Quick API lookup: `.agents/skills/core/miniapp/references/feature-map.md`
-- Full API catalog: `.agents/skills/core/miniapp/references/full-index.md`
+- Quick API lookup: `.agents/skills/miniapp/references/feature-map.md`
+- Full API catalog: `.agents/skills/miniapp/references/full-index.md`
 - Hard rules: `docs/engineering/frontend-policy.md`
 
 ## 7) Granite Reference Evidence

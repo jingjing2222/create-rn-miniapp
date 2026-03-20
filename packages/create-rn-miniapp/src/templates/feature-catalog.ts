@@ -89,8 +89,8 @@ export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
     importBoundaryRules: (options) =>
       options.serverProvider !== null ? ['`backoffice` ↔ `server` 직접 import 금지'] : [],
     optionalSkill: {
-      templateDir: 'optional/backoffice-react',
-      docsPath: '.agents/skills/optional/backoffice-react/SKILL.md',
+      templateDir: 'backoffice-react',
+      docsPath: '.agents/skills/backoffice-react/SKILL.md',
       agentsLabel: 'backoffice React 작업',
       topologyLabel: 'Backoffice React workflow',
     },
@@ -98,8 +98,8 @@ export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
   {
     enabled: (options) => options.serverProvider === 'cloudflare',
     optionalSkill: {
-      templateDir: 'optional/server-cloudflare',
-      docsPath: '.agents/skills/optional/server-cloudflare/SKILL.md',
+      templateDir: 'server-cloudflare',
+      docsPath: '.agents/skills/server-cloudflare/SKILL.md',
       agentsLabel: 'Cloudflare provider 작업',
       topologyLabel: 'Cloudflare provider 운영 가이드',
     },
@@ -107,8 +107,8 @@ export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
   {
     enabled: (options) => options.serverProvider === 'supabase',
     optionalSkill: {
-      templateDir: 'optional/server-supabase',
-      docsPath: '.agents/skills/optional/server-supabase/SKILL.md',
+      templateDir: 'server-supabase',
+      docsPath: '.agents/skills/server-supabase/SKILL.md',
       agentsLabel: 'Supabase provider 작업',
       topologyLabel: 'Supabase provider 운영 가이드',
     },
@@ -116,8 +116,8 @@ export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
   {
     enabled: (options) => options.serverProvider === 'firebase',
     optionalSkill: {
-      templateDir: 'optional/server-firebase',
-      docsPath: '.agents/skills/optional/server-firebase/SKILL.md',
+      templateDir: 'server-firebase',
+      docsPath: '.agents/skills/server-firebase/SKILL.md',
       agentsLabel: 'Firebase provider 작업',
       topologyLabel: 'Firebase provider 운영 가이드',
     },
@@ -138,8 +138,8 @@ export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
     ],
     importBoundaryRules: () => TRPC_WORKSPACE_IMPORT_BOUNDARY_RULES,
     optionalSkill: {
-      templateDir: 'optional/trpc-boundary',
-      docsPath: '.agents/skills/optional/trpc-boundary/SKILL.md',
+      templateDir: 'trpc-boundary',
+      docsPath: '.agents/skills/trpc-boundary/SKILL.md',
       agentsLabel: 'tRPC boundary 변경',
       topologyLabel: 'tRPC boundary change flow',
     },

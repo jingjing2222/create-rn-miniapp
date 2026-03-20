@@ -3,8 +3,14 @@
   "private": false,
   "version": "0.0.26",
   "files": [
-    "core",
-    "optional"
+    "backoffice-react",
+    "granite",
+    "miniapp",
+    "server-cloudflare",
+    "server-firebase",
+    "server-supabase",
+    "tds",
+    "trpc-boundary"
   ],
   "publishConfig": {
     "access": "public"
