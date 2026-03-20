@@ -3,7 +3,7 @@ import type { CliPrompter } from '../cli.js'
 import type { PackageManager } from '../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../server-project.js'
 import type { ServerProvider } from '../providers/index.js'
-import { pathExists } from '../templates/index.js'
+import { pathExists } from '../templates/filesystem.js'
 import {
   finalizeCloudflareProvisioning,
   provisionCloudflareWorker,

@@ -4,7 +4,7 @@ import { readGraniteConfigMetadata } from './patching/ast/index.js'
 import { toDefaultDisplayName } from './layout.js'
 import type { PackageManager } from './package-manager.js'
 import { detectServerProvider, type ServerProvider } from './providers/index.js'
-import { pathExists } from './templates/index.js'
+import { pathExists } from './templates/filesystem.js'
 
 type RootPackageJson = {
   packageManager?: string

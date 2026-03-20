@@ -4,19 +4,23 @@ import {
   ensureBackofficeFirebaseBootstrap,
   ensureBackofficeCloudflareBootstrap,
   ensureBackofficeSupabaseBootstrap,
+} from '../patching/backoffice.js'
+import {
   ensureFrontendFirebaseBootstrap,
   ensureFrontendCloudflareBootstrap,
   ensureFrontendSupabaseBootstrap,
-  patchFirebaseServerWorkspace,
+} from '../patching/frontend.js'
+import {
   patchCloudflareServerWorkspace,
+  patchFirebaseServerWorkspace,
   patchSupabaseServerWorkspace,
-} from '../patching/index.js'
+} from '../patching/server.js'
 import {
   applyFirebaseServerWorkspaceTemplate,
-  pathExists,
   SUPABASE_DEFAULT_FUNCTION_NAME,
-  type TemplateTokens,
-} from '../templates/index.js'
+} from '../templates/server.js'
+import { pathExists } from '../templates/filesystem.js'
+import type { TemplateTokens } from '../templates/types.js'
 
 export type ServerProviderCommandSpec = {
   cwd: string

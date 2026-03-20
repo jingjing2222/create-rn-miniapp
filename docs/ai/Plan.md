@@ -1,3 +1,21 @@
+## 다음 작업: templates/patching 진입점을 area facade로 쪼개서 실행 흐름을 읽히게 만들기
+1. 문제
+   - `templates/index.ts`, `patching/index.ts`가 각각 2천 줄이 넘어, 실제 orchestration entrypoint는 `scaffold/index.ts`, `providers/index.ts`인데도 호출 경로가 한눈에 보이지 않는다.
+   - 지금 구조에서는 root/docs/skills/server/frontend/backoffice/provider patch 책임이 한 파일 안에 섞여 있어, "어디가 실행부인지"를 찾으려면 거대한 파일 전체를 읽어야 한다.
+2. 방향
+   - 실제 동작은 바꾸지 않고 기존 로직 파일을 `runtime.ts`로 격리한다.
+   - `templates/root.ts`, `templates/docs.ts`, `templates/skills.ts`, `templates/server.ts`, `templates/filesystem.ts` 같은 area facade를 추가하고, `templates/index.ts`는 re-export 전용 얇은 facade로 줄인다.
+   - `patching/frontend.ts`, `patching/backoffice.ts`, `patching/server.ts`를 추가하고, `patching/index.ts`도 re-export 전용 얇은 facade로 줄인다.
+   - `scaffold/index.ts`, `providers/index.ts`, 관련 helper는 가능하면 `index.ts`가 아니라 area facade를 직접 import해서 실행 흐름이 import graph만 봐도 드러나게 만든다.
+3. 테스트
+   - 기존 template/patching/scaffold/provider 테스트가 그대로 통과해야 한다.
+   - skill sync 테스트는 docs setup이 없는 현재 형태를 유지한다.
+   - 최종적으로 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - `templates/index.ts`, `patching/index.ts`가 얇은 facade가 된다.
+   - 실행 entrypoint 파일에서 area별 import가 직접 드러난다.
+   - 동작 변경 없이 `pnpm verify`를 통과한다.
+
 ## 다음 작업: dynamic doc anchor와 provider script catalog를 다시 단일화하기
 1. 문제
    - `AGENTS.md`, `docs/index.md`, `workspace-topology.md`의 dynamic section은 heading wording은 줄었지만 template token과 renderer definition이 여전히 같은 section identity를 양쪽에서 들고 있다.

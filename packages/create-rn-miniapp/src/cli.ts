@@ -10,7 +10,7 @@ import {
   serverProviderSupportsTrpc,
   type ServerProvider,
 } from './providers/index.js'
-import { pathExists } from './templates/index.js'
+import { pathExists } from './templates/filesystem.js'
 import type { WorkspaceInspection } from './workspace-inspector.js'
 
 export type ParsedCliArgs = {
