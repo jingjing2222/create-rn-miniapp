@@ -66,7 +66,7 @@ function createPostMergeHook() {
     '  worktree_path="$(git worktree list --porcelain | awk -v b="$branch" \'',
     '    /^worktree /{ wt=$2 }',
     '    /^branch refs\\/heads\\//{ if ($2 == "refs/heads/" b) print wt }',
-    "  '\")",
+    '  \'")',
     '  [ -z "$worktree_path" ] && continue',
     '',
     '  # dirty worktree는 건너뜀',
