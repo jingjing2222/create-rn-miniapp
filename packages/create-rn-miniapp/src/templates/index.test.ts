@@ -664,7 +664,6 @@ test('syncGeneratedSkills copies core skills, selected optional skills, and the 
     hasBackoffice: true,
     hasServer: true,
   })
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints({ serverProvider: 'firebase' }))
   await syncGeneratedSkills(targetRoot, tokens, createDocsHints({ serverProvider: 'firebase' }))
 
   const checkResult = spawnSync(process.execPath, ['./scripts/check-skills.mjs'], {
@@ -721,7 +720,6 @@ test('syncGeneratedSkills selects the provider and trpc skills without leaving s
     hasTrpc: true,
   })
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints({ serverProvider: 'cloudflare' }))
   await syncGeneratedSkills(targetRoot, tokens, createDocsHints({ serverProvider: 'cloudflare' }))
 
   assert.equal(

@@ -55,6 +55,36 @@ type MarkdownRoot = MarkdownNode & {
   children: MarkdownNode[]
 }
 
+type MarkdownSectionDefinition = {
+  heading: string
+  depth: number
+  render: (options: GeneratedWorkspaceOptions) => string
+}
+
+type DynamicDocDefinition = {
+  relativePath: string
+  sections: MarkdownSectionDefinition[]
+}
+
+type SkillReferenceDefinition = {
+  templateDir: string
+  docsPath: string
+  agentsLabel: string
+  topologyLabel: string
+  enabled?: (options: GeneratedWorkspaceOptions) => boolean
+}
+
+type WorkspaceEntryDefinition = {
+  enabled: (options: GeneratedWorkspaceOptions) => boolean
+  agentsLine?: string
+  topologyLine?: string
+}
+
+type CopyDirectoryWithTokensOptions = {
+  relativeDir?: string
+  skipRelativePaths?: Set<string>
+}
+
 type WorkspaceProjectJson = {
   targets?: Record<string, { command?: string }>
 }
@@ -105,6 +135,141 @@ const NORMALIZED_ROOT_WORKSPACE_ORDER = [
 ] as const
 type NormalizedRootWorkspaceName = (typeof NORMALIZED_ROOT_WORKSPACE_ORDER)[number]
 
+const CORE_SKILL_DEFINITIONS: SkillReferenceDefinition[] = [
+  {
+    templateDir: 'core/miniapp',
+    docsPath: '.agents/skills/core/miniapp/SKILL.md',
+    agentsLabel: 'MiniApp capability / 공식 API 탐색',
+    topologyLabel: 'MiniApp capability',
+  },
+  {
+    templateDir: 'core/granite',
+    docsPath: '.agents/skills/core/granite/SKILL.md',
+    agentsLabel: 'route / page / navigation 패턴',
+    topologyLabel: 'Granite page/route patterns',
+  },
+  {
+    templateDir: 'core/tds',
+    docsPath: '.agents/skills/core/tds/SKILL.md',
+    agentsLabel: 'TDS UI 선택과 form 패턴',
+    topologyLabel: 'TDS UI selection',
+  },
+]
+
+const OPTIONAL_SKILL_DEFINITIONS: SkillReferenceDefinition[] = [
+  {
+    templateDir: 'optional/backoffice-react',
+    docsPath: '.agents/skills/optional/backoffice-react/SKILL.md',
+    agentsLabel: 'backoffice React 작업',
+    topologyLabel: 'Backoffice React workflow',
+    enabled: (options) => options.hasBackoffice,
+  },
+  {
+    templateDir: 'optional/server-cloudflare',
+    docsPath: '.agents/skills/optional/server-cloudflare/SKILL.md',
+    agentsLabel: 'Cloudflare provider 작업',
+    topologyLabel: 'Cloudflare provider 운영 가이드',
+    enabled: (options) => options.serverProvider === 'cloudflare',
+  },
+  {
+    templateDir: 'optional/server-supabase',
+    docsPath: '.agents/skills/optional/server-supabase/SKILL.md',
+    agentsLabel: 'Supabase provider 작업',
+    topologyLabel: 'Supabase provider 운영 가이드',
+    enabled: (options) => options.serverProvider === 'supabase',
+  },
+  {
+    templateDir: 'optional/server-firebase',
+    docsPath: '.agents/skills/optional/server-firebase/SKILL.md',
+    agentsLabel: 'Firebase provider 작업',
+    topologyLabel: 'Firebase provider 운영 가이드',
+    enabled: (options) => options.serverProvider === 'firebase',
+  },
+  {
+    templateDir: 'optional/trpc-boundary',
+    docsPath: '.agents/skills/optional/trpc-boundary/SKILL.md',
+    agentsLabel: 'tRPC boundary 변경',
+    topologyLabel: 'tRPC boundary change flow',
+    enabled: (options) => options.hasTrpc,
+  },
+]
+
+const AGENTS_WORKSPACE_ENTRIES: WorkspaceEntryDefinition[] = [
+  {
+    enabled: () => true,
+    agentsLine: '`frontend`: AppInToss + Granite 기반 MiniApp',
+  },
+  {
+    enabled: (options) => options.serverProvider !== null,
+    agentsLine: '`server`: optional provider workspace',
+  },
+  {
+    enabled: (options) => options.hasBackoffice,
+    agentsLine: '`backoffice`: optional Vite 기반 운영 도구',
+  },
+  {
+    enabled: (options) => options.hasTrpc,
+    agentsLine:
+      '`packages/contracts`, `packages/app-router`: optional shared tRPC boundary packages',
+  },
+  {
+    enabled: () => true,
+    agentsLine: '`docs`: 계약, 정책, 제품, 상태 문서',
+  },
+]
+
+const TOPOLOGY_ROOT_WORKSPACE_ENTRIES: WorkspaceEntryDefinition[] = [
+  {
+    enabled: () => true,
+    topologyLine: '`frontend`: AppInToss + Granite 기반 MiniApp',
+  },
+  {
+    enabled: (options) => options.serverProvider !== null,
+    topologyLine: '`server`: optional provider workspace',
+  },
+  {
+    enabled: (options) => options.hasBackoffice,
+    topologyLine: '`backoffice`: optional Vite + React 운영 도구',
+  },
+  {
+    enabled: (options) => options.hasTrpc,
+    topologyLine: '`packages/contracts`: optional tRPC boundary schema / type source',
+  },
+  {
+    enabled: (options) => options.hasTrpc,
+    topologyLine: '`packages/app-router`: optional tRPC router / `AppRouter` source',
+  },
+]
+
+const DYNAMIC_DOC_DEFINITIONS: DynamicDocDefinition[] = [
+  {
+    relativePath: 'AGENTS.md',
+    sections: [
+      { heading: 'Workspace Model', depth: 2, render: renderAgentsWorkspaceModelSection },
+      { heading: 'Skill Routing', depth: 2, render: renderAgentsSkillRoutingSection },
+    ],
+  },
+  {
+    relativePath: 'docs/index.md',
+    sections: [{ heading: 'Skill 구조', depth: 2, render: renderDocsIndexSkillStructureSection }],
+  },
+  {
+    relativePath: 'docs/engineering/workspace-topology.md',
+    sections: [
+      { heading: '루트 구조', depth: 2, render: renderTopologyRootSection },
+      { heading: '역할 분리', depth: 2, render: renderTopologyRolesSection },
+      { heading: 'ownership', depth: 2, render: renderTopologyOwnershipSection },
+      { heading: '참고 Skill', depth: 2, render: renderTopologySkillsSection },
+    ],
+  },
+]
+
+const DYNAMIC_DOCS_INSIDE_DOCS = new Set(
+  DYNAMIC_DOC_DEFINITIONS.map((definition) => definition.relativePath)
+    .filter((relativePath) => relativePath.startsWith('docs/'))
+    .map((relativePath) => relativePath.slice('docs/'.length)),
+)
+
 function resolveTemplatesPackageRoot() {
   const packageJsonPath = require.resolve('@create-rn-miniapp/scaffold-templates/package.json')
   return path.dirname(packageJsonPath)
@@ -135,131 +300,190 @@ function getMarkdownNodeText(node: MarkdownNode) {
   return mdastToString(node as never).trim()
 }
 
-function getMarkdownNodeOwnText(node: MarkdownNode) {
-  if (!Array.isArray(node.children)) {
-    return getMarkdownNodeText(node)
-  }
-
-  return node.children
-    .filter((child) => child.type !== 'list')
-    .map((child) => getMarkdownNodeText(child))
-    .join(' ')
-    .trim()
+function resolveSelectedOptionalSkillDefinitions(options: GeneratedWorkspaceOptions) {
+  return OPTIONAL_SKILL_DEFINITIONS.filter((skill) => skill.enabled?.(options) ?? true)
 }
 
-function filterHeadingSections(
+function renderBulletList(items: string[]) {
+  if (items.length === 0) {
+    return ''
+  }
+
+  return `${items.map((item) => `- ${item}`).join('\n')}\n`
+}
+
+function renderMarkdownBlocks(blocks: Array<string | null>) {
+  return `${blocks.filter((block): block is string => block !== null).join('\n\n')}\n`
+}
+
+function parseMarkdownChildren(source: string) {
+  return (MARKDOWN_RENDERER.parse(source) as MarkdownRoot).children
+}
+
+function replaceSectionBody(
   root: MarkdownRoot,
-  shouldKeepSection: (headingText: string) => boolean,
+  definition: MarkdownSectionDefinition,
+  options: GeneratedWorkspaceOptions,
 ) {
-  const nextChildren: MarkdownNode[] = []
+  const startIndex = root.children.findIndex(
+    (node) =>
+      node.type === 'heading' &&
+      node.depth === definition.depth &&
+      getMarkdownNodeText(node) === definition.heading,
+  )
 
-  for (let index = 0; index < root.children.length; index += 1) {
-    const node = root.children[index]
-
-    if (node.type === 'heading' && typeof node.depth === 'number') {
-      const headingText = getMarkdownNodeText(node)
-
-      if (!shouldKeepSection(headingText)) {
-        const headingDepth = node.depth
-
-        index += 1
-        while (index < root.children.length) {
-          const nextNode = root.children[index]
-
-          if (
-            nextNode.type === 'heading' &&
-            typeof nextNode.depth === 'number' &&
-            nextNode.depth <= headingDepth
-          ) {
-            index -= 1
-            break
-          }
-
-          index += 1
-        }
-
-        continue
-      }
-    }
-
-    nextChildren.push(node)
+  if (startIndex === -1) {
+    throw new Error(`동적 문서 섹션을 찾지 못했습니다: ${definition.heading} (${definition.depth})`)
   }
 
-  root.children = nextChildren
-}
+  let endIndex = startIndex + 1
+  while (endIndex < root.children.length) {
+    const node = root.children[endIndex]
 
-function filterMarkdownNode(
-  node: MarkdownNode,
-  shouldKeepNode: (node: MarkdownNode, text: string) => boolean,
-): MarkdownNode | null {
-  const text = getMarkdownNodeText(node)
-
-  if (!shouldKeepNode(node, text)) {
-    return null
-  }
-
-  if (!Array.isArray(node.children)) {
-    return node
-  }
-
-  const children = node.children
-    .map((child) => filterMarkdownNode(child, shouldKeepNode))
-    .filter((child): child is MarkdownNode => child !== null)
-
-  if (node.type === 'list' && children.length === 0) {
-    return null
-  }
-
-  if (node.type === 'listItem') {
     if (
-      getMarkdownNodeOwnText({ ...node, children }) === 'import boundary:' &&
-      !children.some((child) => child.type === 'list')
+      node.type === 'heading' &&
+      typeof node.depth === 'number' &&
+      node.depth <= definition.depth
     ) {
-      return null
+      break
     }
 
-    if (children.length === 0) {
-      return null
-    }
+    endIndex += 1
   }
 
-  return { ...node, children }
+  root.children = [
+    ...root.children.slice(0, startIndex + 1),
+    ...parseMarkdownChildren(definition.render(options)),
+    ...root.children.slice(endIndex),
+  ]
 }
 
-function filterMarkdownTree(
-  root: MarkdownRoot,
-  shouldKeepNode: (node: MarkdownNode, text: string) => boolean,
-) {
-  root.children = root.children
-    .map((child) => filterMarkdownNode(child, shouldKeepNode))
-    .filter((child): child is MarkdownNode => child !== null)
-}
-
-function removeParagraphs(root: MarkdownRoot, shouldRemove: (text: string) => boolean) {
-  root.children = root.children.filter(
-    (node) => node.type !== 'paragraph' || !shouldRemove(getMarkdownNodeText(node)),
+function renderAgentsWorkspaceModelSection(options: GeneratedWorkspaceOptions) {
+  return renderBulletList(
+    AGENTS_WORKSPACE_ENTRIES.filter((entry) => entry.enabled(options) && entry.agentsLine).map(
+      (entry) => entry.agentsLine as string,
+    ),
   )
 }
 
-function hasListItem(root: MarkdownRoot, textToMatch: string) {
-  const stack: MarkdownNode[] = [...root.children]
+function renderAgentsSkillRoutingSection(options: GeneratedWorkspaceOptions) {
+  const items = [
+    ...CORE_SKILL_DEFINITIONS.map((skill) => `${skill.agentsLabel}: \`${skill.docsPath}\``),
+    ...resolveSelectedOptionalSkillDefinitions(options).map(
+      (skill) => `${skill.agentsLabel}: \`${skill.docsPath}\``,
+    ),
+  ]
 
-  while (stack.length > 0) {
-    const node = stack.pop()
-    if (!node) {
-      continue
-    }
+  return renderBulletList(items)
+}
 
-    if (node.type === 'listItem' && getMarkdownNodeText(node) === textToMatch) {
-      return true
-    }
+function renderDocsIndexSkillStructureSection(options: GeneratedWorkspaceOptions) {
+  const optionalSkills = resolveSelectedOptionalSkillDefinitions(options)
+  const lines = [
+    '- canonical source: `.agents/skills/`',
+    '- Claude mirror: `.claude/skills/`',
+    '',
+    'core skills:',
+    ...CORE_SKILL_DEFINITIONS.map((skill) => `- \`${skill.docsPath}\``),
+  ]
 
-    if (Array.isArray(node.children)) {
-      stack.push(...node.children)
-    }
+  if (optionalSkills.length > 0) {
+    lines.push('', 'optional skills:', ...optionalSkills.map((skill) => `- \`${skill.docsPath}\``))
   }
 
-  return false
+  return `${lines.join('\n')}\n`
+}
+
+function renderTopologyRootSection(options: GeneratedWorkspaceOptions) {
+  return renderBulletList(
+    TOPOLOGY_ROOT_WORKSPACE_ENTRIES.filter(
+      (entry) => entry.enabled(options) && entry.topologyLine,
+    ).map((entry) => entry.topologyLine as string),
+  )
+}
+
+function renderTopologyRolesSection(options: GeneratedWorkspaceOptions) {
+  const frontendLines = ['- MiniApp UI, route, client integration을 담당한다.']
+  if (options.serverProvider !== null) {
+    frontendLines.push('- provider 연결값은 각 workspace의 `.env.local`에서 읽는다.')
+    frontendLines.push('- server runtime 구현을 직접 import하지 않는다.')
+  }
+
+  const blocks = [
+    ['### frontend', ...frontendLines].join('\n'),
+    options.serverProvider !== null
+      ? [
+          '### server',
+          '- provider별 원격 리소스 운영과 server-side runtime을 담당한다.',
+          '- deploy, db/functions, rules/indexes 같은 운영 스크립트의 source다.',
+          '- frontend가 기대하는 env와 연결값을 제공한다.',
+          ...(options.hasBackoffice ? ['- backoffice가 기대하는 env와 연결값을 제공한다.'] : []),
+        ].join('\n')
+      : null,
+    options.hasBackoffice
+      ? [
+          '### backoffice',
+          '- 브라우저 기반 운영 화면을 담당한다.',
+          '- MiniApp 전용 runtime 대신 browser/client 패턴을 따른다.',
+          ...(options.serverProvider !== null
+            ? ['- server runtime 구현을 직접 import하지 않는다.']
+            : []),
+        ].join('\n')
+      : null,
+    options.hasTrpc
+      ? [
+          '### packages/contracts',
+          '- boundary input/output schema와 경계 타입의 source of truth다.',
+          '- consumer는 root import만 사용하고 src 상대 경로를 내려가지 않는다.',
+          '',
+          '### packages/app-router',
+          '- route shape와 `AppRouter` 타입의 source of truth다.',
+          '- Worker runtime과 client는 이 package를 기준으로 타입을 맞춘다.',
+        ].join('\n')
+      : null,
+  ]
+
+  return renderMarkdownBlocks(blocks)
+}
+
+function renderTopologyOwnershipSection(options: GeneratedWorkspaceOptions) {
+  const lines = ['- env ownership: 각 workspace의 `.env.local`']
+  const importBoundaryRules: string[] = []
+
+  if (options.serverProvider !== null) {
+    lines.push(
+      '- API / base URL ownership: provider workspace가 값을 정의하고 consumer workspace가 읽는다.',
+    )
+    importBoundaryRules.push('`frontend` ↔ `server` 직접 import 금지')
+  }
+
+  if (options.hasBackoffice && options.serverProvider !== null) {
+    importBoundaryRules.push('`backoffice` ↔ `server` 직접 import 금지')
+  }
+
+  if (options.hasTrpc) {
+    importBoundaryRules.push(
+      'shared contract가 필요하면 `packages/contracts`, `packages/app-router`로 올린다.',
+    )
+  }
+
+  if (importBoundaryRules.length > 0) {
+    lines.push('- import boundary:')
+    lines.push(...importBoundaryRules.map((rule) => `  - ${rule}`))
+  }
+
+  return `${lines.join('\n')}\n`
+}
+
+function renderTopologySkillsSection(options: GeneratedWorkspaceOptions) {
+  const items = [
+    ...CORE_SKILL_DEFINITIONS.map((skill) => `${skill.topologyLabel}: \`${skill.docsPath}\``),
+    ...resolveSelectedOptionalSkillDefinitions(options).map(
+      (skill) => `${skill.topologyLabel}: \`${skill.docsPath}\``,
+    ),
+  ]
+
+  return renderBulletList(items)
 }
 
 function renderDynamicMarkdownSource(
@@ -267,127 +491,16 @@ function renderDynamicMarkdownSource(
   source: string,
   options: GeneratedWorkspaceOptions,
 ) {
+  const definition = DYNAMIC_DOC_DEFINITIONS.find((doc) => doc.relativePath === relativePath)
+
+  if (!definition) {
+    return source
+  }
+
   const root = MARKDOWN_RENDERER.parse(source) as MarkdownRoot
 
-  switch (relativePath) {
-    case 'AGENTS.md': {
-      filterMarkdownTree(root, (node, text) => {
-        if (node.type !== 'listItem') {
-          return true
-        }
-
-        switch (text) {
-          case 'server: optional provider workspace':
-            return options.serverProvider !== null
-          case 'backoffice: optional Vite 기반 운영 도구':
-            return options.hasBackoffice
-          case 'packages/contracts, packages/app-router: optional shared tRPC boundary packages':
-            return options.hasTrpc
-          case 'backoffice React 작업: .agents/skills/optional/backoffice-react/SKILL.md':
-            return options.hasBackoffice
-          case 'Cloudflare provider 작업: .agents/skills/optional/server-cloudflare/SKILL.md':
-            return options.serverProvider === 'cloudflare'
-          case 'Supabase provider 작업: .agents/skills/optional/server-supabase/SKILL.md':
-            return options.serverProvider === 'supabase'
-          case 'Firebase provider 작업: .agents/skills/optional/server-firebase/SKILL.md':
-            return options.serverProvider === 'firebase'
-          case 'tRPC boundary 변경: .agents/skills/optional/trpc-boundary/SKILL.md':
-            return options.hasTrpc
-          default:
-            return true
-        }
-      })
-      break
-    }
-    case 'docs/index.md': {
-      filterMarkdownTree(root, (node, text) => {
-        if (node.type !== 'listItem') {
-          return true
-        }
-
-        switch (text) {
-          case '.agents/skills/optional/backoffice-react/SKILL.md':
-            return options.hasBackoffice
-          case '.agents/skills/optional/server-cloudflare/SKILL.md':
-            return options.serverProvider === 'cloudflare'
-          case '.agents/skills/optional/server-supabase/SKILL.md':
-            return options.serverProvider === 'supabase'
-          case '.agents/skills/optional/server-firebase/SKILL.md':
-            return options.serverProvider === 'firebase'
-          case '.agents/skills/optional/trpc-boundary/SKILL.md':
-            return options.hasTrpc
-          default:
-            return true
-        }
-      })
-
-      if (
-        !hasListItem(root, '.agents/skills/optional/backoffice-react/SKILL.md') &&
-        !hasListItem(root, '.agents/skills/optional/server-cloudflare/SKILL.md') &&
-        !hasListItem(root, '.agents/skills/optional/server-supabase/SKILL.md') &&
-        !hasListItem(root, '.agents/skills/optional/server-firebase/SKILL.md') &&
-        !hasListItem(root, '.agents/skills/optional/trpc-boundary/SKILL.md')
-      ) {
-        removeParagraphs(root, (text) => text === 'optional skills:')
-      }
-      break
-    }
-    case 'docs/engineering/workspace-topology.md': {
-      filterHeadingSections(root, (headingText) => {
-        switch (headingText) {
-          case 'server':
-            return options.serverProvider !== null
-          case 'backoffice':
-            return options.hasBackoffice
-          case 'packages/contracts':
-          case 'packages/app-router':
-            return options.hasTrpc
-          default:
-            return true
-        }
-      })
-
-      filterMarkdownTree(root, (node, text) => {
-        if (node.type !== 'listItem') {
-          return true
-        }
-
-        switch (text) {
-          case 'server: optional provider workspace':
-            return options.serverProvider !== null
-          case 'backoffice: optional Vite + React 운영 도구':
-            return options.hasBackoffice
-          case 'packages/contracts: optional tRPC boundary schema / type source':
-          case 'packages/app-router: optional tRPC router / AppRouter source':
-            return options.hasTrpc
-          case 'provider 연결값은 각 workspace의 .env.local에서 읽는다.':
-          case 'server runtime 구현을 직접 import하지 않는다.':
-          case 'API / base URL ownership: provider workspace가 값을 정의하고 consumer workspace가 읽는다.':
-          case 'frontend ↔ server 직접 import 금지':
-            return options.serverProvider !== null
-          case 'backoffice가 기대하는 env와 연결값을 제공한다.':
-            return options.hasBackoffice
-          case 'backoffice ↔ server 직접 import 금지':
-            return options.hasBackoffice && options.serverProvider !== null
-          case 'Backoffice React workflow: .agents/skills/optional/backoffice-react/SKILL.md':
-            return options.hasBackoffice
-          case 'shared contract가 필요하면 packages/contracts, packages/app-router로 올린다.':
-          case 'tRPC boundary change flow: .agents/skills/optional/trpc-boundary/SKILL.md':
-            return options.hasTrpc
-          case 'Cloudflare provider 운영 가이드: .agents/skills/optional/server-cloudflare/SKILL.md':
-            return options.serverProvider === 'cloudflare'
-          case 'Supabase provider 운영 가이드: .agents/skills/optional/server-supabase/SKILL.md':
-            return options.serverProvider === 'supabase'
-          case 'Firebase provider 운영 가이드: .agents/skills/optional/server-firebase/SKILL.md':
-            return options.serverProvider === 'firebase'
-          default:
-            return true
-        }
-      })
-      break
-    }
-    default:
-      return source
+  for (const section of definition.sections) {
+    replaceSectionBody(root, section, options)
   }
 
   return String(MARKDOWN_RENDERER.stringify(root as never))
@@ -409,17 +522,29 @@ async function copyDirectoryWithTokens(
   sourceDir: string,
   targetDir: string,
   tokens: TemplateTokens,
+  options?: CopyDirectoryWithTokensOptions,
 ) {
   const entries = await readdir(sourceDir, { withFileTypes: true })
+  const relativeDir = options?.relativeDir ?? ''
 
   await mkdir(targetDir, { recursive: true })
 
   for (const entry of entries) {
     const sourcePath = path.join(sourceDir, entry.name)
     const targetPath = path.join(targetDir, entry.name)
+    const relativePath = (relativeDir ? path.join(relativeDir, entry.name) : entry.name)
+      .split(path.sep)
+      .join('/')
+
+    if (options?.skipRelativePaths?.has(relativePath)) {
+      continue
+    }
 
     if (entry.isDirectory()) {
-      await copyDirectoryWithTokens(sourcePath, targetPath, tokens)
+      await copyDirectoryWithTokens(sourcePath, targetPath, tokens, {
+        ...options,
+        relativeDir: relativePath,
+      })
       continue
     }
 
@@ -1643,47 +1768,25 @@ export async function applyDocsTemplates(
     path.join(baseTemplateDir, 'docs'),
     path.join(targetRoot, 'docs'),
     tokens,
+    { skipRelativePaths: DYNAMIC_DOCS_INSIDE_DOCS },
   )
 
-  await renderDynamicMarkdownTemplate(
-    baseTemplateDir,
-    path.join(baseTemplateDir, 'AGENTS.md'),
-    path.join(targetRoot, 'AGENTS.md'),
-    tokens,
-    options,
-  )
-  await renderDynamicMarkdownTemplate(
-    baseTemplateDir,
-    path.join(baseTemplateDir, 'docs', 'index.md'),
-    path.join(targetRoot, 'docs', 'index.md'),
-    tokens,
-    options,
-  )
-  await renderDynamicMarkdownTemplate(
-    baseTemplateDir,
-    path.join(baseTemplateDir, 'docs', 'engineering', 'workspace-topology.md'),
-    path.join(targetRoot, 'docs', 'engineering', 'workspace-topology.md'),
-    tokens,
-    options,
-  )
+  for (const definition of DYNAMIC_DOC_DEFINITIONS) {
+    await renderDynamicMarkdownTemplate(
+      baseTemplateDir,
+      path.join(baseTemplateDir, ...definition.relativePath.split('/')),
+      path.join(targetRoot, ...definition.relativePath.split('/')),
+      tokens,
+      options,
+    )
+  }
 }
 
 function resolveGeneratedSkillTemplates(options: GeneratedWorkspaceOptions) {
-  const templates = ['core/miniapp', 'core/granite', 'core/tds']
-
-  if (options.hasBackoffice) {
-    templates.push('optional/backoffice-react')
-  }
-
-  if (options.serverProvider) {
-    templates.push(`optional/server-${options.serverProvider}`)
-  }
-
-  if (options.hasTrpc) {
-    templates.push('optional/trpc-boundary')
-  }
-
-  return templates
+  return [
+    ...CORE_SKILL_DEFINITIONS.map((skill) => skill.templateDir),
+    ...resolveSelectedOptionalSkillDefinitions(options).map((skill) => skill.templateDir),
+  ]
 }
 
 export async function syncGeneratedSkills(

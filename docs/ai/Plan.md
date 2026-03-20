@@ -1,3 +1,24 @@
+## 다음 작업: dynamic docs/skills 메타데이터를 한 군데로 모으고 렌더 경로를 단일화하기
+1. 문제
+   - `renderDynamicMarkdownSource()`가 optional 문구를 최종 prose 문자열로 판별해 wording이 조금만 바뀌어도 필터가 깨질 수 있다.
+   - optional skill 목록이 실제 skill sync, `AGENTS.md`, `docs/index.md`, `workspace-topology.md`에 각각 흩어져 있어 rename/add/remove 시 문서와 생성물이 쉽게 어긋난다.
+   - `applyDocsTemplates()`도 `docs/` 통복사 후 일부 문서를 다시 렌더링하는 이중 경로라 동적 문서가 늘어날수록 관리 포인트가 늘어난다.
+   - skill sync 테스트는 docs 렌더를 선행 호출해, 테스트 책임보다 넓은 setup 때문에 실패 원인을 흐린다.
+2. 방향
+   - core/optional skill catalog와 workspace/doc section metadata를 한 manifest 계층으로 올린다.
+   - dynamic markdown은 prose 비교로 node를 지우지 않고, 섹션 단위 body를 AST로 교체하는 방식으로 렌더링한다.
+   - `applyDocsTemplates()`는 dynamic docs를 bulk copy 대상에서 제외하고, 명시된 dynamic doc 목록만 별도 렌더링한다.
+   - `syncGeneratedSkills()` 테스트는 docs setup 없이 skill sync 책임만 검증하게 줄인다.
+3. 테스트
+   - 기존 base-only / selected optional / backoffice-only / rerender-after-add 문서 테스트가 그대로 통과해야 한다.
+   - 기존 skill sync 테스트는 docs setup 없이도 `.agents/.claude` mirror와 optional skill selection을 검증해야 한다.
+   - 최종적으로 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - optional docs filtering이 template prose 변경에 직접 결합되지 않는다.
+   - skill catalog의 source of truth가 문서와 skill sync 사이에서 한 군데로 모인다.
+   - dynamic docs가 통복사 경로와 별도 덮어쓰기 경로로 이중 관리되지 않는다.
+   - `pnpm verify`를 통과한다.
+
 ## 다음 작업: markdown AST 문서 렌더 후속 리뷰 지적 2건 수정하기
 1. 문제
    - base-only scaffold에서 `docs/engineering/workspace-topology.md`에 빈 `- import boundary:` bullet이 남는다.
