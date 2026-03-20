@@ -1,4 +1,4 @@
-## 진행 예정: worktree control-root PR 리뷰 반영
+## 진행 예정: worktree control-root PR 마감 정리
 
 ### 목표
 - PR 리뷰에서 잡힌 문서/온보딩 회귀를 모두 제거한다.
@@ -10,6 +10,7 @@
 - generated README bootstrap 첫 문장을 사람이 읽기 쉬운 강한 안내 문장으로 다듬는다.
 - generated README bootstrap 섹션에서 과한 설명 문장을 걷어내고, 실제 시작 명령만 남긴다.
 - generated README와 공개 README bootstrap 예시에 `mkdir <appName>`/`cd <appName>` 단계까지 포함한다.
+- changeset과 PR 설명을 최종 control-root 방향과 맞지 않는 single-root 서술 없이 정리한다.
 
 ### 확인된 문제
 - worktree scaffold 시 committed repo root(`main/`)에 `.claude/CLAUDE.md`가 빠져 plain clone과 `main/` 직접 진입 동선이 깨져 있다.
@@ -48,6 +49,9 @@
    - tracked 상태인 `docs/superpowers/**`는 index에서 제거한다.
 7. `packages/create-rn-miniapp/src/templates/index.ts`와 optional worktree docs/script
    - golden rule, harness guide, workflow doc, bootstrap stub를 `/` 없는 브랜치명 기준으로 같이 갱신한다.
+8. `.changeset/worktree-scaffold-refactor.md`와 PR 메타데이터
+   - changeset을 최종 `.gitdata + main/ + sibling worktree` 구조 기준으로 다시 쓴다.
+   - PR title/body도 control-root 복귀, bootstrap, cleanup hook, `--add` 해석 기준을 반영하도록 갱신한다.
 
 ### 검증 계획
 - 우선: `pnpm --filter create-rn-miniapp test -- src/scaffold/worktree.test.ts src/release.test.ts`

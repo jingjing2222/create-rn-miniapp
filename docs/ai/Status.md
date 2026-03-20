@@ -1,3 +1,14 @@
+## 2026-03-20 — worktree control-root PR 마감 메타데이터 정리
+- 상태
+  - changeset을 최종 control-root 방향과 맞게 다시 정리했다.
+  - PR title/body에 남아 있던 single-root policy 설명을 제거하고, `.gitdata + main/ + sibling worktree` 기준으로 다시 맞췄다.
+- 반영한 변경
+  - `.changeset/worktree-scaffold-refactor.md`
+    - control-root scaffold, baseline commit, bootstrap, cleanup hook, `--add` 해석 기준을 현재 구현과 같은 방향으로 정리
+- 검증
+  - `pnpm --filter create-rn-miniapp test -- src/release.test.ts` ✅
+  - `pnpm verify` ✅
+
 ## 2026-03-20 — worktree control-root PR 리뷰 회귀 정리
 - 상태
   - worktree scaffold에서도 committed repo root인 `main/`에 `.claude/CLAUDE.md`가 다시 생성되도록 복구했다.
