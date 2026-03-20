@@ -1130,11 +1130,11 @@ test('syncOptionalDocsTemplates injects worktree docs and golden rule when workt
   assert.match(docsIndex, /Worktree workflow/)
   assert.match(
     agents,
-    /새 작업은 반드시 repo root에서 `git worktree add -b <branch> \.\.\/<branch> main`으로 시작/,
+    /새 작업은 반드시 repo root에서 `git worktree add -b <branch> \.\.\/<branch-dir> main`으로 시작하고, `<branch-dir>`는 브랜치명의 `\/`를 `-`로 바꾼 1-depth 디렉토리명을 쓰며, repo 안 `\.\/worktrees\/` 같은 nested worktree는 만들지 않으며/,
   )
   assert.match(
     harnessGuide,
-    /14\. 새 브랜치 작업은 repo root에서 `git worktree add -b <branch> \.\.\/<branch> main`으로 worktree를 만들고/,
+    /14\. 새 브랜치 작업은 repo root에서 `git worktree add -b <branch> \.\.\/<branch-dir> main`으로 worktree를 만들고, `<branch-dir>`는 브랜치명의 `\/`를 `-`로 바꾼 1-depth 디렉토리명을 쓰며, repo 안 `\.\/worktrees\/` 같은 nested worktree는 만들지 않으며,/,
   )
   assert.match(harnessGuide, /15\. 브랜치 생성, 커밋, 브랜치 푸시, PR 생성 순으로 마무리한다\./)
   assert.equal(

@@ -13,7 +13,9 @@ export function createWorktreePolicyNote(options: { workspaceRoot: string }) {
     body: [
       `repo root: ${options.workspaceRoot}`,
       '`main`에는 scaffold 결과를 담은 baseline commit을 먼저 만들어 두었어요.',
-      '표준 시작: `git worktree add -b <branch> ../<branch> main`',
+      '표준 시작: `git worktree add -b <branch> ../<branch-dir> main`',
+      '`<branch-dir>`는 브랜치명의 `/`를 `-`로 바꾼 1-depth 디렉토리명을 써 주세요. 예: `feat/test` -> `../feat-test`',
+      'repo 안 `./worktrees/` 같은 nested worktree는 tooling과 에이전트의 repo root 탐색을 꼬이게 할 수 있어서 쓰지 않아요.',
       '상태 확인: `git worktree list`',
       '`main` 최신화는 보통 `git pull --ff-only`를 써 주세요. 이 표준 경로로 갱신하면 main에 반영된 clean worktree는 post-merge hook으로 같이 정리돼요.',
       '구현, 커밋, 푸시, PR 생성은 그 worktree 안에서 진행해 주세요.',

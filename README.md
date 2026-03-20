@@ -88,7 +88,9 @@ pnpm verify
 
 `--worktree`를 활성화했다면 에이전트 작업 규칙만 달라져요.
 
-- 새 작업은 repo root에서 `git worktree add -b <branch> ../<branch> main`으로 시작해요.
+- 새 작업은 repo root에서 `git worktree add -b <branch> ../<branch-dir> main`으로 시작해요.
+- worktree path는 항상 1-depth slug를 써요. 예를 들어 `feat/test` 브랜치는 `../feat-test`처럼 만들어요.
+- worktree는 의도적으로 repo root 옆 sibling path에 만들어요. repo 안 `./worktrees/` 같은 nested worktree는 두지 않아요.
 - `main`에는 scaffold baseline commit이 이미 있어서 이 명령을 바로 실행할 수 있어요.
 - 구현, 커밋, 푸시, PR 생성은 새 worktree 안에서 진행해요.
 - `main` checkout 최신화는 보통 `git pull --ff-only`를 권장해요. 이 표준 경로로 갱신하면 main에 반영된 clean worktree는 post-merge hook으로 같이 정리돼요.

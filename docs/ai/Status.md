@@ -3,6 +3,7 @@
   - 새 scaffold 결과는 항상 일반 single-root repo로 생성되도록 정리했다.
   - `--worktree`를 고른 경우에는 repo 구조를 바꾸지 않고, AGENTS / 하네스 문서 / 생성 직후 note가 "새 작업은 반드시 repo root에서 worktree로 시작" 규칙을 가리키게 바꿨다.
   - `--worktree` repo는 생성 직후 `main`에 scaffold baseline commit을 만들어, 문서가 안내하는 표준 `git worktree add -b <branch> ../<branch> main` 시작 명령이 즉시 동작하게 했다.
+  - sibling path(`../<branch-dir>`)를 의도된 표준 경로로 고정하고, 브랜치명에 `/`가 있어도 worktree path는 `feat/test -> ../feat-test`처럼 1-depth slug를 쓰게 정리했다. repo 안 `./worktrees/` 같은 nested worktree는 Biome / Nx / 에이전트의 repo root 탐색을 꼬이게 할 수 있어서 쓰지 않는다고 문서와 생성 규칙에 명시했다.
   - merge 또는 squash merge 뒤 `main` checkout을 표준 경로인 `git pull --ff-only`로 최신화하면 main에 반영된 clean worktree를 정리하는 `post-merge` hook을 repo root 기준으로 다시 붙였다.
   - `--add`는 기존 repo의 worktree 정책 활성화 여부를 감지해서, optional docs 동기화 시 그 규칙을 유지하도록 고쳤다.
 - 반영한 변경

@@ -45,6 +45,14 @@
    - 현재 single-root에서 같은 값을 가리키는 `controlRoot`/`workspaceRoot` 표현은 줄이고, worktree 관련 불리언 이름도 정책 의미가 드러나게 정리한다
    - `git pull --ff-only`는 hook이 기대하는 권장 표준 경로로만 설명하고, 문서가 필수 규칙처럼 읽히지 않게 톤을 낮춘다
    - release metadata도 현재 구현 범위에 맞춘다. `.changeset` 설명과 현재 브랜치 PR 제목/본문에서 control-root 레이아웃 뉘앙스를 제거하고, single-root + worktree policy + baseline commit + hook cleanup 기준으로 정리한다
+6. nested worktree 경로 재검토
+   - `../<branch>` 대신 `./worktrees/<branch>`를 기본 경로로 둘 수 있는지 검증한다
+   - Git 동작만이 아니라 root `.gitignore`, Biome, Nx, `pnpm verify`, cleanup hook, generated docs 문구까지 함께 확인한다
+   - repo 내부 경로가 실제로 안전하다고 확인되면, 경로 정책 변경안과 필요한 ignore/문서/테스트 범위를 같이 제안한다
+7. sibling path 표현 보정
+   - sibling path 정책은 유지하되, 브랜치명에 `/`가 있어도 worktree path는 항상 1-depth slug로 쓰게 문구를 수정한다
+   - 표준 예시는 `feat/test -> ../feat-test`처럼, 브랜치명과 디렉토리명을 분리해 설명한다
+   - README, generated note, optional worktree doc, AGENTS golden rule, 하네스 실행가이드, 회귀 테스트를 같이 갱신한다
 
 ### 파일별 작업 계획
 1. `packages/create-rn-miniapp/src/scaffold/worktree.ts`
