@@ -44,6 +44,7 @@
    - `workspace-inspector`가 기존 repo의 worktree 정책 활성화 여부를 감지하고, `--add`도 그 상태를 그대로 유지하게 만든다
    - 현재 single-root에서 같은 값을 가리키는 `controlRoot`/`workspaceRoot` 표현은 줄이고, worktree 관련 불리언 이름도 정책 의미가 드러나게 정리한다
    - `git pull --ff-only`는 hook이 기대하는 권장 표준 경로로만 설명하고, 문서가 필수 규칙처럼 읽히지 않게 톤을 낮춘다
+   - release metadata도 현재 구현 범위에 맞춘다. `.changeset` 설명과 현재 브랜치 PR 제목/본문에서 control-root 레이아웃 뉘앙스를 제거하고, single-root + worktree policy + baseline commit + hook cleanup 기준으로 정리한다
 
 ### 파일별 작업 계획
 1. `packages/create-rn-miniapp/src/scaffold/worktree.ts`
