@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 import type { CliPrompter } from '../cli.js'
 import {
-  convertSingleRootToWorktreeLayout,
+  initBareWorktreeLayout,
   createWorktreeLayoutNote,
   MAIN_WORKTREE_DIRECTORY,
   resolveCreateWorktreeLayout,
@@ -104,43 +104,22 @@ test('createWorktreeLayoutNote points users at the control root and main worktre
   assert.match(note.body, /wt add -c/)
 })
 
-test('convertSingleRootToWorktreeLayout moves the scaffolded workspace into main/ and leaves local shims in the control root', async () => {
-  const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-worktree-'))
+test('initBareWorktreeLayout creates a bare repo with a main worktree and control root shims', async () => {
+  const controlRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-worktree-'))
 
   try {
-    await mkdir(path.join(targetRoot, 'docs', 'ai'), { recursive: true })
-    await writeFile(path.join(targetRoot, 'package.json'), '{"name":"ebook-miniapp"}\n', 'utf8')
-    await writeFile(path.join(targetRoot, 'docs', 'ai', 'Plan.md'), '# plan\n', 'utf8')
+    await initBareWorktreeLayout(controlRoot)
+    const workspaceRoot = path.join(controlRoot, MAIN_WORKTREE_DIRECTORY)
 
-    const result = await convertSingleRootToWorktreeLayout(targetRoot)
-
-    assert.equal(result.controlRoot, targetRoot)
-    assert.equal(result.workspaceRoot, path.join(targetRoot, MAIN_WORKTREE_DIRECTORY))
-    assert.equal(await readFile(path.join(targetRoot, '.git'), 'utf8'), 'gitdir: ./.bare\n')
-    assert.equal(
-      await readFile(path.join(result.workspaceRoot, 'package.json'), 'utf8'),
-      '{"name":"ebook-miniapp"}\n',
-    )
-    assert.equal(
-      await readFile(path.join(result.workspaceRoot, 'docs', 'ai', 'Plan.md'), 'utf8'),
-      '# plan\n',
-    )
-    assert.match(await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8'), /cd main/)
-    assert.match(await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8'), /wt status/)
-    assert.match(await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8'), /wt add -c/)
-    assert.match(
-      await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8'),
-      /control root에서 `git commit`/,
-    )
-    assert.match(
-      await readFile(path.join(targetRoot, 'README.md'), 'utf8'),
-      /실제 MiniApp repo는 `main\/` 아래에 있어요/,
-    )
-    assert.match(await readFile(path.join(targetRoot, 'README.md'), 'utf8'), /wt remove/)
-    await assert.rejects(() => stat(path.join(targetRoot, 'package.json')))
-    assert.equal(runGit(result.workspaceRoot, ['symbolic-ref', '--short', 'HEAD']), 'main')
-    assert.match(runGit(targetRoot, ['worktree', 'list', '--porcelain']), /main$/m)
+    assert.equal(await readFile(path.join(controlRoot, '.git'), 'utf8'), 'gitdir: ./.bare\n')
+    assert.ok((await stat(path.join(controlRoot, '.bare'))).isDirectory())
+    assert.ok((await stat(workspaceRoot)).isDirectory())
+    assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /cd main/)
+    assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /wt status/)
+    assert.match(await readFile(path.join(controlRoot, 'README.md'), 'utf8'), /실제 MiniApp repo는 `main\/` 아래에 있어요/)
+    assert.equal(runGit(workspaceRoot, ['symbolic-ref', '--short', 'HEAD']), 'main')
+    assert.match(runGit(controlRoot, ['worktree', 'list', '--porcelain']), /main$/m)
   } finally {
-    await rm(targetRoot, { recursive: true, force: true })
+    await rm(controlRoot, { recursive: true, force: true })
   }
 })
