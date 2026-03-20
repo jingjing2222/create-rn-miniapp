@@ -1145,6 +1145,10 @@ test('syncOptionalDocsTemplates injects worktree docs and golden rule when workt
     await pathExists(path.join(targetRoot, 'scripts', 'worktree', 'bootstrap-control-root.mjs')),
     true,
   )
+  assert.equal(
+    await pathExists(path.join(targetRoot, 'scripts', 'worktree', 'post-merge-cleanup.sh')),
+    true,
+  )
 })
 
 test('syncOptionalDocsTemplates numbers worktree golden rule after trpc when both are enabled', async (t) => {

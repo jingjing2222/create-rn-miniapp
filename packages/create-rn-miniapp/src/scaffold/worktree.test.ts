@@ -114,10 +114,21 @@ test('createWorktreePolicyNote explains the control-root workflow', () => {
   assert.match(note.body, /main\/docs\/engineering\/worktree-workflow\.md/)
 })
 
-test('createPostMergeHook generates valid bash syntax for repo-root cleanup', () => {
+test('createPostMergeHook reads the shared repo-root cleanup hook template', async () => {
   const hook = createPostMergeHook()
+  const sharedHookPath = path.join(
+    repoRoot,
+    'packages',
+    'scaffold-templates',
+    'optional',
+    'worktree',
+    'scripts',
+    'worktree',
+    'post-merge-cleanup.sh',
+  )
   const result = spawnSync('bash', ['-n', '-c', hook], { encoding: 'utf8' })
 
+  assert.equal(hook, await readFile(sharedHookPath, 'utf8'))
   assert.equal(result.status, 0, `bash syntax error: ${result.stderr}`)
   assert.match(hook, /git cherry main "\$branch"/)
   assert.doesNotMatch(hook, /control_root/)
@@ -143,8 +154,9 @@ test('installWorktreeHooks writes an executable post-merge hook into the repo ro
 test('bootstrap-control-root script installs the cleanup hook for plain-clone bootstrap', async () => {
   const controlRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-bootstrap-hook-'))
   const workspaceRoot = path.join(controlRoot, 'main')
-  const scriptPath = path.join(workspaceRoot, 'scripts', 'worktree', 'bootstrap-control-root.mjs')
-  const templateScriptPath = path.join(
+  const worktreeScriptsRoot = path.join(workspaceRoot, 'scripts', 'worktree')
+  const scriptPath = path.join(worktreeScriptsRoot, 'bootstrap-control-root.mjs')
+  const templateScriptsRoot = path.join(
     repoRoot,
     'packages',
     'scaffold-templates',
@@ -152,16 +164,22 @@ test('bootstrap-control-root script installs the cleanup hook for plain-clone bo
     'worktree',
     'scripts',
     'worktree',
-    'bootstrap-control-root.mjs',
   )
+  const templateScriptPath = path.join(templateScriptsRoot, 'bootstrap-control-root.mjs')
+  const sharedHookTemplatePath = path.join(templateScriptsRoot, 'post-merge-cleanup.sh')
 
   try {
-    await mkdir(path.dirname(scriptPath), { recursive: true })
+    await mkdir(worktreeScriptsRoot, { recursive: true })
     await initializeWorktreeControlRoot({
       controlRoot,
       workspaceRoot,
     })
     await writeFile(scriptPath, await readFile(templateScriptPath, 'utf8'), 'utf8')
+    await writeFile(
+      path.join(worktreeScriptsRoot, 'post-merge-cleanup.sh'),
+      await readFile(sharedHookTemplatePath, 'utf8'),
+      'utf8',
+    )
 
     execFileSync('node', [scriptPath], {
       cwd: workspaceRoot,

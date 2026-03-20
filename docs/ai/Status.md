@@ -1,3 +1,24 @@
+## 2026-03-20 — worktree cleanup hook 관리 포인트 단일화
+- 상태
+  - cleanup hook 본문이 `create-rn-miniapp` 생성기와 generated `bootstrap-control-root.mjs` 안에 중복돼 있었다.
+  - 이제 hook 본문은 `packages/scaffold-templates/optional/worktree/scripts/worktree/post-merge-cleanup.sh` 하나만 source of truth로 두고, 생성기와 bootstrap script가 둘 다 이 파일을 읽어 설치한다.
+- 반영한 변경
+  - `packages/scaffold-templates/optional/worktree/scripts/worktree/post-merge-cleanup.sh`
+    - shared cleanup hook 템플릿 추가
+  - `packages/create-rn-miniapp/src/scaffold/worktree.ts`
+    - 생성기 hook 설치가 scaffold-templates 패키지의 shared hook 템플릿을 읽도록 변경
+  - `packages/scaffold-templates/optional/worktree/scripts/worktree/bootstrap-control-root.mjs`
+    - bootstrap script가 sibling `post-merge-cleanup.sh`를 읽어 hook을 설치하도록 변경
+  - `packages/create-rn-miniapp/src/scaffold/worktree.test.ts`
+    - 생성기 hook source가 shared hook 템플릿과 동일한지 검증 추가
+  - `packages/create-rn-miniapp/src/templates/index.test.ts`
+    - generated repo에 shared hook 템플릿이 같이 복사되는지 검증 추가
+  - `packages/create-rn-miniapp/src/release.test.ts`
+    - scaffold-templates tarball에 shared hook 템플릿이 포함되는지 검증 추가
+- 검증
+  - `pnpm --filter create-rn-miniapp test -- src/scaffold/worktree.test.ts src/templates/index.test.ts src/release.test.ts` ✅
+  - `pnpm verify` ✅
+
 ## 2026-03-20 — plain clone bootstrap cleanup hook 누락 수정
 - 상태
   - user 재현 기준으로 plain clone 후 `bootstrap-control-root.mjs`를 실행한 repo에서는 cleanup hook이 설치되지 않아, `main` pull 뒤 merged clean worktree가 자동 정리되지 않는 문제를 확인했다.

@@ -4,40 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const controlRoot = path.resolve(workspaceRoot, '..')
-const postMergeHook = `#!/usr/bin/env bash
-set -euo pipefail
-
-repo_root="$(git rev-parse --show-toplevel)"
-cd "$repo_root"
-
-current_branch="$(git branch --show-current)"
-if [ "$current_branch" != "main" ]; then
-  exit 0
-fi
-
-git worktree list --porcelain | while IFS= read -r line; do
-  case "$line" in
-    worktree\\ *) current_wt="\${line#worktree }" ;;
-    branch\\ refs/heads/*)
-      branch="\${line#branch refs/heads/}"
-      [ "$branch" = "main" ] && continue
-
-      if git cherry main "$branch" 2>/dev/null | grep -q '^+'; then
-        continue
-      fi
-
-      if [ -n "$(git -C "$current_wt" status --porcelain 2>/dev/null)" ]; then
-        echo "post-merge: $branch worktree에 변경사항이 있어서 건너뛰었어요"
-        continue
-      fi
-
-      echo "post-merge: merged된 worktree 정리 - $branch"
-      git worktree remove "$current_wt" 2>/dev/null || true
-      git branch -d "$branch" 2>/dev/null || true
-      ;;
-  esac
-done
-`
+const postMergeHookTemplatePath = fileURLToPath(new URL('./post-merge-cleanup.sh', import.meta.url))
 
 const controlRootAgents = [
   '# AGENTS.md',
@@ -82,9 +49,10 @@ async function installWorktreeHooks(targetWorkspaceRoot) {
   const gitDir = await resolveGitDir(targetWorkspaceRoot)
   const hooksDir = path.join(gitDir, 'hooks')
   const hookPath = path.join(hooksDir, 'post-merge')
+  const hookSource = await readFile(postMergeHookTemplatePath, 'utf8')
 
   await mkdir(hooksDir, { recursive: true })
-  await writeFile(hookPath, postMergeHook, 'utf8')
+  await writeFile(hookPath, hookSource, 'utf8')
   await chmod(hookPath, 0o755)
 }
 

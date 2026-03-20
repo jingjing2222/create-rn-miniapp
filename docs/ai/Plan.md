@@ -1,4 +1,4 @@
-## 진행 예정: worktree bootstrap cleanup hook 누락 수정
+## 진행 예정: worktree cleanup hook 관리 포인트 단일화
 
 ### 목표
 - PR 리뷰에서 잡힌 문서/온보딩 회귀를 모두 제거한다.
@@ -10,7 +10,7 @@
 - generated README bootstrap 첫 문장을 사람이 읽기 쉬운 강한 안내 문장으로 다듬는다.
 - generated README bootstrap 섹션에서 과한 설명 문장을 걷어내고, 실제 시작 명령만 남긴다.
 - generated README와 공개 README bootstrap 예시에 `mkdir <appName>`/`cd <appName>` 단계까지 포함한다.
-- plain clone bootstrap 경로에서도 cleanup hook이 실제 설치되도록 복구한다.
+- cleanup hook 본문이 생성기와 bootstrap script에 중복되지 않도록 관리 포인트를 하나로 줄인다.
 
 ### 확인된 문제
 - worktree scaffold 시 committed repo root(`main/`)에 `.claude/CLAUDE.md`가 빠져 plain clone과 `main/` 직접 진입 동선이 깨져 있다.
@@ -49,12 +49,15 @@
    - tracked 상태인 `docs/superpowers/**`는 index에서 제거한다.
 7. `packages/create-rn-miniapp/src/templates/index.ts`와 optional worktree docs/script
    - golden rule, harness guide, workflow doc, bootstrap stub를 `/` 없는 브랜치명 기준으로 같이 갱신한다.
-8. `packages/scaffold-templates/optional/worktree/scripts/worktree/bootstrap-control-root.mjs`
-   - local stub 생성과 함께 `.gitdata/hooks/post-merge`를 설치하도록 보강한다.
-   - separate git dir 포인터를 읽어 hook 경로를 정확히 찾는다.
-9. `packages/create-rn-miniapp/src/scaffold/worktree.test.ts`
-   - plain clone bootstrap script가 cleanup hook을 설치하는지 실패 테스트를 추가한다.
+8. `packages/scaffold-templates/optional/worktree/scripts/worktree/post-merge-cleanup.sh`
+   - cleanup hook 본문을 공통 템플릿 파일 하나로 분리한다.
+9. `packages/create-rn-miniapp/src/scaffold/worktree.ts`
+   - 생성기 hook 설치는 공통 템플릿 파일을 읽어서 쓰게 바꾼다.
+10. `packages/scaffold-templates/optional/worktree/scripts/worktree/bootstrap-control-root.mjs`
+    - bootstrap script도 공통 템플릿 파일을 읽어서 hook을 설치하게 바꾼다.
+11. `packages/create-rn-miniapp/src/scaffold/worktree.test.ts`와 `packages/create-rn-miniapp/src/templates/index.test.ts`
+    - 생성기 hook source가 공통 템플릿과 동일한지, generated repo에 공통 hook 템플릿이 같이 복사되는지 실패 테스트를 추가한다.
 
 ### 검증 계획
-- 우선: `pnpm --filter create-rn-miniapp test -- src/scaffold/worktree.test.ts`
+- 우선: `pnpm --filter create-rn-miniapp test -- src/scaffold/worktree.test.ts src/templates/index.test.ts`
 - 마무리: `pnpm verify`

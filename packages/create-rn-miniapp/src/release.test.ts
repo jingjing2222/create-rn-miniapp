@@ -168,6 +168,12 @@ test('scaffold templates tarball keeps the root gitignore template', () => {
     ),
     true,
   )
+  assert.equal(
+    packResult.files.some(
+      (file) => file.path === 'optional/worktree/scripts/worktree/post-merge-cleanup.sh',
+    ),
+    true,
+  )
 })
 
 test('README describes worktree as a control-root bootstrap workflow', () => {
