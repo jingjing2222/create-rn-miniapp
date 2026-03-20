@@ -6,16 +6,16 @@ export {
   ensureFrontendFirebaseBootstrap,
   ensureFrontendSupabaseBootstrap,
   patchFrontendWorkspace,
-} from './frontend.js'
+} from './runtime.js'
 export {
   ensureBackofficeCloudflareBootstrap,
   ensureBackofficeFirebaseBootstrap,
   ensureBackofficeSupabaseBootstrap,
   patchBackofficeWorkspace,
-} from './backoffice.js'
+} from './runtime.js'
 export {
   createRootPackageName,
   patchCloudflareServerWorkspace,
   patchFirebaseServerWorkspace,
   patchSupabaseServerWorkspace,
-} from './server.js'
+} from './runtime.js'

@@ -6,17 +6,17 @@ export type {
   GeneratedWorkspaceOptions,
   TemplateTokens,
   WorkspaceName,
-} from './types.js'
+} from './runtime.js'
 export {
   copyDirectory,
   ensureEmptyDirectory,
   pathExists,
   removePathIfExists,
   writeWorkspaceNpmrc,
-} from './filesystem.js'
-export { applyDocsTemplates, resolveGeneratedWorkspaceOptions } from './docs.js'
-export { applyRootTemplates, renderRootVerifyScript, syncRootWorkspaceManifest } from './root.js'
-export { syncGeneratedSkills } from './skills.js'
+} from './runtime.js'
+export { applyDocsTemplates, resolveGeneratedWorkspaceOptions } from './runtime.js'
+export { applyRootTemplates, renderRootVerifyScript, syncRootWorkspaceManifest } from './runtime.js'
+export { syncGeneratedSkills } from './runtime.js'
 export {
   applyFirebaseServerWorkspaceTemplate,
   applyServerPackageTemplate,
@@ -27,5 +27,5 @@ export {
   patchFirebaseFunctionRegion,
   patchFirebaseServerProjectId,
   SUPABASE_DEFAULT_FUNCTION_NAME,
-} from './server.js'
-export { applyTrpcWorkspaceTemplate } from './trpc-entry.js'
+} from './runtime.js'
+export { applyTrpcWorkspaceTemplate } from './runtime.js'

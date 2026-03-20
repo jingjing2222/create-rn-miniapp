@@ -1,3 +1,18 @@
+## 다음 작업: index.ts 외 re-export 금지 규칙으로 area facade를 직접 export 모듈로 바꾸기
+1. 문제
+   - 방금 쪼갠 `templates/docs.ts`, `templates/root.ts`, `patching/frontend.ts` 같은 area 모듈이 여전히 `export ... from './runtime.js'` 형태의 re-export 파일이다.
+   - 사용자는 `index.ts`를 제외한 모든 파일에서 re-export가 없어야 한다고 명시했고, 지금 상태는 그 규칙을 어긴다.
+2. 방향
+   - non-`index.ts` 파일의 `export ... from` / `export type ... from`를 전수조사한다.
+   - 이 파일들은 runtime import 후 직접 function/type/const를 export 하도록 바꾼다.
+   - `index.ts`만 public barrel re-export로 남기고, 나머지는 직접 선언 또는 wrapper export만 사용한다.
+3. 테스트
+   - `src` 전체를 스캔해서 non-`index.ts` 파일에 re-export 구문이 없다는 실패 테스트를 먼저 추가한다.
+   - 수정 후 targeted test와 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - `index.ts`를 제외한 `src` 모든 파일에서 re-export 구문이 사라진다.
+   - `pnpm verify`를 통과한다.
+
 ## 다음 작업: templates/patching 진입점을 area facade로 쪼개서 실행 흐름을 읽히게 만들기
 1. 문제
    - `templates/index.ts`, `patching/index.ts`가 각각 2천 줄이 넘어, 실제 orchestration entrypoint는 `scaffold/index.ts`, `providers/index.ts`인데도 호출 경로가 한눈에 보이지 않는다.
@@ -2747,4 +2762,13 @@ docs/
    - server provider별로 해당 문서와 링크만 생기는지 검증
    - marker가 없는 예전 문서에도 optional 링크를 삽입할 수 있는지 검증
 7. 완료 기준
+   - `pnpm verify` 통과
+
+## 현재 non-index forwarding module 제거
+1. `index.ts`를 제외한 source module은 다른 파일 export를 forwarding하지 않는다.
+2. `templates/*`, `patching/*`의 facade 파일은 삭제하고 호출부가 실제 구현 파일(`runtime.ts` 등)을 직접 import 하도록 바꾼다.
+3. 테스트 범위
+   - non-`index.ts` 파일에 `export ... from`이 없는지 검증
+   - non-`index.ts` pure forwarding facade module이 존재하면 실패하도록 검증
+4. 완료 기준
    - `pnpm verify` 통과
