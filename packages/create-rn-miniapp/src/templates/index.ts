@@ -1533,7 +1533,7 @@ export async function syncOptionalDocsTemplates(
       endMarker: OPTIONAL_WORKTREE_WORKFLOW_END_MARKER,
       renderedSection: options.hasWorktree
         ? [
-            '14. `git worktree add -b <branch> ../<branch> main`으로 worktree를 만들고, 그 안에서 구현, 커밋, 푸시, PR 생성.',
+            '14. worktree 안에서 `git worktree add -b <branch> ../<branch> main`으로 새 worktree를 만들고, 그 안에서 구현, 커밋, 푸시, PR 생성.',
             '15. 작업이 끝나면 `git worktree remove <path>`로 정리.',
           ].join('\n')
         : '',

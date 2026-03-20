@@ -21,8 +21,16 @@ project/
 
 ## 새 작업 시작
 
+worktree 안(예: `main/`)에서 실행:
+
 ```bash
 git worktree add -b <branch-name> ../<branch-name> main
+```
+
+control root에서 실행:
+
+```bash
+git worktree add -b <branch-name> ./<branch-name> main
 ```
 
 `main/`과 같은 레벨에 새 worktree가 생겨요.
