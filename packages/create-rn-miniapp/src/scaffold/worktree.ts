@@ -49,37 +49,41 @@ function createControlRootReadmeStub(workspaceDirectory: string) {
   ].join('\n')
 }
 
-function createPostMergeHook() {
-  return [
-    '#!/usr/bin/env bash',
-    '# post-merge: merged된 worktree 자동 정리',
-    'set -euo pipefail',
-    '',
-    'control_root="$(git rev-parse --show-toplevel)/.."',
-    'cd "$control_root"',
-    '',
-    'git branch --merged main | while IFS= read -r branch; do',
-    '  branch="$(echo "$branch" | sed "s/^[* ]*//")"',
-    '  [ "$branch" = "main" ] && continue',
-    '  [ -z "$branch" ] && continue',
-    '',
-    '  worktree_path="$(git worktree list --porcelain | awk -v b="$branch" \'',
-    '    /^worktree /{ wt=$2 }',
-    '    /^branch refs\\/heads\\//{ if ($2 == "refs/heads/" b) print wt }',
-    '  \'")',
-    '  [ -z "$worktree_path" ] && continue',
-    '',
-    '  # dirty worktree는 건너뜀',
-    '  if [ -n "$(git -C "$worktree_path" status --porcelain 2>/dev/null)" ]; then',
-    '    echo "post-merge: $branch worktree에 변경사항이 있어서 건너뛰었어요"',
-    '    continue',
-    '  fi',
-    '',
-    '  echo "post-merge: merged된 worktree 정리 — $branch"',
-    '  git worktree remove "$worktree_path" 2>/dev/null || true',
-    '  git branch -d "$branch" 2>/dev/null || true',
-    'done',
-  ].join('\n')
+export function createPostMergeHook() {
+  // heredoc으로 스크립트를 생성해서 따옴표 이스케이핑 문제를 피함
+  return `#!/usr/bin/env bash
+# post-merge: merged된 worktree 자동 정리
+set -euo pipefail
+
+control_root="$(git rev-parse --show-toplevel)/.."
+cd "$control_root"
+
+git branch --merged main | while IFS= read -r branch; do
+  branch="$(echo "$branch" | sed 's/^[* ]*//')"
+  [ "$branch" = "main" ] && continue
+  [ -z "$branch" ] && continue
+
+  worktree_path=""
+  current_wt=""
+  while IFS= read -r line; do
+    case "$line" in
+      worktree\\ *) current_wt="\${line#worktree }" ;;
+      branch\\ refs/heads/"$branch") worktree_path="$current_wt" ;;
+    esac
+  done < <(git worktree list --porcelain)
+  [ -z "$worktree_path" ] && continue
+
+  # dirty worktree는 건너뜀
+  if [ -n "$(git -C "$worktree_path" status --porcelain 2>/dev/null)" ]; then
+    echo "post-merge: $branch worktree에 변경사항이 있어서 건너뛰었어요"
+    continue
+  fi
+
+  echo "post-merge: merged된 worktree 정리 — $branch"
+  git worktree remove "$worktree_path" 2>/dev/null || true
+  git branch -d "$branch" 2>/dev/null || true
+done
+`
 }
 
 async function writeControlRootShims(controlRoot: string) {

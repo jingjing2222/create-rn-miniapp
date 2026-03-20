@@ -6,6 +6,7 @@ import path from 'node:path'
 import test from 'node:test'
 import type { CliPrompter } from '../cli.js'
 import {
+  createPostMergeHook,
   createWorktreeLayoutNote,
   initBareWorktreeLayout,
   MAIN_WORKTREE_DIRECTORY,
@@ -102,6 +103,12 @@ test('createWorktreeLayoutNote points users at the control root and main worktre
   assert.match(note.body, /main worktree: \/tmp\/ebook\/main/)
   assert.match(note.body, /git worktree list/)
   assert.match(note.body, /git worktree add/)
+})
+
+test('createPostMergeHook generates valid bash syntax', () => {
+  const hook = createPostMergeHook()
+  const result = spawnSync('bash', ['-n', '-c', hook], { encoding: 'utf8' })
+  assert.equal(result.status, 0, `bash syntax error: ${result.stderr}`)
 })
 
 test('initBareWorktreeLayout creates a bare repo with a main worktree and control root shims', async () => {
