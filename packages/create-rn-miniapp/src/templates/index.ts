@@ -1254,7 +1254,7 @@ function renderOptionalGoldenRulesSection(options: OptionalDocsOptions) {
 
   if (options.hasWorktree) {
     lines.push(
-      `${ruleNumber}. Worktree discipline: 새 작업은 \`wt add\`로 worktree를 만들어 시작하고, control root에서 직접 commit하지 않는다.`,
+      `${ruleNumber}. Worktree discipline: 새 작업은 \`git worktree add\`로 worktree를 만들어 시작하고, control root에서 직접 commit하지 않는다.`,
     )
     ruleNumber++
   }
@@ -1533,8 +1533,8 @@ export async function syncOptionalDocsTemplates(
       endMarker: OPTIONAL_WORKTREE_WORKFLOW_END_MARKER,
       renderedSection: options.hasWorktree
         ? [
-            '14. `wt add -c <branch> -b main`으로 worktree를 만들고, 그 안에서 구현, 커밋, 푸시, PR 생성.',
-            '15. 작업이 끝나면 `wt remove <branch> -b`로 정리.',
+            '14. `git worktree add -b <branch> ../<branch> main`으로 worktree를 만들고, 그 안에서 구현, 커밋, 푸시, PR 생성.',
+            '15. 작업이 끝나면 `git worktree remove <path>`로 정리.',
           ].join('\n')
         : '',
       fallbackAnchor: SINGLE_ROOT_FINALIZE_LINE,

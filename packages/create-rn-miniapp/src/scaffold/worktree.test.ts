@@ -100,8 +100,8 @@ test('createWorktreeLayoutNote points users at the control root and main worktre
   assert.equal(note.title, 'worktree 레이아웃으로 준비했어요')
   assert.match(note.body, /control root: \/tmp\/ebook/)
   assert.match(note.body, /main worktree: \/tmp\/ebook\/main/)
-  assert.match(note.body, /wt status/)
-  assert.match(note.body, /wt add -c/)
+  assert.match(note.body, /git worktree list/)
+  assert.match(note.body, /git worktree add/)
 })
 
 test('initBareWorktreeLayout creates a bare repo with a main worktree and control root shims', async () => {
@@ -115,7 +115,7 @@ test('initBareWorktreeLayout creates a bare repo with a main worktree and contro
     assert.ok((await stat(path.join(controlRoot, '.bare'))).isDirectory())
     assert.ok((await stat(workspaceRoot)).isDirectory())
     assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /cd main/)
-    assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /wt status/)
+    assert.match(await readFile(path.join(controlRoot, 'AGENTS.md'), 'utf8'), /git worktree list/)
     assert.match(
       await readFile(path.join(controlRoot, 'README.md'), 'utf8'),
       /실제 MiniApp repo는 `main\/` 아래에 있어요/,

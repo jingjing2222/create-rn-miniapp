@@ -22,7 +22,7 @@ project/
 ## 새 작업 시작
 
 ```bash
-wt add -c <branch-name> -b main
+git worktree add -b <branch-name> ../<branch-name> main
 ```
 
 `main/`과 같은 레벨에 새 worktree가 생겨요.
@@ -30,26 +30,26 @@ wt add -c <branch-name> -b main
 ## 상태 확인
 
 ```bash
-wt status
+git worktree list
 ```
 
-모든 worktree의 브랜치와 상태를 한눈에 볼 수 있어요.
+모든 worktree의 경로와 브랜치를 볼 수 있어요.
 
 ## 동기화
 
 ```bash
-wt pull
+git fetch --all
 ```
 
-모든 worktree에서 remote 변경사항을 가져와요.
+remote 변경사항을 가져와요.
 
 ## 정리
 
 ```bash
-wt remove <branch-name> -b
+git worktree remove <path>
 ```
 
-작업이 끝난 worktree를 브랜치와 함께 정리해요.
+작업이 끝난 worktree를 정리해요. 브랜치도 지우려면 `git branch -d <branch-name>`을 이어서 실행하세요.
 
 ## 주의사항
 
