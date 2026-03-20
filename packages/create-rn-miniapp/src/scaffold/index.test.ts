@@ -291,7 +291,7 @@ test('buildRootFinalizePlan keeps npm and bun finalize steps minimal', () => {
   })
 })
 
-test('buildRootFinalizePlan installs latest Deno before biome when Supabase is selected', () => {
+test('buildRootFinalizePlan installs stable Deno before biome when Supabase is selected', () => {
   const targetRoot = path.join('/tmp', 'ebook')
   const plan = buildRootFinalizePlan({
     targetRoot,
@@ -301,13 +301,13 @@ test('buildRootFinalizePlan installs latest Deno before biome when Supabase is s
 
   assert.deepEqual(
     plan.map((step) => step.label),
-    ['루트 pnpm 설치하기', 'server Deno 최신 버전 설치하기', '루트 biome로 코드 정리하기'],
+    ['루트 pnpm 설치하기', 'server Deno stable 버전 맞추기', '루트 biome로 코드 정리하기'],
   )
   assert.deepEqual(plan[1], {
     cwd: targetRoot,
     command: 'pnpm',
     args: ['--dir', 'server', 'deno:install'],
-    label: 'server Deno 최신 버전 설치하기',
+    label: 'server Deno stable 버전 맞추기',
   })
 })
 

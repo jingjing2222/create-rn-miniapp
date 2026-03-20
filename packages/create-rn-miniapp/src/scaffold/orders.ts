@@ -20,7 +20,7 @@ export function buildRootFinalizePlan(options: {
     plan.push({
       cwd: options.targetRoot,
       ...packageManager.runScriptInDirectory('server', 'deno:install'),
-      label: 'server Deno 최신 버전 설치하기',
+      label: 'server Deno stable 버전 맞추기',
     })
   }
 

@@ -1,3 +1,19 @@
+## 다음 작업: Supabase scaffold Deno 확보 정책을 stable로 고치기
+1. 문제
+   - 현재 Supabase scaffold finalize와 generated installer message는 Deno를 `latest`로 설치/업그레이드한다고 설명한다.
+   - 사용자 요구는 `latest`가 아니라 `stable` 채널 기준이어야 하고, 기존 Deno가 있을 때도 `stable`로 맞추는 동작이 더 명확해야 한다.
+2. 방향
+   - Supabase finalize step label과 generated installer/readme description을 `stable` 기준으로 바꾼다.
+   - generated installer script는 기존 Deno가 있으면 `deno upgrade stable`을 실행하게 하고, 신규 설치 경로도 stable release를 설치한다는 메시지로 맞춘다.
+3. 테스트
+   - `src/scaffold/index.test.ts`에서 Supabase finalize step label이 stable 기준인 red 테스트로 먼저 바꾼다.
+   - `src/templates/index.test.ts`에서 generated install script가 `stable` upgrade path를 쓰고 `latest` wording을 남기지 않는 red 테스트로 먼저 바꾼다.
+   - 수정 후 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - Supabase 선택 생성물은 generated repo 관점에서 Deno stable 채널을 설치/업그레이드한다.
+   - 사용자-facing label/message에 `latest` 표현이 남지 않는다.
+   - `pnpm verify`를 통과한다.
+
 ## 다음 작업: Supabase scaffold가 Deno latest를 자동 확보하게 만들기
 1. 문제
    - Supabase server scaffold는 `deno check`를 쓰는 typecheck 스크립트를 만들지만, 생성 시점에 Deno runtime을 확보하지 않아 generated repo에서 바로 `typecheck`가 깨질 수 있다.
