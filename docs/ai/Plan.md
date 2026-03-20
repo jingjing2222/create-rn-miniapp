@@ -10,6 +10,8 @@
 - 현재 `--worktree`는 생성 결과를 clone 구조와 다른 특수 레이아웃으로 바꾼다.
 - commit되는 하네스 문서에 control root, `main/`, `../<branch>` 같은 로컬 레이아웃 전제가 섞여 clone 사용자 기준이 깨진다.
 - `workspace-inspector`, CLI help, scaffold note, optional docs가 모두 control root 개념을 알고 있어 구조적 복잡도가 커졌다.
+- 생성 직후에는 `main`에 실제 commit이 없어서, 현재 강제한 `git worktree add -b <branch> ../<branch> main` 시작 규칙이 바로 실패한다.
+- `--add` 경로는 기존 repo의 worktree 정책 여부를 모르고 문서를 다시 동기화해서, worktree repo의 규칙을 지워버릴 수 있다.
 
 ### 목표
 - 생성 결과, clone 결과, 하네스 문서가 모두 같은 repo root 관점을 사용한다.
@@ -37,6 +39,10 @@
    - `packages/create-rn-miniapp/src/workspace-inspector.ts`의 `main/` fallback은 유지할지 검토
    - 최소 방침: 새 생성은 단순화하되, 기존 control-root 레이아웃을 `--add`에서 읽는 기능은 당장 깨지지 않게 유지
    - 필요하면 deprecated 주석/테스트만 남기고 후속 제거로 분리
+5. 리뷰 반영 후속 수정
+   - `--worktree` 생성 시 scaffold 결과를 담은 초기 baseline commit을 `main`에 자동 생성해, 문서가 안내하는 표준 `git worktree add ... main` 시작 명령이 즉시 동작하게 만든다
+   - `workspace-inspector`가 기존 repo의 worktree 정책 활성화 여부를 감지하고, `--add`도 그 상태를 그대로 유지하게 만든다
+   - 현재 single-root에서 같은 값을 가리키는 `controlRoot`/`workspaceRoot` 표현은 줄이고, worktree 관련 불리언 이름도 정책 의미가 드러나게 정리한다
 
 ### 파일별 작업 계획
 1. `packages/create-rn-miniapp/src/scaffold/worktree.ts`
@@ -59,6 +65,8 @@
    - `packages/create-rn-miniapp/src/templates/index.test.ts`: 공통 finalize line 유지 + clone-safe worktree rule 검증으로 수정
    - `packages/create-rn-miniapp/src/release.test.ts`: README가 control-root 레이아웃을 설명하지 않는지 회귀 테스트 추가
    - `packages/create-rn-miniapp/src/workspace-inspector.test.ts`: 호환 유지 여부에 따라 유지 또는 deprecated 케이스로 명시
+   - `packages/create-rn-miniapp/src/scaffold/worktree.test.ts`: baseline commit 생성 뒤 표준 `git worktree add ... main` 명령이 실제로 성공하는지 검증 추가
+   - `packages/create-rn-miniapp/src/scaffold/index.test.ts`: `--add`에서 기존 worktree 정책을 optional docs 동기화에 그대로 전달하는지 검증 추가
 
 ### TDD 순서
 1. CLI 테스트부터 깨기

@@ -1,18 +1,19 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { access, constants, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import type { CliPrompter } from '../cli.js'
 import {
+  createWorktreeBaselineCommit,
   createPostMergeHook,
   createWorktreePolicyNote,
   installWorktreeHooks,
-  resolveCreateWorktreeLayout,
+  resolveWorktreePolicySelection,
 } from './worktree.js'
 
-test('resolveCreateWorktreeLayout returns explicit worktree selection without prompting', async () => {
+test('resolveWorktreePolicySelection returns explicit worktree selection without prompting', async () => {
   const prompt: CliPrompter = {
     async text() {
       throw new Error('text prompt should not be called')
@@ -23,7 +24,7 @@ test('resolveCreateWorktreeLayout returns explicit worktree selection without pr
   }
 
   assert.equal(
-    await resolveCreateWorktreeLayout({
+    await resolveWorktreePolicySelection({
       prompt,
       noGit: false,
       yes: false,
@@ -33,7 +34,7 @@ test('resolveCreateWorktreeLayout returns explicit worktree selection without pr
   )
 })
 
-test('resolveCreateWorktreeLayout skips worktree conversion when no-git is enabled', async () => {
+test('resolveWorktreePolicySelection skips worktree activation when no-git is enabled', async () => {
   const prompt: CliPrompter = {
     async text() {
       throw new Error('text prompt should not be called')
@@ -44,7 +45,7 @@ test('resolveCreateWorktreeLayout skips worktree conversion when no-git is enabl
   }
 
   assert.equal(
-    await resolveCreateWorktreeLayout({
+    await resolveWorktreePolicySelection({
       prompt,
       noGit: true,
       yes: false,
@@ -54,7 +55,7 @@ test('resolveCreateWorktreeLayout skips worktree conversion when no-git is enabl
   )
 })
 
-test('resolveCreateWorktreeLayout asks whether to enforce the worktree workflow', async () => {
+test('resolveWorktreePolicySelection asks whether to enforce the worktree workflow', async () => {
   const selectMessages: string[] = []
   const prompt: CliPrompter = {
     async text() {
@@ -66,7 +67,7 @@ test('resolveCreateWorktreeLayout asks whether to enforce the worktree workflow'
     },
   }
 
-  const resolved = await resolveCreateWorktreeLayout({
+  const resolved = await resolveWorktreePolicySelection({
     prompt,
     noGit: false,
     yes: false,
@@ -83,6 +84,7 @@ test('createWorktreePolicyNote explains the repo-root workflow', () => {
 
   assert.equal(note.title, 'worktree 워크플로우를 기본 규칙으로 설정했어요')
   assert.match(note.body, /repo root: \/tmp\/ebook/)
+  assert.match(note.body, /baseline commit/)
   assert.match(note.body, /git worktree add -b <branch> \.\.\/<branch> main/)
   assert.match(note.body, /post-merge hook으로 같이 정리돼요/)
   assert.match(note.body, /구현, 커밋, 푸시, PR 생성은 그 worktree 안에서 진행/)
@@ -113,6 +115,42 @@ test('installWorktreeHooks writes an executable post-merge hook into the repo ro
     await access(hookPath, constants.X_OK)
     assert.match(await readFile(hookPath, 'utf8'), /git worktree remove/)
   } finally {
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
+test('createWorktreeBaselineCommit makes the standard worktree start command work immediately', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-worktree-base-'))
+  const branchName = 'feat-worktree'
+  const worktreeName = `${path.basename(workspaceRoot)}-${branchName}`
+  const worktreeRoot = path.join(path.dirname(workspaceRoot), worktreeName)
+
+  try {
+    await writeFile(path.join(workspaceRoot, 'README.md'), '# scaffold\n', 'utf8')
+    execFileSync('git', ['init'], { cwd: workspaceRoot, stdio: 'ignore' })
+    execFileSync('git', ['symbolic-ref', 'HEAD', 'refs/heads/main'], {
+      cwd: workspaceRoot,
+      stdio: 'ignore',
+    })
+
+    await createWorktreeBaselineCommit(workspaceRoot)
+
+    assert.equal(
+      execFileSync('git', ['log', '-1', '--pretty=%s'], {
+        cwd: workspaceRoot,
+        encoding: 'utf8',
+      }).trim(),
+      'chore: bootstrap scaffold',
+    )
+
+    execFileSync('git', ['worktree', 'add', '-b', branchName, `../${worktreeName}`, 'main'], {
+      cwd: workspaceRoot,
+      stdio: 'ignore',
+    })
+
+    assert.ok((await stat(path.join(worktreeRoot, 'README.md'))).isFile())
+  } finally {
+    await rm(worktreeRoot, { recursive: true, force: true })
     await rm(workspaceRoot, { recursive: true, force: true })
   }
 })

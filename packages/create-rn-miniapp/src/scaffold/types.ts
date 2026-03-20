@@ -29,6 +29,7 @@ export type AddWorkspaceOptions = {
   existingServerProvider: ServerProvider | null
   existingHasBackoffice: boolean
   existingHasTrpc: boolean
+  existingHasWorktreePolicy: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean

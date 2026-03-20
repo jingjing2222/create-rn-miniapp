@@ -63,6 +63,7 @@ pnpm verify
 `--worktree`를 고르거나 마지막 질문에서 worktree를 선택해도 repo 레이아웃 자체는 바뀌지 않아요. 대신:
 
 - 에이전트용 `AGENTS.md`와 하네스 문서가 "새 작업은 worktree로 시작" 규칙을 기본으로 안내해요.
+- scaffold 결과를 `main`의 baseline commit으로 먼저 고정해 둬서 표준 `git worktree add ... main` 명령이 바로 동작해요.
 - repo root `.git/hooks/post-merge`에 merged된 clean worktree를 정리하는 hook을 설치해요.
 
 기본값은 worktree 미사용이에요. 마지막 git 단계 직전에 `에이전트가 worktree를 사용하게 할까요? (멀티 에이전트 환경에 유리합니다)`라고 한 번 더 물어봐요. `--worktree`를 주면 그 질문 없이 바로 활성화되고, `--no-git`이면 이 단계는 건너뛰어요.
@@ -88,6 +89,7 @@ pnpm verify
 `--worktree`를 활성화했다면 에이전트 작업 규칙만 달라져요.
 
 - 새 작업은 repo root에서 `git worktree add -b <branch> ../<branch> main`으로 시작해요.
+- `main`에는 scaffold baseline commit이 이미 있어서 이 명령을 바로 실행할 수 있어요.
 - 구현, 커밋, 푸시, PR 생성은 새 worktree 안에서 진행해요.
 - `main` checkout에서 `git pull --ff-only` 하면 merged된 clean worktree는 post-merge hook으로 같이 정리돼요.
 - 자세한 규칙은 생성된 repo의 `docs/engineering/worktree-workflow.md`를 보면 돼요.

@@ -4,6 +4,7 @@
 
 이 repo는 일반 single-root git 저장소예요.
 `--worktree`로 생성했다면 새 작업은 반드시 repo root에서 worktree로 시작해요.
+scaffold 결과는 `main`의 baseline commit으로 먼저 고정돼 있어서, 아래 표준 명령을 바로 실행할 수 있어요.
 
 표준 시작 명령:
 
@@ -34,7 +35,18 @@ git pull --ff-only
 
 ## 정리
 
-머지 후 worktree를 정리할 때:
+머지 후에는 repo root `main` checkout에서 아래처럼 최신 상태를 받으면:
+
+```bash
+git switch main
+git pull --ff-only
+```
+
+merged된 clean worktree는 post-merge hook이 자동으로 정리해요.
+
+- 변경사항이 남아있는 worktree는 자동 정리하지 않아요.
+- 아직 merge되지 않은 브랜치도 자동 정리하지 않아요.
+- 정말 수동 정리가 필요할 때만 아래 명령을 써요.
 
 ```bash
 git worktree remove ../<branch-name>

@@ -9,7 +9,7 @@ import {
   type ServerProvider,
   serverProviderSupportsTrpc,
 } from './providers/index.js'
-import { resolveCreateWorktreeLayout } from './scaffold/worktree.js'
+import { resolveWorktreePolicySelection } from './scaffold/worktree.js'
 import { SERVER_PROJECT_MODES, type ServerProjectMode } from './server-project.js'
 import { pathExists } from './templates/index.js'
 import type { WorkspaceInspection } from './workspace-inspector.js'
@@ -95,6 +95,7 @@ export type ResolvedAddCliOptions = {
   existingServerProvider: ServerProvider | null
   existingHasBackoffice: boolean
   existingHasTrpc: boolean
+  existingHasWorktreePolicy: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
@@ -476,7 +477,7 @@ export async function resolveCliOptions(
           initialValue: 'no',
         })) === 'yes')
 
-  const worktree = await resolveCreateWorktreeLayout({
+  const worktree = await resolveWorktreePolicySelection({
     prompt,
     noGit: argv.noGit ?? false,
     yes: argv.yes,
@@ -560,6 +561,7 @@ export async function resolveAddCliOptions(
     existingServerProvider: inspection.serverProvider,
     existingHasBackoffice: inspection.hasBackoffice,
     existingHasTrpc: inspection.hasTrpc,
+    existingHasWorktreePolicy: inspection.hasWorktreePolicy,
     serverProvider: normalizedServerProvider,
     serverProjectMode,
     skipServerProvisioning,

@@ -1,5 +1,7 @@
+import { execFileSync } from 'node:child_process'
 import { chmod, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import process from 'node:process'
 import type { CliPrompter } from '../cli.js'
 import type { ProvisioningNote } from '../server-project.js'
 
@@ -10,6 +12,7 @@ export function createWorktreePolicyNote(options: { workspaceRoot: string }) {
     title: 'worktree 워크플로우를 기본 규칙으로 설정했어요',
     body: [
       `repo root: ${options.workspaceRoot}`,
+      '`main`에는 scaffold 결과를 담은 baseline commit을 먼저 만들어 두었어요.',
       '표준 시작: `git worktree add -b <branch> ../<branch> main`',
       '상태 확인: `git worktree list`',
       '`main`에서 `git pull --ff-only` 하면 merge된 clean worktree는 post-merge hook으로 같이 정리돼요.',
@@ -17,6 +20,42 @@ export function createWorktreePolicyNote(options: { workspaceRoot: string }) {
       '자세한 규칙은 `docs/engineering/worktree-workflow.md`를 먼저 확인해 주세요.',
     ].join('\n'),
   } satisfies ProvisioningNote
+}
+
+function hasGitCommit(workspaceRoot: string) {
+  try {
+    execFileSync('git', ['rev-parse', '--verify', 'HEAD'], {
+      cwd: workspaceRoot,
+      stdio: 'ignore',
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function createWorktreeBaselineCommit(workspaceRoot: string) {
+  if (hasGitCommit(workspaceRoot)) {
+    return false
+  }
+
+  execFileSync('git', ['add', '-A'], {
+    cwd: workspaceRoot,
+    stdio: 'ignore',
+  })
+  execFileSync('git', ['commit', '-m', 'chore: bootstrap scaffold'], {
+    cwd: workspaceRoot,
+    stdio: 'ignore',
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'create-rn-miniapp',
+      GIT_AUTHOR_EMAIL: 'create-rn-miniapp@local',
+      GIT_COMMITTER_NAME: 'create-rn-miniapp',
+      GIT_COMMITTER_EMAIL: 'create-rn-miniapp@local',
+    },
+  })
+
+  return true
 }
 
 export function createPostMergeHook() {
@@ -85,7 +124,7 @@ export async function installWorktreeHooks(workspaceRoot: string) {
   await chmod(hookPath, 0o755)
 }
 
-export async function resolveCreateWorktreeLayout(options: {
+export async function resolveWorktreePolicySelection(options: {
   prompt: CliPrompter
   noGit: boolean
   yes: boolean

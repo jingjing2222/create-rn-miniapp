@@ -35,7 +35,7 @@ export type OptionalDocsOptions = {
   hasBackoffice: boolean
   serverProvider: OptionalDocsServerProvider | null
   hasTrpc: boolean
-  hasWorktree: boolean
+  hasWorktreePolicy: boolean
 }
 
 type WorkspaceProjectJson = {
@@ -1231,7 +1231,7 @@ function renderOptionalAgentsSection(options: OptionalDocsOptions) {
     )
   }
 
-  if (options.hasWorktree) {
+  if (options.hasWorktreePolicy) {
     lines.push(
       '- `docs/engineering/worktree-workflow.md`',
       '  - repo root 기준 worktree 시작, 조회, 정리 규칙을 먼저 보는 문서',
@@ -1252,7 +1252,7 @@ function renderOptionalGoldenRulesSection(options: OptionalDocsOptions) {
     ruleNumber++
   }
 
-  if (options.hasWorktree) {
+  if (options.hasWorktreePolicy) {
     lines.push(
       `${ruleNumber}. Worktree discipline: 새 작업은 반드시 repo root에서 \`git worktree add -b <branch> ../<branch> main\`으로 시작하고, 구현, 커밋, 푸시, PR 생성은 그 worktree 안에서만 진행한다.`,
     )
@@ -1287,7 +1287,7 @@ function renderOptionalDocsIndexSection(options: OptionalDocsOptions) {
     lines.push('- Server API SSOT (tRPC): `engineering/server-api-ssot-trpc.md`')
   }
 
-  if (options.hasWorktree) {
+  if (options.hasWorktreePolicy) {
     lines.push('- Worktree workflow: `engineering/worktree-workflow.md`')
   }
 
@@ -1344,7 +1344,7 @@ function resolveOptionalDocTemplates(options: OptionalDocsOptions): OptionalDocT
     })
   }
 
-  if (options.hasWorktree) {
+  if (options.hasWorktreePolicy) {
     templates.push({
       templateDir: 'worktree',
     })
@@ -1354,7 +1354,7 @@ function resolveOptionalDocTemplates(options: OptionalDocsOptions): OptionalDocT
 }
 
 export async function syncRootWorkspaceManifest(
-  targetRoot: string,
+  workspaceRoot: string,
   packageManager: PackageManager,
   workspaces: WorkspaceName[],
 ) {
@@ -1363,14 +1363,14 @@ export async function syncRootWorkspaceManifest(
 
   if (adapter.workspaceManifestFile) {
     await writeFile(
-      path.join(targetRoot, adapter.workspaceManifestFile),
+      path.join(workspaceRoot, adapter.workspaceManifestFile),
       renderPnpmWorkspaceManifest(normalizedWorkspaces),
       'utf8',
     )
     return
   }
 
-  const rootPackageJsonPath = path.join(targetRoot, 'package.json')
+  const rootPackageJsonPath = path.join(workspaceRoot, 'package.json')
   const rootPackageJsonSource = await readFile(rootPackageJsonPath, 'utf8')
   const nextRootPackageJsonSource = patchRootPackageJsonSource(rootPackageJsonSource, {
     packageManagerField: adapter.packageManagerField,
@@ -1532,13 +1532,13 @@ export async function syncOptionalDocsTemplates(
     let nextHarnessSource = replaceMarkedSection(harnessSource, {
       startMarker: OPTIONAL_WORKTREE_WORKFLOW_START_MARKER,
       endMarker: OPTIONAL_WORKTREE_WORKFLOW_END_MARKER,
-      renderedSection: options.hasWorktree
+      renderedSection: options.hasWorktreePolicy
         ? '14. 새 브랜치 작업은 repo root에서 `git worktree add -b <branch> ../<branch> main`으로 worktree를 만들고, 구현, 커밋, 푸시, PR 생성은 그 worktree 안에서 진행한다.'
         : '',
       fallbackAnchor: SINGLE_ROOT_FINALIZE_LINE,
     })
 
-    if (options.hasWorktree && nextHarnessSource.includes(SINGLE_ROOT_FINALIZE_LINE)) {
+    if (options.hasWorktreePolicy && nextHarnessSource.includes(SINGLE_ROOT_FINALIZE_LINE)) {
       nextHarnessSource = nextHarnessSource.replace(
         SINGLE_ROOT_FINALIZE_LINE,
         '15. 브랜치 생성, 커밋, 브랜치 푸시, PR 생성 순으로 마무리한다.',

@@ -433,7 +433,7 @@ test('syncOptionalDocsTemplates copies and indexes selected backoffice and serve
     hasBackoffice: true,
     serverProvider: 'firebase',
     hasTrpc: false,
-    hasWorktree: false,
+    hasWorktreePolicy: false,
   })
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
@@ -477,7 +477,7 @@ test('syncOptionalDocsTemplates adds the tRPC boundary type golden rule only whe
     hasBackoffice: false,
     serverProvider: 'cloudflare',
     hasTrpc: true,
-    hasWorktree: false,
+    hasWorktreePolicy: false,
   })
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
@@ -524,7 +524,7 @@ test('syncOptionalDocsTemplates can patch legacy docs files without markers', as
     hasBackoffice: true,
     serverProvider: 'supabase',
     hasTrpc: true,
-    hasWorktree: false,
+    hasWorktreePolicy: false,
   })
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
@@ -1115,7 +1115,7 @@ test('syncOptionalDocsTemplates injects worktree docs and golden rule when workt
     hasBackoffice: false,
     serverProvider: null,
     hasTrpc: false,
-    hasWorktree: true,
+    hasWorktreePolicy: true,
   })
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
@@ -1152,7 +1152,7 @@ test('syncOptionalDocsTemplates numbers worktree golden rule after trpc when bot
     hasBackoffice: false,
     serverProvider: 'cloudflare',
     hasTrpc: true,
-    hasWorktree: true,
+    hasWorktreePolicy: true,
   })
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')

@@ -897,6 +897,7 @@ test('resolveAddCliOptions detects additive targets from an existing workspace',
       hasServer: false,
       hasBackoffice: false,
       hasTrpc: false,
+      hasWorktreePolicy: false,
       serverProvider: null,
     },
   )
@@ -913,6 +914,7 @@ test('resolveAddCliOptions detects additive targets from an existing workspace',
   assert.equal(resolved.existingServerProvider, null)
   assert.equal(resolved.existingHasBackoffice, false)
   assert.equal(resolved.existingHasTrpc, false)
+  assert.equal(resolved.existingHasWorktreePolicy, false)
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
     '`backoffice`도 같이 추가할까요?',
@@ -947,11 +949,13 @@ test('resolveAddCliOptions keeps the inspected workspace root when the input pat
       hasServer: true,
       hasBackoffice: false,
       hasTrpc: false,
+      hasWorktreePolicy: true,
       serverProvider: 'supabase',
     },
   )
 
   assert.equal(resolved.rootDir, path.resolve('/tmp/existing-miniapp/main'))
+  assert.equal(resolved.existingHasWorktreePolicy, true)
 })
 
 test('resolveAddCliOptions accepts explicit server-provider in yes mode', async () => {
@@ -982,6 +986,7 @@ test('resolveAddCliOptions accepts explicit server-provider in yes mode', async 
       hasServer: false,
       hasBackoffice: false,
       hasTrpc: false,
+      hasWorktreePolicy: false,
       serverProvider: null,
     },
   )
@@ -1035,6 +1040,7 @@ test('resolveAddCliOptions can add trpc to an existing cloudflare server workspa
       hasServer: true,
       hasBackoffice: false,
       hasTrpc: false,
+      hasWorktreePolicy: false,
       serverProvider: 'cloudflare',
     },
   )
@@ -1094,6 +1100,7 @@ test('resolveAddCliOptions does not ask for trpc when the existing server is sup
       hasServer: true,
       hasBackoffice: false,
       hasTrpc: false,
+      hasWorktreePolicy: false,
       serverProvider: 'supabase',
     },
   )
@@ -1155,6 +1162,7 @@ test('resolveAddCliOptions asks whether to remove existing cloudflare api helper
         hasServer: true,
         hasBackoffice: true,
         hasTrpc: false,
+        hasWorktreePolicy: false,
         serverProvider: 'cloudflare',
       },
     )
@@ -1205,6 +1213,7 @@ test('resolveAddCliOptions keeps existing cloudflare api helpers in yes mode', a
         hasServer: true,
         hasBackoffice: false,
         hasTrpc: false,
+        hasWorktreePolicy: false,
         serverProvider: 'cloudflare',
       },
     )
@@ -1252,6 +1261,7 @@ test('resolveAddCliOptions rejects server-project-mode without server-provider',
           hasServer: false,
           hasBackoffice: false,
           hasTrpc: false,
+          hasWorktreePolicy: false,
           serverProvider: null,
         },
       ),

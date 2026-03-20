@@ -116,6 +116,53 @@ test('inspectWorkspace detects cloudflare server workspaces from wrangler config
   assert.equal(inspection.serverProvider, 'cloudflare')
 })
 
+test('inspectWorkspace detects when the worktree policy docs are present', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+
+  await mkdir(path.join(targetRoot, 'frontend'), { recursive: true })
+  await mkdir(path.join(targetRoot, 'docs', 'engineering'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'package.json'),
+    JSON.stringify(
+      {
+        packageManager: 'pnpm@10.32.1',
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [',
+      '    appsInToss({',
+      '      brand: {',
+      '        displayName: "전자책 미니앱",',
+      '      },',
+      '    }),',
+      '  ],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'docs', 'engineering', 'worktree-workflow.md'),
+    '# worktree\n',
+    'utf8',
+  )
+
+  const inspection = await inspectWorkspace(targetRoot)
+
+  assert.equal(inspection.hasWorktreePolicy, true)
+})
+
 test('inspectWorkspace detects firebase server workspaces from firebase config', async (t) => {
   const targetRoot = await createTempWorkspace(t)
 
@@ -385,4 +432,5 @@ test('inspectWorkspace resolves a worktree control root to main/', async (t) => 
   assert.equal(inspection.rootDir, workspaceRoot)
   assert.equal(inspection.packageManager, 'pnpm')
   assert.equal(inspection.appName, 'ebook-miniapp')
+  assert.equal(inspection.hasWorktreePolicy, false)
 })

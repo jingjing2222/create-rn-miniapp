@@ -19,6 +19,7 @@ export type WorkspaceInspection = {
   hasServer: boolean
   hasBackoffice: boolean
   hasTrpc: boolean
+  hasWorktreePolicy: boolean
   serverProvider: ServerProvider | null
 }
 
@@ -98,6 +99,9 @@ export async function inspectWorkspace(rootDir: string): Promise<WorkspaceInspec
   const hasTrpc =
     (await pathExists(path.join(resolvedRootDir, 'packages', 'app-router', 'package.json'))) ||
     (await pathExists(path.join(resolvedRootDir, 'packages', 'trpc', 'package.json')))
+  const hasWorktreePolicy = await pathExists(
+    path.join(resolvedRootDir, 'docs', 'engineering', 'worktree-workflow.md'),
+  )
   const serverProvider = hasServer ? await detectServerProvider(resolvedRootDir) : null
 
   return {
@@ -108,6 +112,7 @@ export async function inspectWorkspace(rootDir: string): Promise<WorkspaceInspec
     hasServer,
     hasBackoffice,
     hasTrpc,
+    hasWorktreePolicy,
     serverProvider,
   }
 }
