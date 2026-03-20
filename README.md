@@ -2,27 +2,29 @@
 
 ![example](https://raw.githubusercontent.com/jingjing2222/create-rn-miniapp/main/example.gif)
 
-`create-rn-miniapp`은 AppInToss MiniApp용 모노레포를 만든 뒤, 에이전트가 Granite, `@apps-in-toss/framework` API, TDS를 바로 활용할 수 있게 실행 컨텍스트를 patch해주는 스캐폴딩 CLI예요.
+`create-rn-miniapp`은 AppInToss MiniApp용 모노레포를 만든 뒤, 공식 scaffold 위에 `AGENTS.md`, `CLAUDE.md`, `docs/*`, `.agents/skills`, `.claude/skills`를 자동으로 만들어줘요.
+
+그래서 생성 직후부터 에이전트와 사람이 같은 문서와 Skill을 보면서 바로 작업을 시작할 수 있어요. 단순 폴더 생성기가 아니라, 문서와 Skill까지 한 번에 갖춘 실행 기반을 만들어주는 스캐폴딩 CLI예요.
 
 이 도구는 앱 소스 전체를 자체 템플릿으로 복제하지 않아요. Granite, AppInToss, Supabase, Cloudflare, Firebase, Vite의 공식 scaffold를 먼저 실행하고, 그 결과물 위에 MiniApp 운영에 필요한 컨텍스트만 덧입혀요.
 
 생성된 repo는 lint와 `verify`로도 TDS와 Granite 기준 쪽으로 계속 유도해요. 이건 단순 취향 강제가 아니라, 에이전트가 작업하다가 컨텍스트를 놓치고 `react-native` 기본 UI나 우회 경로로 새는 걸 초반부터 막기 위한 룰이에요.
 
-- `frontend`: Granite + `@apps-in-toss/framework` 기반 MiniApp scaffold와 실행 컨텍스트를 함께 맞춰줘요.
+- `frontend`: Granite + `@apps-in-toss/framework` 기반 MiniApp scaffold와 작업 기반을 함께 맞춰줘요.
 - `server`: optional Supabase, Cloudflare, Firebase server 워크스페이스와 provider별 운영 문서를 넣어줘요.
 - `backoffice`: optional Vite + React + TypeScript workspace를 만들어요.
 - 루트: 선택한 package manager + `nx` + `biome` 기준으로 monorepo 설정을 맞춰줘요.
-- 계약/어댑터/Skill: `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.agents/skills`, `.claude/skills`, `docs/*`를 함께 넣어 AI와 개발자가 바로 작업할 수 있는 컨텍스트를 제공해요.
+- 문서/Skill: `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.agents/skills`, `.claude/skills`, `docs/*`를 함께 넣어 AI와 개발자가 바로 작업할 수 있는 기반을 제공해요.
 
 ## 이 도구가 실제로 추가하는 것
 
 공식 scaffold만으로는 바로 안 보이는 부분을 이 CLI가 같이 보강해줘요.
 
 - Granite MiniApp이 `@apps-in-toss/framework`와 함께 바로 동작하도록 config, env 주입, monorepo 연동을 patch해요.
-- TDS, Granite, AppInToss API와 작업 플레이북을 빠르게 탐색할 수 있게 canonical skills와 adapter 문서를 넣어줘요.
+- TDS, Granite, AppInToss API를 바로 찾고 따라갈 수 있게 작업 문서와 Skill을 함께 만들어줘요.
 - 루트 monorepo에 `nx`, `biome`, workspace manifest, `project.json`을 맞춰서 검증 흐름을 통일해요.
 - provider를 선택하면 인증, 기존 리소스 선택 또는 신규 리소스 생성, local workspace 연결까지 이어지는 IaC 흐름을 제공해요.
-- Cloudflare에 tRPC를 같이 고르면 shared boundary / router source of truth를 세워서 client workspace가 타입 경계를 공유하게 맞춰줘요.
+- Cloudflare에 tRPC를 같이 고르면 shared boundary package와 router package를 기준으로 client workspace가 타입 경계를 공유하게 맞춰줘요.
 - 각 생성물은 루트 계약 문서와 workspace 문서를 기준으로 다시 렌더돼서, optional workspace 조합이나 `--add` 이후 상태도 문서와 Skill에 반영돼요.
 
 ## 빠른 시작
@@ -60,13 +62,13 @@ pnpm verify
 
 ## 생성물 계약
 
-이 CLI가 만드는 건 단순 폴더 뼈대가 아니라, MiniApp이 Granite, `@apps-in-toss/framework`, TDS 기준으로 바로 작업될 수 있게 문서, Skill, adapter, 검증 흐름까지 포함한 실행 컨텍스트예요.
+이 CLI가 만드는 건 단순 폴더 뼈대가 아니라, MiniApp이 Granite, `@apps-in-toss/framework`, TDS 기준으로 바로 작업될 수 있게 문서, Skill, 검증 흐름까지 포함한 실행 기반이에요.
 
 - 생성물 루트에는 `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/*`, `.agents/skills`, `.claude/skills`가 함께 들어가요.
 - optional workspace를 선택하면 해당 workspace와 맞는 문서/Skill 라우팅도 같이 다시 계산돼요.
 - `.claude/skills`는 scaffold 시점에 `.agents/skills`에서 자동으로 생성되는 mirror예요.
 
-정확한 생성 구조와 provider별 세부 파일/스크립트/env 키는 생성된 repo 문서를 source of truth로 봐야 해요.
+정확한 생성 구조와 provider별 세부 파일/스크립트/env 키는 생성된 repo 문서를 기준으로 보면 돼요.
 
 생성이 끝나면 생성물 루트 `AGENTS.md`의 `Start Here` 순서를 먼저 따라가세요. 그 흐름대로 `docs/ai/*`, `docs/index.md`, `docs/product/기능명세서.md`를 확인한 뒤, 해당 작업에 맞는 `.agents/skills/*`를 선택해서 구현을 이끌어가면 돼요.
 
@@ -98,7 +100,7 @@ pnpm verify
 - `cloudflare`: Worker와 storage/binding 연결 흐름을 맞춰주고, 필요하면 tRPC boundary까지 같이 올려줘요.
 - `firebase`: Functions / Firestore / Web SDK 연결 흐름을 초기 상태부터 이어갈 수 있게 맞춰줘요.
 
-`cloudflare`를 고르면 tRPC overlay도 같이 이어줄지 물어봐요. tRPC를 고르면 shared boundary package와 router package가 source of truth가 되고, client workspace는 그 타입만 가져가도록 맞춰줘요.
+`cloudflare`를 고르면 tRPC overlay도 같이 이어줄지 물어봐요. tRPC를 고르면 shared boundary package와 router package를 기준으로 client workspace는 그 타입만 가져가도록 맞춰줘요.
 
 provider별 세부 생성물과 운영 순서는 생성된 `server/README.md`, 루트 `AGENTS.md`, `docs/index.md`를 기준으로 보면 됩니다.
 

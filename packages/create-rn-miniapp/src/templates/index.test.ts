@@ -376,8 +376,23 @@ test('README does not hand-maintain generated root tree, helper scripts, or prov
   )
   assert.match(
     readmeSource,
-    /정확한 생성 구조와 provider별 세부 파일\/스크립트\/env 키는 생성된 repo 문서를 source of truth로 봐야 해요\./,
+    /정확한 생성 구조와 provider별 세부 파일\/스크립트\/env 키는 생성된 repo 문서를 기준으로 보면 돼요\./,
   )
+})
+
+test('README treats generated skills as a first-class scaffold output and avoids opaque English jargon', async () => {
+  const readmeSource = await readFile(
+    fileURLToPath(new URL('../../../../README.md', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(
+    readmeSource,
+    /공식 scaffold 위에 `AGENTS\.md`, `CLAUDE\.md`, `docs\/\*`, `\.agents\/skills`, `\.claude\/skills`를 자동으로 만들어줘요\./,
+  )
+  assert.match(readmeSource, /문서와 Skill까지 한 번에 갖춘 실행 기반/)
+  assert.doesNotMatch(readmeSource, /canonical/i)
+  assert.doesNotMatch(readmeSource, /source of truth/i)
 })
 
 test('root helper script names come from shared metadata instead of scattered literals', async () => {

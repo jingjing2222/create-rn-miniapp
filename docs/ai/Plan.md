@@ -1,3 +1,17 @@
+## 다음 작업: README에서 Skill 자동 생성을 더 직접적으로 설명하기
+1. 문제
+   - 현재 README는 실행 컨텍스트 patch 설명 비중이 커서, 이 CLI가 공식 scaffold 위에 문서와 Skill을 자동으로 만들어준다는 가치가 첫 문단에서 약하게 보인다.
+   - `canonical`, `source of truth` 같은 영어식 표현이 남아 있어 한국어 README 톤과도 잘 맞지 않는다.
+2. 방향
+   - README 첫 소개와 핵심 가치 섹션에서 `AGENTS.md`, `CLAUDE.md`, `docs/*`, `.agents/skills`, `.claude/skills` 자동 생성 메시지를 전면에 둔다.
+   - `canonical`, `source of truth` 같은 표현은 `기준`, `자동 생성`, `바로 작업할 수 있는 문서와 Skill` 같은 한국어 표현으로 치환한다.
+3. 테스트
+   - README 관련 템플릿 테스트에서 Skill 자동 생성 강조 문구와 영어식 용어 제거를 먼저 실패 테스트로 고정한다.
+   - 수정 후 `pnpm verify`를 통과한다.
+4. 완료 기준
+   - README만 읽어도 이 CLI가 공식 scaffold 위에 문서와 Skill을 자동으로 만들어준다는 점이 바로 드러난다.
+   - README에서 `canonical`, `source of truth` 표현이 제거된다.
+
 ## 다음 작업: scaffold skill 구조를 flat하게 재편하기
 1. 문제
    - 현재 canonical skill source와 generated mirror가 `core/*`, `optional/*` 중간 디렉터리를 끼고 있어 에이전트가 skill을 찾을 때 인식률이 떨어진다.
