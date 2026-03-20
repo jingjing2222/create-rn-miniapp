@@ -121,6 +121,10 @@ test('initBareWorktreeLayout creates a bare repo with a main worktree and contro
       /실제 MiniApp repo는 `main\/` 아래에 있어요/,
     )
     assert.equal(runGit(workspaceRoot, ['symbolic-ref', '--short', 'HEAD']), 'main')
+    assert.equal(
+      runGit(path.join(controlRoot, '.bare'), ['symbolic-ref', '--short', 'HEAD']),
+      'main',
+    )
     assert.match(runGit(controlRoot, ['worktree', 'list', '--porcelain']), /main$/m)
   } finally {
     await rm(controlRoot, { recursive: true, force: true })

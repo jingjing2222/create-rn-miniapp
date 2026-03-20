@@ -128,6 +128,12 @@ export async function initBareWorktreeLayout(controlRoot: string) {
   await runCommand({
     cwd: controlRoot,
     command: 'git',
+    args: ['symbolic-ref', 'HEAD', 'refs/heads/main'],
+    label: 'bare repo 기본 브랜치를 main으로 맞추기',
+  })
+  await runCommand({
+    cwd: controlRoot,
+    command: 'git',
     args: ['worktree', 'add', '--orphan', MAIN_WORKTREE_DIRECTORY],
     label: '`main` worktree 만들기',
   })
