@@ -5,6 +5,10 @@
 - 공개 배포 대상 패키지 중 실제 변경이 있는 패키지만 포함한다.
 - changeset 설명은 한국어로 작성하고, 커밋 후 원격 브랜치와 PR에 반영한다.
 
+### 후속 수정
+- patch changeset 범위를 `create-rn-miniapp`, `@create-rn-miniapp/scaffold-skills`, `@create-rn-miniapp/scaffold-templates` 세 패키지로 바로잡는다.
+- changeset 수정 후 `pnpm verify`를 다시 통과시킨다.
+
 ### 작업 순서
 1. 현재 diff 기준으로 배포 대상 패키지를 확정한다.
 2. `.changeset/*.md` 파일을 추가해 patch bump와 한국어 릴리스 요약을 기록한다.

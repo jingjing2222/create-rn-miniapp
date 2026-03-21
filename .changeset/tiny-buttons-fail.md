@@ -1,5 +1,6 @@
 ---
 "create-rn-miniapp": patch
+"@create-rn-miniapp/scaffold-templates": patch
 "@create-rn-miniapp/scaffold-skills": patch
 ---
 
