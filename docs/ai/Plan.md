@@ -6,6 +6,7 @@
 - 사용자 중심 섹션 순서와 anti-jargon 규칙을 README 회귀 테스트로 고정한다.
 - 긴 CLI 플래그 나열 대신 `--help` 중심 안내로 줄이고, Skill과 `nx`/`biome`이 생성 직후 어떤 역할을 하는지 사용자 언어로 설명한다.
 - README 안에서 생성되는 Skill 목록도 사용자 관점 이름과 쓰임새로 같이 보여준다.
+- `## 이런 경우에 잘 맞아요`에서는 Skill 공유보다 MiniApp에 필요한 Skill이 처음부터 준비돼 있다는 가치를 먼저 드러낸다.
 
 ### 작업 순서
 1. `packages/create-rn-miniapp/src/templates/index.test.ts`에 README UX red test를 추가하고, 기존 maintainer-oriented assertion을 사용자 중심 규칙으로 치환한다.

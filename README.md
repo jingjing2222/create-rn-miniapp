@@ -9,7 +9,7 @@
 ## 이런 경우에 잘 맞아요
 
 - 공식 scaffold는 유지하고, 팀이 바로 쓸 작업 문맥만 얹고 싶을 때
-- 사람과 에이전트가 같은 문서와 Skill을 보면서 바로 작업하고 싶을 때
+- MiniApp에서 자주 쓰는 Skill이 처음부터 준비돼 있으면 좋을 때
 - frontend만이 아니라 optional `server`, `backoffice`까지 한 번에 시작하고 싶을 때
 
 ## 빠른 시작

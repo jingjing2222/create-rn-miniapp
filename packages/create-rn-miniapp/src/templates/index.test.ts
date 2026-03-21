@@ -759,6 +759,19 @@ test('README opens with user value and points readers to the next action', async
   )
 })
 
+test('README frames skill value as miniapp-ready setup before agent collaboration wording', async () => {
+  const readmeSource = await readFile(
+    fileURLToPath(new URL('../../../../README.md', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(readmeSource, /MiniApp에서 자주 쓰는 Skill이 처음부터 준비돼 있으면 좋을 때/)
+  assert.doesNotMatch(
+    readmeSource,
+    /사람과 에이전트가 같은 문서와 Skill을 보면서 바로 작업하고 싶을 때/,
+  )
+})
+
 test('README defers generated repo onboarding order to AGENTS Start Here', async () => {
   const readmeSource = await readFile(
     fileURLToPath(new URL('../../../../README.md', import.meta.url)),
