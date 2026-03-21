@@ -1,0 +1,64 @@
+{
+  "docs-slug-alias": [
+    {
+      "name": "stepper-row",
+      "docsSlug": "stepper",
+      "docUrl": "https://tossmini-docs.toss.im/tds-react-native/components/stepper/",
+      "note": "Docs slug mismatch. Keep the component name `stepper-row`, but link to the stepper docs leaf."
+    },
+    {
+      "name": "chart",
+      "docsSlug": "Chart/bar-chart",
+      "docUrl": "https://tossmini-docs.toss.im/tds-react-native/components/Chart/bar-chart/",
+      "note": "Docs slug mismatch. Keep the component name `chart`, but link to the bar-chart docs leaf."
+    }
+  ],
+  "root-export-gap": [
+    {
+      "name": "navbar",
+      "rootImportPath": "@toss/tds-react-native/extensions/page-navbar",
+      "docUrl": "https://tossmini-docs.toss.im/tds-react-native/components/navbar/",
+      "note": "Docs leaf exists, but the package root export path differs from other components."
+    }
+  ],
+  "root-export-no-public-docs": [
+    {
+      "name": "agreement",
+      "note": "Export-only / docs-missing. Gate recommendation and provide a doc-backed fallback."
+    },
+    {
+      "name": "bottom-cta",
+      "note": "Export-only / docs-missing. Gate recommendation and provide a doc-backed fallback."
+    },
+    {
+      "name": "bottom-sheet",
+      "note": "Export-only / docs-missing. Gate recommendation and provide a doc-backed fallback."
+    },
+    {
+      "name": "fixed-bottom-cta",
+      "note": "Export-only / docs-missing. Gate recommendation and provide a doc-backed fallback."
+    },
+    {
+      "name": "icon",
+      "note": "Export-only / docs-missing. Gate recommendation and provide a doc-backed fallback."
+    },
+    {
+      "name": "tooltip",
+      "note": "Export-only / docs-missing. Gate recommendation and provide a doc-backed fallback."
+    },
+    {
+      "name": "top",
+      "note": "Export-only / docs-missing. Gate recommendation and provide a doc-backed fallback."
+    },
+    {
+      "name": "txt",
+      "note": "Export-only / docs-missing. Gate recommendation and provide a doc-backed fallback."
+    }
+  ],
+  "dir-only-weak": [
+    {
+      "name": "paragraph",
+      "note": "Component dir exists, but root export and public docs evidence are both weak. Block by default."
+    }
+  ]
+}

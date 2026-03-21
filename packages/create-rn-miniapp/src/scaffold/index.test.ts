@@ -230,6 +230,20 @@ test('migration scaffold combinations generate docs, skills, and the claude mirr
       expectedSkills,
       combo.label,
     )
+    assert.equal(
+      await pathExists(
+        path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'scripts', 'ensure-fresh.mjs'),
+      ),
+      true,
+      combo.label,
+    )
+    assert.equal(
+      await pathExists(
+        path.join(targetRoot, '.claude', 'skills', 'tds-ui', 'scripts', 'refresh-catalog.mjs'),
+      ),
+      true,
+      combo.label,
+    )
 
     for (const legacySkillName of LEGACY_SKILL_NAMES) {
       assert.equal(

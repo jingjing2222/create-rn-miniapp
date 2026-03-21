@@ -65,7 +65,7 @@ export const SKILL_CATALOG: SkillDefinition[] = [
     topologyLabel: 'TDS UI selection',
     frontendPolicyReferenceLabel: 'TDS component 선택',
     frontendPolicyReferencePath: '.agents/skills/tds-ui/SKILL.md',
-    referenceCatalogPath: '.agents/skills/tds-ui/references/catalog.md',
+    referenceCatalogPath: '.agents/skills/tds-ui/generated/catalog.json',
   },
   {
     id: 'backoffice-react',
