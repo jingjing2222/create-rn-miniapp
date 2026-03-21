@@ -324,8 +324,8 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
                 : 'skipped'
               : (initialServerState?.remoteInitialization ?? 'not-run')
             : 'not-run',
-    trpc: trpcEnabled,
-    backoffice: await pathExists(path.join(targetRoot, 'backoffice')),
+    trpc: initialServerState?.trpc ?? trpcEnabled,
+    backoffice: initialServerState?.backoffice ?? options.withBackoffice,
   })
 
   if (finalServerState) {
@@ -567,8 +567,8 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
                 : 'skipped'
               : (initialServerState?.remoteInitialization ?? 'not-run')
             : 'not-run',
-    trpc: await pathExists(path.join(targetRoot, 'packages', 'contracts')),
-    backoffice: await pathExists(path.join(targetRoot, 'backoffice')),
+    trpc: initialServerState?.trpc ?? trpcEnabled,
+    backoffice: initialServerState?.backoffice ?? options.withBackoffice,
   })
 
   if (finalServerState) {

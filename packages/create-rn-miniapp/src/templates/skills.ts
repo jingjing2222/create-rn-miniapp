@@ -1,68 +1,24 @@
 import path from 'node:path'
 import { mkdir, rm } from 'node:fs/promises'
 import { copyDirectory, copyDirectoryWithTokens, resolveSkillsPackageRoot } from './filesystem.js'
-import {
-  resolveSelectedOptionalSkillDefinitions,
-  type SkillReferenceDefinition,
-} from './feature-catalog.js'
 import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
+import {
+  CORE_SKILL_DEFINITIONS as SHARED_CORE_SKILL_DEFINITIONS,
+  getCoreSkillDefinition as getCoreSkillDefinitionFromCatalog,
+  resolveSelectedSkillDefinitions,
+  type CoreSkillDefinition as SharedCoreSkillDefinition,
+  type CoreSkillId as SharedCoreSkillId,
+} from './skill-catalog.js'
 import type { GeneratedWorkspaceOptions, GeneratedWorkspaceHints, TemplateTokens } from './types.js'
 
-export type CoreSkillId = 'miniapp-capabilities' | 'granite-routing' | 'tds-ui'
+export type CoreSkillDefinition = SharedCoreSkillDefinition
+export type CoreSkillId = SharedCoreSkillId
 
-export type CoreSkillDefinition = SkillReferenceDefinition & {
-  id: CoreSkillId
-  frontendPolicyReferenceLabel: string
-  frontendPolicyReferencePath: string
-  referenceCatalogPath?: string
-}
-
-export const CORE_SKILL_DEFINITIONS: CoreSkillDefinition[] = [
-  {
-    id: 'miniapp-capabilities',
-    templateDir: 'miniapp-capabilities',
-    docsPath: '.agents/skills/miniapp-capabilities/SKILL.md',
-    agentsLabel: 'MiniApp capability / 공식 API 탐색',
-    topologyLabel: 'MiniApp capability',
-    frontendPolicyReferenceLabel: '기능 축과 공식 문서 진입',
-    frontendPolicyReferencePath: '.agents/skills/miniapp-capabilities/SKILL.md',
-  },
-  {
-    id: 'granite-routing',
-    templateDir: 'granite-routing',
-    docsPath: '.agents/skills/granite-routing/SKILL.md',
-    agentsLabel: 'route / page / navigation 패턴',
-    topologyLabel: 'Granite page/route patterns',
-    frontendPolicyReferenceLabel: 'route / navigation 패턴',
-    frontendPolicyReferencePath: '.agents/skills/granite-routing/SKILL.md',
-  },
-  {
-    id: 'tds-ui',
-    templateDir: 'tds-ui',
-    docsPath: '.agents/skills/tds-ui/SKILL.md',
-    agentsLabel: 'TDS UI 선택과 form 패턴',
-    topologyLabel: 'TDS UI selection',
-    frontendPolicyReferenceLabel: 'TDS component 선택',
-    frontendPolicyReferencePath: '.agents/skills/tds-ui/SKILL.md',
-    referenceCatalogPath: '.agents/skills/tds-ui/references/catalog.md',
-  },
-]
-
-export function getCoreSkillDefinition(id: CoreSkillId) {
-  const definition = CORE_SKILL_DEFINITIONS.find((skill) => skill.id === id)
-
-  if (!definition) {
-    throw new Error(`알 수 없는 core skill id입니다: ${id}`)
-  }
-
-  return definition
-}
+export const CORE_SKILL_DEFINITIONS = SHARED_CORE_SKILL_DEFINITIONS
+export const getCoreSkillDefinition = getCoreSkillDefinitionFromCatalog
 
 function resolveGeneratedSkillTemplates(options: GeneratedWorkspaceOptions) {
-  return [
-    ...CORE_SKILL_DEFINITIONS.map((skill) => skill.templateDir),
-    ...resolveSelectedOptionalSkillDefinitions(options).map((skill) => skill.templateDir),
-  ]
+  return resolveSelectedSkillDefinitions(options).map((skill) => skill.templateDir)
 }
 
 export async function syncGeneratedSkills(

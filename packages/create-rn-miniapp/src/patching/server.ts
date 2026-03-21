@@ -2,6 +2,11 @@ import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { getPackageManagerAdapter } from '../package-manager.js'
 import {
+  getProviderClientContract,
+  PROVIDER_CLIENT_CONTRACTS,
+  resolveProviderClientLinkFiles,
+} from '../provider-client-contract.js'
+import {
   SERVER_SCAFFOLD_STATE_DIR,
   SERVER_SCAFFOLD_STATE_RELATIVE_PATH,
   type ServerScaffoldState,
@@ -163,17 +168,12 @@ export async function writeServerScaffoldState(targetRoot: string, state: Server
 }
 
 function renderServerCheckEnvScriptSource() {
-  const providerEnvKeys = {
-    cloudflare: [
-      'CLOUDFLARE_ACCOUNT_ID',
-      'CLOUDFLARE_WORKER_NAME',
-      'CLOUDFLARE_D1_DATABASE_ID',
-      'CLOUDFLARE_D1_DATABASE_NAME',
-      'CLOUDFLARE_R2_BUCKET_NAME',
-    ],
-    supabase: ['SUPABASE_PROJECT_REF', 'SUPABASE_DB_PASSWORD', 'SUPABASE_ACCESS_TOKEN'],
-    firebase: ['FIREBASE_PROJECT_ID', 'FIREBASE_FUNCTION_REGION'],
-  } as const
+  const providerEnvKeys = Object.fromEntries(
+    Object.entries(PROVIDER_CLIENT_CONTRACTS).map(([provider, contract]) => [
+      provider,
+      contract.serverEnvKeys,
+    ]),
+  )
   const statePathExpr = '$' + '{statePath}'
   const readmeRelativePathExpr = '$' + '{readmeRelativePath}'
   const readmePathExpr = '$' + '{readmePath}'
@@ -236,41 +236,25 @@ function renderServerCheckEnvScriptSource() {
 }
 
 function renderServerCheckClientLinksScriptSource() {
-  const providerClientFiles = {
-    cloudflare: {
-      default: ['frontend/.env.local', 'frontend/src/lib/api.ts'],
-      trpc: [
-        'frontend/.env.local',
-        'frontend/src/lib/trpc.ts',
-        'packages/contracts/package.json',
-        'packages/app-router/package.json',
+  const providerClientFiles = Object.fromEntries(
+    (Object.keys(PROVIDER_CLIENT_CONTRACTS) as Array<keyof typeof PROVIDER_CLIENT_CONTRACTS>).map(
+      (provider) => [
+        provider,
+        {
+          default: resolveProviderClientLinkFiles(provider, { trpc: false, backoffice: false }),
+          trpc: resolveProviderClientLinkFiles(provider, { trpc: true, backoffice: false }),
+          backofficeDefault: resolveProviderClientLinkFiles(provider, {
+            trpc: false,
+            backoffice: true,
+          }).filter((filePath) => filePath.startsWith('backoffice/')),
+          backofficeTrpc: resolveProviderClientLinkFiles(provider, {
+            trpc: true,
+            backoffice: true,
+          }).filter((filePath) => filePath.startsWith('backoffice/')),
+        },
       ],
-      backofficeDefault: ['backoffice/.env.local', 'backoffice/src/lib/api.ts'],
-      backofficeTrpc: ['backoffice/.env.local', 'backoffice/src/lib/trpc.ts'],
-    },
-    supabase: {
-      default: ['frontend/.env.local', 'frontend/src/lib/supabase.ts'],
-      trpc: [],
-      backofficeDefault: ['backoffice/.env.local', 'backoffice/src/lib/supabase.ts'],
-      backofficeTrpc: [],
-    },
-    firebase: {
-      default: [
-        'frontend/.env.local',
-        'frontend/src/lib/firebase.ts',
-        'frontend/src/lib/firestore.ts',
-        'frontend/src/lib/storage.ts',
-      ],
-      trpc: [],
-      backofficeDefault: [
-        'backoffice/.env.local',
-        'backoffice/src/lib/firebase.ts',
-        'backoffice/src/lib/firestore.ts',
-        'backoffice/src/lib/storage.ts',
-      ],
-      backofficeTrpc: [],
-    },
-  } as const
+    ),
+  )
   const statePathExpr = '$' + '{statePath}'
   const fileStatusExpr = '$' + "{existsSync(absolutePath) ? 'ok' : 'missing'}"
   const relativePathExpr = '$' + '{relativePath}'
@@ -383,6 +367,10 @@ function renderServerRemoteOpsSection(commands: string[]) {
     '- 실행 전에는 `server/.create-rn-miniapp/state.json`과 `server/README.md`를 먼저 확인해요.',
     ...commands.map((command) => `- 후보 명령: \`${command}\``),
   ]
+}
+
+function formatEnvKeys(keys: string[]) {
+  return keys.map((key) => `\`${key}\``).join(', ')
 }
 
 async function copyCloudflareTokenGuideAsset(
@@ -509,6 +497,7 @@ function renderSupabaseServerReadme(options?: {
   scriptCatalog: ServerScriptCatalogEntry[]
   accessTokenGuideImagePaths?: string[] | null
 }) {
+  const contract = getProviderClientContract('supabase')
   const scriptLines = renderServerReadmeScriptLines(
     options?.scriptCatalog ?? [],
     options?.packageManagerRunCommand ?? 'pnpm',
@@ -548,12 +537,12 @@ function renderSupabaseServerReadme(options?: {
     '## Miniapp / Backoffice 연결',
     '',
     '- miniapp frontend는 `frontend/src/lib/supabase.ts`에서 Supabase client를 생성해요.',
-    '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_SUPABASE_URL`, `MINIAPP_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
-    '- frontend `scaffold.preset.ts`가 `.env.local` 값을 읽어 `MINIAPP_SUPABASE_URL`, `MINIAPP_SUPABASE_PUBLISHABLE_KEY`를 주입하고, `granite.config.ts`는 그 scaffold preset만 연결해요.',
+    `- miniapp frontend \`.env.local\`은 \`${contract.frontend.envFile}\`에 두고 ${formatEnvKeys(contract.frontend.envKeys)}를 사용해요.`,
+    `- frontend \`scaffold.preset.ts\`가 \`.env.local\` 값을 읽어 ${formatEnvKeys(contract.frontend.envKeys)}를 주입하고, \`granite.config.ts\`는 그 scaffold preset만 연결해요.`,
     `- miniapp frontend는 \`supabase.functions.invoke('${SUPABASE_DEFAULT_FUNCTION_NAME}')\` 형태로 Edge Function을 호출할 수 있어요.`,
     '- backoffice가 있으면 `backoffice/src/lib/supabase.ts`에서 별도 browser client를 생성해요.',
-    '- backoffice `.env.local`은 `backoffice/.env.local`에 두고 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
-    '- backoffice도 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`를 사용해요.',
+    `- backoffice \`.env.local\`은 \`${contract.backoffice.envFile}\`에 두고 ${formatEnvKeys(contract.backoffice.envKeys)}를 사용해요.`,
+    `- backoffice도 ${formatEnvKeys(contract.backoffice.envKeys)}를 사용해요.`,
     `- backoffice도 동일하게 \`supabase.functions.invoke('${SUPABASE_DEFAULT_FUNCTION_NAME}')\`를 사용할 수 있어요.`,
     '',
     '## 운영 메모',
@@ -596,6 +585,7 @@ function renderCloudflareServerReadme(options?: {
   tokenGuideImagePath?: string | null
   trpc?: boolean
 }) {
+  const contract = getProviderClientContract('cloudflare')
   const trpcEnabled = options?.trpc === true
   const scriptLines = renderServerReadmeScriptLines(
     options?.scriptCatalog ?? [],
@@ -635,8 +625,8 @@ function renderCloudflareServerReadme(options?: {
     '',
     '## Miniapp / Backoffice 연결',
     '',
-    '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_API_BASE_URL`을 사용해요.',
-    '- backoffice `.env.local`은 `backoffice/.env.local`에 두고 `VITE_API_BASE_URL`을 사용해요.',
+    `- miniapp frontend \`.env.local\`은 \`${contract.frontend.envFile}\`에 두고 ${formatEnvKeys(contract.frontend.envKeys)}를 사용해요.`,
+    `- backoffice \`.env.local\`은 \`${contract.backoffice.envFile}\`에 두고 ${formatEnvKeys(contract.backoffice.envKeys)}를 사용해요.`,
     '- provisioning이 성공하면 frontend/backoffice `.env.local`에 Worker URL이 자동으로 기록돼요.',
     `- Worker 코드는 \`${CLOUDFLARE_D1_BINDING_NAME}\` D1 binding과 \`${CLOUDFLARE_R2_BINDING_NAME}\` R2 binding을 사용할 수 있어요.`,
     ...(trpcEnabled
@@ -685,6 +675,7 @@ function renderFirebaseServerReadme(options?: {
   loginCiGuideImagePath?: string | null
   serviceAccountGuideImagePaths?: string[] | null
 }) {
+  const contract = getProviderClientContract('firebase')
   const scriptLines = renderServerReadmeScriptLines(
     options?.scriptCatalog ?? [],
     options?.packageManagerRunCommand ?? 'pnpm',
@@ -727,12 +718,12 @@ function renderFirebaseServerReadme(options?: {
     '',
     '## Miniapp / Backoffice 연결',
     '',
-    '- miniapp frontend는 `frontend/src/lib/firebase.ts`, `frontend/src/lib/firestore.ts`, `frontend/src/lib/storage.ts`에서 Firebase Web SDK를 초기화해요.',
-    '- miniapp frontend `.env.local`은 `frontend/.env.local`에 두고 `MINIAPP_FIREBASE_API_KEY`, `MINIAPP_FIREBASE_AUTH_DOMAIN`, `MINIAPP_FIREBASE_PROJECT_ID`, `MINIAPP_FIREBASE_STORAGE_BUCKET`, `MINIAPP_FIREBASE_MESSAGING_SENDER_ID`, `MINIAPP_FIREBASE_APP_ID`, `MINIAPP_FIREBASE_MEASUREMENT_ID`, `MINIAPP_FIREBASE_FUNCTION_REGION`를 사용해요.',
+    '- miniapp frontend는 `frontend/src/lib/firebase.ts`, `frontend/src/lib/firestore.ts`, `frontend/src/lib/functions.ts`, `frontend/src/lib/public-app-status.ts`, `frontend/src/lib/storage.ts`에서 Firebase Web SDK와 public status fallback 흐름을 초기화해요.',
+    `- miniapp frontend \`.env.local\`은 \`${contract.frontend.envFile}\`에 두고 ${formatEnvKeys(contract.frontend.envKeys)}를 사용해요.`,
     '- frontend `scaffold.preset.ts`는 `process.cwd()` 기준으로 `.env.local` 값을 읽어 같은 `MINIAPP_FIREBASE_*` 값을 주입하고, `granite.config.ts`는 그 scaffold preset만 연결해요.',
     '- `frontend/src/lib/public-app-status.ts`는 Firestore direct read를 먼저 시도하고, 권한 오류가 나면 `getPublicStatus` callable function으로 fallback 해요.',
     '- backoffice가 있으면 `backoffice/src/lib/firebase.ts`, `backoffice/src/lib/firestore.ts`, `backoffice/src/lib/storage.ts`가 같은 Firebase project를 사용해요.',
-    '- backoffice `.env.local`은 `backoffice/.env.local`에 두고 `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`를 사용해요.',
+    `- backoffice \`.env.local\`은 \`${contract.backoffice.envFile}\`에 두고 ${formatEnvKeys(contract.backoffice.envKeys)}를 사용해요.`,
     '',
     '## 운영 메모',
     '',

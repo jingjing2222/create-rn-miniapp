@@ -72,10 +72,9 @@ pnpm verify
 
 생성이 끝나면 생성물 루트 `AGENTS.md`의 `Start Here` 순서를 먼저 따라가세요. 그 흐름대로 `docs/ai/*`, `docs/index.md`, `docs/product/기능명세서.md`를 확인한 뒤, 해당 작업에 맞는 `.agents/skills/*`를 선택해서 구현을 이끌어가면 돼요.
 
-현재 Skill 기준 이름은 아래와 같아요.
+현재 Skill 이름, 라벨, docs path, optional 선택 기준은 `packages/create-rn-miniapp/src/templates/skill-catalog.ts`가 소유해요.
 
-- core: `miniapp-capabilities`, `granite-routing`, `tds-ui`
-- optional: `backoffice-react`, `cloudflare-worker`, `supabase-project`, `firebase-functions`, `trpc-boundary`
+- generated `.agents/skills`와 `.claude/skills`는 이 catalog에서 같이 렌더돼요.
 - `.claude/skills`는 이 기준 이름을 그대로 mirror해요.
 
 ## CLI 옵션

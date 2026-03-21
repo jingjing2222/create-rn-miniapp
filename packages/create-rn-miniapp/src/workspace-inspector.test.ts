@@ -122,6 +122,81 @@ test('inspectWorkspace reads existing scaffold state manifest when present', asy
 
   await mkdir(path.join(targetRoot, 'frontend'), { recursive: true })
   await mkdir(path.join(targetRoot, 'server', '.create-rn-miniapp'), { recursive: true })
+  await mkdir(path.join(targetRoot, 'packages', 'app-router'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'package.json'),
+    JSON.stringify(
+      {
+        packageManager: getTestPackageManagerField('pnpm'),
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [',
+      '    appsInToss({',
+      '      brand: {',
+      '        displayName: "전자책 미니앱",',
+      '      },',
+      '    }),',
+      '  ],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'server', 'wrangler.jsonc'),
+    '{\n  "name": "server"\n}\n',
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'packages', 'app-router', 'package.json'),
+    JSON.stringify({ name: '@workspace/app-router', private: true }, null, 2),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'server', '.create-rn-miniapp', 'state.json'),
+    JSON.stringify(
+      {
+        serverProvider: 'cloudflare',
+        serverProjectMode: 'create',
+        remoteInitialization: 'applied',
+        trpc: true,
+        backoffice: false,
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  )
+
+  const inspection = await inspectWorkspace(targetRoot)
+
+  assert.deepEqual(inspection.serverScaffoldState, {
+    serverProvider: 'cloudflare',
+    serverProjectMode: 'create',
+    remoteInitialization: 'applied',
+    trpc: true,
+    backoffice: false,
+  })
+  assert.equal(inspection.hasTrpc, true)
+})
+
+test('inspectWorkspace rejects scaffold state that disagrees with workspace topology', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+
+  await mkdir(path.join(targetRoot, 'frontend'), { recursive: true })
+  await mkdir(path.join(targetRoot, 'server', '.create-rn-miniapp'), { recursive: true })
   await writeFile(
     path.join(targetRoot, 'package.json'),
     JSON.stringify(
@@ -163,10 +238,10 @@ test('inspectWorkspace reads existing scaffold state manifest when present', asy
     JSON.stringify(
       {
         serverProvider: 'cloudflare',
-        serverProjectMode: 'create',
-        remoteInitialization: 'applied',
+        serverProjectMode: 'existing',
+        remoteInitialization: 'skipped',
         trpc: true,
-        backoffice: false,
+        backoffice: true,
       },
       null,
       2,
@@ -174,23 +249,10 @@ test('inspectWorkspace reads existing scaffold state manifest when present', asy
     'utf8',
   )
 
-  const inspection = (await inspectWorkspace(targetRoot)) as {
-    serverScaffoldState?: {
-      serverProvider: string
-      serverProjectMode: string | null
-      remoteInitialization: string
-      trpc: boolean
-      backoffice: boolean
-    } | null
-  }
-
-  assert.deepEqual(inspection.serverScaffoldState, {
-    serverProvider: 'cloudflare',
-    serverProjectMode: 'create',
-    remoteInitialization: 'applied',
-    trpc: true,
-    backoffice: false,
-  })
+  await assert.rejects(
+    () => inspectWorkspace(targetRoot),
+    /state\.json과 실제 workspace topology가 서로 다릅니다/,
+  )
 })
 
 test('inspectWorkspace detects firebase server workspaces from firebase config', async (t) => {

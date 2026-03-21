@@ -91,6 +91,16 @@ test('published package names match the released npm packages', () => {
   assert.equal(templatesPackageJson.name, '@create-rn-miniapp/scaffold-templates')
 })
 
+test('scaffold skills package does not hand-maintain one files entry per skill directory', () => {
+  const skillsPackageJson = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'packages/scaffold-skills/package.json'), 'utf8'),
+  ) as {
+    files?: string[]
+  }
+
+  assert.deepEqual(skillsPackageJson.files, ['*', '!core', '!optional'])
+})
+
 test('workspace project schema does not depend on local node_modules paths', () => {
   const projectJson = JSON.parse(
     fs.readFileSync(path.join(repoRoot, 'packages/create-rn-miniapp/project.json'), 'utf8'),

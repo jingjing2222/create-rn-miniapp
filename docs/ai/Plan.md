@@ -1,3 +1,16 @@
+## 진행 예정: Scaffold SSoT contract 정리
+
+### 목표
+- skill taxonomy, provider client contract, generated server state ownership을 각각 한 군데서만 소유하도록 정리한다.
+- `--add` 경로에서 manifest가 이미 가진 사실을 중간에서 다시 추론하지 않게 만든다.
+- 진단 스크립트와 루트 문서가 실제 generator source에서 파생되도록 맞춘다.
+
+### 작업 순서
+1. skill metadata를 shared catalog로 모아 docs/rendering/test가 같은 source를 보게 만든다.
+2. provider별 env key와 client link expectation을 shared contract로 모아 README/script가 같은 source를 보게 만든다.
+3. workspace inspection과 add scaffold flow에서 `state.json`이 소유하는 server topology를 재추론하지 않도록 정리한다.
+4. 관련 회귀 테스트를 추가하고 `pnpm verify`로 최종 확인한다.
+
 ## 진행 예정: Patch changeset 추가
 
 ### 목표

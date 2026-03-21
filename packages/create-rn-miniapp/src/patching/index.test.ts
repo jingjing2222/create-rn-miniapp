@@ -2220,6 +2220,10 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
     targets?: Record<string, { command?: string }>
   }
   const readme = await readFile(path.join(serverRoot, 'README.md'), 'utf8')
+  const checkClientLinksScript = await readFile(
+    path.join(serverRoot, 'scripts', 'check-client-links.mjs'),
+    'utf8',
+  )
   const scaffoldState = JSON.parse(
     await readFile(path.join(serverRoot, '.create-rn-miniapp', 'state.json'), 'utf8'),
   ) as {
@@ -2262,6 +2266,7 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   assert.match(readme, /getPublicStatus/)
   assert.match(readme, /frontend\/src\/lib\/firebase\.ts/)
   assert.match(readme, /frontend\/src\/lib\/firestore\.ts/)
+  assert.match(readme, /frontend\/src\/lib\/functions\.ts/)
   assert.match(readme, /frontend\/src\/lib\/storage\.ts/)
   assert.match(readme, /MINIAPP_FIREBASE_API_KEY/)
   assert.match(readme, /VITE_FIREBASE_API_KEY/)
@@ -2298,6 +2303,11 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
       .filter((entry) => entry.includeInReadme !== false)
       .map((entry) => entry.name),
   )
+  assert.match(checkClientLinksScript, /frontend\/src\/lib\/firebase\.ts/)
+  assert.match(checkClientLinksScript, /frontend\/src\/lib\/firestore\.ts/)
+  assert.match(checkClientLinksScript, /frontend\/src\/lib\/functions\.ts/)
+  assert.match(checkClientLinksScript, /frontend\/src\/lib\/public-app-status\.ts/)
+  assert.match(checkClientLinksScript, /frontend\/src\/lib\/storage\.ts/)
   assert.equal(await readFile(copiedLoginCiGuide, 'utf8'), 'firebase-login-ci')
   assert.equal(await readFile(copiedServiceAccountGuide1, 'utf8'), 'firebase-service-account-1')
   assert.equal(await readFile(copiedServiceAccountGuide2, 'utf8'), 'firebase-service-account-2')

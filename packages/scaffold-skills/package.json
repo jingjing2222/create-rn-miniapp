@@ -3,14 +3,9 @@
   "private": false,
   "version": "0.1.0",
   "files": [
-    "backoffice-react",
-    "cloudflare-worker",
-    "firebase-functions",
-    "granite-routing",
-    "miniapp-capabilities",
-    "supabase-project",
-    "tds-ui",
-    "trpc-boundary"
+    "*",
+    "!core",
+    "!optional"
   ],
   "publishConfig": {
     "access": "public"

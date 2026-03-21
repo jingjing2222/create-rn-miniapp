@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { fileURLToPath } from 'node:url'
 import {
   applyDocsTemplates,
   applyRootTemplates,
@@ -291,6 +292,22 @@ test('migration scaffold combinations generate docs, skills, and the claude mirr
     })
     assert.equal(checkResult.status, 0, checkResult.stderr || checkResult.stdout)
   }
+})
+
+test('add scaffold flow does not re-derive manifest topology from filesystem probes', async () => {
+  const scaffoldSource = await readFile(
+    fileURLToPath(new URL('./index.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(
+    scaffoldSource,
+    /trpc: await pathExists\(path\.join\(targetRoot, 'packages', 'contracts'\)\)/,
+  )
+  assert.doesNotMatch(
+    scaffoldSource,
+    /backoffice: await pathExists\(path\.join\(targetRoot, 'backoffice'\)\)/,
+  )
 })
 
 test('buildRootFinalizePlan adds yarn sdk generation after root install', () => {

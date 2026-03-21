@@ -196,18 +196,42 @@ test('docs and skills modules do not keep separate optional feature manifests', 
     fileURLToPath(new URL('./skills.ts', import.meta.url)),
     'utf8',
   )
-  const sharedFeatureSource = await readFile(
-    fileURLToPath(new URL('./feature-catalog.ts', import.meta.url)),
+  const sharedSkillCatalogSource = await readFile(
+    fileURLToPath(new URL('./skill-catalog.ts', import.meta.url)),
     'utf8',
   )
 
   assert.doesNotMatch(docsSource, /WORKSPACE_FEATURE_DEFINITIONS/)
   assert.doesNotMatch(skillsSource, /OPTIONAL_SKILL_DEFINITIONS/)
-  assert.match(sharedFeatureSource, /templateDir: 'backoffice-react'/)
-  assert.match(sharedFeatureSource, /templateDir: 'cloudflare-worker'/)
-  assert.match(sharedFeatureSource, /templateDir: 'supabase-project'/)
-  assert.match(sharedFeatureSource, /templateDir: 'firebase-functions'/)
-  assert.match(sharedFeatureSource, /templateDir: 'trpc-boundary'/)
+  assert.match(sharedSkillCatalogSource, /templateDir: 'backoffice-react'/)
+  assert.match(sharedSkillCatalogSource, /templateDir: 'cloudflare-worker'/)
+  assert.match(sharedSkillCatalogSource, /templateDir: 'supabase-project'/)
+  assert.match(sharedSkillCatalogSource, /templateDir: 'firebase-functions'/)
+  assert.match(sharedSkillCatalogSource, /templateDir: 'trpc-boundary'/)
+})
+
+test('skill taxonomy metadata is centralized in a shared catalog', async () => {
+  const catalogSource = await readFile(
+    fileURLToPath(new URL('./skill-catalog.ts', import.meta.url)),
+    'utf8',
+  )
+  const skillsSource = await readFile(
+    fileURLToPath(new URL('./skills.ts', import.meta.url)),
+    'utf8',
+  )
+  const sharedFeatureSource = await readFile(
+    fileURLToPath(new URL('./feature-catalog.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(catalogSource, /export const SKILL_CATALOG/)
+  assert.match(skillsSource, /from '\.\/skill-catalog\.js'/)
+  assert.match(sharedFeatureSource, /from '\.\/skill-catalog\.js'/)
+  assert.doesNotMatch(sharedFeatureSource, /templateDir: 'backoffice-react'/)
+  assert.doesNotMatch(sharedFeatureSource, /templateDir: 'cloudflare-worker'/)
+  assert.doesNotMatch(sharedFeatureSource, /templateDir: 'supabase-project'/)
+  assert.doesNotMatch(sharedFeatureSource, /templateDir: 'firebase-functions'/)
+  assert.doesNotMatch(sharedFeatureSource, /templateDir: 'trpc-boundary'/)
 })
 
 test('frontend policy derives core skill references from the core skill catalog', async () => {
@@ -406,6 +430,24 @@ test('root AGENTS follows the code-owned generated AGENTS contract', async () =>
 
   assert.doesNotMatch(agentsSource, /packages\/scaffold-templates\/base\/AGENTS\.md/)
   assert.match(agentsSource, /packages\/create-rn-miniapp\/src\/templates\/docs\.ts/)
+})
+
+test('root docs do not hand-maintain canonical skill name lists', async () => {
+  const agentsSource = await readFile(
+    fileURLToPath(new URL('../../../../AGENTS.md', import.meta.url)),
+    'utf8',
+  )
+  const readmeSource = await readFile(
+    fileURLToPath(new URL('../../../../README.md', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(agentsSource, /^- core:/m)
+  assert.doesNotMatch(agentsSource, /^- optional:/m)
+  assert.match(agentsSource, /skill-catalog\.ts/)
+  assert.doesNotMatch(readmeSource, /^- core:/m)
+  assert.doesNotMatch(readmeSource, /^- optional:/m)
+  assert.match(readmeSource, /skill-catalog\.ts/)
 })
 
 test('server remote ops are derived from shared script metadata instead of hardcoded provider tables', async () => {

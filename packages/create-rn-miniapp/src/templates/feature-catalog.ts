@@ -1,4 +1,5 @@
 import type { GeneratedWorkspaceOptions } from './types.js'
+import { resolveOptionalSkillDefinition, type OptionalSkillId } from './skill-catalog.js'
 import {
   TRPC_APP_ROUTER_WORKSPACE_ROLE_SECTION,
   TRPC_CONTRACTS_WORKSPACE_ROLE_SECTION,
@@ -6,13 +7,6 @@ import {
   TRPC_WORKSPACE_IMPORT_BOUNDARY_RULES,
   TRPC_WORKSPACE_TOPOLOGY_ROOT_LINES,
 } from './trpc.js'
-
-export type SkillReferenceDefinition = {
-  templateDir: string
-  docsPath: string
-  agentsLabel: string
-  topologyLabel: string
-}
 
 export type WorkspaceRoleSectionDefinition = {
   heading: string
@@ -26,7 +20,7 @@ export type WorkspaceFeatureDefinition = {
   roleSections?: WorkspaceRoleSectionDefinition[]
   ownershipLines?: (options: GeneratedWorkspaceOptions) => string[]
   importBoundaryRules?: (options: GeneratedWorkspaceOptions) => string[]
-  optionalSkill?: SkillReferenceDefinition
+  optionalSkillId?: OptionalSkillId
 }
 
 export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
@@ -88,39 +82,19 @@ export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
     ],
     importBoundaryRules: (options) =>
       options.serverProvider !== null ? ['`backoffice` ↔ `server` 직접 import 금지'] : [],
-    optionalSkill: {
-      templateDir: 'backoffice-react',
-      docsPath: '.agents/skills/backoffice-react/SKILL.md',
-      agentsLabel: 'backoffice React 작업',
-      topologyLabel: 'Backoffice React workflow',
-    },
+    optionalSkillId: 'backoffice-react',
   },
   {
     enabled: (options) => options.serverProvider === 'cloudflare',
-    optionalSkill: {
-      templateDir: 'cloudflare-worker',
-      docsPath: '.agents/skills/cloudflare-worker/SKILL.md',
-      agentsLabel: 'Cloudflare Worker 작업',
-      topologyLabel: 'Cloudflare Worker 운영 가이드',
-    },
+    optionalSkillId: 'cloudflare-worker',
   },
   {
     enabled: (options) => options.serverProvider === 'supabase',
-    optionalSkill: {
-      templateDir: 'supabase-project',
-      docsPath: '.agents/skills/supabase-project/SKILL.md',
-      agentsLabel: 'Supabase project 작업',
-      topologyLabel: 'Supabase 프로젝트 운영 가이드',
-    },
+    optionalSkillId: 'supabase-project',
   },
   {
     enabled: (options) => options.serverProvider === 'firebase',
-    optionalSkill: {
-      templateDir: 'firebase-functions',
-      docsPath: '.agents/skills/firebase-functions/SKILL.md',
-      agentsLabel: 'Firebase Functions 작업',
-      topologyLabel: 'Firebase Functions 운영 가이드',
-    },
+    optionalSkillId: 'firebase-functions',
   },
   {
     enabled: (options) => options.hasTrpc,
@@ -137,12 +111,7 @@ export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
       },
     ],
     importBoundaryRules: () => TRPC_WORKSPACE_IMPORT_BOUNDARY_RULES,
-    optionalSkill: {
-      templateDir: 'trpc-boundary',
-      docsPath: '.agents/skills/trpc-boundary/SKILL.md',
-      agentsLabel: 'tRPC boundary 변경',
-      topologyLabel: 'tRPC boundary change flow',
-    },
+    optionalSkillId: 'trpc-boundary',
   },
 ]
 
@@ -152,6 +121,6 @@ export function resolveEnabledWorkspaceFeatures(options: GeneratedWorkspaceOptio
 
 export function resolveSelectedOptionalSkillDefinitions(options: GeneratedWorkspaceOptions) {
   return resolveEnabledWorkspaceFeatures(options).flatMap((feature) =>
-    feature.optionalSkill ? [feature.optionalSkill] : [],
+    feature.optionalSkillId ? [resolveOptionalSkillDefinition(feature.optionalSkillId)] : [],
   )
 }

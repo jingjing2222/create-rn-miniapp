@@ -23,10 +23,9 @@
 - `packages/scaffold-templates`: generated repo에 복사할 하네스/문서 템플릿
 - `packages/scaffold-skills`: generated repo에 복사할 canonical skill source
 
-## Canonical Skills
-- core: `miniapp-capabilities`, `granite-routing`, `tds-ui`
-- optional: `backoffice-react`, `cloudflare-worker`, `supabase-project`, `firebase-functions`, `trpc-boundary`
-- mirror contract: generated repo는 `.agents/skills`를 정본으로 두고 `.claude/skills`를 같은 이름으로 mirror한다.
+## Skill Source
+- skill 이름, 라벨, docs path, optional 선택 기준은 `packages/create-rn-miniapp/src/templates/skill-catalog.ts`가 소유한다.
+- generated repo는 이 catalog 기준으로 `.agents/skills`를 렌더하고 `.claude/skills`를 같은 이름으로 mirror한다.
 
 ## Generator Principle
 1. Granite, Vite, Supabase scaffold는 공식 CLI로 생성한다.
