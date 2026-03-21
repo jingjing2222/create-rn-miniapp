@@ -49,8 +49,9 @@ pnpm verify
 
 - `frontend`는 Granite + `@apps-in-toss/framework` 기반으로 시작해요.
 - 필요하면 `server`, `backoffice`도 같이 만들 수 있어요.
-- 루트에는 `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/*`, `.agents/skills`, `.claude/skills`가 같이 들어가요.
-- `verify` 흐름도 함께 맞춰줘서 초반 설정이 쉽게 흐트러지지 않아요.
+- 루트에는 `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/*`가 같이 들어가요.
+- 루트 `verify`는 `nx`로 워크스페이스 작업 순서를 맞추고, `biome`으로 포맷과 lint 기준을 한 군데에서 관리해요.
+- 그래서 생성 직후에도 루트에서 한 번에 검사 흐름을 맞출 수 있어요.
 
 자세한 생성 구조와 운영 방식은 생성된 repo 문서를 보면 돼요.
 
@@ -60,25 +61,23 @@ pnpm verify
 
 그 흐름을 따라가면 지금 확인할 문서와 Skill이 자연스럽게 이어져요. 그래서 README에서 모든 작업 순서를 길게 외울 필요는 없어요.
 
-## 자주 쓰는 옵션
+## Skill은 왜 같이 들어가나요
 
-- `--package-manager <pnpm|yarn|npm|bun>`: 생성과 루트 monorepo에 쓸 package manager를 직접 고를 때
-- `--name`: 생성 디렉터리 이름이자 Granite `appName`을 정할 때
-- `--display-name`: 사용자에게 보이는 앱 이름을 정할 때
-- `--server-provider <supabase|cloudflare|firebase>`: `server` workspace를 같이 만들 때
-- `--with-backoffice`: `backoffice` workspace를 같이 만들 때
-- `--trpc`: `cloudflare` 위에 tRPC 경계를 같이 둘 때
+Skill은 에이전트가 같은 기준으로 화면, 라우팅, 서버 작업을 이어가게 도와주는 작업 가이드예요.
 
-## 필요할 때만 보는 옵션
+생성된 repo에서는 `AGENTS.md`가 지금 읽을 Skill로 이어주고, `.agents/skills`, `.claude/skills`에는 그 기준을 같이 넣어줘요.
 
-- `--add`: 이미 만든 루트에 `server`나 `backoffice`를 나중에 붙일 때
-- `--root-dir <dir>`: `--add` 대상을 다른 경로로 지정할 때
-- `--output-dir <dir>`: 새 repo를 다른 상위 경로에 만들 때
-- `--server-project-mode <create|existing>`: 기존 원격 리소스를 연결할지 새로 만들지 정할 때
-- `--no-git`: 마지막 `git init`을 생략할 때
-- `--skip-install`: 마지막 install과 정리를 건너뛸 때
-- `--yes`: 선택형 질문을 기본값으로 진행할 때
-- `--help`, `--version`: 도움말이나 버전을 확인할 때
+## CLI 옵션은 `--help`로 확인해요
+
+어떤 실행 방식이든 마지막에 `--help`를 붙이면 전체 옵션을 볼 수 있어요.
+
+```bash
+pnpm dlx create-rn-miniapp --help
+```
+
+처음엔 `package manager`, `server provider`, `backoffice`, `--add` 정도만 보면 충분해요.
+
+필요할 때만 `--server-project-mode`, `--root-dir`, `--output-dir`, `--skip-install` 같은 세부 옵션까지 보면 돼요.
 
 ## server provider 고르기
 

@@ -747,11 +747,15 @@ test('README opens with user value and points readers to the next action', async
   assert.match(readmeSource, /## 이런 경우에 잘 맞아요/)
   assert.match(readmeSource, /## 빠른 시작/)
   assert.match(readmeSource, /## 생성한 다음엔 이렇게 보면 돼요/)
+  assert.match(readmeSource, /## CLI 옵션은 `--help`로 확인해요/)
   assert.match(readmeSource, /생성한 뒤에는 루트 `AGENTS\.md`의 `Start Here`부터 보면 돼요\./)
-  assert.ok(readmeSource.indexOf('## 빠른 시작') < readmeSource.indexOf('## 자주 쓰는 옵션'))
+  assert.ok(
+    readmeSource.indexOf('## 빠른 시작') <
+      readmeSource.indexOf('## CLI 옵션은 `--help`로 확인해요'),
+  )
   assert.ok(
     readmeSource.indexOf('## 생성한 다음엔 이렇게 보면 돼요') <
-      readmeSource.indexOf('## 자주 쓰는 옵션'),
+      readmeSource.indexOf('## CLI 옵션은 `--help`로 확인해요'),
   )
 })
 
@@ -794,6 +798,15 @@ test('README treats generated skills as a first-class scaffold output and avoids
 
   assert.match(readmeSource, /공식 scaffold 위에 필요한 운영 문서와 Skill을 함께 준비해줘요\./)
   assert.match(readmeSource, /문서와 Skill까지 함께 준비해주는 CLI/)
+  assert.match(readmeSource, /## Skill은 왜 같이 들어가나요/)
+  assert.match(
+    readmeSource,
+    /Skill은 에이전트가 같은 기준으로 화면, 라우팅, 서버 작업을 이어가게 도와주는 작업 가이드예요\./,
+  )
+  assert.match(
+    readmeSource,
+    /생성된 repo에서는 `AGENTS\.md`가 지금 읽을 Skill로 이어주고, `.agents\/skills`, `.claude\/skills`에는 그 기준을 같이 넣어줘요\./,
+  )
   assert.doesNotMatch(readmeSource, /canonical/i)
   assert.doesNotMatch(readmeSource, /source of truth/i)
   assert.doesNotMatch(readmeSource, /생성물 계약/)
@@ -842,22 +855,45 @@ test('README keeps maintainer-only implementation language out of the user guide
   assert.match(readmeSource, /자세한 생성 구조와 운영 방식은 생성된 repo 문서를 보면 돼요\./)
 })
 
-test('README groups common actions before advanced details', async () => {
+test('README explains option discovery through --help instead of a long flag list', async () => {
   const readmeSource = await readFile(
     fileURLToPath(new URL('../../../../README.md', import.meta.url)),
     'utf8',
   )
 
-  assert.match(readmeSource, /## 자주 쓰는 옵션/)
-  assert.match(readmeSource, /## 필요할 때만 보는 옵션/)
+  assert.match(readmeSource, /## CLI 옵션은 `--help`로 확인해요/)
+  assert.match(
+    readmeSource,
+    /어떤 실행 방식이든 마지막에 `--help`를 붙이면 전체 옵션을 볼 수 있어요\./,
+  )
+  assert.match(
+    readmeSource,
+    /처음엔 `package manager`, `server provider`, `backoffice`, `--add` 정도만 보면 충분해요\./,
+  )
   assert.match(readmeSource, /## server provider 고르기/)
   assert.match(readmeSource, /## 기존 워크스페이스에 나중에 붙이기/)
+  assert.doesNotMatch(readmeSource, /## 자주 쓰는 옵션/)
+  assert.doesNotMatch(readmeSource, /## 필요할 때만 보는 옵션/)
   assert.ok(
-    readmeSource.indexOf('## 자주 쓰는 옵션') < readmeSource.indexOf('## 필요할 때만 보는 옵션'),
+    readmeSource.indexOf('## CLI 옵션은 `--help`로 확인해요') <
+      readmeSource.indexOf('## server provider 고르기'),
   )
   assert.ok(
     readmeSource.indexOf('## server provider 고르기') < readmeSource.indexOf('## 생성 기준'),
   )
+})
+
+test('README explains how nx and biome keep the generated root workflow aligned', async () => {
+  const readmeSource = await readFile(
+    fileURLToPath(new URL('../../../../README.md', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(
+    readmeSource,
+    /루트 `verify`는 `nx`로 워크스페이스 작업 순서를 맞추고, `biome`으로 포맷과 lint 기준을 한 군데에서 관리해요\./,
+  )
+  assert.match(readmeSource, /그래서 생성 직후에도 루트에서 한 번에 검사 흐름을 맞출 수 있어요\./)
 })
 
 test('server remote ops are derived from shared script metadata instead of hardcoded provider tables', async () => {

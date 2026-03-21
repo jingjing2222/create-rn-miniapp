@@ -4,17 +4,19 @@
 - 루트 `README.md`를 처음 보는 사용자 기준으로 다시 써서, 도구의 가치와 시작 순서가 내부 구현 설명보다 먼저 읽히게 만든다.
 - `생성물 계약`, `Provider IaC`, `렌더`, `catalog가 소유`, `skill-catalog.ts` 같은 maintainer 중심 표현을 걷어낸다.
 - 사용자 중심 섹션 순서와 anti-jargon 규칙을 README 회귀 테스트로 고정한다.
+- 긴 CLI 플래그 나열 대신 `--help` 중심 안내로 줄이고, Skill과 `nx`/`biome`이 생성 직후 어떤 역할을 하는지 사용자 언어로 설명한다.
 
 ### 작업 순서
 1. `packages/create-rn-miniapp/src/templates/index.test.ts`에 README UX red test를 추가하고, 기존 maintainer-oriented assertion을 사용자 중심 규칙으로 치환한다.
-2. `README.md`를 "무엇을 해주는지 -> 언제 쓰는지 -> 빠른 시작 -> 생성 후 어디를 볼지 -> 자주 쓰는 옵션 -> 상세 안내" 순서로 재작성한다.
-3. provider와 `--add` 설명은 선택 기준 중심으로 줄이고, detailed file/env/script 설명은 생성된 repo 문서로 넘긴다.
+2. `README.md`를 "무엇을 해주는지 -> 언제 쓰는지 -> 빠른 시작 -> 생성 후 어디를 볼지 -> Skill과 verify 흐름 설명 -> 상세 안내" 순서로 재작성한다.
+3. provider와 `--add` 설명은 선택 기준 중심으로 줄이고, CLI 플래그 상세 목록은 `--help`로 넘긴다.
 4. `pnpm --filter create-rn-miniapp test -- src/templates/index.test.ts`와 `pnpm verify`를 다시 통과시킨 뒤 커밋한다.
 
 ### 완료 기준
 - 첫 화면에서 내부 산출물 목록보다 사용자 가치와 다음 행동이 먼저 읽힌다.
 - README가 `AGENTS.md`의 `Start Here`로 자연스럽게 연결된다.
 - maintainer-only 표현과 내부 소스 파일 경로가 README에서 빠진다.
+- README가 Skill과 `nx`/`biome`의 역할을 "왜 같이 생기는지" 기준으로 설명한다.
 - `pnpm verify`를 통과한다.
 
 ## 다음 작업: tds-ui decision skill 최종 마이그레이션
