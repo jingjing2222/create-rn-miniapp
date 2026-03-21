@@ -807,6 +807,13 @@ test('README treats generated skills as a first-class scaffold output and avoids
     readmeSource,
     /생성된 repo에서는 `AGENTS\.md`가 지금 읽을 Skill로 이어주고, `.agents\/skills`, `.claude\/skills`에는 그 기준을 같이 넣어줘요\./,
   )
+  assert.match(readmeSource, /기본으로는 아래 Skill이 같이 들어가요\./)
+  assert.match(
+    readmeSource,
+    /- `miniapp-capabilities`: MiniApp capability와 공식 API를 찾을 때 봐요\./,
+  )
+  assert.match(readmeSource, /- `granite-routing`: route, page, navigation 패턴을 정할 때 봐요\./)
+  assert.match(readmeSource, /- `tds-ui`: TDS UI와 form 패턴을 고를 때 봐요\./)
   assert.doesNotMatch(readmeSource, /canonical/i)
   assert.doesNotMatch(readmeSource, /source of truth/i)
   assert.doesNotMatch(readmeSource, /생성물 계약/)
@@ -823,7 +830,7 @@ test('root AGENTS follows the code-owned generated AGENTS contract', async () =>
   assert.match(agentsSource, /packages\/create-rn-miniapp\/src\/templates\/docs\.ts/)
 })
 
-test('root docs do not hand-maintain canonical skill name lists', async () => {
+test('README lists scaffolded skills in user-facing groups without leaking maintainer labels', async () => {
   const agentsSource = await readFile(
     fileURLToPath(new URL('../../../../AGENTS.md', import.meta.url)),
     'utf8',
@@ -836,6 +843,16 @@ test('root docs do not hand-maintain canonical skill name lists', async () => {
   assert.doesNotMatch(agentsSource, /^- core:/m)
   assert.doesNotMatch(agentsSource, /^- optional:/m)
   assert.match(agentsSource, /skill-catalog\.ts/)
+  assert.match(readmeSource, /선택한 구성에 따라 아래 Skill이 추가돼요\./)
+  assert.match(readmeSource, /- `backoffice-react`: `backoffice`를 같이 만들었을 때 들어가요\./)
+  assert.match(
+    readmeSource,
+    /- `cloudflare-worker`, `supabase-project`, `firebase-functions`: 고른 `server` provider에 맞춰 들어가요\./,
+  )
+  assert.match(
+    readmeSource,
+    /- `trpc-boundary`: `cloudflare` 위에 `tRPC`를 올렸을 때 같이 들어가요\./,
+  )
   assert.doesNotMatch(readmeSource, /^- core:/m)
   assert.doesNotMatch(readmeSource, /^- optional:/m)
   assert.doesNotMatch(readmeSource, /skill-catalog\.ts/)

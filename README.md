@@ -67,6 +67,18 @@ Skill은 에이전트가 같은 기준으로 화면, 라우팅, 서버 작업을
 
 생성된 repo에서는 `AGENTS.md`가 지금 읽을 Skill로 이어주고, `.agents/skills`, `.claude/skills`에는 그 기준을 같이 넣어줘요.
 
+기본으로는 아래 Skill이 같이 들어가요.
+
+- `miniapp-capabilities`: MiniApp capability와 공식 API를 찾을 때 봐요.
+- `granite-routing`: route, page, navigation 패턴을 정할 때 봐요.
+- `tds-ui`: TDS UI와 form 패턴을 고를 때 봐요.
+
+선택한 구성에 따라 아래 Skill이 추가돼요.
+
+- `backoffice-react`: `backoffice`를 같이 만들었을 때 들어가요.
+- `cloudflare-worker`, `supabase-project`, `firebase-functions`: 고른 `server` provider에 맞춰 들어가요.
+- `trpc-boundary`: `cloudflare` 위에 `tRPC`를 올렸을 때 같이 들어가요.
+
 ## CLI 옵션은 `--help`로 확인해요
 
 어떤 실행 방식이든 마지막에 `--help`를 붙이면 전체 옵션을 볼 수 있어요.
