@@ -89,6 +89,25 @@ async function createTempTargetRoot(t: test.TestContext) {
   return targetRoot
 }
 
+async function listRelativeFiles(root: string, currentDir = ''): Promise<string[]> {
+  const absoluteDir = currentDir ? path.join(root, currentDir) : root
+  const entries = await readdir(absoluteDir, { withFileTypes: true })
+  const files: string[] = []
+
+  for (const entry of [...entries].sort((left, right) => left.name.localeCompare(right.name))) {
+    const relativePath = currentDir ? path.join(currentDir, entry.name) : entry.name
+
+    if (entry.isDirectory()) {
+      files.push(...(await listRelativeFiles(root, relativePath)))
+      continue
+    }
+
+    files.push(relativePath.split(path.sep).join('/'))
+  }
+
+  return files
+}
+
 const NX_ROOT_SCHEMA_URL =
   'https://raw.githubusercontent.com/nrwl/nx/master/packages/nx/schemas/nx-schema.json'
 const NX_PROJECT_SCHEMA_URL =
@@ -239,14 +258,202 @@ test('frontend policy derives core skill references from the core skill catalog'
     fileURLToPath(new URL('./frontend-policy.ts', import.meta.url)),
     'utf8',
   )
+  const skillCatalogSource = await readFile(
+    fileURLToPath(new URL('./skill-catalog.ts', import.meta.url)),
+    'utf8',
+  )
 
   assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/miniapp\/SKILL\.md/)
   assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/granite\/SKILL\.md/)
   assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/tds\/SKILL\.md/)
   assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/tds\/references\/catalog\.md/)
+  assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/tds-ui\/references\/catalog\.md/)
   assert.match(frontendPolicySource, /getCoreSkillDefinition\('miniapp-capabilities'/)
   assert.match(frontendPolicySource, /getCoreSkillDefinition\('granite-routing'/)
   assert.match(frontendPolicySource, /getCoreSkillDefinition\('tds-ui'/)
+  assert.match(skillCatalogSource, /\.agents\/skills\/tds-ui\/generated\/catalog\.json/)
+})
+
+test('tds-ui canonical skill package is self-contained and decision-driven', async () => {
+  const tdsUiRoot = fileURLToPath(new URL('../../../scaffold-skills/tds-ui', import.meta.url))
+  const expectedFiles = [
+    'AGENTS.md',
+    'generated/anomalies.json',
+    'generated/catalog.json',
+    'generated/catalog.md',
+    'metadata.json',
+    'references/decision-matrix.md',
+    'references/display-patterns.md',
+    'references/export-gaps.md',
+    'references/feedback-and-loading.md',
+    'references/form-patterns.md',
+    'references/layout-and-navigation.md',
+    'references/policy-summary.md',
+    'rules/accessibility-interactive-elements.md',
+    'rules/catalog-doc-backed-first.md',
+    'rules/catalog-export-gap-handling.md',
+    'rules/export-only-gated.md',
+    'rules/navbar-import-gap.md',
+    'rules/no-rn-primitive-when-tds-exists.md',
+    'rules/screen-states-loading-error-empty.md',
+    'rules/state-controlled-uncontrolled.md',
+    'SKILL.md',
+  ]
+
+  assert.deepEqual(await listRelativeFiles(tdsUiRoot), expectedFiles)
+
+  const skillSource = await readFile(path.join(tdsUiRoot, 'SKILL.md'), 'utf8')
+  assert.match(skillSource, /generated\/catalog\.json/)
+  assert.match(skillSource, /generated\/anomalies\.json/)
+  assert.match(skillSource, /references\/decision-matrix\.md/)
+  assert.match(skillSource, /rules\/\*\.md/)
+  assert.match(skillSource, /추천 컴포넌트/)
+  assert.match(skillSource, /anomaly note/i)
+
+  const metadata = JSON.parse(await readFile(path.join(tdsUiRoot, 'metadata.json'), 'utf8')) as {
+    package: { name: string; version: string }
+    lastVerifiedAt: string
+  }
+  assert.equal(metadata.package.name, '@toss/tds-react-native')
+  assert.equal(metadata.package.version, '2.0.2')
+  assert.equal(metadata.lastVerifiedAt, '2026-03-19')
+
+  const catalog = JSON.parse(
+    await readFile(path.join(tdsUiRoot, 'generated', 'catalog.json'), 'utf8'),
+  ) as Array<{
+    name: string
+    cluster: string
+    selectionStatus: string
+    rootExported: boolean
+    componentDirExists: boolean
+    rootImportPath: string
+    docsStatus: string
+    docsSlug: string | null
+    docUrl: string | null
+    stateModel: {
+      controlled: string[]
+      uncontrolled: string[]
+    }
+    useWhen: string[]
+    avoidWhen: string[]
+    knownCaveats: string[]
+    packageVersion: string
+    lastVerifiedAt: string
+  }>
+
+  const searchField = catalog.find((entry) => entry.name === 'search-field')
+  const navbar = catalog.find((entry) => entry.name === 'navbar')
+  const agreement = catalog.find((entry) => entry.name === 'agreement')
+  const paragraph = catalog.find((entry) => entry.name === 'paragraph')
+  const chart = catalog.find((entry) => entry.name === 'chart')
+  const stepperRow = catalog.find((entry) => entry.name === 'stepper-row')
+
+  assert.equal(searchField?.cluster, 'input-choice')
+  assert.equal(searchField?.selectionStatus, 'doc-backed')
+  assert.equal(searchField?.rootExported, true)
+  assert.equal(searchField?.componentDirExists, true)
+  assert.equal(searchField?.rootImportPath, '@toss/tds-react-native')
+  assert.equal(searchField?.docsStatus, 'public-docs')
+  assert.equal(searchField?.docsSlug, 'search-field')
+  assert.equal(
+    searchField?.docUrl,
+    'https://tossmini-docs.toss.im/tds-react-native/components/search-field/',
+  )
+  assert.deepEqual(searchField?.stateModel, {
+    controlled: ['value', 'onChange'],
+    uncontrolled: ['defaultValue'],
+  })
+  assert.ok(searchField?.useWhen.includes('search query input'))
+  assert.ok(searchField?.avoidWhen.includes('free-form non-search text entry'))
+  assert.ok(
+    searchField?.knownCaveats.includes('prefer over text-field when the primary intent is search'),
+  )
+  assert.equal(searchField?.packageVersion, '2.0.2')
+  assert.equal(searchField?.lastVerifiedAt, '2026-03-19')
+
+  assert.equal(navbar?.cluster, 'list-navigation-layout')
+  assert.equal(navbar?.selectionStatus, 'export-gap')
+  assert.equal(navbar?.rootExported, false)
+  assert.equal(navbar?.componentDirExists, true)
+  assert.equal(navbar?.rootImportPath, '@toss/tds-react-native/extensions/page-navbar')
+  assert.equal(navbar?.docsStatus, 'public-docs')
+  assert.equal(navbar?.docsSlug, 'navbar')
+  assert.equal(navbar?.docUrl, 'https://tossmini-docs.toss.im/tds-react-native/components/navbar/')
+  assert.deepEqual(navbar?.stateModel, {
+    controlled: [],
+    uncontrolled: [],
+  })
+  assert.ok(
+    navbar?.knownCaveats.includes(
+      'docs-backed but import path differs from the package root export',
+    ),
+  )
+
+  assert.equal(agreement?.cluster, 'guarded-export-only')
+  assert.equal(agreement?.selectionStatus, 'export-only')
+  assert.equal(agreement?.rootExported, true)
+  assert.equal(agreement?.componentDirExists, true)
+  assert.equal(agreement?.rootImportPath, '@toss/tds-react-native')
+  assert.equal(agreement?.docsStatus, 'no-public-docs')
+  assert.equal(agreement?.docsSlug, null)
+  assert.equal(agreement?.docUrl, null)
+  assert.ok(
+    agreement?.knownCaveats.includes('export-only / docs-missing: provide a doc-backed fallback'),
+  )
+
+  assert.equal(paragraph?.cluster, 'blocked-by-default')
+  assert.equal(paragraph?.selectionStatus, 'blocked')
+  assert.equal(paragraph?.rootExported, false)
+  assert.equal(paragraph?.componentDirExists, true)
+  assert.equal(paragraph?.rootImportPath, '')
+  assert.equal(paragraph?.docsStatus, 'no-public-docs')
+  assert.equal(paragraph?.docsSlug, null)
+  assert.equal(paragraph?.docUrl, null)
+  assert.ok(paragraph?.knownCaveats.includes('dir-only-weak: do not recommend by default'))
+  assert.equal(chart?.docsSlug, 'Chart/bar-chart')
+  assert.equal(stepperRow?.docsSlug, 'stepper')
+
+  const anomalies = JSON.parse(
+    await readFile(path.join(tdsUiRoot, 'generated', 'anomalies.json'), 'utf8'),
+  ) as Record<string, Array<{ name: string }>>
+  assert.deepEqual(Object.keys(anomalies).sort(), [
+    'dir-only-weak',
+    'docs-slug-alias',
+    'root-export-gap',
+    'root-export-no-public-docs',
+  ])
+  assert.deepEqual(anomalies['docs-slug-alias']?.map((entry) => entry.name).sort(), [
+    'chart',
+    'stepper-row',
+  ])
+  assert.deepEqual(
+    anomalies['root-export-gap']?.map((entry) => entry.name),
+    ['navbar'],
+  )
+  assert.deepEqual(anomalies['root-export-no-public-docs']?.map((entry) => entry.name).sort(), [
+    'agreement',
+    'bottom-cta',
+    'bottom-sheet',
+    'fixed-bottom-cta',
+    'icon',
+    'tooltip',
+    'top',
+    'txt',
+  ])
+  assert.deepEqual(
+    anomalies['dir-only-weak']?.map((entry) => entry.name),
+    ['paragraph'],
+  )
+
+  for (const ruleFile of expectedFiles.filter((filePath) => filePath.startsWith('rules/'))) {
+    const ruleSource = await readFile(path.join(tdsUiRoot, ruleFile), 'utf8')
+    assert.match(ruleSource, /^---\n/m, ruleFile)
+    assert.match(ruleSource, /impact:/, ruleFile)
+    assert.match(ruleSource, /tags:/, ruleFile)
+    assert.match(ruleSource, /reference:/, ruleFile)
+    assert.match(ruleSource, /## Incorrect/, ruleFile)
+    assert.match(ruleSource, /## Correct/, ruleFile)
+  }
 })
 
 test('frontend route verifier is rendered from frontend policy metadata instead of template source', async () => {
@@ -673,7 +880,7 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   assert.match(biomeJson, /Text/)
   assert.match(biomeJson, /TDS `Txt`/)
   assert.match(biomeJson, /docs\/engineering\/frontend-policy\.md/)
-  assert.match(biomeJson, /\.agents\/skills\/tds-ui\/references\/catalog\.md/)
+  assert.match(biomeJson, /\.agents\/skills\/tds-ui\/generated\/catalog\.json/)
 })
 
 test('applyRootTemplates emits shared react-native guidance across package managers', async (t) => {
@@ -1274,6 +1481,58 @@ test('syncGeneratedSkills copies core skills, selected optional skills, and the 
         'feature-map.md',
       ),
       'utf8',
+    ),
+  )
+  assert.equal(
+    await pathExists(path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'AGENTS.md')),
+    true,
+  )
+  assert.equal(
+    await pathExists(
+      path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'generated', 'catalog.json'),
+    ),
+    true,
+  )
+  assert.equal(
+    await pathExists(
+      path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'generated', 'anomalies.json'),
+    ),
+    true,
+  )
+  assert.equal(
+    await pathExists(
+      path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'references', 'decision-matrix.md'),
+    ),
+    true,
+  )
+  assert.equal(
+    await pathExists(
+      path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'rules', 'export-only-gated.md'),
+    ),
+    true,
+  )
+
+  const syncedTdsSkill = await readFile(
+    path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'SKILL.md'),
+    'utf8',
+  )
+  const syncedCatalog = JSON.parse(
+    await readFile(
+      path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'generated', 'catalog.json'),
+      'utf8',
+    ),
+  ) as Array<{ name: string; cluster: string }>
+
+  assert.match(syncedTdsSkill, /generated\/catalog\.json/)
+  assert.match(syncedTdsSkill, /generated\/anomalies\.json/)
+  assert.ok(
+    syncedCatalog.some(
+      (entry) => entry.name === 'search-field' && entry.cluster === 'input-choice',
+    ),
+  )
+  assert.ok(
+    syncedCatalog.some(
+      (entry) => entry.name === 'agreement' && entry.cluster === 'guarded-export-only',
     ),
   )
 })
