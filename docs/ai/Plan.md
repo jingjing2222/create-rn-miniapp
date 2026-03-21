@@ -73,12 +73,14 @@
 ### 후속 수정
 - patch changeset 범위를 `create-rn-miniapp`, `@create-rn-miniapp/scaffold-skills`, `@create-rn-miniapp/scaffold-templates` 세 패키지로 바로잡는다.
 - changeset 수정 후 `pnpm verify`를 다시 통과시킨다.
+- 현재 브랜치 diff와 맞는 한국어 changeset 설명을 작성하고, PR 제목/본문도 같은 범위로 갱신한다.
 
 ### 작업 순서
 1. 현재 diff 기준으로 배포 대상 패키지를 확정한다.
 2. `.changeset/*.md` 파일을 추가해 patch bump와 한국어 릴리스 요약을 기록한다.
-3. `pnpm verify`를 다시 실행해 최종 상태를 확인한다.
-4. changeset 커밋을 만들고 현재 PR 브랜치에 푸시한다.
+3. PR 제목과 본문을 현재 브랜치 범위에 맞게 한국어로 수정한다.
+4. `pnpm verify`를 다시 실행해 최종 상태를 확인한다.
+5. changeset 커밋을 만들고 현재 PR 브랜치에 푸시한다.
 
 ## 진행 예정: Skill taxonomy SSoT audit
 
