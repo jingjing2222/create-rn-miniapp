@@ -1,3 +1,15 @@
+## 다음 작업: dev publish 구현을 루트 scripts로 이동
+
+### 목표
+- `publish:dev`의 실행 파일을 `packages/create-rn-miniapp` 내부에서 제거하고, repo root `scripts/` 아래로 옮긴다.
+- 루트 `package.json`의 `publish:dev`는 새 root script만 가리키게 한다.
+- release test는 root script 경로와 package-local 구현 제거를 먼저 고정한다.
+
+### 작업 순서
+1. `release.test.ts`에서 `publish:dev` 경로 기대치를 `scripts/publish-dev.ts`로 바꾸고, 기존 package-local 구현 파일이 없어야 한다는 red test를 추가한다.
+2. `packages/create-rn-miniapp/src/release/dev-publish.ts` 구현을 root `scripts/publish-dev.ts`로 옮기고, 관련 import와 root script를 갱신한다.
+3. targeted test와 `pnpm verify`를 다시 통과시킨 뒤 커밋한다.
+
 ## 다음 작업: non-index re-export alias 금지
 
 ### 목표

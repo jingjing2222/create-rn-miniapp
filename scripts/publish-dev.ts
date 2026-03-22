@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
 
 type PackageJson = {
   name: string
@@ -21,7 +20,7 @@ type PrepareDevPublishPackageJsonsResult = {
   templatesPackageJson: PackageJson
 }
 
-const repoRoot = path.resolve(import.meta.dirname, '../../../..')
+const repoRoot = path.resolve(__dirname, '..')
 const cliPackageName = 'create-rn-miniapp'
 const templatesPackageName = '@create-rn-miniapp/scaffold-templates'
 
@@ -151,6 +150,6 @@ function main(): void {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (require.main === module) {
   main()
 }

@@ -9,7 +9,7 @@
     "test": "nx run-many -t test --all",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm format",
-    "publish:dev": "pnpm exec tsx packages/create-rn-miniapp/src/release/dev-publish.ts",
+    "publish:dev": "pnpm exec tsx scripts/publish-dev.ts",
     "release": "changeset publish",
     "format": "pnpm exec biome format . --write",
     "format:check": "pnpm exec biome format .",

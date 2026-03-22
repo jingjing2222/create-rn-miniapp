@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 import fs from 'node:fs'
 import path from 'node:path'
 import test from 'node:test'
-import { formatDevPublishVersion, prepareDevPublishPackageJsons } from './release/dev-publish.js'
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..')
+const require = createRequire(import.meta.url)
+const {
+  formatDevPublishVersion,
+  prepareDevPublishPackageJsons,
+} = require('../../../scripts/publish-dev.ts')
 
 test('version-packages formats workspace after changeset bump', () => {
   const packageJsonPath = path.join(repoRoot, 'package.json')
@@ -14,9 +19,11 @@ test('version-packages formats workspace after changeset bump', () => {
   }
 
   assert.equal(packageJson.scripts?.['version-packages'], 'changeset version && pnpm format')
+  assert.equal(packageJson.scripts?.['publish:dev'], 'pnpm exec tsx scripts/publish-dev.ts')
+  assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/publish-dev.ts')), true)
   assert.equal(
-    packageJson.scripts?.['publish:dev'],
-    'pnpm exec tsx packages/create-rn-miniapp/src/release/dev-publish.ts',
+    fs.existsSync(path.join(repoRoot, 'packages/create-rn-miniapp/src/release/dev-publish.ts')),
+    false,
   )
 })
 
