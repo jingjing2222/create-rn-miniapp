@@ -9,6 +9,7 @@ import {
 } from './frontend-policy.js'
 import {
   copyFileWithTokens,
+  pathExists,
   resolveTemplatesPackageRoot,
   replaceTemplateTokens,
 } from './filesystem.js'
@@ -109,8 +110,30 @@ function renderRootBiomeSource(adapter: ReturnType<typeof getPackageManagerAdapt
   )}\n`
 }
 
+async function resolvePreservedRootBiomeIncludes(
+  targetRoot: string,
+  packageManager: PackageManager,
+) {
+  const biomePath = path.join(targetRoot, 'biome.json')
+
+  if (!(await pathExists(biomePath))) {
+    return [] as string[]
+  }
+
+  const adapter = getPackageManagerAdapter(packageManager)
+  const biomeJson = JSON.parse(await readFile(biomePath, 'utf8')) as {
+    files?: {
+      includes?: string[]
+    }
+  }
+  const existingIncludes = biomeJson.files?.includes ?? []
+
+  return existingIncludes.filter((entry) => !adapter.rootBiomeIncludes.includes(entry))
+}
+
 async function syncRootFrontendPolicyArtifacts(targetRoot: string, packageManager: PackageManager) {
   const packageManagerAdapter = getPackageManagerAdapter(packageManager)
+  const preservedBiomeIncludes = await resolvePreservedRootBiomeIncludes(targetRoot, packageManager)
 
   await mkdir(path.join(targetRoot, 'scripts'), { recursive: true })
   await writeFile(
@@ -120,7 +143,10 @@ async function syncRootFrontendPolicyArtifacts(targetRoot: string, packageManage
   )
   await writeFile(
     path.join(targetRoot, 'biome.json'),
-    renderRootBiomeSource(packageManagerAdapter),
+    renderRootBiomeSource({
+      ...packageManagerAdapter,
+      rootBiomeIncludes: [...packageManagerAdapter.rootBiomeIncludes, ...preservedBiomeIncludes],
+    }),
     'utf8',
   )
 }

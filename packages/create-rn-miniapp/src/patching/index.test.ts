@@ -15,6 +15,7 @@ import {
   createFirebaseServerScriptCatalog,
   createSupabaseServerScriptCatalog,
 } from '../server-script-catalog.js'
+import { syncRootFrontendPolicyFiles } from '../templates/root.js'
 import {
   patchBackofficeWorkspace,
   patchCloudflareServerWorkspace,
@@ -2360,6 +2361,70 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
   assert.equal(await readFile(copiedServiceAccountGuide2, 'utf8'), 'firebase-service-account-2')
   assert.match(rootGitignore, /^server\/functions\/lib\/$/m)
   assert.deepEqual(rootBiome.files?.includes, ['**', '!!node_modules', '!!**/server/functions/lib'])
+})
+
+test('patchFirebaseServerWorkspace keeps firebase lib ignored after root frontend policy sync', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const serverRoot = path.join(targetRoot, 'server')
+
+  await mkdir(path.join(serverRoot, 'functions', 'src'), { recursive: true })
+  await writeJson(path.join(targetRoot, 'biome.json'), {
+    files: {
+      includes: ['**', '!!**/.nx', '!!**/node_modules', '!!**/dist', '!!frontend/.granite'],
+    },
+  })
+  await writeJson(path.join(serverRoot, 'package.json'), {
+    name: 'server',
+    private: true,
+    scripts: {
+      deploy:
+        'bunx firebase-tools@15.11.0 deploy --only functions,firestore:rules,firestore:indexes --config firebase.json',
+      build: 'bun run --cwd ./functions build',
+      typecheck: 'bun run --cwd ./functions typecheck',
+      logs: 'bunx firebase-tools@15.11.0 functions:log',
+      test: `node -e "console.log('firebase server test placeholder')"`,
+    },
+  })
+
+  await patchFirebaseServerWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'bun',
+      packageManagerCommand: 'bun',
+      packageManagerRunCommand: 'bun run',
+      packageManagerExecCommand: 'bunx',
+      verifyCommand: 'bun run verify',
+    },
+    {
+      packageManager: 'bun',
+      state: {
+        serverProvider: 'firebase',
+        serverProjectMode: 'create',
+        remoteInitialization: 'applied',
+        trpc: false,
+        backoffice: true,
+      },
+    },
+  )
+
+  await syncRootFrontendPolicyFiles(targetRoot, 'bun')
+
+  const rootBiome = JSON.parse(await readFile(path.join(targetRoot, 'biome.json'), 'utf8')) as {
+    files?: {
+      includes?: string[]
+    }
+  }
+
+  assert.deepEqual(rootBiome.files?.includes, [
+    '**',
+    '!!**/.nx',
+    '!!**/node_modules',
+    '!!**/dist',
+    '!!frontend/.granite',
+    '!!**/server/functions/lib',
+  ])
 })
 
 test('patchFirebaseServerWorkspace adds firebase-only yarn packageExtensions to root yarnrc', async (t) => {
