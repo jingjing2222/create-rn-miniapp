@@ -438,13 +438,9 @@ test('generated docs and inspectors derive workspace topology from a shared help
   assert.doesNotMatch(templateTypesSource, /GeneratedSkillsServerProvider/)
 })
 
-test('frontend policy derives core skill references from the core skill catalog', async () => {
+test('frontend policy keeps TDS and Granite guidance as a shared contract', async () => {
   const frontendPolicySource = await readFile(
     fileURLToPath(new URL('./frontend-policy.ts', import.meta.url)),
-    'utf8',
-  )
-  const skillCatalogSource = await readFile(
-    fileURLToPath(new URL('./skill-catalog.ts', import.meta.url)),
     'utf8',
   )
 
@@ -453,11 +449,17 @@ test('frontend policy derives core skill references from the core skill catalog'
   assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/tds\/SKILL\.md/)
   assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/tds\/references\/catalog\.md/)
   assert.doesNotMatch(frontendPolicySource, /\.agents\/skills\/tds-ui\/references\/catalog\.md/)
-  assert.match(frontendPolicySource, /getCoreSkillDefinition\('miniapp-capabilities'/)
-  assert.match(frontendPolicySource, /getCoreSkillDefinition\('granite-routing'/)
-  assert.match(frontendPolicySource, /getCoreSkillDefinition\('tds-ui'/)
-  assert.match(skillCatalogSource, /referenceCatalogRelativePath: 'generated\/catalog\.json'/)
-  assert.doesNotMatch(skillCatalogSource, /createProjectSkillGeneratedPath\(/)
+  assert.doesNotMatch(frontendPolicySource, /getCoreSkillDefinition\(/)
+  assert.doesNotMatch(frontendPolicySource, /createProjectSkillDocPath\(/)
+  assert.doesNotMatch(frontendPolicySource, /createProjectSkillGeneratedPath\(/)
+  assert.match(frontendPolicySource, /TDS를 써 주세요/)
+  assert.match(frontendPolicySource, /Granite router 규칙/)
+  assert.match(
+    frontendPolicySource,
+    /정말 이 컴포넌트를 써야 하면 `biome-ignore`에 이유를 같이 남겨 주세요/,
+  )
+  assert.doesNotMatch(frontendPolicySource, /Granite UI로 보완/)
+  assert.doesNotMatch(frontendPolicySource, /TDS `Txt`/)
 })
 
 test('tds-ui canonical skill package is self-contained and decision-driven', async () => {
@@ -1147,10 +1149,7 @@ test('applyDocsTemplates keeps AGENTS skill-free and renders README onboarding w
   assert.match(readme, /npx skills check/)
   assert.match(readme, /npx skills update/)
   assert.doesNotMatch(frontendPolicy, /\.agents\/skills\//)
-  assert.match(
-    frontendPolicy,
-    /UI는 TDS를 우선하고, 필요한 경우에만 Granite 컴포넌트를 보완적으로 사용한다\./,
-  )
+  assert.match(frontendPolicy, /UI는 TDS를 사용한다\./)
   assert.match(
     frontendPolicy,
     /Granite router의 `:param` path params와 `validateParams`는 허용한다\./,
@@ -1325,8 +1324,8 @@ test('applyRootTemplates keeps pnpm workspace manifest for pnpm', async (t) => {
   assert.match(biomeJson, /ActivityIndicator/)
   assert.match(biomeJson, /Alert/)
   assert.match(biomeJson, /Text/)
-  assert.match(biomeJson, /TDS `Txt`/)
-  assert.match(biomeJson, /TDS를 먼저 써 주세요/)
+  assert.match(biomeJson, /TDS를 써 주세요/)
+  assert.match(biomeJson, /정말 이 컴포넌트를 써야 하면 `biome-ignore`에 이유를 같이 남겨 주세요/)
   assert.match(biomeJson, /docs\/engineering\/frontend-policy\.md/)
   assert.doesNotMatch(biomeJson, /\.agents\/skills\/tds-ui\/generated\/catalog\.json/)
 })
@@ -1360,11 +1359,16 @@ test('applyRootTemplates emits shared react-native guidance across package manag
   }
 
   assert.equal(new Set(reactNativeMessages.map(([, message]) => message)).size, 1)
-  assert.match(reactNativeMessages[0]?.[1] ?? '', /TDS `Txt`/)
+  assert.match(reactNativeMessages[0]?.[1] ?? '', /TDS를 써 주세요/)
+  assert.match(
+    reactNativeMessages[0]?.[1] ?? '',
+    /정말 이 컴포넌트를 써야 하면 `biome-ignore`에 이유를 같이 남겨 주세요/,
+  )
+  assert.doesNotMatch(reactNativeMessages[0]?.[1] ?? '', /Granite UI로 보완/)
   assert.doesNotMatch(reactNativeMessages[0]?.[1] ?? '', /\.agents\/skills\/tds-ui/)
 })
 
-test('applyRootTemplates switches biome guidance to skill-aware mode when local core skills are installed', async (t) => {
+test('applyRootTemplates keeps biome guidance stable even when local core skills are installed', async (t) => {
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
 
@@ -1377,8 +1381,9 @@ test('applyRootTemplates switches biome guidance to skill-aware mode when local 
 
   const biomeJson = await readFile(path.join(targetRoot, 'biome.json'), 'utf8')
 
-  assert.match(biomeJson, /skills\/tds-ui\/generated\/catalog\.json/)
-  assert.match(biomeJson, /TDS를 먼저 써 주세요/)
+  assert.doesNotMatch(biomeJson, /skills\/tds-ui\/generated\/catalog\.json/)
+  assert.match(biomeJson, /TDS를 써 주세요/)
+  assert.doesNotMatch(biomeJson, /Granite UI로 보완/)
 })
 
 test('syncRootWorkspaceManifest normalizes package workspaces to packages/* in pnpm manifest', async (t) => {
@@ -1846,7 +1851,7 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
   assert.doesNotMatch(readme, /npx skills add/)
 })
 
-test('applyDocsTemplates keeps skill references in frontend policy when project-local core skills are installed', async (t) => {
+test('applyDocsTemplates keeps frontend policy generic even when project-local core skills are installed', async (t) => {
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
 
@@ -1862,9 +1867,13 @@ test('applyDocsTemplates keeps skill references in frontend policy when project-
     'utf8',
   )
 
-  assert.match(frontendPolicy, /skills\/miniapp-capabilities\/SKILL\.md/)
-  assert.match(frontendPolicy, /skills\/granite-routing\/SKILL\.md/)
-  assert.match(frontendPolicy, /skills\/tds-ui\/SKILL\.md/)
+  assert.doesNotMatch(frontendPolicy, /skills\/miniapp-capabilities\/SKILL\.md/)
+  assert.doesNotMatch(frontendPolicy, /skills\/granite-routing\/SKILL\.md/)
+  assert.doesNotMatch(frontendPolicy, /skills\/tds-ui\/SKILL\.md/)
+  assert.match(frontendPolicy, /TDS를 기준으로 구현한다/)
+  assert.match(frontendPolicy, /Granite router 규칙/)
+  assert.match(frontendPolicy, /UI는 TDS를 사용한다\./)
+  assert.doesNotMatch(frontendPolicy, /Granite UI를 보완적으로 사용한다/)
 })
 
 test('applyDocsTemplates rerenders README recommendations when optional workspaces are added later', async (t) => {

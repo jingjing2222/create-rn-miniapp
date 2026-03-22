@@ -17,7 +17,6 @@ import {
   FRONTEND_POLICY_CHECK_SCRIPT_NAME,
   ROOT_VERIFY_STEP_SCRIPT_NAMES,
 } from './root-script-catalog.js'
-import { listInstalledProjectSkillEntries } from '../skills-install.js'
 import type { TemplateTokens, WorkspaceName } from './types.js'
 
 const NORMALIZED_PACKAGE_WORKSPACE = 'packages/*' as const
@@ -69,11 +68,8 @@ function renderRootScripts(packageManager: PackageManager) {
   }
 }
 
-function renderRootBiomeSource(
-  adapter: ReturnType<typeof getPackageManagerAdapter>,
-  installedSkills: Parameters<typeof resolveFrontendPolicyRuleSet>[0],
-) {
-  const policyRules = resolveFrontendPolicyRuleSet(installedSkills)
+function renderRootBiomeSource(adapter: ReturnType<typeof getPackageManagerAdapter>) {
+  const policyRules = resolveFrontendPolicyRuleSet()
 
   return `${JSON.stringify(
     {
@@ -124,7 +120,6 @@ function renderRootBiomeSource(
 
 async function syncRootFrontendPolicyArtifacts(targetRoot: string, packageManager: PackageManager) {
   const packageManagerAdapter = getPackageManagerAdapter(packageManager)
-  const installedSkills = await listInstalledProjectSkillEntries(targetRoot)
 
   await mkdir(path.join(targetRoot, 'scripts'), { recursive: true })
   await writeFile(
@@ -134,7 +129,7 @@ async function syncRootFrontendPolicyArtifacts(targetRoot: string, packageManage
   )
   await writeFile(
     path.join(targetRoot, 'biome.json'),
-    renderRootBiomeSource(packageManagerAdapter, installedSkills),
+    renderRootBiomeSource(packageManagerAdapter),
     'utf8',
   )
 }

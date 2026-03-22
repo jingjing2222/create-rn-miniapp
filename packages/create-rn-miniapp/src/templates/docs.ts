@@ -395,7 +395,7 @@ export async function applyDocsTemplates(
         : definition.relativePath === 'README.md'
           ? await renderRootReadmeMarkdown(tokens, options, installedSkills)
           : definition.relativePath === 'docs/engineering/frontend-policy.md'
-            ? renderFrontendPolicyMarkdown(tokens.packageManager, installedSkills)
+            ? renderFrontendPolicyMarkdown(tokens.packageManager)
             : definition.render(tokens, options)
 
     await writeCodeOwnedMarkdown(targetRoot, definition.relativePath, renderedSource)

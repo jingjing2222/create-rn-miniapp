@@ -1,3 +1,39 @@
+## 다음 작업: frontend policy TDS 문구를 더 강하게 고정
+
+### 목표
+- `react-native` 기본 UI 제한 메시지에서 Granite UI 보완, `Text`/`Txt`, `Pressable` 한정 문구를 제거한다.
+- TDS 사용은 항상-on 계약으로 고정하고, 예외 사용은 어떤 컴포넌트든 `biome-ignore` 이유를 남기게 바꾼다.
+- red test를 먼저 바꾼 뒤 policy SSoT와 generated 산출물을 같이 맞춘다.
+
+### 작업 순서
+1. frontend policy/biome/generated docs 테스트를 새 문구 기준으로 먼저 깨뜨린다.
+2. `frontend-policy.ts`의 공용 메시지와 reference line을 같은 의미로 수정한다.
+3. `pnpm verify`를 다시 통과시키고 커밋한다.
+
+## 다음 작업: frontend policy 항상-on 변경을 release metadata에 반영
+
+### 목표
+- 현재 브랜치의 frontend policy 변경을 changeset과 PR 설명에 정확히 반영한다.
+- 공개 패키지는 `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates` 두 개만 patch로 올린다.
+- verify 결과까지 확인한 뒤 브랜치를 푸시하고 PR을 연다.
+
+### 작업 순서
+1. changeset을 새로 추가해 두 패키지 patch와 변경 요약을 한국어로 적는다.
+2. `pnpm verify` 결과를 다시 확인하고 커밋 상태를 점검한다.
+3. 브랜치를 푸시하고 한국어 PR title/body를 현재 변경 범위 기준으로 작성한다.
+
+## 다음 작업: frontend policy를 skill 설치 상태와 분리
+
+### 목표
+- root biome lint와 generated `docs/engineering/frontend-policy.md`가 skill 설치 여부에 따라 달라지지 않게 한다.
+- TDS 우선, Granite routing 규칙은 MiniApp 공용 계약으로 고정하고, skill은 README onboarding만 담당하게 줄인다.
+- skill-aware 경로 reference를 기대하던 테스트를 먼저 공용 정책 기준으로 바꾼 뒤 구현을 맞춘다.
+
+### 작업 순서
+1. root biome/frontend policy가 skill 설치 여부와 무관하게 같은 메시지를 가져야 한다는 red test로 바꾼다.
+2. `frontend-policy.ts`, `root.ts`, 관련 docs 렌더에서 installed skill 기반 분기를 제거한다.
+3. targeted test와 `pnpm verify`를 다시 통과시키고 커밋한다.
+
 ## 다음 작업: root README skills 안내를 배포 기준으로 전환
 
 ### 목표
