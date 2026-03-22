@@ -197,7 +197,7 @@ test('migration scaffold combinations generate docs, README onboarding, and only
 
     assert.doesNotMatch(agents, /\.agents\/skills/)
     assert.doesNotMatch(agents, /\.claude\/skills/)
-    assert.match(readme, /Optional agent skills/)
+    assert.match(readme, /## skills 전략/)
     assert.match(readme, /npx skills add/)
     assert.equal(await pathExists(path.join(targetRoot, 'docs', 'skills.md')), false, combo.label)
     assert.equal(await pathExists(path.join(targetRoot, '.agents', 'skills')), false, combo.label)

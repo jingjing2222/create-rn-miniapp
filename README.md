@@ -61,11 +61,11 @@ pnpm verify
 
 그 흐름을 따라가면 지금 확인할 문서와 Skill이 자연스럽게 이어져요. 그래서 README에서 모든 작업 순서를 길게 외울 필요는 없어요.
 
-## Optional agent skills
+## skills 전략
 
-agent skill은 에이전트가 같은 기준으로 화면, 라우팅, 서버 작업을 이어가게 도와주는 작업 가이드예요.
-
-이 저장소는 skill source를 root `skills/`에 두고, 생성된 repo에는 설치 가이드만 남겨요. 실제 설치와 업데이트는 [`skills`](https://github.com/vercel-labs/skills) CLI로 직접 선택해서 진행하면 돼요.
+- `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 예시만 제공합니다.
+- 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI를 그대로 사용합니다.
+- 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 curated skill source를 둡니다.
 
 추천 시작점은 아래 정도예요.
 

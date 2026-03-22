@@ -210,6 +210,13 @@ function renderInstalledSkillReadmeLines(installedSkillIds: string[]) {
   })
 }
 
+const SKILLS_STRATEGY_README_LINES = [
+  '## skills 전략',
+  '- `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 예시만 제공합니다.',
+  '- 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI를 그대로 사용합니다.',
+  '- 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 curated skill source를 둡니다.',
+]
+
 async function renderRootReadmeMarkdown(
   targetRoot: string,
   tokens: TemplateTokens,
@@ -229,7 +236,7 @@ async function renderRootReadmeMarkdown(
     '- `docs/index.md`: 문서 구조와 verify 동선',
     '- `docs/product/기능명세서.md`: 제품 요구사항',
     '',
-    '## Optional agent skills',
+    ...SKILLS_STRATEGY_README_LINES,
     ...(installedSkillIds.length > 0
       ? [
           '현재 project-local skills가 설치되어 있어요.',
@@ -238,7 +245,7 @@ async function renderRootReadmeMarkdown(
           ...renderInstalledSkillReadmeLines(installedSkillIds),
         ]
       : [
-          'agent skills는 선택 사항이에요. 필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.',
+          '필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.',
           ...(recommendedSkillDefinitions.length > 0
             ? [
                 '',

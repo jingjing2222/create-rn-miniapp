@@ -844,7 +844,7 @@ test('README frames skill value as miniapp-ready setup before agent collaboratio
     readmeSource,
     /MiniApp에서 자주 쓰는 agent skill을 나중에 표준 CLI로 붙일 수 있으면 좋을 때/,
   )
-  assert.match(readmeSource, /Optional agent skills/)
+  assert.match(readmeSource, /## skills 전략/)
   assert.doesNotMatch(
     readmeSource,
     /사람과 에이전트가 같은 문서와 Skill을 보면서 바로 작업하고 싶을 때/,
@@ -893,12 +893,19 @@ test('README treats generated skills as a first-class scaffold output and avoids
     /공식 scaffold 위에 필요한 운영 문서와 optional agent skill onboarding을 함께 준비해줘요\./,
   )
   assert.match(readmeSource, /optional agent skill 가이드까지 함께 준비해주는 CLI/)
-  assert.match(readmeSource, /## Optional agent skills/)
+  assert.match(readmeSource, /## skills 전략/)
   assert.match(
     readmeSource,
-    /agent skill은 에이전트가 같은 기준으로 화면, 라우팅, 서버 작업을 이어가게 도와주는 작업 가이드예요\./,
+    /`create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 예시만 제공합니다\./,
   )
-  assert.match(readmeSource, /root `skills\/`에 두고, 생성된 repo에는 설치 가이드만 남겨요\./)
+  assert.match(
+    readmeSource,
+    /실제 설치, 확인, 업데이트는 \[`@vercel-labs\/skills`\]\(https:\/\/github\.com\/vercel-labs\/skills\) 표준 CLI를 그대로 사용합니다\./,
+  )
+  assert.match(
+    readmeSource,
+    /이 저장소의 `skills\/`에는 MiniApp 작업에 맞춘 curated skill source를 둡니다\./,
+  )
   assert.match(readmeSource, /npx skills add \./)
   assert.doesNotMatch(readmeSource, /npx skills add jingjing2222\/create-rn-miniapp/)
   assert.match(
@@ -1123,7 +1130,7 @@ test('applyDocsTemplates keeps AGENTS skill-free and renders README onboarding w
   assert.doesNotMatch(agents, /\.agents\/skills/)
   assert.doesNotMatch(agents, /\.claude\/skills/)
   assert.doesNotMatch(agents, /skills add/)
-  assert.match(readme, /Optional agent skills/)
+  assert.match(readme, /## skills 전략/)
   assert.match(readme, /npx skills add/)
   assert.match(readme, /npx skills list/)
   assert.match(readme, /npx skills check/)
@@ -1735,7 +1742,7 @@ test('applyDocsTemplates omits local skill routing and docs/skills for base-only
   assert.doesNotMatch(agents, /\.claude\/skills/)
   assert.match(claude, /README\.md/)
   assert.match(copilot, /AGENTS\.md/)
-  assert.match(readme, /Optional agent skills/)
+  assert.match(readme, /## skills 전략/)
   assert.match(readme, /npx skills add/)
   assert.match(readme, /miniapp-capabilities/)
   assert.match(readme, /granite-routing/)
@@ -1820,7 +1827,7 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
 
   const readme = await readFile(path.join(targetRoot, 'README.md'), 'utf8')
 
-  assert.match(readme, /Optional agent skills/)
+  assert.match(readme, /## skills 전략/)
   assert.match(readme, /현재 project-local skills가 설치되어 있어요\./)
   assert.match(readme, /### Installed/)
   assert.match(readme, /miniapp-capabilities/)

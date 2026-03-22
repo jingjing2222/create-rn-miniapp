@@ -1,3 +1,15 @@
+## 다음 작업: README skills 전략 섹션 축약
+
+### 목표
+- root README와 generated README의 skill 안내 섹션 제목을 `## skills 전략`으로 통일한다.
+- 소개 문구는 5줄 안쪽의 짧은 전략 설명으로 줄이고, `create-rn-miniapp`는 추천만 하고 실제 lifecycle은 `@vercel-labs/skills` 표준 CLI를 직접 쓴다는 점을 더 선명하게 드러낸다.
+- 추천 목록, 설치 예시, 표준 명령은 기존처럼 유지하되 장황한 도입 문장은 제거한다.
+
+### 작업 순서
+1. root README와 generated README 테스트에서 `Optional agent skills`와 기존 장문 설명을 `skills 전략` 기준으로 먼저 깨뜨린다.
+2. root README와 generated README 렌더러를 같은 방향의 짧은 전략 설명으로 갱신한다.
+3. targeted test와 `pnpm verify`를 다시 통과시키고 커밋한다.
+
 ## 다음 작업: dev publish 구현을 루트 scripts로 이동
 
 ### 목표
