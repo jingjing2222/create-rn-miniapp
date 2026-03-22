@@ -8,10 +8,10 @@ import {
   buildCreateSupabaseProjectArgs,
   extractJsonPayload,
   finalizeSupabaseProvisioning,
-  formatSupabaseManualSetupNote,
-  formatSupabaseAccessTokenRequiredMessage,
   isSupabaseAccessTokenRequiredError,
+  formatSupabaseManualSetupNote,
   pollForNewSupabaseProject,
+  promptSupabaseAccessToken,
   resolveSupabaseClientApiKey,
   shouldAutoApplySupabaseRemoteDatabase,
   shouldAutoDeploySupabaseEdgeFunctions,
@@ -128,50 +128,97 @@ test('isSupabaseAccessTokenRequiredError detects token-first auth failures', () 
   )
 })
 
-test('formatSupabaseAccessTokenRequiredMessage explains token-first recovery steps', () => {
-  const message = formatSupabaseAccessTokenRequiredMessage({
-    packageManager: 'yarn',
-    originalError:
-      'Access token not provided. Supply an access token by running supabase login or setting the SUPABASE_ACCESS_TOKEN environment variable.',
+test('promptSupabaseAccessToken shows Korean guide and trims the entered token', async () => {
+  const messages: string[] = []
+  const token = await promptSupabaseAccessToken({
+    async text() {
+      throw new Error('password prompt를 써야 해요.')
+    },
+    async select() {
+      throw new Error('select는 호출되면 안 돼요.')
+    },
+    async password(options) {
+      messages.push(options.message)
+      messages.push(options.guide ?? '')
+      return '  sb_secret_token  '
+    },
   })
 
-  assert.match(message, /Supabase 인증 토큰이 필요해요\./)
-  assert.match(message, /non-TTY subprocess/)
-  assert.match(message, /SUPABASE_ACCESS_TOKEN/)
-  assert.match(message, /yarn dlx supabase@2\.83\.0 login --token <token>/)
-  assert.match(message, /dashboard\/account\/tokens/)
-  assert.match(message, /Access token not provided/)
+  assert.equal(token, 'sb_secret_token')
+  assert.equal(messages[0], 'Supabase access token을 붙여 넣어 주세요')
+  assert.match(messages[1] ?? '', /아래 URL에서 token을 발급한 뒤 그대로 붙여 넣으면 돼요\./)
+  assert.match(messages[1] ?? '', /https:\/\/supabase\.com\/dashboard\/account\/tokens/)
 })
 
-test('withSupabaseAccessTokenRequirement converts auth failures without retrying login', async () => {
+test('withSupabaseAccessTokenRequirement prompts for a token, retries once, and returns it', async () => {
   let attempts = 0
+  const prompts: string[] = []
+  const logins: string[] = []
 
-  await assert.rejects(
-    withSupabaseAccessTokenRequirement('yarn', async () => {
+  const result = await withSupabaseAccessTokenRequirement({
+    packageManager: 'yarn',
+    cwd: '/tmp/ebook-miniapp',
+    prompt: {
+      async text() {
+        throw new Error('password prompt를 써야 해요.')
+      },
+      async select() {
+        throw new Error('select는 호출되면 안 돼요.')
+      },
+      async password(options) {
+        prompts.push(options.message)
+        prompts.push(options.guide ?? '')
+        return 'sb_secret_token'
+      },
+    },
+    loginWithAccessToken: async ({ accessToken, cwd, packageManager }) => {
+      logins.push(`${packageManager}:${cwd}:${accessToken}`)
+    },
+    action: async () => {
       attempts += 1
 
-      throw new CommandExecutionError({
-        label: 'Supabase 프로젝트 목록 조회',
-        command: 'yarn',
-        args: ['dlx', 'supabase@2.83.0', 'projects', 'list', '--output', 'json'],
-        stdout: '',
-        stderr:
-          'Access token not provided. Supply an access token by running supabase login or setting the SUPABASE_ACCESS_TOKEN environment variable.',
-        exitCode: 1,
-      })
-    }),
-    /Supabase 인증 토큰이 필요해요\./,
-  )
+      if (attempts === 1) {
+        throw new CommandExecutionError({
+          label: 'Supabase 프로젝트 목록 조회',
+          command: 'yarn',
+          args: ['dlx', 'supabase@2.83.0', 'projects', 'list', '--output', 'json'],
+          stdout: '',
+          stderr:
+            'Access token not provided. Supply an access token by running supabase login or setting the SUPABASE_ACCESS_TOKEN environment variable.',
+          exitCode: 1,
+        })
+      }
 
-  assert.equal(attempts, 1)
+      return 'ok'
+    },
+  })
+
+  assert.equal(result.result, 'ok')
+  assert.equal(result.accessToken, 'sb_secret_token')
+  assert.equal(attempts, 2)
+  assert.equal(prompts[0], 'Supabase access token을 붙여 넣어 주세요')
+  assert.match(prompts[1] ?? '', /dashboard\/account\/tokens/)
+  assert.deepEqual(logins, ['yarn:/tmp/ebook-miniapp:sb_secret_token'])
 })
 
 test('withSupabaseAccessTokenRequirement preserves unrelated failures', async () => {
   const expectedError = new Error('network timeout')
 
   await assert.rejects(
-    withSupabaseAccessTokenRequirement('pnpm', async () => {
-      throw expectedError
+    withSupabaseAccessTokenRequirement({
+      packageManager: 'pnpm',
+      cwd: '/tmp/ebook-miniapp',
+      prompt: {
+        async text() {
+          throw new Error('text는 호출되면 안 돼요.')
+        },
+        async select() {
+          throw new Error('select는 호출되면 안 돼요.')
+        },
+      },
+      action: async () => {
+        throw expectedError
+      },
     }),
     (error) => {
       assert.equal(error, expectedError)
@@ -331,6 +378,27 @@ test('writeSupabaseServerLocalEnvFile creates server env file and preserves an e
   }
 })
 
+test('writeSupabaseServerLocalEnvFile writes the prompted access token when the env is blank', async () => {
+  const targetRoot = await mkdtemp(
+    path.join(os.tmpdir(), 'create-rn-miniapp-supabase-server-access-token-'),
+  )
+
+  try {
+    await writeSupabaseServerLocalEnvFile({
+      targetRoot,
+      projectRef: 'abc123',
+      accessToken: 'sb_secret_token',
+    })
+
+    const serverEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
+
+    assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
+    assert.match(serverEnv, /^SUPABASE_ACCESS_TOKEN=sb_secret_token$/m)
+  } finally {
+    await rm(targetRoot, { recursive: true, force: true })
+  }
+})
+
 test('finalizeSupabaseProvisioning writes env files for existing projects when publishable key is available', async () => {
   const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-supabase-finalize-'))
 
@@ -341,6 +409,7 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
         projectRef: 'abc123',
         publishableKey: 'sb_publishable_123',
         dbPassword: null,
+        accessToken: null,
         didApplyRemoteDb: false,
         didDeployEdgeFunctions: false,
         mode: 'existing',
@@ -384,6 +453,34 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
   }
 })
 
+test('finalizeSupabaseProvisioning writes the prompted access token to server env', async () => {
+  const targetRoot = await mkdtemp(
+    path.join(os.tmpdir(), 'create-rn-miniapp-supabase-finalize-access-token-'),
+  )
+
+  try {
+    const notes = await finalizeSupabaseProvisioning({
+      targetRoot,
+      provisionedProject: {
+        projectRef: 'abc123',
+        publishableKey: 'sb_publishable_123',
+        dbPassword: null,
+        accessToken: 'sb_secret_token',
+        didApplyRemoteDb: false,
+        didDeployEdgeFunctions: false,
+        mode: 'existing',
+      },
+    })
+
+    const serverEnv = await readFile(path.join(targetRoot, 'server', '.env.local'), 'utf8')
+
+    assert.match(serverEnv, /^SUPABASE_ACCESS_TOKEN=sb_secret_token$/m)
+    assert.doesNotMatch(notes[0]?.body ?? '', /SUPABASE_ACCESS_TOKEN`은 비어 있어요/)
+  } finally {
+    await rm(targetRoot, { recursive: true, force: true })
+  }
+})
+
 test('finalizeSupabaseProvisioning skips password guidance when server db password already exists', async () => {
   const targetRoot = await mkdtemp(
     path.join(os.tmpdir(), 'create-rn-miniapp-supabase-finalize-existing-password-'),
@@ -410,6 +507,7 @@ test('finalizeSupabaseProvisioning skips password guidance when server db passwo
         projectRef: 'abc123',
         publishableKey: 'sb_publishable_123',
         dbPassword: null,
+        accessToken: null,
         didApplyRemoteDb: false,
         didDeployEdgeFunctions: false,
         mode: 'existing',
@@ -444,6 +542,7 @@ test('finalizeSupabaseProvisioning falls back to manual setup guidance when publ
         projectRef: 'abc123',
         publishableKey: null,
         dbPassword: null,
+        accessToken: null,
         didApplyRemoteDb: false,
         didDeployEdgeFunctions: false,
         mode: 'existing',

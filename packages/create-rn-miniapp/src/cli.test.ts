@@ -1338,7 +1338,7 @@ test('formatCliHelp renders Korean help text', () => {
   assert.match(help, /버전 보기/)
 })
 
-test('createClackPrompter delegates text input and choice prompts to clack prompts', async () => {
+test('createClackPrompter delegates text, password, and choice prompts to clack prompts', async () => {
   const messages: string[] = []
   const prompter = createClackPrompter({
     async text(options) {
@@ -1348,6 +1348,14 @@ test('createClackPrompter delegates text input and choice prompts to clack promp
 
       messages.push(`text:${options.message}`)
       return options.initialValue ?? 'ebook-miniapp'
+    },
+    async password(options) {
+      if (options.guide) {
+        messages.push(`guide:${options.guide}`)
+      }
+
+      messages.push(`password:${options.message}`)
+      return 'sb_secret_token'
     },
     async select<T extends string>(options: {
       message: string
@@ -1397,6 +1405,17 @@ test('createClackPrompter delegates text input and choice prompts to clack promp
     message: 'displayName을 입력해 주세요',
     guide: '앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
   })
+  assert.ok(prompter.password)
+  const passwordPrompt = prompter.password
+
+  if (!passwordPrompt) {
+    throw new Error('password prompt가 필요해요.')
+  }
+
+  const passwordValue = await passwordPrompt({
+    message: 'Supabase access token을 붙여 넣어 주세요',
+    guide: '아래 URL에서 발급한 token을 그대로 붙여 넣으면 돼요.',
+  })
   const selectValue = await prompter.select({
     message: '`server` 제공자를 골라 주세요.',
     options: [
@@ -1412,12 +1431,15 @@ test('createClackPrompter delegates text input and choice prompts to clack promp
   })
 
   assert.equal(textValue, 'ebook-miniapp')
+  assert.equal(passwordValue, 'sb_secret_token')
   assert.equal(selectValue, 'firebase')
   assert.deepEqual(multiselectValue, ['backoffice-react'])
   assert.deepEqual(messages, [
     'text:appName을 입력해 주세요',
     'guide:앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
     'text:displayName을 입력해 주세요',
+    'guide:아래 URL에서 발급한 token을 그대로 붙여 넣으면 돼요.',
+    'password:Supabase access token을 붙여 넣어 주세요',
     'select:`server` 제공자를 골라 주세요.',
     'multiselect:추가로 snapshot에 유지할 manual skill이 있나요?',
   ])
@@ -1427,6 +1449,9 @@ test('createClackPrompter turns prompt cancellation into a user-facing error', a
   const cancelled = Symbol('cancelled')
   const prompter = createClackPrompter({
     async text() {
+      return cancelled
+    },
+    async password() {
       return cancelled
     },
     async select<T extends string>(options: {
@@ -1451,4 +1476,14 @@ test('createClackPrompter turns prompt cancellation into a user-facing error', a
     () => prompter.text({ message: 'appName을 입력해 주세요' }),
     /입력을 취소했어요\./,
   )
+  assert.ok(prompter.password)
+  await assert.rejects(async () => {
+    const passwordPrompt = prompter.password
+
+    if (!passwordPrompt) {
+      throw new Error('password prompt가 필요해요.')
+    }
+
+    await passwordPrompt({ message: 'Supabase access token을 붙여 넣어 주세요' })
+  }, /입력을 취소했어요\./)
 })

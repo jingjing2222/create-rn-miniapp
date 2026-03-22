@@ -1,15 +1,15 @@
-## 다음 작업: Supabase non-TTY 로그인 fallback 제거
+## 다음 작업: Supabase token login 상호작용과 env 자동 반영
 
 ### 목표
-- Supabase provisioning이 비-TTY 환경에서 `supabase login` interactive flow로 떨어지지 않게 만든다.
-- Supabase 인증은 token-first 계약으로 정리하고, 자동 로그인 불가 상황에서는 `SUPABASE_ACCESS_TOKEN` 설정 안내를 명확히 보여 준다.
-- 기존 scaffold/provision 흐름은 유지하되, non-interactive 환경에서 에러 흐름이 더 이상 잘못된 순서로 흔들리지 않게 고정한다.
+- Supabase provisioning이 auth failure를 만났을 때 영어 에러로 끝나지 않고, 토스체 한국어 안내로 token 입력 흐름을 이어 간다.
+- 토큰 발급 URL을 바로 보여 주고 CLI에서 access token을 입력받아 이번 provisioning 실행 env에 주입해서 이어서 진행한다.
+- 이번 실행에서 입력받은 access token은 `server/.env.local`에도 적어 둬서 이후 `db:apply`/`functions:deploy` 자동화와 수동 재실행이 바로 이어지게 만든다.
 
 ### 작업 순서
-1. Supabase provisioning 테스트에 `projects list` 실패 시 non-TTY/token-required 에러는 `supabase login`을 시도하지 않는 red test를 먼저 추가한다.
-2. `provision.ts`에서 interactive login fallback 조건을 분리해서, token-required/non-TTY auth failure는 즉시 사용자 안내 에러로 전환한다.
-3. manual setup note와 에러 문구를 token-first 흐름에 맞춰 정리하고, 필요하면 기존 `.env.local` 안내와 연결한다.
-4. targeted test와 `pnpm verify`를 통과시킨 뒤 단일 목적 커밋으로 정리한다.
+1. Supabase provisioning 테스트를 token prompt + retry + `.env.local` access token 반영 기준으로 먼저 깨뜨린다.
+2. `cli.ts` prompt abstraction에 secret input path를 추가하고, Supabase provider가 한국어 안내/URL과 함께 token을 입력받게 만든다.
+3. auth failure 시 prompt로 받은 access token을 이번 실행 env에 주입해서 provisioning을 한 번 재시도하게 바꾼다.
+4. finalize 단계에서 이번 실행에 쓴 access token을 `server/.env.local`에 채우도록 정리하고, targeted test와 `pnpm verify`로 고정한다.
 
 ## 다음 작업: dedent 잔여 authored multiline 전수조사
 
