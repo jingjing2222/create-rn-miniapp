@@ -1,3 +1,16 @@
+## 다음 작업: changeset 추가와 한글 PR 마무리
+
+### 목표
+- 이번 브랜치에 포함된 generator/runtime/template 변경을 publish 대상 두 패키지 기준 patch release note로 정리한다.
+- `create-rn-miniapp`와 `@create-rn-miniapp/scaffold-templates` 둘 다 changeset에 포함해 후속 versioning이 바로 가능하게 만든다.
+- 브랜치를 원격에 push하고, 변경 요약과 검증 결과를 한국어 PR 제목/본문으로 정리한다.
+
+### 작업 순서
+1. `docs/ai/Plan.md`를 먼저 갱신하고 현재 publish 대상 패키지를 다시 확인한다.
+2. 두 패키지를 함께 올리는 patch changeset을 한국어 설명으로 추가한다.
+3. changeset을 별도 커밋으로 정리하고 원격 브랜치에 push한다.
+4. GitHub PR을 한국어 제목/본문으로 생성하고 링크를 기록한다.
+
 ## 다음 작업: SSOT/파생 상태 drift 전수 검수
 
 ### 목표
