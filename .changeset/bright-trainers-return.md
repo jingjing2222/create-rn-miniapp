@@ -1,12 +1,10 @@
 ---
 "create-rn-miniapp": patch
-"@create-rn-miniapp/agent-skills": patch
 "@create-rn-miniapp/scaffold-templates": patch
-"@create-rn-miniapp/skills-manager": patch
 ---
 
-`skills-manager` 패키지를 추가해 스킬 동기화 흐름을 별도 CLI로 분리했습니다.
+optional skills 전략을 `@vercel-labs/skills` 표준 CLI 중심으로 단순화했습니다.
 
-- 생성물의 `skills:sync`, `skills:diff`, `skills:upgrade` wrapper가 `create-rn-miniapp` 대신 `@create-rn-miniapp/skills-manager`를 호출합니다.
-- skill manifest와 `docs/skills.md`가 generator 버전 대신 manager 버전을 기준으로 기록되도록 정리했습니다.
-- `create-rn-miniapp`의 로컬 `skills` 서브커맨드를 제거하고, release/dev-publish 경로에 새 공개 패키지를 포함했습니다.
+- canonical skill source를 workspace package가 아니라 repo root `skills/` plain directory로 정리했습니다.
+- generated repo는 skill을 기본 포함하지 않고, optional install guide와 `npx skills ...` 표준 흐름만 안내하도록 바꿨습니다.
+- skill 설치 상태 판별, frontend policy reference, generated README/contract 문구가 실제 project-local skill 경로에서 파생되도록 SSoT를 정리했습니다.

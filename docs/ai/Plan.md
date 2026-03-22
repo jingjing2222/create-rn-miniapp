@@ -1,3 +1,16 @@
+## 다음 작업: changeset / PR 설명 정합성 복구
+
+### 목표
+- 현재 브랜치의 구현 상태와 어긋난 changeset, PR title/body를 실제 optional skills 전략 기준으로 다시 맞춘다.
+- 제거된 `skills-manager`, `agent-skills` 패키지를 changeset 대상과 PR 설명에서 걷어낸다.
+- 루트 `skills/` source + `@vercel-labs/skills` 표준 CLI 위임 + SSoT 정리 내용을 release/PR 설명의 단일 기준으로 맞춘다.
+
+### 작업 순서
+1. 현재 changeset과 열린 PR의 제목/본문을 확인한다.
+2. changeset frontmatter를 실제 공개 패키지 변경 범위로 줄이고, 본문을 현재 구조 설명으로 갱신한다.
+3. PR title/body를 optional skills 전략과 SSoT 정리 기준으로 다시 작성한다.
+4. 필요 시 `pnpm verify`를 다시 실행한 뒤 커밋하고 푸시한다.
+
 ## 다음 작업: skills 경로 강결합 전수 감사
 
 ### 목표
