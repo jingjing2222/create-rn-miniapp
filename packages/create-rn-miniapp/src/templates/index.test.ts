@@ -899,12 +899,18 @@ test('README treats generated skills as a first-class scaffold output and avoids
     readmeSource,
     /이 저장소의 `skills\/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README\.md`가 추천 목록을 자동으로 보여줘요\./,
   )
-  assert.match(readmeSource, /사용할 skill id는 `skills\/` 아래 디렉터리 이름을 보면 돼요\./)
-  assert.match(readmeSource, /npx skills add \. --skill <skill-id> --copy/)
-  assert.doesNotMatch(readmeSource, /npx skills add jingjing2222\/create-rn-miniapp/)
-  assert.doesNotMatch(readmeSource, /- `miniapp-capabilities`:/)
-  assert.doesNotMatch(readmeSource, /- `granite-routing`:/)
-  assert.doesNotMatch(readmeSource, /- `tds-ui`:/)
+  assert.match(
+    readmeSource,
+    /npx skills add jingjing2222\/create-rn-miniapp --skill miniapp-capabilities --skill granite-routing --skill tds-ui --copy/,
+  )
+  assert.match(readmeSource, /- `miniapp-capabilities`/)
+  assert.match(readmeSource, /- `granite-routing`/)
+  assert.match(readmeSource, /- `tds-ui`/)
+  assert.match(readmeSource, /- `backoffice-react`/)
+  assert.match(readmeSource, /- `cloudflare-worker`/)
+  assert.match(readmeSource, /- `supabase-project`/)
+  assert.match(readmeSource, /- `firebase-functions`/)
+  assert.match(readmeSource, /- `trpc-boundary`/)
   assert.match(readmeSource, /npx skills list/)
   assert.match(readmeSource, /npx skills check/)
   assert.match(readmeSource, /npx skills update/)
@@ -962,11 +968,13 @@ test('README lists scaffolded skills in user-facing groups without leaking maint
   assert.match(agentsSource, /skill-catalog\.ts/)
   assert.match(agentsSource, /Skill source: `skills`/)
   assert.match(readmeSource, /생성된 repo `README\.md`가 추천 목록을 자동으로 보여줘요\./)
-  assert.match(readmeSource, /사용할 skill id는 `skills\/` 아래 디렉터리 이름을 보면 돼요\./)
-  assert.match(readmeSource, /npx skills add \. --skill <skill-id> --copy/)
-  assert.doesNotMatch(readmeSource, /- `backoffice-react`:/)
-  assert.doesNotMatch(readmeSource, /- `cloudflare-worker`/)
-  assert.doesNotMatch(readmeSource, /- `trpc-boundary`:/)
+  assert.match(
+    readmeSource,
+    /npx skills add jingjing2222\/create-rn-miniapp --skill miniapp-capabilities --skill granite-routing --skill tds-ui --copy/,
+  )
+  assert.match(readmeSource, /- `backoffice-react`/)
+  assert.match(readmeSource, /- `cloudflare-worker`/)
+  assert.match(readmeSource, /- `trpc-boundary`/)
   assert.doesNotMatch(readmeSource, /^- core:/m)
   assert.doesNotMatch(readmeSource, /^- optional:/m)
   assert.doesNotMatch(readmeSource, /skill-catalog\.ts/)

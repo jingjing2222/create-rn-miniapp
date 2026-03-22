@@ -1,3 +1,15 @@
+## 다음 작업: root README skills 안내를 배포 기준으로 전환
+
+### 목표
+- root README의 skills 안내를 maintainer 로컬 clone 기준이 아니라 배포된 사용자 기준으로 바꾼다.
+- `npx skills add . ...` 예시는 제거하고, 실제 repo slug를 쓰는 설치 예시를 넣는다.
+- 현재 설치 가능한 skill id 목록을 README에 직접 보여주고, 관련 회귀 테스트를 먼저 갱신한다.
+
+### 작업 순서
+1. root README 테스트에서 로컬 `.` 설치 예시 대신 배포 slug 기반 예시와 skill id 목록을 기대하게 바꾼다.
+2. root README 문구를 배포 기준 install flow로 수정한다.
+3. targeted test와 `pnpm verify`를 다시 통과시키고 커밋/푸시한다.
+
 ## 다음 작업: skills 전략 문구 토스체로 정리
 
 ### 목표

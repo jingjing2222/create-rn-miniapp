@@ -67,15 +67,24 @@ pnpm verify
 - 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 바로 하면 돼요.
 - 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.
 
-사용할 skill id는 `skills/` 아래 디렉터리 이름을 보면 돼요.
-
-이 저장소를 clone한 상태라면 repo root에서 이렇게 바로 설치해볼 수 있어요.
+예를 들어 기본 작업용 skill을 바로 넣고 싶다면 이렇게 하면 돼요.
 
 ```bash
-npx skills add . --skill <skill-id> --copy
+npx skills add jingjing2222/create-rn-miniapp --skill miniapp-capabilities --skill granite-routing --skill tds-ui --copy
 ```
 
 생성된 repo의 `README.md`는 그 시점의 source repo 기준 설치 예시를 자동으로 다시 보여줘요.
+
+지금 설치할 수 있는 skill id는 이거예요.
+
+- `miniapp-capabilities`
+- `granite-routing`
+- `tds-ui`
+- `backoffice-react`
+- `cloudflare-worker`
+- `supabase-project`
+- `firebase-functions`
+- `trpc-boundary`
 
 설치 뒤에는 표준 명령만 기억하면 돼요.
 
