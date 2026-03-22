@@ -1,6 +1,5 @@
 import path from 'node:path'
 import type { CommandSpec } from '../command-spec.js'
-import { SUPABASE_CLI } from '../external-tooling.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import type { ServerScaffoldState } from '../server-project.js'
 import type { OptionalSkillId } from '../templates/skill-catalog.js'
@@ -25,6 +24,7 @@ import {
   SUPABASE_DEFAULT_FUNCTION_NAME,
 } from '../templates/server.js'
 import type { TemplateTokens } from '../templates/types.js'
+import { buildSupabaseBootstrapPlan } from './supabase/provision.js'
 
 type ProviderPlanOptions = {
   targetRoot: string
@@ -57,31 +57,6 @@ export type ServerProviderAdapter = {
   bootstrapBackoffice?(options: Omit<ProviderPatchOptions, 'packageManager'>): Promise<void>
 }
 
-function buildSupabasePlan(options: ProviderPlanOptions): CommandSpec[] {
-  const packageManager = getPackageManagerAdapter(options.packageManager)
-  const serverRoot = path.join(options.targetRoot, 'server')
-
-  return [
-    {
-      cwd: serverRoot,
-      ...packageManager.dlx(SUPABASE_CLI, ['init']),
-      label: 'server Supabase 준비하기',
-    },
-    {
-      cwd: serverRoot,
-      ...packageManager.dlx(SUPABASE_CLI, [
-        'functions',
-        'new',
-        SUPABASE_DEFAULT_FUNCTION_NAME,
-        '--workdir',
-        '.',
-        '--yes',
-      ]),
-      label: 'server Supabase Edge Function 만들기',
-    },
-  ]
-}
-
 const supabaseAdapter: ServerProviderAdapter = {
   id: 'supabase',
   label: 'Supabase',
@@ -92,10 +67,18 @@ const supabaseAdapter: ServerProviderAdapter = {
     return pathExists(path.join(rootDir, 'server', 'supabase', 'config.toml'))
   },
   buildCreatePlan(options) {
-    return buildSupabasePlan(options)
+    return buildSupabaseBootstrapPlan({
+      targetRoot: options.targetRoot,
+      packageManager: options.packageManager,
+      functionName: SUPABASE_DEFAULT_FUNCTION_NAME,
+    })
   },
   buildAddPlan(options) {
-    return buildSupabasePlan(options)
+    return buildSupabaseBootstrapPlan({
+      targetRoot: options.targetRoot,
+      packageManager: options.packageManager,
+      functionName: SUPABASE_DEFAULT_FUNCTION_NAME,
+    })
   },
   async patchServerWorkspace(options) {
     await patchSupabaseServerWorkspace(options.targetRoot, options.tokens, {

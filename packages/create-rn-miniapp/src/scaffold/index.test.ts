@@ -327,7 +327,7 @@ test('buildRootFinalizePlan installs stable Deno before biome when Supabase is s
   assert.deepEqual(plan[1], {
     cwd: targetRoot,
     command: 'pnpm',
-    args: ['--dir', 'server', 'deno:install'],
+    args: ['--dir', 'server', 'run', 'deno:install'],
     label: 'server Deno stable 버전 맞추기',
   })
 })
@@ -400,7 +400,50 @@ test('buildCreateLifecycleOrder syncs root workspaces before cloudflare trpc pro
     '루트 템플릿 적용하기',
     'server 워크스페이스 다듬기',
     '루트 workspace manifest 먼저 맞추기',
+    '루트 Cloudflare workspace 의존성을 먼저 설치하기',
     'server provisioning 하기',
+    '루트 workspace manifest 맞추기',
+    '루트 git 저장소 만들기',
+    '루트 기본 브랜치를 main으로 맞추기',
+  ])
+})
+
+test('buildCreateLifecycleOrder ignores trpc-only lifecycle steps for non-cloudflare providers', () => {
+  const labels = buildCreateLifecycleOrder({
+    appName: 'ebook',
+    targetRoot: path.join('/tmp', 'ebook'),
+    packageManager: 'pnpm',
+    serverProvider: 'firebase',
+    withTrpc: true,
+    withBackoffice: false,
+  })
+
+  assert.doesNotMatch(labels.join('\n'), /루트 workspace manifest 먼저 맞추기/)
+  assert.doesNotMatch(labels.join('\n'), /루트 workspace manifest 맞추기/)
+})
+
+test('buildCreateLifecycleOrder installs root dependencies before cloudflare provisioning', () => {
+  const labels = buildCreateLifecycleOrder({
+    appName: 'ebook',
+    targetRoot: path.join('/tmp', 'ebook'),
+    packageManager: 'yarn',
+    serverProvider: 'cloudflare',
+    withBackoffice: true,
+  })
+
+  assert.deepEqual(labels, [
+    'frontend Granite 만들기',
+    'frontend 의존성 설치하기',
+    'frontend AppInToss Framework 설치하기',
+    'frontend ait 초기화하기',
+    'frontend TDS 설치하기',
+    'server Cloudflare Workers 준비하기',
+    'server 워크스페이스 준비하기',
+    '루트 템플릿 적용하기',
+    'server 워크스페이스 다듬기',
+    '루트 Cloudflare workspace 의존성을 먼저 설치하기',
+    'server provisioning 하기',
+    'backoffice Vite 만들기',
     '루트 workspace manifest 맞추기',
     '루트 git 저장소 만들기',
     '루트 기본 브랜치를 main으로 맞추기',

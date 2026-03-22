@@ -184,6 +184,75 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'supabase.ts')), false)
 })
 
+test('patchFrontendWorkspace removes workspace-local yarn config artifacts', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const frontendRoot = path.join(targetRoot, 'frontend')
+
+  await mkdir(path.join(frontendRoot, 'src'), { recursive: true })
+  await writeJson(path.join(frontendRoot, 'package.json'), {
+    name: 'ebook-miniapp',
+    private: true,
+    scripts: {
+      dev: 'granite dev',
+      build: 'ait build',
+    },
+    dependencies: {
+      '@apps-in-toss/framework': '^2.0.5',
+    },
+    devDependencies: {
+      '@granite-js/plugin-hermes': '1.0.7',
+      '@granite-js/plugin-router': '1.0.7',
+      typescript: '^5.8.3',
+    },
+  })
+  await writeFile(
+    path.join(frontendRoot, 'tsconfig.json'),
+    '{\n  "compilerOptions": {\n    "module": "commonjs"\n  }\n}\n',
+    'utf8',
+  )
+  await writeFile(
+    path.join(frontendRoot, 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  scheme: "intoss",',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [appsInToss({ brand: { displayName: "전자책 미니앱", primaryColor: "#3182F6", icon: "" }, permissions: [] })],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  await writeFile(path.join(frontendRoot, '.yarnrc.yml'), 'enableGlobalCache: false\n', 'utf8')
+  await writeFile(path.join(frontendRoot, 'yarn.lock'), '# yarn lockfile v1\n', 'utf8')
+  await writeFile(path.join(frontendRoot, '.pnp.cjs'), 'module.exports = {}\n', 'utf8')
+  await writeFile(path.join(frontendRoot, '.pnp.loader.mjs'), 'export default {}\n', 'utf8')
+
+  await patchFrontendWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'yarn',
+      packageManagerCommand: 'yarn',
+      packageManagerRunCommand: 'yarn',
+      packageManagerExecCommand: 'yarn exec',
+      verifyCommand: 'yarn verify',
+    },
+    {
+      packageManager: 'yarn',
+      serverProvider: null,
+    },
+  )
+
+  assert.equal(await pathExists(path.join(frontendRoot, '.yarnrc.yml')), false)
+  assert.equal(await pathExists(path.join(frontendRoot, 'yarn.lock')), false)
+  assert.equal(await pathExists(path.join(frontendRoot, '.pnp.cjs')), false)
+  assert.equal(await pathExists(path.join(frontendRoot, '.pnp.loader.mjs')), false)
+})
+
 test('patchFrontendWorkspace replaces Granite starter pages that use touchables', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const frontendRoot = path.join(targetRoot, 'frontend')
@@ -722,7 +791,7 @@ test('patchFrontendWorkspace adds cloudflare trpc client when trpc overlay is se
   assert.equal(packageJson.devDependencies?.['@workspace/app-router'], 'workspace:*')
   assert.equal(
     packageJson.scripts?.typecheck,
-    'pnpm --dir ../packages/app-router build && tsc --noEmit',
+    'pnpm --dir ../packages/app-router run build && tsc --noEmit',
   )
   assert.equal(tsconfig.compilerOptions?.allowImportingTsExtensions, true)
   assert.equal(tsconfig.compilerOptions?.moduleResolution, 'bundler')
@@ -1572,7 +1641,7 @@ test('patchBackofficeWorkspace adds cloudflare trpc client without api helper wh
   assert.equal(packageJson.devDependencies?.['@workspace/app-router'], 'workspace:*')
   assert.equal(
     packageJson.scripts?.typecheck,
-    'pnpm --dir ../packages/app-router build && tsc -b --pretty false',
+    'pnpm --dir ../packages/app-router run build && tsc -b --pretty false',
   )
   assert.equal(await pathExists(path.join(backofficeRoot, 'src', 'lib', 'api.ts')), false)
   assert.match(trpcClient, /createTRPCProxyClient/)
@@ -1796,8 +1865,8 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
   assert.equal(packageJson.scripts?.['deploy:remote'], undefined)
   assert.equal(packageJson.scripts?.test, 'vitest run')
   assert.equal(wranglerConfig.$schema, 'https://unpkg.com/wrangler@4.73.0/config-schema.json')
-  assert.equal(projectJson.targets?.build?.command, 'pnpm --dir server build')
-  assert.equal(projectJson.targets?.typecheck?.command, 'pnpm --dir server typecheck')
+  assert.equal(projectJson.targets?.build?.command, 'pnpm --dir server run build')
+  assert.equal(projectJson.targets?.typecheck?.command, 'pnpm --dir server run typecheck')
   assert.match(rootGitignore, /^server\/worker-configuration\.d\.ts$/m)
   assert.deepEqual(rootBiome.files?.includes, [
     '**',
@@ -1946,18 +2015,21 @@ test('patchCloudflareServerWorkspace wires local worker test config and handler 
   assert.equal(packageJson.dependencies?.['@workspace/app-router'], 'workspace:*')
   assert.equal(packageJson.dependencies?.['@workspace/contracts'], 'workspace:*')
   assert.equal(packageJson.scripts?.['trpc:sync'], undefined)
-  assert.equal(packageJson.scripts?.dev, 'pnpm --dir ../packages/app-router build && wrangler dev')
+  assert.equal(
+    packageJson.scripts?.dev,
+    'pnpm --dir ../packages/app-router run build && wrangler dev',
+  )
   assert.equal(
     packageJson.scripts?.build,
-    'pnpm --dir ../packages/app-router build && wrangler deploy --dry-run',
+    'pnpm --dir ../packages/app-router run build && wrangler deploy --dry-run',
   )
   assert.equal(
     packageJson.scripts?.typecheck,
-    'pnpm --dir ../packages/app-router build && wrangler types && tsc --noEmit',
+    'pnpm --dir ../packages/app-router run build && wrangler types && tsc --noEmit',
   )
   assert.equal(
     packageJson.scripts?.deploy,
-    'pnpm --dir ../packages/app-router build && node ./scripts/cloudflare-deploy.mjs',
+    'pnpm --dir ../packages/app-router run build && node ./scripts/cloudflare-deploy.mjs',
   )
   assert.match(indexSource, /fetchRequestHandler/)
   assert.match(indexSource, /from '@workspace\/app-router'/)
@@ -1989,14 +2061,81 @@ test('patchCloudflareServerWorkspace wires local worker test config and handler 
   assert.deepEqual(
     extractReadmeScriptNames(readme),
     createCloudflareServerScriptCatalog({
-      devCommand: 'pnpm --dir ../packages/app-router build && wrangler dev',
-      buildCommand: 'pnpm --dir ../packages/app-router build && wrangler deploy --dry-run',
-      typecheckCommand: 'pnpm --dir ../packages/app-router build && wrangler types && tsc --noEmit',
+      devCommand: 'pnpm --dir ../packages/app-router run build && wrangler dev',
+      buildCommand: 'pnpm --dir ../packages/app-router run build && wrangler deploy --dry-run',
+      typecheckCommand:
+        'pnpm --dir ../packages/app-router run build && wrangler types && tsc --noEmit',
       deployCommand:
-        'pnpm --dir ../packages/app-router build && node ./scripts/cloudflare-deploy.mjs',
+        'pnpm --dir ../packages/app-router run build && node ./scripts/cloudflare-deploy.mjs',
       testCommand: 'vitest run',
     }).map((entry) => entry.name),
   )
+})
+
+test('patchCloudflareServerWorkspace uses local wrangler execution for yarn deploy helper', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+  const serverRoot = path.join(targetRoot, 'server')
+
+  await mkdir(path.join(serverRoot, 'src'), { recursive: true })
+  await writeJson(path.join(serverRoot, 'package.json'), {
+    name: 'server',
+    private: true,
+    scripts: {
+      dev: 'wrangler dev',
+      build: 'wrangler deploy --dry-run',
+      typecheck: 'wrangler types && tsc --noEmit',
+      deploy: 'wrangler deploy',
+      test: 'vitest run',
+    },
+    dependencies: {},
+    devDependencies: {
+      wrangler: '^4.76.0',
+      vitest: '^3.2.4',
+      typescript: '^5.9.3',
+    },
+  })
+  await writeFile(
+    path.join(serverRoot, 'wrangler.jsonc'),
+    '{\n  "$schema": "node_modules/wrangler/config-schema.json",\n  "name": "server"\n}\n',
+    'utf8',
+  )
+
+  await patchCloudflareServerWorkspace(
+    targetRoot,
+    {
+      appName: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      packageManager: 'yarn',
+      packageManagerCommand: 'yarn',
+      packageManagerRunCommand: 'yarn',
+      packageManagerExecCommand: 'yarn exec',
+      verifyCommand: 'yarn verify',
+    },
+    {
+      packageManager: 'yarn',
+      trpc: false,
+      state: {
+        serverProvider: 'cloudflare',
+        serverProjectMode: 'create',
+        remoteInitialization: 'not-run',
+        trpc: false,
+        backoffice: false,
+      },
+    },
+  )
+
+  const deployScript = await readFile(
+    path.join(serverRoot, 'scripts', 'cloudflare-deploy.mjs'),
+    'utf8',
+  )
+
+  assert.match(
+    deployScript,
+    /const packageManagerCommand = process\.platform === 'win32' \? 'yarn\.cmd' : 'yarn'/,
+  )
+  assert.match(deployScript, /spawnSync\(packageManagerCommand, \["exec","wrangler","deploy"\],/)
+  assert.doesNotMatch(deployScript, /dlx/)
+  assert.doesNotMatch(deployScript, /wrangler@4\.76\.0/)
 })
 
 test('patchSupabaseServerWorkspace creates a server README with remote and local guidance', async (t) => {
@@ -2074,11 +2213,11 @@ test('patchSupabaseServerWorkspace creates a server README with remote and local
   assert.match(readme, /supabase\/migrations\//)
   assert.match(readme, /supabase\/functions\/api\/index\.ts/)
   assert.match(readme, /scripts\/supabase-functions-typecheck\.mjs/)
-  assert.match(readme, /cd server && pnpm typecheck/)
-  assert.match(readme, /cd server && pnpm db:apply/)
-  assert.match(readme, /cd server && pnpm functions:serve/)
-  assert.match(readme, /cd server && pnpm functions:deploy/)
-  assert.match(readme, /cd server && pnpm db:apply:local/)
+  assert.match(readme, /cd server && pnpm run typecheck/)
+  assert.match(readme, /cd server && pnpm run db:apply/)
+  assert.match(readme, /cd server && pnpm run functions:serve/)
+  assert.match(readme, /cd server && pnpm run functions:deploy/)
+  assert.match(readme, /cd server && pnpm run db:apply:local/)
   assert.match(readme, /frontend\/src\/lib\/supabase\.ts/)
   assert.match(readme, /supabase\.functions\.invoke\('api'\)/)
   assert.match(readme, /MINIAPP_SUPABASE_URL/)
@@ -2292,7 +2431,7 @@ test('patchFirebaseServerWorkspace creates a server README for firebase function
     'firebase-service-account-guide2.png',
   )
 
-  assert.equal(projectJson.targets?.build?.command, 'pnpm --dir server build')
+  assert.equal(projectJson.targets?.build?.command, 'pnpm --dir server run build')
   assert.match(readme, /^# server$/m)
   assert.match(readme, /Firebase Functions/)
   assert.match(readme, /## Scaffold State/)

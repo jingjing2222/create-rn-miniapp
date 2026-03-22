@@ -3,6 +3,9 @@ import { buildCreateCommandPhases } from '../commands.js'
 import { YARN_SDKS_CLI } from '../external-tooling.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
+import { resolveCreateTrpcEnabled } from './flow-state.js'
+
+export const CLOUDFLARE_PREINSTALL_LABEL = '루트 Cloudflare workspace 의존성을 먼저 설치하기'
 
 export function buildRootFinalizePlan(options: {
   targetRoot: string
@@ -82,6 +85,10 @@ export function buildCreateExecutionOrder(options: CreateOrderOptions) {
 
 export function buildCreateLifecycleOrder(options: CreateOrderOptions) {
   const phases = buildCreateCommandPhases(options)
+  const trpcEnabled = resolveCreateTrpcEnabled({
+    serverProvider: options.serverProvider,
+    withTrpc: options.withTrpc ?? false,
+  })
   const labels = [
     ...phases.frontend.map((command) => command.label),
     ...phases.server.map((command) => command.label),
@@ -97,7 +104,7 @@ export function buildCreateLifecycleOrder(options: CreateOrderOptions) {
     labels.push('server 워크스페이스 다듬기', 'server provisioning 하기')
   }
 
-  if (options.withTrpc) {
+  if (trpcEnabled) {
     labels.splice(
       labels.indexOf('server provisioning 하기'),
       0,
@@ -105,9 +112,13 @@ export function buildCreateLifecycleOrder(options: CreateOrderOptions) {
     )
   }
 
+  if (options.serverProvider === 'cloudflare') {
+    labels.splice(labels.indexOf('server provisioning 하기'), 0, CLOUDFLARE_PREINSTALL_LABEL)
+  }
+
   labels.push(...phases.backoffice.map((command) => command.label))
 
-  if (options.withBackoffice || options.withTrpc) {
+  if (options.withBackoffice || trpcEnabled) {
     labels.push('루트 workspace manifest 맞추기')
   }
 

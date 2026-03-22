@@ -5,6 +5,7 @@ import { stripVTControlCharacters } from 'node:util'
 import { log } from '@clack/prompts'
 import JSON5 from 'json5'
 import type { CommandSpec } from '../../command-spec.js'
+import { extractJsonPayload } from '../../cli-structured-output.js'
 import { FIREBASE_TOOLS_CLI } from '../../external-tooling.js'
 import {
   CommandExecutionError,
@@ -15,7 +16,6 @@ import {
 import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
-import { extractJsonPayload } from '../../providers/supabase/provision.js'
 import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
 import { pathExists } from '../../templates/filesystem.js'
 import {

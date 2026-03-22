@@ -3,7 +3,7 @@ import path from 'node:path'
 import { minVersion } from 'semver'
 import { renderProcessEnvLoaderScriptLines } from '../env-loader-script.js'
 import { WRANGLER_CLI } from '../external-tooling.js'
-import { getPackageManagerAdapter } from '../package-manager.js'
+import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import {
   getProviderClientContract,
   PROVIDER_CLIENT_CONTRACTS,
@@ -392,7 +392,7 @@ async function copyCloudflareTokenGuideAsset(
 
 function renderCloudflareDeployScript(tokens: TemplateTokens) {
   const packageManager = getPackageManagerAdapter(tokens.packageManager)
-  const command = packageManager.dlx(WRANGLER_CLI, ['deploy'])
+  const command = packageManager.exec(WRANGLER_CLI.packageName, ['deploy'])
 
   return dedentWithTrailingNewline`
     import { spawnSync } from 'node:child_process'
@@ -460,20 +460,17 @@ function renderCloudflareVitestConfigSource() {
 }
 
 function renderSupabaseServerReadme(options?: {
-  packageManagerRunCommand: string
+  packageManager: PackageManager
   scriptCatalog: ServerScriptCatalogEntry[]
   accessTokenGuideImagePaths?: string[] | null
 }) {
   const contract = getProviderClientContract('supabase')
   const scriptLines = renderServerReadmeScriptLines(
     options?.scriptCatalog ?? [],
-    options?.packageManagerRunCommand ?? 'pnpm',
+    options?.packageManager ?? 'pnpm',
   )
   const remoteOpsLines = renderServerRemoteOpsSection(
-    renderServerRemoteOpsCommands(
-      options?.scriptCatalog ?? [],
-      options?.packageManagerRunCommand ?? 'pnpm',
-    ),
+    renderServerRemoteOpsCommands(options?.scriptCatalog ?? [], options?.packageManager ?? 'pnpm'),
   )
 
   return dedentWithTrailingNewline`
@@ -544,7 +541,7 @@ function renderSupabaseServerReadme(options?: {
 }
 
 function renderCloudflareServerReadme(options?: {
-  packageManagerRunCommand: string
+  packageManager: PackageManager
   scriptCatalog: ServerScriptCatalogEntry[]
   tokenGuideImagePath?: string | null
   trpc?: boolean
@@ -553,13 +550,10 @@ function renderCloudflareServerReadme(options?: {
   const trpcEnabled = options?.trpc === true
   const scriptLines = renderServerReadmeScriptLines(
     options?.scriptCatalog ?? [],
-    options?.packageManagerRunCommand ?? 'pnpm',
+    options?.packageManager ?? 'pnpm',
   )
   const remoteOpsLines = renderServerRemoteOpsSection(
-    renderServerRemoteOpsCommands(
-      options?.scriptCatalog ?? [],
-      options?.packageManagerRunCommand ?? 'pnpm',
-    ),
+    renderServerRemoteOpsCommands(options?.scriptCatalog ?? [], options?.packageManager ?? 'pnpm'),
   )
 
   return dedentWithTrailingNewline`
@@ -635,7 +629,7 @@ function renderCloudflareServerReadme(options?: {
 }
 
 function renderFirebaseServerReadme(options?: {
-  packageManagerRunCommand: string
+  packageManager: PackageManager
   scriptCatalog: ServerScriptCatalogEntry[]
   loginCiGuideImagePath?: string | null
   serviceAccountGuideImagePaths?: string[] | null
@@ -643,13 +637,10 @@ function renderFirebaseServerReadme(options?: {
   const contract = getProviderClientContract('firebase')
   const scriptLines = renderServerReadmeScriptLines(
     options?.scriptCatalog ?? [],
-    options?.packageManagerRunCommand ?? 'pnpm',
+    options?.packageManager ?? 'pnpm',
   )
   const remoteOpsLines = renderServerRemoteOpsSection(
-    renderServerRemoteOpsCommands(
-      options?.scriptCatalog ?? [],
-      options?.packageManagerRunCommand ?? 'pnpm',
-    ),
+    renderServerRemoteOpsCommands(options?.scriptCatalog ?? [], options?.packageManager ?? 'pnpm'),
   )
 
   return dedentWithTrailingNewline`
@@ -899,14 +890,14 @@ export async function patchSupabaseServerWorkspace(
   const supabaseScriptCatalog = createSupabaseServerScriptCatalog(tokens.packageManager)
   const remoteOpsCommands = renderServerRemoteOpsCommands(
     supabaseScriptCatalog,
-    tokens.packageManagerRunCommand,
+    tokens.packageManager,
   )
   await applyServerPackageTemplate(targetRoot, tokens)
   await writeServerScaffoldSupportFiles(serverRoot, options.state, remoteOpsCommands)
   await writeTextFile(
     path.join(serverRoot, 'README.md'),
     renderSupabaseServerReadme({
-      packageManagerRunCommand: tokens.packageManagerRunCommand,
+      packageManager: tokens.packageManager,
       scriptCatalog: supabaseScriptCatalog,
       accessTokenGuideImagePaths,
     }),
@@ -949,10 +940,7 @@ export async function patchCloudflareServerWorkspace(
       ? normalizeVitestTestScript(packageJson.scripts.test)
       : null,
   })
-  const remoteOpsCommands = renderServerRemoteOpsCommands(
-    cloudflareScripts,
-    tokens.packageManagerRunCommand,
-  )
+  const remoteOpsCommands = renderServerRemoteOpsCommands(cloudflareScripts, tokens.packageManager)
 
   await writeServerScaffoldSupportFiles(serverRoot, options.state, remoteOpsCommands)
   await patchPackageJsonFile(packageJsonPath, {
@@ -985,7 +973,7 @@ export async function patchCloudflareServerWorkspace(
   await writeTextFile(
     path.join(serverRoot, 'README.md'),
     renderCloudflareServerReadme({
-      packageManagerRunCommand: tokens.packageManagerRunCommand,
+      packageManager: tokens.packageManager,
       scriptCatalog: cloudflareScripts,
       tokenGuideImagePath,
       trpc: options.trpc,
@@ -1044,14 +1032,14 @@ export async function patchFirebaseServerWorkspace(
   })
   const remoteOpsCommands = renderServerRemoteOpsCommands(
     firebaseScriptCatalog,
-    tokens.packageManagerRunCommand,
+    tokens.packageManager,
   )
 
   await writeServerScaffoldSupportFiles(serverRoot, options.state, remoteOpsCommands)
   await writeTextFile(
     path.join(serverRoot, 'README.md'),
     renderFirebaseServerReadme({
-      packageManagerRunCommand: tokens.packageManagerRunCommand,
+      packageManager: tokens.packageManager,
       scriptCatalog: firebaseScriptCatalog,
       loginCiGuideImagePath,
       serviceAccountGuideImagePaths,

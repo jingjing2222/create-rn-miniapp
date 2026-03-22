@@ -433,3 +433,33 @@ test('runtime authored multiline helpers do not regress to manual string assembl
     )
   }
 })
+
+test('firebase provisioning does not import shared CLI JSON parsing from the supabase provider module', async () => {
+  const firebaseProvisionSource = await readFile(
+    path.join(SRC_ROOT, 'providers', 'firebase', 'provision.ts'),
+    'utf8',
+  )
+
+  assert.doesNotMatch(
+    firebaseProvisionSource,
+    /from '\.\.\/\.\.\/providers\/supabase\/provision\.js'/,
+  )
+})
+
+test('provider registry does not rebuild supabase bootstrap CLI specs inline', async () => {
+  const providersIndexSource = await readFile(path.join(SRC_ROOT, 'providers', 'index.ts'), 'utf8')
+
+  assert.doesNotMatch(providersIndexSource, /SUPABASE_CLI/)
+  assert.doesNotMatch(providersIndexSource, /function buildSupabasePlan/)
+})
+
+test('docs renderer does not special-case code-owned docs by relative path', async () => {
+  const docsSource = await readFile(path.join(SRC_ROOT, 'templates', 'docs.ts'), 'utf8')
+
+  assert.doesNotMatch(docsSource, /definition\.relativePath === 'AGENTS\.md'/)
+  assert.doesNotMatch(docsSource, /definition\.relativePath === 'README\.md'/)
+  assert.doesNotMatch(
+    docsSource,
+    /definition\.relativePath === 'docs\/engineering\/frontend-policy\.md'/,
+  )
+})

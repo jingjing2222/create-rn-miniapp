@@ -21,8 +21,6 @@ export function createTemplateTokens(options: {
     packageManager: options.packageManager,
     packageManagerField: packageManager.packageManagerField,
     packageManagerCommand: options.packageManager,
-    packageManagerRunCommand: packageManager.runCommandPrefix,
-    packageManagerExecCommand: packageManager.execCommandPrefix,
     verifyCommand: packageManager.verifyCommand(),
   } satisfies TemplateTokens
 }

@@ -1,3 +1,67 @@
+## 다음 작업: SSOT/파생 상태 drift 전수 검수
+
+### 목표
+- 코드베이스에서 동일한 계약을 여러 곳이 따로 소유하거나, 한 source가 바뀌면 같이 바뀌어야 하는 파생 상태가 갈라져 있는 지점을 찾는다.
+- 특히 package manager adapter, scaffold lifecycle, template/docs renderer, provider-specific server contract를 나눠서 본다.
+- 이번 턴은 구현보다 검수와 분류가 목적이므로, 섹션별 findings와 후속 수정 shortlist를 만든다.
+
+### 작업 순서
+1. `docs/ai/Plan.md`를 갱신하고, 검수 축을 네 섹션으로 분리한다.
+2. 네 섹션을 독립 범위로 나눠 agent 4개에 병렬 검수시킨다.
+3. 각 agent 결과를 현재 코드와 대조해 중복 구현, drift risk, overwrite hazard, fake abstraction을 묶는다.
+4. 최종 결과는 severity와 수정 우선순위 기준으로 정리한다.
+
+## 다음 작업: SSOT drift 수정 구현
+
+### 목표
+- 검수에서 확인된 중복 실행 계약, lifecycle state 파생, provider utility 누수, docs renderer parallel ownership을 실제 코드에서 정리한다.
+- package manager/script invocation, scaffold flow state, provider shared utility, generated README/doc renderer를 각자 한 source에서만 파생되게 만든다.
+- 회귀는 구조 테스트와 출력 테스트 둘 다로 막고, 최종 `pnpm verify`까지 통과시킨다.
+
+### 작업 순서
+1. package manager/script invocation drift를 잡는 failing test를 먼저 추가한다.
+2. scaffold create/add flow의 TRPC/provider state drift를 잡는 failing test를 추가한다.
+3. provider shared utility 누수와 docs renderer special-case drift를 잡는 failing test를 추가한다.
+4. 테스트를 통과시키는 최소 구현으로 helper/module/renderer를 정리한다.
+5. `pnpm verify` 후 단일 목적 커밋으로 정리한다.
+
+## 다음 작업: Yarn frontend Granite SHA 오류 재현과 root cause 확인
+
+### 목표
+- 생성 직후 Yarn workspace의 `frontend`에서 `yarn dev`가 SHA-1 오류로 깨지는 현상을 실제 scaffold 산출물에서 재현한다.
+- `frontend` 단독 `yarn install` 전후에 어떤 lock/PnP/workspace 상태 차이가 생기는지 확인한다.
+- 원인이 Granite/Metro의 Yarn PnP zip 경로 처리인지, root/workspace install 순서 문제인지 증거로 분리한다.
+
+### 작업 순서
+1. `/Users/kimhyeongjeong/Desktop/code/scaffold-test/test3`의 root와 `frontend` Yarn/PnP 관련 파일 상태를 먼저 읽는다.
+2. 생성 직후 `frontend`에서 `yarn dev`를 재현하고, 오류 스택과 참조 경로를 수집한다.
+3. `frontend`에서 `yarn install`을 실행한 뒤 바뀐 파일과 `yarn dev` 동작 변화를 다시 비교한다.
+4. 결과를 현재 scaffold install 순서와 대조해 root cause를 정리한다.
+
+## 다음 작업: npm/bun Cloudflare deploy contract 점검
+
+### 목표
+- Cloudflare deploy helper를 local `wrangler` 실행으로 바꾼 뒤 npm과 bun에서도 같은 contract가 유지되는지 점검한다.
+- 각 package manager adapter의 `exec` 경로가 local dependency를 기준으로 동작하는지 코드와 실제 문서 기준으로 확인한다.
+- 추가 수정이 필요한지, 아니면 Yarn 전용 이슈였는지 분리해서 정리한다.
+
+### 작업 순서
+1. npm/bun package manager adapter의 `exec`/`runScriptInDirectory` contract와 Cloudflare provisioning 순서를 다시 읽는다.
+2. 공식 문서 기준으로 `npm exec`와 `bunx`가 local `wrangler` dependency를 어떻게 해석하는지 확인한다.
+3. 필요하면 회귀 테스트나 후속 수정 포인트를 정리하고 결과를 보고한다.
+
+## 다음 작업: Yarn Cloudflare deploy helper를 local wrangler contract로 정렬
+
+### 목표
+- Cloudflare generated `server/scripts/cloudflare-deploy.mjs`가 Yarn에서 `yarn dlx wrangler@... deploy`를 직접 치지 않게 만든다.
+- generated `server/package.json`의 local `wrangler` dependency 계약과 deploy helper 실행 경로를 일치시킨다.
+- Yarn PnP 환경에서도 `yarn wrangler deploy` 또는 동등한 local binary 실행 경로만 타게 고정한다.
+
+### 작업 순서
+1. Cloudflare patch test를 추가해 Yarn generated deploy helper가 `yarn dlx wrangler`가 아니라 local wrangler 실행 경로를 사용해야 한다는 red를 만든다.
+2. `renderCloudflareDeployScript`를 package-manager별 local script/binary 실행 contract 기준으로 최소 수정한다.
+3. targeted test와 `pnpm verify`로 Yarn Cloudflare deploy flow를 다시 고정한다.
+
 ## 다음 작업: 미커밋 변경을 목적별로 분리 커밋
 
 ### 목표

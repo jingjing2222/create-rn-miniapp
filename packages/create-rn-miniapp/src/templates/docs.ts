@@ -2,9 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { listInstalledProjectSkillEntries, type InstalledProjectSkill } from '../skills-install.js'
 import {
+  GENERATED_REPO_SKILLS_STRATEGY_README_LINES,
   renderSkillsInstallExample,
   renderSkillsStandardCommandSummary,
-  SKILLS_STRATEGY_README_LINES,
 } from '../root-readme.js'
 import {
   resolveTemplatesPackageRoot,
@@ -25,7 +25,7 @@ import dedent, { dedentWithTrailingNewline } from '../dedent.js'
 type DocumentDefinition = {
   relativePath: string
   ownership: 'code' | 'template'
-  render?: (tokens: TemplateTokens, options: GeneratedWorkspaceOptions) => string
+  render?: (context: DocsRenderContext) => string | Promise<string>
   startHereOrder?: number
   engineeringDoc?: {
     agentsRepositoryLabel: string
@@ -34,7 +34,14 @@ type DocumentDefinition = {
 
 type CodeOwnedDocDefinition = DocumentDefinition & {
   ownership: 'code'
-  render: (tokens: TemplateTokens, options: GeneratedWorkspaceOptions) => string
+  render: (context: DocsRenderContext) => string | Promise<string>
+}
+
+type DocsRenderContext = {
+  targetRoot: string
+  tokens: TemplateTokens
+  options: GeneratedWorkspaceOptions
+  installedSkills: readonly InstalledProjectSkill[]
 }
 
 function renderBulletList(items: string[]) {
@@ -123,11 +130,8 @@ function resolveEngineeringDocuments() {
   return DOCUMENT_DEFINITIONS.filter((document) => document.engineeringDoc)
 }
 
-async function renderAgentsMarkdown(
-  _targetRoot: string,
-  _tokens: TemplateTokens,
-  options: GeneratedWorkspaceOptions,
-) {
+async function renderAgentsMarkdown(context: DocsRenderContext) {
+  const { options } = context
   const repositoryContractLines = resolveEngineeringDocuments().map(
     (document) =>
       `- ${document.engineeringDoc?.agentsRepositoryLabel}: ${formatDocumentPath(document.relativePath)}`,
@@ -239,11 +243,8 @@ function renderRootReadmeSkillSection(options: {
   `
 }
 
-async function renderRootReadmeMarkdown(
-  tokens: TemplateTokens,
-  options: GeneratedWorkspaceOptions,
-  installedSkills: readonly InstalledProjectSkill[],
-) {
+async function renderRootReadmeMarkdown(context: DocsRenderContext) {
+  const { tokens, options, installedSkills } = context
   const recommendedSkillDefinitions = resolveRecommendedSkillDefinitions(options)
   const recommendedSkillIds = recommendedSkillDefinitions.map((skill) => skill.id)
   const recommendedSkillLabels = recommendedSkillDefinitions.map((skill) => `\`${skill.id}\``)
@@ -259,7 +260,7 @@ async function renderRootReadmeMarkdown(
     - \`docs/index.md\`: 문서 구조와 verify 동선
     - \`docs/product/기능명세서.md\`: 제품 요구사항
     
-    ${(SKILLS_STRATEGY_README_LINES).join('\n')}
+    ${(GENERATED_REPO_SKILLS_STRATEGY_README_LINES).join('\n')}
     ${renderRootReadmeSkillSection({
       installedSkillIds,
       recommendedSkillIds,
@@ -277,12 +278,12 @@ const DOCUMENT_DEFINITIONS: DocumentDefinition[] = [
   {
     relativePath: 'AGENTS.md',
     ownership: 'code',
-    render: () => '',
+    render: renderAgentsMarkdown,
   },
   {
     relativePath: 'README.md',
     ownership: 'code',
-    render: () => '',
+    render: renderRootReadmeMarkdown,
   },
   {
     relativePath: 'docs/ai/Plan.md',
@@ -302,7 +303,7 @@ const DOCUMENT_DEFINITIONS: DocumentDefinition[] = [
   {
     relativePath: 'docs/index.md',
     ownership: 'code',
-    render: (tokens) => renderDocsIndexMarkdown(tokens),
+    render: ({ tokens }) => renderDocsIndexMarkdown(tokens),
     startHereOrder: 4,
   },
   {
@@ -320,7 +321,7 @@ const DOCUMENT_DEFINITIONS: DocumentDefinition[] = [
   {
     relativePath: 'docs/engineering/frontend-policy.md',
     ownership: 'code',
-    render: () => '',
+    render: ({ tokens }) => renderFrontendPolicyMarkdown(tokens.packageManager),
     engineeringDoc: {
       agentsRepositoryLabel: 'frontend 정책',
     },
@@ -328,7 +329,7 @@ const DOCUMENT_DEFINITIONS: DocumentDefinition[] = [
   {
     relativePath: 'docs/engineering/workspace-topology.md',
     ownership: 'code',
-    render: (_tokens, options) => renderWorkspaceTopologyMarkdown(options),
+    render: ({ options }) => renderWorkspaceTopologyMarkdown(options),
     engineeringDoc: {
       agentsRepositoryLabel: 'workspace 구조',
     },
@@ -364,6 +365,12 @@ export async function applyDocsTemplates(
   const options = await resolveGeneratedWorkspaceOptions(targetRoot, hints)
   const installedSkills = await listInstalledProjectSkillEntries(targetRoot)
   const extraTokens = createRootTemplateExtraTokens(tokens.packageManager)
+  const renderContext = {
+    targetRoot,
+    tokens,
+    options,
+    installedSkills,
+  } satisfies DocsRenderContext
 
   await copyFileWithTokens(
     path.join(baseTemplateDir, 'CLAUDE.md'),
@@ -388,14 +395,7 @@ export async function applyDocsTemplates(
   )
 
   for (const definition of CODE_OWNED_DOC_DEFINITIONS) {
-    const renderedSource =
-      definition.relativePath === 'AGENTS.md'
-        ? await renderAgentsMarkdown(targetRoot, tokens, options)
-        : definition.relativePath === 'README.md'
-          ? await renderRootReadmeMarkdown(tokens, options, installedSkills)
-          : definition.relativePath === 'docs/engineering/frontend-policy.md'
-            ? renderFrontendPolicyMarkdown(tokens.packageManager)
-            : definition.render(tokens, options)
+    const renderedSource = await definition.render(renderContext)
 
     await writeCodeOwnedMarkdown(targetRoot, definition.relativePath, renderedSource)
   }

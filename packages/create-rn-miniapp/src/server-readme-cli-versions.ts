@@ -5,22 +5,20 @@ import {
   WRANGLER_CLI,
   type ExternalCliTool,
 } from './external-tooling.js'
+import type { ServerProvider } from './providers/index.js'
 import dedent from './dedent.js'
 
-export type ServerReadmeCliVersionProvider = 'cloudflare' | 'firebase' | 'supabase'
+const SERVER_README_CLI_TOOLS = {
+  cloudflare: [CREATE_CLOUDFLARE_CLI, WRANGLER_CLI],
+  firebase: [FIREBASE_TOOLS_CLI],
+  supabase: [SUPABASE_CLI],
+} satisfies Record<ServerProvider, readonly ExternalCliTool[]>
 
-const SERVER_README_CLI_TOOLS: Record<ServerReadmeCliVersionProvider, readonly ExternalCliTool[]> =
-  {
-    cloudflare: [CREATE_CLOUDFLARE_CLI, WRANGLER_CLI],
-    firebase: [FIREBASE_TOOLS_CLI],
-    supabase: [SUPABASE_CLI],
-  }
-
-export function getServerReadmeCliTools(provider: ServerReadmeCliVersionProvider) {
+export function getServerReadmeCliTools(provider: ServerProvider) {
   return SERVER_README_CLI_TOOLS[provider]
 }
 
-export function renderServerReadmeCliVersionsSection(provider: ServerReadmeCliVersionProvider) {
+export function renderServerReadmeCliVersionsSection(provider: ServerProvider) {
   return dedent`
     ## 생성 기준 CLI 버전
 

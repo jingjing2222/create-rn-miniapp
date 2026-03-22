@@ -1,4 +1,5 @@
 nodeLinker: pnp
+enableGlobalCache: false
 
 packageExtensions:
   "@react-native-community/cli-debugger-ui@*":

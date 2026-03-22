@@ -51,8 +51,6 @@ export function replaceTemplateTokens(
     .replaceAll('{{packageManager}}', tokens.packageManager)
     .replaceAll('{{packageManagerField}}', packageManagerField)
     .replaceAll('{{packageManagerCommand}}', tokens.packageManagerCommand)
-    .replaceAll('{{packageManagerRunCommand}}', tokens.packageManagerRunCommand)
-    .replaceAll('{{packageManagerExecCommand}}', tokens.packageManagerExecCommand)
     .replaceAll('{{verifyCommand}}', tokens.verifyCommand)
 
   for (const [key, value] of Object.entries(extraTokens)) {

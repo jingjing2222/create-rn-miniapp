@@ -19,8 +19,8 @@ export type TemplateTokens = {
   packageManager: PackageManager
   packageManagerField?: string
   packageManagerCommand: string
-  packageManagerRunCommand: string
-  packageManagerExecCommand: string
+  packageManagerRunCommand?: string
+  packageManagerExecCommand?: string
   verifyCommand: string
 }
 

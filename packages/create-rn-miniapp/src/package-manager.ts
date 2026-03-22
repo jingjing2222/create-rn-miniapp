@@ -19,8 +19,6 @@ export type PackageManagerAdapter = {
   id: PackageManager
   label: string
   packageManagerField: string
-  runCommandPrefix: string
-  execCommandPrefix: string
   rootBiomeIncludes: string[]
   rootTemplateFiles: Array<{
     sourceName: string
@@ -89,8 +87,6 @@ const pnpmAdapter: PackageManagerAdapter = {
   id: 'pnpm',
   label: 'pnpm',
   packageManagerField: `pnpm@${PNPM_VERSION}`,
-  runCommandPrefix: 'pnpm',
-  execCommandPrefix: 'pnpm exec',
   rootBiomeIncludes: COMMON_ROOT_BIOME_INCLUDES,
   rootTemplateFiles: [
     {
@@ -141,7 +137,7 @@ const pnpmAdapter: PackageManagerAdapter = {
     return withArgs('pnpm', ['--dir', directory, 'install'])
   },
   runScriptInDirectory(directory, script) {
-    return withArgs('pnpm', ['--dir', directory, script])
+    return withArgs('pnpm', ['--dir', directory, 'run', script])
   },
   installInDirectoryCommand(directory) {
     return renderCommandString(this.installInDirectory(directory))
@@ -153,10 +149,10 @@ const pnpmAdapter: PackageManagerAdapter = {
     return renderCommandString(this.dlx(tool, args))
   },
   workspaceRunCommand(workspace, script) {
-    return `pnpm --dir ${workspace} ${script}`
+    return `pnpm --dir ${workspace} run ${script}`
   },
   runScript(script) {
-    return `pnpm ${script}`
+    return `pnpm run ${script}`
   },
   rootFormatScript() {
     return 'pnpm exec biome format . --write'
@@ -176,8 +172,6 @@ const yarnAdapter: PackageManagerAdapter = {
   id: 'yarn',
   label: 'yarn',
   packageManagerField: `yarn@${YARN_VERSION}`,
-  runCommandPrefix: 'yarn',
-  execCommandPrefix: 'yarn exec',
   rootBiomeIncludes: YARN_ROOT_BIOME_INCLUDES,
   rootTemplateFiles: [
     {
@@ -192,7 +186,7 @@ const yarnAdapter: PackageManagerAdapter = {
       targetName: '.yarnrc.yml',
     },
   ],
-  toolingFiles: ['yarn.lock', '.pnp.cjs', '.pnp.loader.mjs'],
+  toolingFiles: ['yarn.lock', '.pnp.cjs', '.pnp.loader.mjs', '.yarnrc.yml'],
   workspaceArtifacts: ['node_modules', '.yarn'],
   install() {
     return withArgs('yarn', ['install'])
@@ -268,8 +262,6 @@ const npmAdapter: PackageManagerAdapter = {
   id: 'npm',
   label: 'npm',
   packageManagerField: `npm@${NPM_VERSION}`,
-  runCommandPrefix: 'npm run',
-  execCommandPrefix: 'npm exec --',
   rootBiomeIncludes: COMMON_ROOT_BIOME_INCLUDES,
   rootTemplateFiles: [
     {
@@ -359,8 +351,6 @@ const bunAdapter: PackageManagerAdapter = {
   id: 'bun',
   label: 'bun',
   packageManagerField: `bun@${BUN_VERSION}`,
-  runCommandPrefix: 'bun run',
-  execCommandPrefix: 'bunx',
   rootBiomeIncludes: COMMON_ROOT_BIOME_INCLUDES,
   rootTemplateFiles: [
     {

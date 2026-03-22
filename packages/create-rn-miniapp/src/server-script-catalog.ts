@@ -13,36 +13,29 @@ export function createServerScriptRecord(entries: ServerScriptCatalogEntry[]) {
   return Object.fromEntries(entries.map((entry) => [entry.name, entry.command]))
 }
 
-function renderServerScriptInvocation(packageManagerRunCommand: string, scriptName: string) {
-  if (packageManagerRunCommand === 'pnpm' && scriptName === 'deploy') {
-    return 'pnpm run deploy'
-  }
-
-  return `${packageManagerRunCommand} ${scriptName}`
+function renderServerScriptInvocation(packageManager: PackageManager, scriptName: string) {
+  return getPackageManagerAdapter(packageManager).runScript(scriptName)
 }
 
 export function renderServerReadmeScriptLines(
   entries: ServerScriptCatalogEntry[],
-  packageManagerRunCommand: string,
+  packageManager: PackageManager,
 ) {
   return entries
     .filter((entry) => entry.includeInReadme !== false)
     .map(
       (entry) =>
-        `- \`cd server && ${renderServerScriptInvocation(packageManagerRunCommand, entry.name)}\`: ${entry.readmeDescription}`,
+        `- \`cd server && ${renderServerScriptInvocation(packageManager, entry.name)}\`: ${entry.readmeDescription}`,
     )
 }
 
 export function renderServerRemoteOpsCommands(
   entries: ServerScriptCatalogEntry[],
-  packageManagerRunCommand: string,
+  packageManager: PackageManager,
 ) {
   return entries
     .filter((entry) => entry.remoteOp === true)
-    .map(
-      (entry) =>
-        `cd server && ${renderServerScriptInvocation(packageManagerRunCommand, entry.name)}`,
-    )
+    .map((entry) => `cd server && ${renderServerScriptInvocation(packageManager, entry.name)}`)
 }
 
 export function createSupabaseServerScriptCatalog(packageManager: PackageManager) {

@@ -91,8 +91,6 @@ function createTokens(packageManager: PackageManager): TemplateTokens {
     packageManager,
     packageManagerField: adapter.packageManagerField,
     packageManagerCommand: packageManager,
-    packageManagerRunCommand: adapter.runCommandPrefix,
-    packageManagerExecCommand: adapter.execCommandPrefix,
     verifyCommand: adapter.verifyCommand(),
   }
 }
@@ -1292,6 +1290,7 @@ test('applyDocsTemplates keeps AGENTS skill-free and renders README onboarding w
   assert.doesNotMatch(repoContract, /\.claude\/skills/)
   assert.match(readme, /## skills 전략/)
   assert.match(readme, /npx skills add/)
+  assert.doesNotMatch(readme, /이 저장소의 `skills\/`/)
   for (const command of [SKILLS_LIST_COMMAND, SKILLS_CHECK_COMMAND, SKILLS_UPDATE_COMMAND]) {
     assert.match(readme, new RegExp(escapeRegExp(command)))
   }
@@ -1659,17 +1658,20 @@ test('applyTrpcWorkspaceTemplate creates shared contracts and app-router workspa
   )
   assert.equal(
     appRouterPackageJson.scripts?.build,
-    'pnpm --dir ../contracts build && tsdown src/index.ts --format esm,cjs --dts --clean --out-dir dist',
+    'pnpm --dir ../contracts run build && tsdown src/index.ts --format esm,cjs --dts --clean --out-dir dist',
   )
   assert.equal(appRouterTsconfig.compilerOptions?.composite, true)
   assert.equal(appRouterTsconfig.compilerOptions?.declaration, true)
   assert.equal(appRouterTsconfig.compilerOptions?.outDir, 'dist')
   assert.equal(appRouterTsconfig.compilerOptions?.allowImportingTsExtensions, true)
   assert.equal(appRouterTsconfig.compilerOptions?.rewriteRelativeImportExtensions, true)
-  assert.equal(appRouterProjectJson.targets?.build?.command, 'pnpm --dir packages/app-router build')
+  assert.equal(
+    appRouterProjectJson.targets?.build?.command,
+    'pnpm --dir packages/app-router run build',
+  )
   assert.equal(
     appRouterProjectJson.targets?.typecheck?.command,
-    'pnpm --dir packages/app-router typecheck',
+    'pnpm --dir packages/app-router run typecheck',
   )
   assert.match(contractsReadme, /packages\/contracts/)
   assert.match(appRouterReadme, /packages\/app-router/)
@@ -2111,6 +2113,7 @@ test('applyRootTemplates and workspace templates emit yarn-specific files and co
   assert.match(gitignore, /^\.yarn\/?$/m)
   assert.match(gitignore, /^\.pnp\.\*$/m)
   assert.match(yarnrc, /nodeLinker: pnp/)
+  assert.match(yarnrc, /enableGlobalCache: false/)
   assert.match(yarnrc, /packageExtensions:/)
   assert.match(yarnrc, /"@react-native-community\/cli-debugger-ui@\*":/)
   assert.match(yarnrc, /"@babel\/runtime": "\^7\.0\.0"/)
@@ -2413,11 +2416,11 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
   assert.equal(serverPackageJson.dependencies?.['google-auth-library'], '^10.6.1')
   assert.equal(
     serverPackageJson.scripts?.build,
-    'pnpm --dir ./functions install --ignore-workspace && pnpm --dir ./functions build',
+    'pnpm --dir ./functions install --ignore-workspace && pnpm --dir ./functions run build',
   )
   assert.equal(
     serverPackageJson.scripts?.typecheck,
-    'pnpm --dir ./functions install --ignore-workspace && pnpm --dir ./functions typecheck',
+    'pnpm --dir ./functions install --ignore-workspace && pnpm --dir ./functions run typecheck',
   )
   assert.equal(
     serverPackageJson.scripts?.deploy,
@@ -2433,15 +2436,15 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
   )
   assert.equal(
     serverPackageJson.scripts?.['seed:public-status'],
-    'pnpm --dir ./functions install --ignore-workspace && pnpm --dir ./functions seed:public-status',
+    'pnpm --dir ./functions install --ignore-workspace && pnpm --dir ./functions run seed:public-status',
   )
   assert.equal(
     serverPackageJson.scripts?.['setup:public-status'],
-    'pnpm firestore:ensure && pnpm deploy:firestore && pnpm seed:public-status',
+    'pnpm run firestore:ensure && pnpm run deploy:firestore && pnpm run seed:public-status',
   )
   assert.equal(
     firebaseJson.functions?.[0]?.predeploy?.[0],
-    'pnpm --dir "$RESOURCE_DIR" install --ignore-workspace && pnpm --dir "$RESOURCE_DIR" build',
+    'pnpm --dir "$RESOURCE_DIR" install --ignore-workspace && pnpm --dir "$RESOURCE_DIR" run build',
   )
   assert.equal(firebaseJson.firestore?.rules, 'firestore.rules')
   assert.equal(firebaseJson.firestore?.indexes, 'firestore.indexes.json')

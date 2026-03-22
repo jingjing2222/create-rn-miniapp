@@ -30,7 +30,12 @@ import type {
   ServerRemoteInitializationState,
   ServerScaffoldState,
 } from '../server-project.js'
-import { buildRootFinalizePlan, buildRootGitSetupPlan } from './orders.js'
+import {
+  buildRootFinalizePlan,
+  buildRootGitSetupPlan,
+  CLOUDFLARE_PREINSTALL_LABEL,
+} from './orders.js'
+import { resolveAddServerFlowState, resolveCreateTrpcEnabled } from './flow-state.js'
 import {
   maybeFinalizeCloudflareProvisioning,
   maybeFinalizeFirebaseProvisioning,
@@ -86,6 +91,25 @@ function buildServerScaffoldState(options: {
     trpc: options.trpc,
     backoffice: options.backoffice,
   }
+}
+
+async function maybeInstallRootDependenciesBeforeCloudflareProvisioning(options: {
+  targetRoot: string
+  packageManager: ReturnType<typeof getPackageManagerAdapter>['id']
+  shouldInstall: boolean
+}) {
+  if (!options.shouldInstall) {
+    return
+  }
+
+  const packageManager = getPackageManagerAdapter(options.packageManager)
+
+  log.step(CLOUDFLARE_PREINSTALL_LABEL)
+  await runCommand({
+    cwd: options.targetRoot,
+    ...packageManager.install(),
+    label: CLOUDFLARE_PREINSTALL_LABEL,
+  })
 }
 
 function buildAddInitialServerState(options: {
@@ -192,7 +216,10 @@ async function maybeInstallSelectedSkills(options: {
 export async function scaffoldWorkspace(options: ScaffoldOptions) {
   const targetRoot = path.resolve(options.outputDir, options.appName)
   const notes: ProvisioningNote[] = []
-  const trpcEnabled = options.withTrpc && options.serverProvider === 'cloudflare'
+  const trpcEnabled = resolveCreateTrpcEnabled({
+    serverProvider: options.serverProvider,
+    withTrpc: options.withTrpc,
+  })
   const initialServerState = buildServerScaffoldState({
     serverProvider: options.serverProvider,
     serverProjectMode: options.serverProjectMode,
@@ -272,15 +299,11 @@ export async function scaffoldWorkspace(options: ScaffoldOptions) {
     )
   }
 
-  if (trpcEnabled) {
-    const packageManager = getPackageManagerAdapter(options.packageManager)
-    log.step('루트 tRPC workspace 의존성을 먼저 설치할게요')
-    await runCommand({
-      cwd: targetRoot,
-      ...packageManager.install(),
-      label: '루트 tRPC workspace 의존성을 먼저 설치할게요',
-    })
-  }
+  await maybeInstallRootDependenciesBeforeCloudflareProvisioning({
+    targetRoot,
+    packageManager: options.packageManager,
+    shouldInstall: options.serverProvider === 'cloudflare',
+  })
 
   const provisionedSupabaseProject = await maybeProvisionSupabaseProject({
     targetRoot,
@@ -445,8 +468,13 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     displayName: options.displayName,
     packageManager: options.packageManager,
   })
-  const trpcServerProvider = options.serverProvider ?? options.existingServerProvider
-  const trpcEnabled = options.withTrpc && trpcServerProvider === 'cloudflare'
+  const serverFlowState = resolveAddServerFlowState({
+    existingServerProvider: options.existingServerProvider,
+    requestedServerProvider: options.serverProvider,
+    withServer: options.withServer,
+    withTrpc: options.withTrpc,
+  })
+  const trpcEnabled = serverFlowState.trpcEnabled
   const initialServerState = buildAddInitialServerState({
     existingState: options.existingServerScaffoldState,
     existingServerProvider: options.existingServerProvider,
@@ -493,11 +521,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     targetRoot,
     tokens,
     packageManager: options.packageManager,
-    serverProvider: options.withServer
-      ? options.serverProvider
-      : trpcEnabled
-        ? options.existingServerProvider
-        : null,
+    serverProvider: serverFlowState.patchServerProvider,
     state: initialServerState,
     trpc: trpcEnabled,
   })
@@ -510,15 +534,11 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     )
   }
 
-  if (options.withServer && options.serverProvider === 'cloudflare' && trpcEnabled) {
-    const packageManager = getPackageManagerAdapter(options.packageManager)
-    log.step('루트 tRPC workspace 의존성을 먼저 설치할게요')
-    await runCommand({
-      cwd: targetRoot,
-      ...packageManager.install(),
-      label: '루트 tRPC workspace 의존성을 먼저 설치할게요',
-    })
-  }
+  await maybeInstallRootDependenciesBeforeCloudflareProvisioning({
+    targetRoot,
+    packageManager: options.packageManager,
+    shouldInstall: options.withServer && options.serverProvider === 'cloudflare',
+  })
 
   const provisionedSupabaseProject = options.withServer
     ? await maybeProvisionSupabaseProject({
@@ -569,7 +589,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     await resolveRootWorkspaces(targetRoot),
   )
 
-  const finalServerProvider = options.existingServerProvider ?? options.serverProvider
+  const finalServerProvider = serverFlowState.finalServerProvider
   await applyDocsTemplates(targetRoot, tokens, { serverProvider: finalServerProvider })
 
   if (
@@ -662,7 +682,7 @@ export async function addWorkspaces(options: AddWorkspaceOptions) {
     for (const command of buildRootFinalizePlan({
       targetRoot,
       packageManager: options.packageManager,
-      serverProvider: options.existingServerProvider ?? options.serverProvider,
+      serverProvider: finalServerProvider,
     })) {
       log.step(command.label)
       await runCommand(command)
