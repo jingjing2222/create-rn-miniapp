@@ -216,9 +216,9 @@ function renderInstalledSkillReadmeLines(installedSkillIds: string[]) {
 
 const SKILLS_STRATEGY_README_LINES = [
   '## skills 전략',
-  '- `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 예시만 제공합니다.',
-  '- 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI를 그대로 사용합니다.',
-  '- 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 curated skill source를 둡니다.',
+  '- `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 방법만 알려줘요.',
+  '- 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 바로 하면 돼요.',
+  '- 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.',
 ]
 
 async function renderRootReadmeMarkdown(

@@ -889,15 +889,15 @@ test('README treats generated skills as a first-class scaffold output and avoids
   assert.match(readmeSource, /## skills 전략/)
   assert.match(
     readmeSource,
-    /`create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 예시만 제공합니다\./,
+    /`create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 방법만 알려줘요\./,
   )
   assert.match(
     readmeSource,
-    /실제 설치, 확인, 업데이트는 \[`@vercel-labs\/skills`\]\(https:\/\/github\.com\/vercel-labs\/skills\) 표준 CLI를 그대로 사용합니다\./,
+    /실제 설치, 확인, 업데이트는 \[`@vercel-labs\/skills`\]\(https:\/\/github\.com\/vercel-labs\/skills\) 표준 CLI로 바로 하면 돼요\./,
   )
   assert.match(
     readmeSource,
-    /이 저장소의 `skills\/`에는 MiniApp 작업에 맞춘 curated skill source가 있고, 생성된 repo `README\.md`가 추천 목록을 자동으로 보여줍니다\./,
+    /이 저장소의 `skills\/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README\.md`가 추천 목록을 자동으로 보여줘요\./,
   )
   assert.match(readmeSource, /사용할 skill id는 `skills\/` 아래 디렉터리 이름을 보면 돼요\./)
   assert.match(readmeSource, /npx skills add \. --skill <skill-id> --copy/)
@@ -961,7 +961,7 @@ test('README lists scaffolded skills in user-facing groups without leaking maint
   assert.doesNotMatch(agentsSource, /^- optional:/m)
   assert.match(agentsSource, /skill-catalog\.ts/)
   assert.match(agentsSource, /Skill source: `skills`/)
-  assert.match(readmeSource, /생성된 repo `README\.md`가 추천 목록을 자동으로 보여줍니다\./)
+  assert.match(readmeSource, /생성된 repo `README\.md`가 추천 목록을 자동으로 보여줘요\./)
   assert.match(readmeSource, /사용할 skill id는 `skills\/` 아래 디렉터리 이름을 보면 돼요\./)
   assert.match(readmeSource, /npx skills add \. --skill <skill-id> --copy/)
   assert.doesNotMatch(readmeSource, /- `backoffice-react`:/)

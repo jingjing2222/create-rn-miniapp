@@ -1,3 +1,15 @@
+## 다음 작업: skills 전략 문구 토스체로 정리
+
+### 목표
+- root README와 generated README의 `skills 전략` 3줄 설명을 더 짧고 토스체 톤으로 다듬는다.
+- 의미는 유지하되, `create-rn-miniapp`는 추천만 하고 실제 lifecycle은 표준 `skills` CLI가 담당한다는 점을 더 자연스럽게 전달한다.
+- 관련 회귀 테스트를 먼저 갱신하고, 문구 수정 뒤 verify까지 다시 통과시킨다.
+
+### 작업 순서
+1. README 회귀 테스트의 해당 문장 기대값을 먼저 토스체 기준으로 바꾼다.
+2. root README와 generated README renderer의 같은 문구를 같이 수정한다.
+3. targeted test와 `pnpm verify`를 다시 통과시키고 커밋/푸시한다.
+
 ## 다음 작업: changeset / PR 설명 정합성 복구
 
 ### 목표
