@@ -7,7 +7,7 @@
   - 로컬 경로(`node_modules`, 임시 생성 JSON, 내부 스캔 결과)에 의존하지 않는다.
   - 공식 공개 문서만 source of truth로 사용한다.
   - 구현자는 본 문서에서 후보 API를 찾고, 링크된 원문에서 시그니처와 제약을 최종 확인한다.
-- 네이티브 모듈, 라우팅, UI import 강제 규칙은 `docs/engineering/frontend-policy.md`를 따른다.
+- 네이티브 모듈, 라우팅, UI import 강제 규칙은 `../../shared/references/frontend-policy.md`를 따른다.
 
 ## 1) 이 문서를 언제 보나
 
@@ -271,7 +271,7 @@
 
 - Granite API는 항상 공식 React Native 레퍼런스 기준으로 적용한다.
 - 플랫폼별 API 차이는 분기 처리하고, 에러 타입을 명시적으로 핸들링한다.
-- 라우팅 경로와 페이지 구조 규칙은 이 문서가 아니라 `docs/engineering/frontend-policy.md`가 기준이다.
+- 라우팅 경로와 페이지 구조 규칙은 이 문서가 아니라 `../../shared/references/frontend-policy.md`가 기준이다.
 - 같은 이름의 UI/visibility API가 보여도 import source가 `@apps-in-toss/framework`면 framework 문서를, `@granite-js/*`면 Granite 문서를 우선한다.
 
 Granite 실무 포인트:

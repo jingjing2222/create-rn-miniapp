@@ -10,6 +10,15 @@ import {
   PACKAGE_MANAGERS,
   type PackageManager,
 } from '../package-manager.js'
+import {
+  ROOT_README_PROVIDER_SECTION_END_MARKER,
+  ROOT_README_PROVIDER_SECTION_START_MARKER,
+  ROOT_README_SKILLS_SECTION_END_MARKER,
+  ROOT_README_SKILLS_SECTION_START_MARKER,
+  renderRootReadmeProviderSection,
+  renderRootReadmeSkillsSection,
+} from '../root-readme.js'
+import { SKILL_CATALOG } from './skill-catalog.js'
 import { getTestPackageManagerField } from '../test-support/package-manager.js'
 import * as templateModule from './index.js'
 import {
@@ -291,6 +300,19 @@ function getMarkdownSectionBody(source: string, heading: string) {
   return source.slice(sectionStart, sectionEnd).trim()
 }
 
+function getManagedBlock(source: string, startMarker: string, endMarker: string) {
+  const startIndex = source.indexOf(startMarker)
+
+  assert.notEqual(startIndex, -1, `missing managed block start marker: ${startMarker}`)
+
+  const contentStart = startIndex + startMarker.length
+  const endIndex = source.indexOf(endMarker, contentStart)
+
+  assert.notEqual(endIndex, -1, `missing managed block end marker: ${endMarker}`)
+
+  return source.slice(contentStart, endIndex).trim()
+}
+
 test('template module does not expose the legacy optional docs sync entrypoint', () => {
   assert.equal('syncOptionalDocsTemplates' in templateModule, false)
 })
@@ -405,14 +427,60 @@ test('skill taxonomy metadata is centralized in a shared catalog', async () => {
   assert.doesNotMatch(catalogSource, /from '\.\.\/skills-contract\.js'/)
   assert.doesNotMatch(catalogSource, /docsPath:/)
   assert.doesNotMatch(catalogSource, /referenceCatalogPath:/)
+  assert.doesNotMatch(catalogSource, /topologyLabel:/)
+  assert.doesNotMatch(catalogSource, /frontendPolicyReferenceLabel:/)
+  assert.doesNotMatch(catalogSource, /referenceCatalogRelativePath:/)
   assert.doesNotMatch(catalogSource, /createProjectSkillDocPath\(/)
   assert.doesNotMatch(catalogSource, /createProjectSkillGeneratedPath\(/)
   assert.match(sharedFeatureSource, /from '\.\/skill-catalog\.js'/)
+  assert.match(sharedFeatureSource, /getServerProviderAdapter/)
+  assert.doesNotMatch(sharedFeatureSource, /optionalSkillId:\s*'cloudflare-worker'/)
+  assert.doesNotMatch(sharedFeatureSource, /optionalSkillId:\s*'supabase-project'/)
+  assert.doesNotMatch(sharedFeatureSource, /optionalSkillId:\s*'firebase-functions'/)
   assert.doesNotMatch(sharedFeatureSource, /templateDir: 'backoffice-react'/)
   assert.doesNotMatch(sharedFeatureSource, /templateDir: 'cloudflare-worker'/)
   assert.doesNotMatch(sharedFeatureSource, /templateDir: 'supabase-project'/)
   assert.doesNotMatch(sharedFeatureSource, /templateDir: 'firebase-functions'/)
   assert.doesNotMatch(sharedFeatureSource, /templateDir: 'trpc-boundary'/)
+})
+
+test('skill catalog ids stay aligned with root skills directories', async () => {
+  const skillRoot = fileURLToPath(new URL('../../../../skills', import.meta.url))
+  const skillDirectories = (await readdir(skillRoot, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort()
+  const installableSkillDirectories: string[] = []
+
+  for (const directory of skillDirectories) {
+    if (await pathExists(path.join(skillRoot, directory, 'SKILL.md'))) {
+      installableSkillDirectories.push(directory)
+    }
+  }
+
+  assert.deepEqual(SKILL_CATALOG.map((skill) => skill.id).sort(), installableSkillDirectories)
+})
+
+test('skill docs share a single frontend policy path reference', async () => {
+  const sharedReferencePath = fileURLToPath(
+    new URL('../../../../skills/shared/references/frontend-policy.md', import.meta.url),
+  )
+  const sharedReferenceSource = await readFile(sharedReferencePath, 'utf8')
+  const skillDocs = [
+    '../../../../skills/granite-routing/SKILL.md',
+    '../../../../skills/miniapp-capabilities/SKILL.md',
+    '../../../../skills/granite-routing/references/patterns.md',
+    '../../../../skills/miniapp-capabilities/references/feature-map.md',
+    '../../../../skills/miniapp-capabilities/references/full-index.md',
+  ]
+
+  assert.match(sharedReferenceSource, /docs\/engineering\/frontend-policy\.md/)
+
+  for (const relativePath of skillDocs) {
+    const source = await readFile(fileURLToPath(new URL(relativePath, import.meta.url)), 'utf8')
+    assert.doesNotMatch(source, /docs\/engineering\/frontend-policy\.md/)
+    assert.match(source, /shared\/references\/frontend-policy\.md/)
+  }
 })
 
 test('generated docs and inspectors derive workspace topology from a shared helper', async () => {
@@ -920,6 +988,30 @@ test('README treats generated skills as a first-class scaffold output and avoids
   assert.doesNotMatch(readmeSource, /source of truth/i)
   assert.doesNotMatch(readmeSource, /생성물 계약/)
   assert.doesNotMatch(readmeSource, /Provider IaC/)
+})
+
+test('root README managed sections stay synced with shared renderers', async () => {
+  const readmeSource = await readFile(
+    fileURLToPath(new URL('../../../../README.md', import.meta.url)),
+    'utf8',
+  )
+
+  assert.equal(
+    getManagedBlock(
+      readmeSource,
+      ROOT_README_SKILLS_SECTION_START_MARKER,
+      ROOT_README_SKILLS_SECTION_END_MARKER,
+    ),
+    renderRootReadmeSkillsSection().trim(),
+  )
+  assert.equal(
+    getManagedBlock(
+      readmeSource,
+      ROOT_README_PROVIDER_SECTION_START_MARKER,
+      ROOT_README_PROVIDER_SECTION_END_MARKER,
+    ),
+    renderRootReadmeProviderSection().trim(),
+  )
 })
 
 test('skill references do not hardcode the project-local skills root when sibling paths are enough', async () => {

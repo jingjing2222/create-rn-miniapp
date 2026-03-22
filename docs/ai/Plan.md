@@ -1,3 +1,15 @@
+## 다음 작업: 남은 skills SSoT 드리프트 제거
+
+### 목표
+- root README의 `skills 전략`, `server provider 고르기` 섹션을 shared renderer에서 파생시키고, static README는 managed block만 소비하게 만든다.
+- installable skill registry와 root `skills/*` 디렉터리 사이의 drift를 테스트로 막고, dead metadata는 catalog에서 제거한다.
+- provider -> optional skill 추천 규칙과 root README provider 설명을 provider registry 단일 source에서 파생시키고, skill 문서의 frontend policy 경로는 shared reference 한 곳으로 모은다.
+
+### 작업 순서
+1. root README managed block, skill catalog/skills 디렉터리 정합성, provider mapping, shared frontend-policy reference를 red test로 먼저 고정한다.
+2. shared README renderer, provider metadata, skill catalog 정리, shared skill reference 파일을 구현하고 README를 sync한다.
+3. targeted test와 `pnpm verify`를 통과시킨 뒤 단일 목적 커밋으로 정리한다.
+
 ## 다음 작업: frontend policy TDS 문구를 더 강하게 고정
 
 ### 목표

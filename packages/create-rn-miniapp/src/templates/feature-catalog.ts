@@ -1,6 +1,8 @@
+import { getServerProviderAdapter } from '../providers/index.js'
 import type { GeneratedWorkspaceOptions } from './types.js'
 import {
   CORE_SKILL_DEFINITIONS,
+  OPTIONAL_SKILL_IDS,
   resolveOptionalSkillDefinition,
   type OptionalSkillId,
   type SkillDefinition,
@@ -90,18 +92,6 @@ export const WORKSPACE_FEATURE_CATALOG: WorkspaceFeatureDefinition[] = [
     optionalSkillId: 'backoffice-react',
   },
   {
-    enabled: (options) => options.serverProvider === 'cloudflare',
-    optionalSkillId: 'cloudflare-worker',
-  },
-  {
-    enabled: (options) => options.serverProvider === 'supabase',
-    optionalSkillId: 'supabase-project',
-  },
-  {
-    enabled: (options) => options.serverProvider === 'firebase',
-    optionalSkillId: 'firebase-functions',
-  },
-  {
     enabled: (options) => options.hasTrpc,
     agentsLines: [TRPC_WORKSPACE_AGENTS_LINE],
     topologyRootLines: TRPC_WORKSPACE_TOPOLOGY_ROOT_LINES,
@@ -125,8 +115,24 @@ export function resolveEnabledWorkspaceFeatures(options: GeneratedWorkspaceOptio
 }
 
 export function resolveSelectedOptionalSkillDefinitions(options: GeneratedWorkspaceOptions) {
-  return resolveEnabledWorkspaceFeatures(options).flatMap((feature) =>
-    feature.optionalSkillId ? [resolveOptionalSkillDefinition(feature.optionalSkillId)] : [],
+  const selectedSkillIds = new Set<OptionalSkillId>()
+
+  for (const feature of resolveEnabledWorkspaceFeatures(options)) {
+    if (feature.optionalSkillId) {
+      selectedSkillIds.add(feature.optionalSkillId)
+    }
+  }
+
+  if (options.serverProvider !== null) {
+    const providerSkillId = getServerProviderAdapter(options.serverProvider).optionalSkillId
+
+    if (providerSkillId) {
+      selectedSkillIds.add(providerSkillId)
+    }
+  }
+
+  return OPTIONAL_SKILL_IDS.filter((skillId) => selectedSkillIds.has(skillId)).map((skillId) =>
+    resolveOptionalSkillDefinition(skillId),
   )
 }
 

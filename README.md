@@ -61,8 +61,8 @@ pnpm verify
 
 그 흐름을 따라가면 지금 확인할 문서와 Skill이 자연스럽게 이어져요. 그래서 README에서 모든 작업 순서를 길게 외울 필요는 없어요.
 
+<!-- generated:skills-strategy:start -->
 ## skills 전략
-
 - `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 방법만 알려줘요.
 - 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 바로 하면 돼요.
 - 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.
@@ -72,8 +72,6 @@ pnpm verify
 ```bash
 npx skills add jingjing2222/create-rn-miniapp --skill miniapp-capabilities --skill granite-routing --skill tds-ui --copy
 ```
-
-생성된 repo의 `README.md`는 그 시점의 source repo 기준 설치 예시를 자동으로 다시 보여줘요.
 
 지금 설치할 수 있는 skill id는 이거예요.
 
@@ -93,6 +91,7 @@ npx skills list
 npx skills check
 npx skills update
 ```
+<!-- generated:skills-strategy:end -->
 
 ## CLI 옵션은 `--help`로 확인해요
 
@@ -106,6 +105,7 @@ pnpm dlx create-rn-miniapp --help
 
 필요할 때만 `--server-project-mode`, `--root-dir`, `--output-dir`, `--skip-install` 같은 세부 옵션까지 보면 돼요.
 
+<!-- generated:server-provider:start -->
 ## server provider 고르기
 
 - `supabase`: DB와 Functions를 같이 빠르게 시작하고 싶을 때
@@ -113,6 +113,7 @@ pnpm dlx create-rn-miniapp --help
 - `firebase`: Functions, Firestore, Web SDK 흐름이 익숙할 때
 
 상세 연결 순서와 운영 방식은 생성된 repo의 `server/README.md`와 루트 문서를 보면 돼요.
+<!-- generated:server-provider:end -->
 
 ## 기존 워크스페이스에 나중에 붙이기
 

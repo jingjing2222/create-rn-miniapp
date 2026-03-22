@@ -2,6 +2,7 @@ import path from 'node:path'
 import type { CommandSpec } from '../command-spec.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import type { ServerScaffoldState } from '../server-project.js'
+import type { OptionalSkillId } from '../templates/skill-catalog.js'
 import {
   ensureBackofficeFirebaseBootstrap,
   ensureBackofficeCloudflareBootstrap,
@@ -43,7 +44,9 @@ type ProviderPatchOptions = ProviderWorkspaceOptions & {
 export type ServerProviderAdapter = {
   id: 'supabase' | 'cloudflare' | 'firebase'
   label: string
+  readmeDescription: string
   supportsTrpc: boolean
+  optionalSkillId?: OptionalSkillId
   detect(rootDir: string): Promise<boolean>
   buildCreatePlan(options: ProviderPlanOptions): CommandSpec[]
   buildAddPlan(options: ProviderPlanOptions): CommandSpec[]
@@ -81,7 +84,9 @@ function buildSupabasePlan(options: ProviderPlanOptions): CommandSpec[] {
 const supabaseAdapter: ServerProviderAdapter = {
   id: 'supabase',
   label: 'Supabase',
+  readmeDescription: 'DB와 Functions를 같이 빠르게 시작하고 싶을 때',
   supportsTrpc: false,
+  optionalSkillId: 'supabase-project',
   async detect(rootDir) {
     return pathExists(path.join(rootDir, 'server', 'supabase', 'config.toml'))
   },
@@ -120,7 +125,9 @@ function buildCloudflarePlan(options: ProviderPlanOptions): CommandSpec[] {
 const cloudflareAdapter: ServerProviderAdapter = {
   id: 'cloudflare',
   label: 'Cloudflare Workers',
+  readmeDescription: 'edge runtime과 binding 중심으로 가고 싶을 때',
   supportsTrpc: true,
+  optionalSkillId: 'cloudflare-worker',
   async detect(rootDir) {
     return (
       (await pathExists(path.join(rootDir, 'server', 'wrangler.jsonc'))) ||
@@ -151,7 +158,9 @@ const cloudflareAdapter: ServerProviderAdapter = {
 const firebaseAdapter: ServerProviderAdapter = {
   id: 'firebase',
   label: 'Firebase',
+  readmeDescription: 'Functions, Firestore, Web SDK 흐름이 익숙할 때',
   supportsTrpc: false,
+  optionalSkillId: 'firebase-functions',
   async detect(rootDir) {
     return pathExists(path.join(rootDir, 'server', 'firebase.json'))
   },

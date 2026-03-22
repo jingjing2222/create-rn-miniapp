@@ -1,0 +1,100 @@
+import { SERVER_PROVIDERS, getServerProviderAdapter } from './providers/index.js'
+import { renderSkillsAddCommand } from './skills-install.js'
+import {
+  SKILLS_CHECK_COMMAND,
+  SKILLS_LIST_COMMAND,
+  SKILLS_UPDATE_COMMAND,
+} from './skills-contract.js'
+import { CORE_SKILL_DEFINITIONS, SKILL_CATALOG } from './templates/skill-catalog.js'
+
+export const ROOT_README_SKILLS_SECTION_START_MARKER = '<!-- generated:skills-strategy:start -->'
+export const ROOT_README_SKILLS_SECTION_END_MARKER = '<!-- generated:skills-strategy:end -->'
+export const ROOT_README_PROVIDER_SECTION_START_MARKER = '<!-- generated:server-provider:start -->'
+export const ROOT_README_PROVIDER_SECTION_END_MARKER = '<!-- generated:server-provider:end -->'
+
+export const SKILLS_STRATEGY_README_LINES = [
+  '## skills 전략',
+  '- `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 방법만 알려줘요.',
+  '- 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 바로 하면 돼요.',
+  '- 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.',
+]
+
+export function renderRootReadmeSkillsSection() {
+  const exampleSkillIds = CORE_SKILL_DEFINITIONS.map((skill) => skill.id)
+
+  return [
+    ...SKILLS_STRATEGY_README_LINES,
+    '',
+    '예를 들어 기본 작업용 skill을 바로 넣고 싶다면 이렇게 하면 돼요.',
+    '',
+    '```bash',
+    renderSkillsAddCommand(exampleSkillIds),
+    '```',
+    '',
+    '지금 설치할 수 있는 skill id는 이거예요.',
+    '',
+    ...SKILL_CATALOG.map((skill) => `- \`${skill.id}\``),
+    '',
+    '설치 뒤에는 표준 명령만 기억하면 돼요.',
+    '',
+    '```bash',
+    SKILLS_LIST_COMMAND,
+    SKILLS_CHECK_COMMAND,
+    SKILLS_UPDATE_COMMAND,
+    '```',
+  ].join('\n')
+}
+
+export function renderRootReadmeProviderSection() {
+  return [
+    '## server provider 고르기',
+    '',
+    ...SERVER_PROVIDERS.map((provider) => {
+      const adapter = getServerProviderAdapter(provider)
+      return `- \`${provider}\`: ${adapter.readmeDescription}`
+    }),
+    '',
+    '상세 연결 순서와 운영 방식은 생성된 repo의 `server/README.md`와 루트 문서를 보면 돼요.',
+  ].join('\n')
+}
+
+function replaceManagedBlock(
+  source: string,
+  startMarker: string,
+  endMarker: string,
+  content: string,
+) {
+  const pattern = new RegExp(
+    `${escapeRegExp(startMarker)}[\\s\\S]*?${escapeRegExp(endMarker)}`,
+    'm',
+  )
+
+  if (!pattern.test(source)) {
+    throw new Error(`README managed block을 찾지 못했어요: ${startMarker}`)
+  }
+
+  return source.replace(pattern, `${startMarker}\n${content}\n${endMarker}`)
+}
+
+export function syncRootReadmeManagedSections(source: string) {
+  return [
+    {
+      startMarker: ROOT_README_SKILLS_SECTION_START_MARKER,
+      endMarker: ROOT_README_SKILLS_SECTION_END_MARKER,
+      content: renderRootReadmeSkillsSection(),
+    },
+    {
+      startMarker: ROOT_README_PROVIDER_SECTION_START_MARKER,
+      endMarker: ROOT_README_PROVIDER_SECTION_END_MARKER,
+      content: renderRootReadmeProviderSection(),
+    },
+  ].reduce(
+    (nextSource, block) =>
+      replaceManagedBlock(nextSource, block.startMarker, block.endMarker, block.content),
+    source,
+  )
+}
+
+function escapeRegExp(source: string) {
+  return source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
