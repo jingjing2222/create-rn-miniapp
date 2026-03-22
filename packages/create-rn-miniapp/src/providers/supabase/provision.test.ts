@@ -101,6 +101,28 @@ test('extractJsonPayload reads structured output from stdout only and ignores st
   })
 })
 
+test('extractJsonPayload accepts trailing JSON after Yarn dlx stdout prelude', () => {
+  const payload = extractJsonPayload<Array<{ id: string; name: string }>>({
+    stdout: [
+      '➤ YN0000: · Yarn 4.12.0',
+      '➤ YN0000: ┌ Resolution step',
+      '➤ YN0085: │ + supabase@npm:2.83.0, @isaacs/fs-minipass@npm:4.0.1, and 22 more.',
+      '➤ YN0000: └ Completed in 0s 325ms',
+      '➤ YN0000: · Done with warnings in 6s 343ms',
+      '',
+      '[{"id":"project-ref","name":"ebook"}]',
+    ].join('\n'),
+    stderr: 'Cannot find project ref. Have you run supabase link?',
+  })
+
+  assert.deepEqual(payload, [
+    {
+      id: 'project-ref',
+      name: 'ebook',
+    },
+  ])
+})
+
 test('buildCreateSupabaseProjectArgs appends only the project name positional arg', () => {
   assert.deepEqual(buildCreateSupabaseProjectArgs('test-project'), [
     'projects',

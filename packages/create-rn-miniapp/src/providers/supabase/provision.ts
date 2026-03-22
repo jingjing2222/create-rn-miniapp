@@ -48,6 +48,7 @@ const SUPABASE_ACCESS_TOKEN_REQUIRED_PATTERNS = [
   'Cannot use automatic login flow inside non-TTY environments.',
   'Please provide --token flag',
 ] as const
+const YARN_STDOUT_LOG_PATTERN = /^(?:➤\s+)?YN\d{4}:/u
 const ANSI_ESCAPE = String.fromCharCode(0x1b)
 const ANSI_BEL = String.fromCharCode(0x07)
 const OSC_HYPERLINK_PATTERN = new RegExp(
@@ -177,10 +178,13 @@ export function extractJsonPayload<T>(output: Pick<CommandOutput, 'stdout' | 'st
     .filter((line) => line.trim().length > 0)
     .join('\n')
     .trim()
+  const parseCandidates = [fullStdout, stripPackageManagerStdoutPrelude(fullStdout)].filter(
+    (candidate, index, array) => candidate.length > 0 && array.indexOf(candidate) === index,
+  )
 
-  if (fullStdout) {
+  for (const candidate of parseCandidates) {
     try {
-      return JSON.parse(fullStdout) as T
+      return JSON.parse(candidate) as T
     } catch {}
   }
 
@@ -189,6 +193,27 @@ export function extractJsonPayload<T>(output: Pick<CommandOutput, 'stdout' | 'st
 
 function stripCliStructuredOutput(source: string) {
   return source.replace(OSC_HYPERLINK_PATTERN, '').replace(OSC_SEQUENCE_PATTERN, '')
+}
+
+function stripPackageManagerStdoutPrelude(source: string) {
+  const lines = source.split('\n')
+  let index = 0
+
+  while (index < lines.length && YARN_STDOUT_LOG_PATTERN.test(lines[index] ?? '')) {
+    index += 1
+  }
+
+  while (index < lines.length && (lines[index]?.trim().length ?? 0) === 0) {
+    index += 1
+  }
+
+  const candidate = lines.slice(index).join('\n').trim()
+
+  if (candidate.startsWith('{') || candidate.startsWith('[')) {
+    return candidate
+  }
+
+  return source
 }
 
 export function resolveSupabaseClientApiKey(apiKeys: SupabaseApiKey[]) {

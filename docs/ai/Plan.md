@@ -1,3 +1,16 @@
+## 다음 작업: Supabase JSON parser가 Yarn stdout prelude를 무시하게 보강
+
+### 목표
+- `yarn dlx supabase ... --output json`가 Yarn 진행 로그를 `stdout`에 같이 써도 Supabase structured output parsing이 깨지지 않게 만든다.
+- 임의의 mixed stdout까지 무분별하게 허용하지 않고, package manager prelude + trailing JSON이라는 현재 실출력 계약만 정확히 수용한다.
+- `projects list`, `api-keys` 같은 Supabase JSON command가 Yarn 환경에서도 안정적으로 provisioning까지 이어지게 고정한다.
+
+### 작업 순서
+1. 실제 Yarn stdout prelude + trailing JSON output을 red test로 먼저 추가한다.
+2. `extractJsonPayload`가 package manager prelude를 제거하거나 trailing JSON payload만 안전하게 골라내도록 최소 수정한다.
+3. 기존 “임의 mixed stdout은 reject” 계약이 유지되는지 같이 확인한다.
+4. targeted test와 `pnpm verify`를 통과시킨 뒤 단일 목적 커밋으로 정리한다.
+
 ## 다음 작업: Supabase token login 상호작용과 env 자동 반영
 
 ### 목표
