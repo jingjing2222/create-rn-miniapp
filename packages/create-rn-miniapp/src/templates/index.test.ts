@@ -1761,6 +1761,39 @@ test('applyDocsTemplates keeps AGENTS free of local skill routing even when proj
   assert.doesNotMatch(agents, /\.claude\/skills\/\*/)
 })
 
+test('applyDocsTemplates replaces install CTA with installed skill summary when project-local skills already exist', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await mkdir(path.join(targetRoot, '.agents', 'skills', 'tds-ui'), { recursive: true })
+  await mkdir(path.join(targetRoot, '.agents', 'skills', 'miniapp-capabilities'), {
+    recursive: true,
+  })
+  await writeFile(
+    path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'SKILL.md'),
+    '# TDS\n',
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, '.agents', 'skills', 'miniapp-capabilities', 'SKILL.md'),
+    '# MiniApp\n',
+    'utf8',
+  )
+
+  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+
+  const readme = await readFile(path.join(targetRoot, 'README.md'), 'utf8')
+
+  assert.match(readme, /Optional agent skills/)
+  assert.match(readme, /현재 project-local skills가 설치되어 있어요\./)
+  assert.match(readme, /### Installed/)
+  assert.match(readme, /miniapp-capabilities/)
+  assert.match(readme, /tds-ui/)
+  assert.doesNotMatch(readme, /### Recommended/)
+  assert.doesNotMatch(readme, /설치 예시:/)
+  assert.doesNotMatch(readme, /npx skills add/)
+})
+
 test('applyDocsTemplates rerenders README recommendations when optional workspaces are added later', async (t) => {
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')

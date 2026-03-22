@@ -3398,3 +3398,13 @@ docs/
 - 완료 기준
   - 관련 회귀 테스트 갱신
   - `pnpm verify` 통과
+
+## 다음 작업: README optional skills 동적 렌더
+
+### 목표
+- generated `README.md`의 Optional agent skills 섹션은 현재 설치 상태를 반영한다.
+- project-local skill이 이미 설치되어 있으면 추천/설치 예시 대신 실제 설치된 skill 목록을 보여준다.
+- project-local skill이 없을 때만 추천 목록과 `skills add` 설치 예시를 보여준다.
+- 완료 기준
+  - 설치/미설치 두 상태에 대한 회귀 테스트 추가
+  - `pnpm verify` 통과

@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { renderSkillsAddCommand } from '../skills-install.js'
+import { listInstalledProjectSkills, renderSkillsAddCommand } from '../skills-install.js'
 import {
   SKILLS_CHECK_COMMAND,
   SKILLS_LIST_COMMAND,
@@ -18,6 +18,7 @@ import {
 import { renderFrontendPolicyMarkdown } from './frontend-policy.js'
 import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
 import { createRootTemplateExtraTokens, renderRootVerifyStepsMarkdown } from './root.js'
+import { SKILL_CATALOG } from './skill-catalog.js'
 import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
 
 type DocumentDefinition = {
@@ -197,9 +198,26 @@ function renderWorkspaceTopologyMarkdown(options: GeneratedWorkspaceOptions) {
   ].join('\n')
 }
 
-function renderRootReadmeMarkdown(tokens: TemplateTokens, options: GeneratedWorkspaceOptions) {
+function renderInstalledSkillReadmeLines(installedSkillIds: string[]) {
+  return installedSkillIds.map((skillId) => {
+    const definition = SKILL_CATALOG.find((skill) => skill.id === skillId)
+
+    if (!definition) {
+      return `- \`${skillId}\``
+    }
+
+    return `- \`${definition.id}\`: ${definition.agentsLabel}`
+  })
+}
+
+async function renderRootReadmeMarkdown(
+  targetRoot: string,
+  tokens: TemplateTokens,
+  options: GeneratedWorkspaceOptions,
+) {
   const recommendedSkillDefinitions = resolveRecommendedSkillDefinitions(options)
   const recommendedSkillIds = recommendedSkillDefinitions.map((skill) => skill.id)
+  const installedSkillIds = await listInstalledProjectSkills(targetRoot)
 
   return [
     `# ${tokens.displayName}`,
@@ -212,16 +230,27 @@ function renderRootReadmeMarkdown(tokens: TemplateTokens, options: GeneratedWork
     '- `docs/product/기능명세서.md`: 제품 요구사항',
     '',
     '## Optional agent skills',
-    'agent skills는 선택 사항이에요. 필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.',
-    ...(recommendedSkillDefinitions.length > 0
+    ...(installedSkillIds.length > 0
       ? [
+          '현재 project-local skills가 설치되어 있어요.',
           '',
-          '### Recommended',
-          ...recommendedSkillDefinitions.map((skill) => `- \`${skill.id}\`: ${skill.agentsLabel}`),
-          '',
-          `설치 예시: \`${renderSkillsAddCommand(recommendedSkillIds)}\``,
+          '### Installed',
+          ...renderInstalledSkillReadmeLines(installedSkillIds),
         ]
-      : []),
+      : [
+          'agent skills는 선택 사항이에요. 필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.',
+          ...(recommendedSkillDefinitions.length > 0
+            ? [
+                '',
+                '### Recommended',
+                ...recommendedSkillDefinitions.map(
+                  (skill) => `- \`${skill.id}\`: ${skill.agentsLabel}`,
+                ),
+                '',
+                `설치 예시: \`${renderSkillsAddCommand(recommendedSkillIds)}\``,
+              ]
+            : []),
+        ]),
     '',
     '### Standard commands',
     `- 설치된 skill 확인: \`${SKILLS_LIST_COMMAND}\``,
@@ -243,7 +272,7 @@ const DOCUMENT_DEFINITIONS: DocumentDefinition[] = [
   {
     relativePath: 'README.md',
     ownership: 'code',
-    render: (tokens, options) => renderRootReadmeMarkdown(tokens, options),
+    render: () => '',
   },
   {
     relativePath: 'docs/ai/Plan.md',
@@ -351,7 +380,9 @@ export async function applyDocsTemplates(
     const renderedSource =
       definition.relativePath === 'AGENTS.md'
         ? await renderAgentsMarkdown(targetRoot, tokens, options)
-        : definition.render(tokens, options)
+        : definition.relativePath === 'README.md'
+          ? await renderRootReadmeMarkdown(targetRoot, tokens, options)
+          : definition.render(tokens, options)
 
     await writeCodeOwnedMarkdown(targetRoot, definition.relativePath, renderedSource)
   }
