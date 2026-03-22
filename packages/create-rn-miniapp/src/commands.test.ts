@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import test from 'node:test'
-import { buildAddCommandPlan, buildCommandPlan, runCommandWithOutput } from './commands.js'
+import {
+  buildAddCommandPlan,
+  buildCommandPlan,
+  CommandExecutionError,
+  runCommandWithOutput,
+} from './commands.js'
 
 test('buildCommandPlan keeps AppInToss frontend steps first', () => {
   const targetRoot = path.join('/tmp', 'ebook')
@@ -306,9 +311,11 @@ test('runCommandWithOutput includes stdout and stderr in failure messages', asyn
       label: '실패 테스트',
     }),
     (error: unknown) => {
-      assert.ok(error instanceof Error)
+      assert.ok(error instanceof CommandExecutionError)
       assert.match(error.message, /stdout marker/)
       assert.match(error.message, /stderr marker/)
+      assert.equal(error.stdout.trim(), 'stdout marker')
+      assert.equal(error.stderr.trim(), 'stderr marker')
       return true
     },
   )

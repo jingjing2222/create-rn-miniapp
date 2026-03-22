@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import npa from 'npm-package-arg'
 import { readGraniteConfigMetadata } from './patching/ast/index.js'
 import { toDefaultDisplayName } from './layout.js'
-import type { PackageManager } from './package-manager.js'
+import { PACKAGE_MANAGERS, type PackageManager } from './package-manager.js'
 import { detectServerProvider, type ServerProvider } from './providers/index.js'
 import { readServerScaffoldState, type ServerScaffoldState } from './server-project.js'
 import { pathExists } from './templates/filesystem.js'
@@ -56,20 +57,10 @@ export type WorkspaceInspection = {
 }
 
 function parsePackageManagerField(value: string | undefined): PackageManager {
-  if (value?.startsWith('pnpm@')) {
-    return 'pnpm'
-  }
+  const packageResult = value ? npa(value) : null
 
-  if (value?.startsWith('yarn@')) {
-    return 'yarn'
-  }
-
-  if (value?.startsWith('npm@')) {
-    return 'npm'
-  }
-
-  if (value?.startsWith('bun@')) {
-    return 'bun'
+  if (packageResult?.name && PACKAGE_MANAGERS.includes(packageResult.name as PackageManager)) {
+    return packageResult.name as PackageManager
   }
 
   throw new Error(

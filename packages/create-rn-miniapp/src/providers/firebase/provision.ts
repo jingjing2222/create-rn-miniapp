@@ -1,9 +1,16 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { log } from '@clack/prompts'
+import JSON5 from 'json5'
 import type { CommandSpec } from '../../command-spec.js'
-import { runCommand, runCommandWithOutput, type CommandOutput } from '../../commands.js'
+import {
+  CommandExecutionError,
+  runCommand,
+  runCommandWithOutput,
+  type CommandOutput,
+} from '../../commands.js'
 import type { CliPrompter } from '../../cli.js'
 import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
@@ -50,6 +57,11 @@ type GoogleCloudIamPolicyBinding = {
 
 type GoogleCloudIamPolicy = {
   bindings?: GoogleCloudIamPolicyBinding[]
+}
+
+type StructuredErrorDetail = {
+  reason: string | null
+  metadata: Record<string, unknown>
 }
 
 type GoogleCloudFirestoreDatabase = {
@@ -277,19 +289,8 @@ function normalizeFirebaseWebApps(payload: unknown) {
   return normalizedApps
 }
 
-function parseFirebaseWebSdkConfigPayload(output: string) {
-  const objectMatch = output.match(/\{[\s\S]*\}/)
-
-  if (!objectMatch) {
-    throw new Error('Firebase Web SDK 설정 결과를 해석하지 못했습니다.')
-  }
-
-  const jsonLike = objectMatch[0]
-    .replace(/([{,]\s*)([A-Za-z0-9_]+)\s*:/g, '$1"$2":')
-    .replace(/'/g, '"')
-    .replace(/,(\s*[}\]])/g, '$1')
-
-  return JSON.parse(jsonLike) as Partial<FirebaseWebSdkConfig>
+export function parseFirebaseWebSdkConfigSource(source: string) {
+  return JSON5.parse(source) as Partial<FirebaseWebSdkConfig>
 }
 
 function normalizeFirebaseWebSdkConfig(payload: unknown) {
@@ -400,14 +401,14 @@ function createFirebaseServerEnvValues(
   ].join('\n')
 }
 
-function parseGoogleCloudBillingInfoPayload(output: string) {
-  const objectMatch = output.match(/\{[\s\S]*\}/)
+function parseGoogleCloudBillingInfoPayload(output: Pick<CommandOutput, 'stdout' | 'stderr'>) {
+  const payload = extractJsonPayload<unknown>(output)
 
-  if (!objectMatch) {
+  if (!payload || typeof payload !== 'object') {
     throw new Error('Google Cloud billing 상태를 해석하지 못했습니다.')
   }
 
-  return JSON.parse(objectMatch[0]) as GoogleCloudProjectBillingInfo
+  return payload as GoogleCloudProjectBillingInfo
 }
 
 function formatFirebaseProjectLabel(project: FirebaseProject) {
@@ -428,8 +429,13 @@ function validateFirebaseProjectId(value: string) {
   return undefined
 }
 
-export function isFirebaseProjectIdConflictError(message: string) {
-  const normalized = message.toLowerCase()
+export function isFirebaseProjectIdConflictError(error: unknown) {
+  const errorPayload = extractStructuredCommandErrorPayload(error)
+  if (hasStructuredErrorStatus(errorPayload, 'ALREADY_EXISTS')) {
+    return true
+  }
+
+  const normalized = normalizeCommandErrorText(error)
 
   return (
     normalized.includes('there is already a project with id') ||
@@ -439,21 +445,8 @@ export function isFirebaseProjectIdConflictError(message: string) {
   )
 }
 
-export function isFirebaseProjectAddFirebaseRecoveryError(message: string) {
-  const normalized = message.toLowerCase()
-
-  return (
-    normalized.includes('creating google cloud platform project') &&
-    (normalized.includes('✔ creating google cloud platform project') ||
-      normalized.includes('created google cloud platform project')) &&
-    normalized.includes('adding firebase resources to google cloud platform project') &&
-    (normalized.includes('✖ adding firebase resources to google cloud platform project') ||
-      normalized.includes('failed to add firebase resources'))
-  )
-}
-
-export function isFirebaseAddFirebasePermissionDeniedError(message: string) {
-  const normalized = message.toLowerCase()
+export function isFirebaseAddFirebasePermissionDeniedError(error: unknown) {
+  const normalized = normalizeCommandErrorText(error)
 
   return (
     normalized.includes(':addfirebase 403') &&
@@ -462,8 +455,8 @@ export function isFirebaseAddFirebasePermissionDeniedError(message: string) {
   )
 }
 
-export function isFirebaseFunctionsBuildServiceAccountPermissionError(message: string) {
-  const normalized = message.toLowerCase()
+export function isFirebaseFunctionsBuildServiceAccountPermissionError(error: unknown) {
+  const normalized = normalizeCommandErrorText(error)
 
   return normalized.includes(
     'could not build the function due to a missing permission on the build service account',
@@ -474,8 +467,13 @@ export function isFirebaseBillingEnabled(info: GoogleCloudProjectBillingInfo) {
   return info.billingEnabled === true
 }
 
-export function isGoogleCloudAuthRefreshError(message: string) {
-  const normalized = message.toLowerCase()
+export function isGoogleCloudAuthRefreshError(error: unknown) {
+  const errorPayload = extractStructuredCommandErrorPayload(error)
+  if (hasStructuredInvalidGrant(errorPayload)) {
+    return true
+  }
+
+  const normalized = normalizeCommandErrorText(error)
 
   return (
     normalized.includes('invalid_grant') ||
@@ -485,8 +483,13 @@ export function isGoogleCloudAuthRefreshError(message: string) {
   )
 }
 
-export function isGoogleCloudServiceDisabledError(message: string, service?: string) {
-  const normalized = message.toLowerCase()
+export function isGoogleCloudServiceDisabledError(error: unknown, service?: string) {
+  const errorPayload = extractStructuredCommandErrorPayload(error)
+  if (hasStructuredServiceDisabledError(errorPayload, service)) {
+    return true
+  }
+
+  const normalized = normalizeCommandErrorText(error)
   const serviceDisabled =
     normalized.includes('service_disabled') ||
     normalized.includes('it is disabled') ||
@@ -503,8 +506,152 @@ export function isGoogleCloudServiceDisabledError(message: string, service?: str
   return normalized.includes(service.toLowerCase())
 }
 
-export function isFirebaseFirestoreDatabaseMissingError(message: string) {
-  return /does not exist|NOT_FOUND|not found/i.test(message)
+export function isFirebaseFirestoreDatabaseMissingError(error: unknown) {
+  return /does not exist|NOT_FOUND|not found/i.test(normalizeCommandErrorText(error))
+}
+
+function normalizeCommandErrorText(error: unknown) {
+  const parts =
+    error instanceof CommandExecutionError
+      ? [error.message, error.stdout, error.stderr]
+      : error instanceof Error
+        ? [error.message]
+        : typeof error === 'string'
+          ? [error]
+          : [String(error)]
+
+  return parts
+    .filter((part) => typeof part === 'string' && part.trim().length > 0)
+    .join('\n')
+    .toLowerCase()
+}
+
+function extractStructuredCommandErrorPayload(error: unknown) {
+  const candidates =
+    error instanceof CommandExecutionError
+      ? [error.stderr, error.stdout, error.message]
+      : error instanceof Error
+        ? [error.message]
+        : typeof error === 'string'
+          ? [error]
+          : []
+
+  for (const candidate of candidates) {
+    if (!candidate.trim()) {
+      continue
+    }
+
+    try {
+      return extractJsonPayload<unknown>({
+        stdout: candidate,
+        stderr: '',
+      })
+    } catch {}
+  }
+
+  return null
+}
+
+function hasStructuredErrorStatus(payload: unknown, expectedStatus: string) {
+  return extractStructuredErrorStatus(payload)?.toUpperCase() === expectedStatus.toUpperCase()
+}
+
+function hasStructuredInvalidGrant(payload: unknown) {
+  return collectStructuredStringValues(payload).some((value) => value === 'invalid_grant')
+}
+
+function hasStructuredServiceDisabledError(payload: unknown, service?: string) {
+  if (!payload || typeof payload !== 'object') {
+    return false
+  }
+
+  if (hasStructuredErrorStatus(payload, 'SERVICE_DISABLED')) {
+    return true
+  }
+
+  const details = extractStructuredErrorDetails(payload)
+  const matchingReason = details.some((detail) => detail.reason === 'SERVICE_DISABLED')
+
+  if (!matchingReason) {
+    return false
+  }
+
+  if (!service) {
+    return true
+  }
+
+  return details.some(
+    (detail) =>
+      detail.reason === 'SERVICE_DISABLED' &&
+      [detail.metadata.service, detail.metadata.serviceName]
+        .filter((value): value is string => typeof value === 'string')
+        .some((value) => value === service),
+  )
+}
+
+function extractStructuredErrorStatus(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  if ('status' in payload && typeof payload.status === 'string') {
+    return payload.status
+  }
+
+  if ('error' in payload && payload.error && typeof payload.error === 'object') {
+    const nestedError = payload.error as { status?: unknown }
+
+    if (typeof nestedError.status === 'string') {
+      return nestedError.status
+    }
+  }
+
+  return null
+}
+
+function extractStructuredErrorDetails(payload: unknown): StructuredErrorDetail[] {
+  if (!payload || typeof payload !== 'object') {
+    return []
+  }
+
+  const detailContainer =
+    'details' in payload && Array.isArray(payload.details)
+      ? payload.details
+      : 'error' in payload &&
+          payload.error &&
+          typeof payload.error === 'object' &&
+          Array.isArray((payload.error as { details?: unknown[] }).details)
+        ? ((payload.error as { details: unknown[] }).details ?? [])
+        : []
+
+  return detailContainer
+    .filter(
+      (detail): detail is { reason?: unknown; metadata?: unknown } =>
+        !!detail && typeof detail === 'object',
+    )
+    .map((detail) => ({
+      reason: typeof detail.reason === 'string' ? detail.reason : null,
+      metadata:
+        detail.metadata && typeof detail.metadata === 'object'
+          ? (detail.metadata as Record<string, unknown>)
+          : {},
+    }))
+}
+
+function collectStructuredStringValues(payload: unknown): string[] {
+  if (typeof payload === 'string') {
+    return [payload.toLowerCase()]
+  }
+
+  if (Array.isArray(payload)) {
+    return payload.flatMap((item) => collectStructuredStringValues(item))
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return []
+  }
+
+  return Object.values(payload).flatMap((value) => collectStructuredStringValues(value))
 }
 
 export function formatFirebaseBlazeUpgradeMessage(options: {
@@ -646,20 +793,28 @@ async function describeGoogleCloudProjectBillingInfo(
     label: 'Google Cloud billing 상태 확인',
   })
 
-  return parseGoogleCloudBillingInfoPayload(`${output.stdout}\n${output.stderr}`)
+  return parseGoogleCloudBillingInfoPayload(output)
 }
 
-function parseGoogleCloudDefaultBuildServiceAccount(
+export function parseGoogleCloudDefaultBuildServiceAccountOutput(
   output: Pick<CommandOutput, 'stdout' | 'stderr'>,
 ) {
-  const combined = `${output.stdout}\n${output.stderr}`
-  const emailMatch = combined.match(/[A-Za-z0-9-]+@[A-Za-z0-9.-]+/)
+  const lines = stripVTControlCharacters(output.stdout)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
 
-  if (!emailMatch) {
+  if (lines.length !== 1) {
     throw new Error('Cloud Build 기본 service account를 해석하지 못했습니다.')
   }
 
-  return emailMatch[0]
+  const email = lines[0]
+
+  if (!/^[^@\s]+@[^@\s]+$/.test(email)) {
+    throw new Error('Cloud Build 기본 service account를 해석하지 못했습니다.')
+  }
+
+  return email
 }
 
 async function getGoogleCloudProjectIamPolicy(
@@ -685,11 +840,17 @@ async function getGoogleCloudDefaultBuildServiceAccount(
   const output = await runCommandWithOutput({
     cwd,
     command: gcloudCommand,
-    args: ['builds', 'get-default-service-account', '--project', projectId],
+    args: [
+      'builds',
+      'get-default-service-account',
+      '--project',
+      projectId,
+      '--format=value(serviceAccountEmail)',
+    ],
     label: 'Cloud Build 기본 service account 확인',
   })
 
-  return parseGoogleCloudDefaultBuildServiceAccount(output)
+  return parseGoogleCloudDefaultBuildServiceAccountOutput(output)
 }
 
 async function ensureGoogleCloudServiceAccountExists(
@@ -852,9 +1013,7 @@ export async function ensureFirebaseProjectIsOnBlazePlan(options: {
     try {
       billingInfo = await describeBillingInfo(options.cwd, options.projectId)
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-
-      if (!isGoogleCloudAuthRefreshError(message)) {
+      if (!isGoogleCloudAuthRefreshError(error)) {
         throw error
       }
 
@@ -1001,14 +1160,12 @@ export async function ensureFirebaseBuildServiceAccountPermissions(options: {
 
       policy = await getProjectIamPolicy(options.cwd, options.projectId)
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-
-      if (isGoogleCloudServiceDisabledError(message, CLOUD_BUILD_API_SERVICE)) {
+      if (isGoogleCloudServiceDisabledError(error, CLOUD_BUILD_API_SERVICE)) {
         await enableServices(options.cwd, options.projectId, [CLOUD_BUILD_API_SERVICE])
         continue
       }
 
-      if (!isGoogleCloudAuthRefreshError(message)) {
+      if (!isGoogleCloudAuthRefreshError(error)) {
         throw error
       }
 
@@ -1034,9 +1191,7 @@ export async function ensureFirebaseBuildServiceAccountPermissions(options: {
         await addProjectIamBinding(options.cwd, options.projectId, buildServiceAccountMember, role)
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-
-      if (!isGoogleCloudAuthRefreshError(message)) {
+      if (!isGoogleCloudAuthRefreshError(error)) {
         throw error
       }
 
@@ -1048,10 +1203,15 @@ export async function ensureFirebaseBuildServiceAccountPermissions(options: {
 export function formatFirebaseAddFirebaseFailureMessage(options: {
   projectId: string
   cwd: string
+  packageManager: PackageManager
   rawMessage: string
   debugLogContent?: string
 }) {
   const debugLogPath = path.join(options.cwd, 'firebase-debug.log')
+  const retryCommand = getPackageManagerAdapter(options.packageManager).dlxCommand(
+    'firebase-tools',
+    ['projects:addfirebase', options.projectId],
+  )
 
   if (
     options.debugLogContent &&
@@ -1066,7 +1226,7 @@ export function formatFirebaseAddFirebaseFailureMessage(options: {
       '이렇게 확인해 주세요',
       '- https://console.firebase.google.com/ 에 로그인해서 Firebase Terms of Service를 먼저 수락해 주세요.',
       `- 프로젝트 \`${options.projectId}\` 의 IAM에서 지금 계정에 Owner 또는 Editor 권한이 있는지 확인해 주세요.`,
-      `- 권한 정리 뒤에 \`yarn dlx firebase-tools projects:addfirebase ${options.projectId}\` 로 다시 시도해 주세요.`,
+      `- 권한 정리 뒤에 \`${retryCommand}\` 로 다시 시도해 주세요.`,
       `- 자세한 원본 로그: ${debugLogPath}`,
       `- 참고 문서: ${FIREBASE_EXISTING_GCP_PROJECTS_DOC_URL}`,
     ].join('\n')
@@ -1159,10 +1319,30 @@ async function addFirebaseToExistingGoogleCloudProject(
       formatFirebaseAddFirebaseFailureMessage({
         projectId,
         cwd,
+        packageManager,
         rawMessage,
         debugLogContent: debugLog?.content,
       }),
     )
+  }
+}
+
+async function tryRecoverFirebaseProjectCreation(
+  packageManager: PackageManager,
+  cwd: string,
+  projectId: string,
+) {
+  const existingFirebaseProjects = await listFirebaseProjects(packageManager, cwd).catch(() => [])
+
+  if (existingFirebaseProjects.some((project) => project.projectId === projectId)) {
+    return true
+  }
+
+  try {
+    await addFirebaseToExistingGoogleCloudProject(packageManager, cwd, projectId)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -1203,19 +1383,17 @@ export async function ensureFirebaseFirestoreReady(options: {
       await describeFirestoreDatabase(options.cwd, options.projectId)
       return
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-
-      if (isGoogleCloudServiceDisabledError(message, FIRESTORE_API_SERVICE)) {
+      if (isGoogleCloudServiceDisabledError(error, FIRESTORE_API_SERVICE)) {
         await enableServices(options.cwd, options.projectId, [FIRESTORE_API_SERVICE])
         continue
       }
 
-      if (isGoogleCloudAuthRefreshError(message)) {
+      if (isGoogleCloudAuthRefreshError(error)) {
         await ensureAuth(options.cwd, gcloudCommand)
         continue
       }
 
-      if (!isFirebaseFirestoreDatabaseMissingError(message)) {
+      if (!isFirebaseFirestoreDatabaseMissingError(error)) {
         throw error
       }
 
@@ -1230,18 +1408,17 @@ export async function ensureFirebaseFirestoreReady(options: {
       await createFirestoreDatabase(options.cwd, options.projectId, options.databaseLocation)
       return
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-
-      if (isGoogleCloudServiceDisabledError(message, FIRESTORE_API_SERVICE)) {
+      if (isGoogleCloudServiceDisabledError(error, FIRESTORE_API_SERVICE)) {
         await enableServices(options.cwd, options.projectId, [FIRESTORE_API_SERVICE])
         continue
       }
 
-      if (isGoogleCloudAuthRefreshError(message)) {
+      if (isGoogleCloudAuthRefreshError(error)) {
         await ensureAuth(options.cwd, gcloudCommand)
         continue
       }
 
+      const message = error instanceof Error ? error.message : String(error)
       if (/already exists|ALREADY_EXISTS/i.test(message)) {
         return
       }
@@ -1318,17 +1495,12 @@ async function createFirebaseProject(
 
       return projectId
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-
-      if (isFirebaseProjectAddFirebaseRecoveryError(message)) {
-        log.message(
-          'Google Cloud 프로젝트는 만들어졌고 Firebase 리소스 연결만 실패했어요. 기존 프로젝트에 Firebase를 다시 연결해 볼게요.',
-        )
-        await addFirebaseToExistingGoogleCloudProject(packageManager, cwd, projectId)
+      if (await tryRecoverFirebaseProjectCreation(packageManager, cwd, projectId)) {
+        log.message('기존 Google Cloud 프로젝트 기준으로 Firebase 연결을 복구했어요.')
         return projectId
       }
 
-      if (!isFirebaseProjectIdConflictError(message)) {
+      if (!isFirebaseProjectIdConflictError(error)) {
         throw error
       }
 
@@ -1344,11 +1516,8 @@ async function createFirebaseProject(
           '같은 projectId의 Google Cloud 프로젝트가 이미 있어서 Firebase 리소스 연결 복구를 시도할게요.',
         )
 
-        try {
-          await addFirebaseToExistingGoogleCloudProject(packageManager, cwd, projectId)
+        if (await tryRecoverFirebaseProjectCreation(packageManager, cwd, projectId)) {
           return projectId
-        } catch {
-          // Fall through to the normal duplicate-id prompt flow.
         }
       }
 
@@ -1433,22 +1602,26 @@ async function getFirebaseWebSdkConfig(
   projectId: string,
   appId: string,
 ) {
-  const output = await runCommandWithOutput(
-    buildFirebaseCommand(packageManager, cwd, 'Firebase Web SDK 설정 조회', [
-      'apps:sdkconfig',
-      'WEB',
-      appId,
-      '--project',
-      projectId,
-    ]),
-  )
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-firebase-sdkconfig-'))
+  const outputPath = path.join(tempDir, 'firebase-web-sdk-config.json5')
 
   try {
-    return normalizeFirebaseWebSdkConfig(extractJsonPayload<unknown>(output))
-  } catch {
-    return normalizeFirebaseWebSdkConfig(
-      parseFirebaseWebSdkConfigPayload(`${output.stdout}\n${output.stderr}`),
+    await runCommandWithOutput(
+      buildFirebaseCommand(packageManager, cwd, 'Firebase Web SDK 설정 조회', [
+        'apps:sdkconfig',
+        'WEB',
+        appId,
+        '--project',
+        projectId,
+        '--out',
+        outputPath,
+      ]),
     )
+
+    const source = await readFile(outputPath, 'utf8')
+    return normalizeFirebaseWebSdkConfig(parseFirebaseWebSdkConfigSource(source))
+  } finally {
+    await rm(tempDir, { recursive: true, force: true })
   }
 }
 

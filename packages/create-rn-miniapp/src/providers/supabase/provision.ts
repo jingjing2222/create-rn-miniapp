@@ -39,6 +39,16 @@ type ProvisionSupabaseProjectOptions = {
 
 const CREATE_SUPABASE_PROJECT_SENTINEL = '__create_supabase_project__'
 const SUPABASE_ACCESS_TOKENS_DASHBOARD_URL = 'https://supabase.com/dashboard/account/tokens'
+const ANSI_ESCAPE = String.fromCharCode(0x1b)
+const ANSI_BEL = String.fromCharCode(0x07)
+const OSC_HYPERLINK_PATTERN = new RegExp(
+  `${ANSI_ESCAPE}\\]8;;[\\s\\S]*?(?:${ANSI_BEL}|${ANSI_ESCAPE}\\\\)[\\s\\S]*?${ANSI_ESCAPE}\\]8;;(?:${ANSI_BEL}|${ANSI_ESCAPE}\\\\)`,
+  'g',
+)
+const OSC_SEQUENCE_PATTERN = new RegExp(
+  `${ANSI_ESCAPE}\\][\\s\\S]*?(?:${ANSI_BEL}|${ANSI_ESCAPE}\\\\)`,
+  'g',
+)
 
 export function buildCreateSupabaseProjectArgs(projectName: string) {
   return ['projects', 'create', projectName]
@@ -143,28 +153,25 @@ function formatSupabaseEdgeFunctionSkipGuidance() {
 }
 
 export function extractJsonPayload<T>(output: Pick<CommandOutput, 'stdout' | 'stderr'>) {
-  const lines = `${output.stdout}\n${output.stderr}`
+  const cleanedStdout = stripCliStructuredOutput(output.stdout)
+  const fullStdout = cleanedStdout
     .split(/\r?\n/)
     .map((line) => stripVTControlCharacters(line).trimEnd())
     .filter((line) => line.trim().length > 0)
+    .join('\n')
+    .trim()
 
-  for (let start = 0; start < lines.length; start += 1) {
-    const trimmed = lines[start]?.trimStart()
-
-    if (!trimmed || (!trimmed.startsWith('[') && !trimmed.startsWith('{'))) {
-      continue
-    }
-
-    for (let end = lines.length; end > start; end -= 1) {
-      const candidate = lines.slice(start, end).join('\n').trim()
-
-      try {
-        return JSON.parse(candidate) as T
-      } catch {}
-    }
+  if (fullStdout) {
+    try {
+      return JSON.parse(fullStdout) as T
+    } catch {}
   }
 
   throw new Error('JSON 결과를 해석하지 못했습니다.')
+}
+
+function stripCliStructuredOutput(source: string) {
+  return source.replace(OSC_HYPERLINK_PATTERN, '').replace(OSC_SEQUENCE_PATTERN, '')
 }
 
 export function resolveSupabaseClientApiKey(apiKeys: SupabaseApiKey[]) {

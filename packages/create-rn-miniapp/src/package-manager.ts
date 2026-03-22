@@ -75,6 +75,10 @@ function withArgs(command: string, args: string[]): PackageManagerCommand {
   return { command, args }
 }
 
+function renderCommandString(command: PackageManagerCommand) {
+  return [command.command, ...command.args].join(' ')
+}
+
 const pnpmAdapter: PackageManagerAdapter = {
   id: 'pnpm',
   label: 'pnpm',
@@ -138,13 +142,13 @@ const pnpmAdapter: PackageManagerAdapter = {
     return withArgs('pnpm', ['--dir', directory, script])
   },
   installInDirectoryCommand(directory) {
-    return `pnpm --dir ${directory} install`
+    return renderCommandString(this.installInDirectory(directory))
   },
   runScriptInDirectoryCommand(directory, script) {
-    return `pnpm --dir ${directory} ${script}`
+    return renderCommandString(this.runScriptInDirectory(directory, script))
   },
   dlxCommand(packageName, args) {
-    return ['pnpm', 'dlx', packageName, ...args].join(' ')
+    return renderCommandString(this.dlx(packageName, args))
   },
   workspaceRunCommand(workspace, script) {
     return `pnpm --dir ${workspace} ${script}`
@@ -234,13 +238,13 @@ const yarnAdapter: PackageManagerAdapter = {
     return withArgs('yarn', ['--cwd', directory, script])
   },
   installInDirectoryCommand(directory) {
-    return `yarn --cwd ${directory} install`
+    return renderCommandString(this.installInDirectory(directory))
   },
   runScriptInDirectoryCommand(directory, script) {
-    return `yarn --cwd ${directory} ${script}`
+    return renderCommandString(this.runScriptInDirectory(directory, script))
   },
   dlxCommand(packageName, args) {
-    return ['yarn', 'dlx', packageName, ...args].join(' ')
+    return renderCommandString(this.dlx(packageName, args))
   },
   workspaceRunCommand(workspace, script) {
     return `yarn workspace ${workspace} ${script}`
@@ -327,13 +331,13 @@ const npmAdapter: PackageManagerAdapter = {
     return withArgs('npm', ['--prefix', directory, 'run', script])
   },
   installInDirectoryCommand(directory) {
-    return `npm --prefix ${directory} install`
+    return renderCommandString(this.installInDirectory(directory))
   },
   runScriptInDirectoryCommand(directory, script) {
-    return `npm --prefix ${directory} run ${script}`
+    return renderCommandString(this.runScriptInDirectory(directory, script))
   },
   dlxCommand(packageName, args) {
-    return ['npx', packageName, ...args].join(' ')
+    return renderCommandString(this.dlx(packageName, args))
   },
   workspaceRunCommand(workspace, script) {
     return `npm --workspace ${workspace} run ${script}`
@@ -416,13 +420,13 @@ const bunAdapter: PackageManagerAdapter = {
     return withArgs('bun', ['run', '--cwd', directory, script])
   },
   installInDirectoryCommand(directory) {
-    return `bun install --cwd ${directory}`
+    return renderCommandString(this.installInDirectory(directory))
   },
   runScriptInDirectoryCommand(directory, script) {
-    return `bun run --cwd ${directory} ${script}`
+    return renderCommandString(this.runScriptInDirectory(directory, script))
   },
   dlxCommand(packageName, args) {
-    return ['bunx', packageName, ...args].join(' ')
+    return renderCommandString(this.dlx(packageName, args))
   },
   workspaceRunCommand(workspace, script) {
     return `bun run --cwd ${workspace} ${script}`

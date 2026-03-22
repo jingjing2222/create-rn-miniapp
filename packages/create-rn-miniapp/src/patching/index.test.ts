@@ -1802,6 +1802,8 @@ test('patchCloudflareServerWorkspace keeps worker scripts and removes local tool
   assert.match(readme, /Workers R2 Storage > Write/)
   assert.match(readme, /D1 > Write/)
   assert.match(readme, /dash\.cloudflare\.com\/profile\/api-tokens/)
+  assert.match(checkEnvScript, /import \{ parseEnv \} from 'node:util'/)
+  assert.doesNotMatch(checkEnvScript, /for \(const line of source\.split/)
   assert.match(
     readme,
     /!\[Cloudflare API token 발급 화면\]\(\.\/assets\/cloudflare-api-token-guide\.png\)/,

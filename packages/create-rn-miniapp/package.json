@@ -28,13 +28,21 @@
     "@create-rn-miniapp/scaffold-templates": "workspace:*",
     "@swc/core": "^1.15.18",
     "cloudflare": "^5.2.0",
+    "env-paths": "^3.0.0",
     "execa": "^9.6.1",
     "gray-matter": "^4.0.3",
+    "json5": "^2.2.3",
     "jsonc-parser": "^3.3.1",
+    "npm-package-arg": "^13.0.0",
+    "semver": "^7.7.3",
+    "smol-toml": "^1.4.1",
+    "yaml": "^2.8.1",
     "yargs": "^18.0.0"
   },
   "devDependencies": {
     "@swc/types": "^0.1.25",
+    "@types/npm-package-arg": "^6.1.4",
+    "@types/semver": "^7.7.1",
     "@types/yargs": "^17.0.33"
   }
 }

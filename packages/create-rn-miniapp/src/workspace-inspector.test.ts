@@ -485,3 +485,38 @@ test('inspectWorkspace accepts npm and bun packageManager fields', async (t) => 
   assert.equal(npmInspection.packageManager, 'npm')
   assert.equal(bunInspection.packageManager, 'bun')
 })
+
+test('inspectWorkspace accepts packageManager fields with extra semver metadata', async (t) => {
+  const targetRoot = await createTempWorkspace(t)
+
+  await mkdir(path.join(targetRoot, 'frontend'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, 'package.json'),
+    JSON.stringify(
+      {
+        packageManager: `${getTestPackageManagerField('pnpm')}+sha512.deadbeef`,
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  )
+  await writeFile(
+    path.join(targetRoot, 'frontend', 'granite.config.ts'),
+    [
+      "import { appsInToss } from '@apps-in-toss/framework/plugins'",
+      "import { defineConfig } from '@granite-js/react-native/config'",
+      '',
+      'export default defineConfig({',
+      '  appName: "ebook-miniapp",',
+      '  plugins: [appsInToss({ brand: { displayName: "전자책 미니앱" } })],',
+      '})',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+
+  const inspection = await inspectWorkspace(targetRoot)
+
+  assert.equal(inspection.packageManager, 'pnpm')
+})

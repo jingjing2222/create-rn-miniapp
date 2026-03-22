@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import type { CliPrompter } from '../../cli.js'
+import { CommandExecutionError } from '../../commands.js'
 import {
   buildFirebaseCommand,
   buildFirebaseFunctionsDeployCommand,
@@ -17,10 +18,12 @@ import {
   formatFirebaseManualSetupNote,
   isFirebaseBillingEnabled,
   isGoogleCloudAuthRefreshError,
-  isFirebaseProjectAddFirebaseRecoveryError,
   isFirebaseAddFirebasePermissionDeniedError,
   isFirebaseFunctionsBuildServiceAccountPermissionError,
   isFirebaseProjectIdConflictError,
+  isGoogleCloudServiceDisabledError,
+  parseGoogleCloudDefaultBuildServiceAccountOutput,
+  parseFirebaseWebSdkConfigSource,
   resolveGoogleCloudCliArchiveSpec,
   shouldInitializeFirebaseRemoteContent,
   writeFirebaseLocalEnvFiles,
@@ -101,6 +104,50 @@ test('resolveGoogleCloudCliArchiveSpec picks the correct official archive per pl
   })
 })
 
+test('parseFirebaseWebSdkConfigSource parses JSON5-style Firebase WEB sdk config output', () => {
+  assert.deepEqual(
+    parseFirebaseWebSdkConfigSource(
+      [
+        '{',
+        "  apiKey: 'api-key',",
+        "  authDomain: 'example.firebaseapp.com',",
+        "  projectId: 'example',",
+        "  storageBucket: 'example.appspot.com',",
+        "  messagingSenderId: '123',",
+        "  appId: 'app-id',",
+        '}',
+      ].join('\n'),
+    ),
+    {
+      apiKey: 'api-key',
+      authDomain: 'example.firebaseapp.com',
+      projectId: 'example',
+      storageBucket: 'example.appspot.com',
+      messagingSenderId: '123',
+      appId: 'app-id',
+    },
+  )
+})
+
+test('parseGoogleCloudDefaultBuildServiceAccountOutput reads a single stdout email and ignores stderr noise', () => {
+  assert.equal(
+    parseGoogleCloudDefaultBuildServiceAccountOutput({
+      stdout: '563134134914@cloudbuild.gserviceaccount.com\n',
+      stderr: 'warning: ignored extra logs',
+    }),
+    '563134134914@cloudbuild.gserviceaccount.com',
+  )
+
+  assert.throws(
+    () =>
+      parseGoogleCloudDefaultBuildServiceAccountOutput({
+        stdout: '',
+        stderr: '563134134914@cloudbuild.gserviceaccount.com',
+      }),
+    /Cloud Build 기본 service account를 해석하지 못했습니다/,
+  )
+})
+
 test('isFirebaseProjectIdConflictError detects duplicate Firebase project ID failures', () => {
   assert.equal(
     isFirebaseProjectIdConflictError(
@@ -123,26 +170,21 @@ test('isFirebaseProjectIdConflictError detects duplicate Firebase project ID fai
     ),
     true,
   )
-})
-
-test('isFirebaseProjectAddFirebaseRecoveryError detects partial firebase project creation failures', () => {
   assert.equal(
-    isFirebaseProjectAddFirebaseRecoveryError(
-      [
-        'Firebase 새 프로젝트 생성 단계가 실패했습니다. (yarn dlx firebase-tools projects:create test-test-jingjing --display-name test)',
-        '- Creating Google Cloud Platform project',
-        '✔ Creating Google Cloud Platform project',
-        '- Adding Firebase resources to Google Cloud Platform project',
-        '✖ Adding Firebase resources to Google Cloud Platform project',
-      ].join('\n'),
+    isFirebaseProjectIdConflictError(
+      new CommandExecutionError({
+        label: 'Firebase 새 프로젝트 생성',
+        command: 'firebase',
+        args: ['projects:create', 'test-test'],
+        stdout: '',
+        stderr: JSON.stringify({
+          status: 'ALREADY_EXISTS',
+          message: 'duplicate project id',
+        }),
+        exitCode: 1,
+      }),
     ),
     true,
-  )
-  assert.equal(
-    isFirebaseProjectAddFirebaseRecoveryError(
-      'Firebase 새 프로젝트 생성 단계가 실패했습니다. billing account is required.',
-    ),
-    false,
   )
 })
 
@@ -168,6 +210,7 @@ test('formatFirebaseAddFirebaseFailureMessage explains permission-denied failure
   const message = formatFirebaseAddFirebaseFailureMessage({
     projectId: 'test-test-jingjing-app',
     cwd: '/tmp/ebook',
+    packageManager: 'npm',
     rawMessage: 'Error: Failed to add Firebase to Google Cloud Platform project.',
     debugLogContent: [
       '[debug] POST https://firebase.googleapis.com/v1beta1/projects/test-test-jingjing-app:addFirebase 403',
@@ -180,7 +223,8 @@ test('formatFirebaseAddFirebaseFailureMessage explains permission-denied failure
   assert.match(message, /Firebase Terms of Service/)
   assert.match(message, /Owner 또는 Editor/)
   assert.match(message, /firebase-debug\.log/)
-  assert.match(message, /projects:addfirebase test-test-jingjing-app/)
+  assert.match(message, /npx firebase-tools projects:addfirebase test-test-jingjing-app/)
+  assert.doesNotMatch(message, /yarn dlx/)
 })
 
 test('isFirebaseBillingEnabled reflects gcloud billingEnabled state', () => {
@@ -221,6 +265,51 @@ test('isGoogleCloudAuthRefreshError detects invalid_grant and auth login prompts
     true,
   )
   assert.equal(isGoogleCloudAuthRefreshError('billing account is disabled'), false)
+  assert.equal(
+    isGoogleCloudAuthRefreshError(
+      new CommandExecutionError({
+        label: 'Google Cloud billing 상태 확인',
+        command: 'gcloud',
+        args: ['billing', 'projects', 'describe', 'miniapp-8000b'],
+        stdout: '',
+        stderr: JSON.stringify({
+          error: 'invalid_grant',
+          error_description: 'Bad Request',
+        }),
+        exitCode: 1,
+      }),
+    ),
+    true,
+  )
+})
+
+test('isGoogleCloudServiceDisabledError reads structured error payloads before text fallback', () => {
+  assert.equal(
+    isGoogleCloudServiceDisabledError(
+      new CommandExecutionError({
+        label: 'Cloud Build 기본 service account 확인',
+        command: 'gcloud',
+        args: ['builds', 'get-default-service-account', '--project', 'miniapp-8000b'],
+        stdout: '',
+        stderr: JSON.stringify({
+          error: {
+            status: 'PERMISSION_DENIED',
+            details: [
+              {
+                reason: 'SERVICE_DISABLED',
+                metadata: {
+                  service: 'cloudbuild.googleapis.com',
+                },
+              },
+            ],
+          },
+        }),
+        exitCode: 1,
+      }),
+      'cloudbuild.googleapis.com',
+    ),
+    true,
+  )
 })
 
 test('ensureFirebaseProjectIsOnBlazePlan retries until billing is enabled', async () => {

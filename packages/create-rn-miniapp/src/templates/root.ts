@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { stringify as stringifyYaml } from 'yaml'
 import { patchRootPackageJsonSource } from '../patching/package-json.js'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import {
@@ -150,8 +151,9 @@ function normalizeRootWorkspaces(workspaces: WorkspaceName[]): NormalizedRootWor
 }
 
 function renderPnpmWorkspaceManifest(workspaces: NormalizedRootWorkspaceName[]) {
-  const lines = ['packages:', ...workspaces.map((workspace) => `  - ${workspace}`)]
-  return `${lines.join('\n')}\n`
+  return stringifyYaml({
+    packages: [...workspaces],
+  })
 }
 
 export async function syncRootWorkspaceManifest(

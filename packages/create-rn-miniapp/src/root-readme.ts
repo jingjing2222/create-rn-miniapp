@@ -68,16 +68,27 @@ function replaceManagedBlock(
   endMarker: string,
   content: string,
 ) {
-  const pattern = new RegExp(
-    `${escapeRegExp(startMarker)}[\\s\\S]*?${escapeRegExp(endMarker)}`,
-    'm',
-  )
+  const startIndex = source.indexOf(startMarker)
 
-  if (!pattern.test(source)) {
+  if (startIndex < 0) {
     throw new Error(`README managed block을 찾지 못했어요: ${startMarker}`)
   }
 
-  return source.replace(pattern, `${startMarker}\n${content}\n${endMarker}`)
+  const endIndex = source.indexOf(endMarker, startIndex + startMarker.length)
+
+  if (endIndex < 0) {
+    throw new Error(`README managed block을 찾지 못했어요: ${endMarker}`)
+  }
+
+  return [
+    source.slice(0, startIndex),
+    startMarker,
+    '\n',
+    content,
+    '\n',
+    endMarker,
+    source.slice(endIndex + endMarker.length),
+  ].join('')
 }
 
 export function syncRootReadmeManagedSections(source: string) {
@@ -97,8 +108,4 @@ export function syncRootReadmeManagedSections(source: string) {
       replaceManagedBlock(nextSource, block.startMarker, block.endMarker, block.content),
     source,
   )
-}
-
-function escapeRegExp(source: string) {
-  return source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
