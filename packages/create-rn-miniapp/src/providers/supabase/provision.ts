@@ -39,6 +39,12 @@ type ProvisionSupabaseProjectOptions = {
 
 const CREATE_SUPABASE_PROJECT_SENTINEL = '__create_supabase_project__'
 const SUPABASE_ACCESS_TOKENS_DASHBOARD_URL = 'https://supabase.com/dashboard/account/tokens'
+const ANSI_ESCAPE = String.fromCharCode(0x1b)
+const ANSI_BEL = String.fromCharCode(0x07)
+const OSC_SEQUENCE_PATTERN = new RegExp(
+  `${ANSI_ESCAPE}\\][\\s\\S]*?(?:${ANSI_BEL}|${ANSI_ESCAPE}\\\\)`,
+  'g',
+)
 
 export function buildCreateSupabaseProjectArgs(projectName: string) {
   return ['projects', 'create', projectName]
@@ -143,28 +149,88 @@ function formatSupabaseEdgeFunctionSkipGuidance() {
 }
 
 export function extractJsonPayload<T>(output: Pick<CommandOutput, 'stdout' | 'stderr'>) {
-  const lines = `${output.stdout}\n${output.stderr}`
+  const cleanedStdout = stripCliStructuredOutput(output.stdout)
+  const fullStdout = cleanedStdout
     .split(/\r?\n/)
     .map((line) => stripVTControlCharacters(line).trimEnd())
     .filter((line) => line.trim().length > 0)
+    .join('\n')
+    .trim()
 
-  for (let start = 0; start < lines.length; start += 1) {
-    const trimmed = lines[start]?.trimStart()
+  if (fullStdout) {
+    try {
+      return JSON.parse(fullStdout) as T
+    } catch {}
+  }
 
-    if (!trimmed || (!trimmed.startsWith('[') && !trimmed.startsWith('{'))) {
-      continue
-    }
-
-    for (let end = lines.length; end > start; end -= 1) {
-      const candidate = lines.slice(start, end).join('\n').trim()
-
-      try {
-        return JSON.parse(candidate) as T
-      } catch {}
-    }
+  const structuredPayload = extractBalancedJsonPayload(fullStdout)
+  if (structuredPayload) {
+    try {
+      return JSON.parse(structuredPayload) as T
+    } catch {}
   }
 
   throw new Error('JSON 결과를 해석하지 못했습니다.')
+}
+
+function stripCliStructuredOutput(source: string) {
+  return source.replace(OSC_SEQUENCE_PATTERN, '')
+}
+
+function extractBalancedJsonPayload(source: string) {
+  const startIndex = source.search(/[[{]/)
+
+  if (startIndex < 0) {
+    return null
+  }
+
+  const opening = source[startIndex]
+  const closing = opening === '{' ? '}' : ']'
+  let depth = 0
+  let inString = false
+  let escaping = false
+
+  for (let index = startIndex; index < source.length; index += 1) {
+    const char = source[index]
+
+    if (inString) {
+      if (escaping) {
+        escaping = false
+        continue
+      }
+
+      if (char === '\\') {
+        escaping = true
+        continue
+      }
+
+      if (char === '"') {
+        inString = false
+      }
+
+      continue
+    }
+
+    if (char === '"') {
+      inString = true
+      continue
+    }
+
+    if (char === opening) {
+      depth += 1
+      continue
+    }
+
+    if (char === closing) {
+      depth -= 1
+
+      if (depth === 0) {
+        return source.slice(startIndex, index + 1)
+      }
+    }
+  }
+
+  return null
 }
 
 export function resolveSupabaseClientApiKey(apiKeys: SupabaseApiKey[]) {

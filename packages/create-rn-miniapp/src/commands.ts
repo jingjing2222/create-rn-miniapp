@@ -8,6 +8,39 @@ export type CommandOutput = {
   stderr: string
 }
 
+type CommandExecutionErrorOptions = {
+  label: string
+  command: string
+  args: string[]
+  stdout: string
+  stderr: string
+  exitCode: number
+}
+
+export class CommandExecutionError extends Error {
+  readonly label: string
+  readonly command: string
+  readonly args: string[]
+  readonly stdout: string
+  readonly stderr: string
+  readonly exitCode: number
+
+  constructor(options: CommandExecutionErrorOptions) {
+    const combinedOutput = [options.stdout.trim(), options.stderr.trim()].filter(Boolean).join('\n')
+    super(
+      `${options.label} 중에 실패했어요. (${options.command} ${options.args.join(' ')})${combinedOutput ? `\n${combinedOutput}` : ''}`,
+    )
+
+    this.name = 'CommandExecutionError'
+    this.label = options.label
+    this.command = options.command
+    this.args = [...options.args]
+    this.stdout = options.stdout
+    this.stderr = options.stderr
+    this.exitCode = options.exitCode
+  }
+}
+
 type CreatePlanOptions = {
   appName: string
   targetRoot: string
@@ -134,21 +167,32 @@ async function executeCommand(spec: CommandSpec, captureOutput: boolean) {
       return { stdout, stderr }
     }
 
-    const combinedOutput = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n')
-
-    throw new Error(
-      `${spec.label} 중에 실패했어요. (${spec.command} ${spec.args.join(' ')})${captureOutput && combinedOutput ? `\n${combinedOutput}` : ''}`,
-    )
+    throw new CommandExecutionError({
+      label: spec.label,
+      command: spec.command,
+      args: spec.args,
+      stdout: captureOutput ? stdout : '',
+      stderr: captureOutput ? stderr : '',
+      exitCode: result.exitCode ?? 1,
+    })
   } catch (error) {
-    if (error instanceof ExecaError) {
-      const combinedOutput = [error.stdout, error.stderr, error.shortMessage]
-        .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
-        .map((part) => part.trim())
-        .join('\n')
+    if (error instanceof CommandExecutionError) {
+      throw error
+    }
 
-      throw new Error(
-        `${spec.label} 중에 실패했어요. (${spec.command} ${spec.args.join(' ')})${combinedOutput ? `\n${combinedOutput}` : ''}`,
-      )
+    if (error instanceof ExecaError) {
+      throw new CommandExecutionError({
+        label: spec.label,
+        command: spec.command,
+        args: spec.args,
+        stdout: typeof error.stdout === 'string' ? error.stdout : '',
+        stderr:
+          [error.stderr, error.shortMessage]
+            .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
+            .map((part) => part.trim())
+            .join('\n') ?? '',
+        exitCode: error.exitCode ?? 1,
+      })
     }
 
     const message = error instanceof Error ? error.message : String(error)

@@ -70,6 +70,23 @@
 2. renderer + sync script를 추가하고, 테스트 기대값을 shared source에서 파생되게 바꾼다.
 3. `pnpm verify`를 통과시킨 뒤 단일 목적 커밋으로 정리하고 푸시한다.
 
+## 다음 작업: parser hardening과 직접 구현 축소
+
+### 목표
+- semver/env/TOML/CLI output parsing처럼 현재 직접 구현하거나 정규식으로 보정하는 경로를 공식 parser 또는 더 좁은 source-of-truth로 치환한다.
+- provider/tooling capability를 text scraping과 하드코딩된 문자열 대신 structured output과 shared metadata에서 파생되게 만든다.
+- 사용자가 지적한 직접 구현 목록을 체크리스트로 추적하고, 각 항목을 red test -> 구현 -> verify 순서로 닫는다.
+
+### 체크리스트
+- [x] Wrangler version parsing을 semver parser 기반으로 바꾸고 generated TS escaping도 안전한 serializer로 교체
+- [x] generated server script의 `.env` parsing을 `parseEnv` 기반으로 교체
+- [x] Cloudflare Wrangler auth parsing을 TOML parser 기반으로 교체
+- [x] Supabase structured output parsing에서 text scraping 제거
+- [x] Firebase/GCloud structured output parsing 보정 해킹 제거
+- [x] Firebase error handling의 brittle한 영어 문구 매칭을 줄이고 structured signal 우선으로 전환
+- [x] package-manager abstraction과 `packageManager` field parsing 면적을 점검하고 중복/직접 구현을 축소
+- [x] AST clone과 low-risk string builder(`pnpm-workspace.yaml`, README managed block, generated TS escaping) 중 과도한 직접 구현을 정리
+
 ## 다음 작업: skill catalog를 source skill frontmatter에서 파생
 
 ### 목표

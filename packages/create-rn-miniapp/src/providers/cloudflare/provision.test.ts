@@ -15,6 +15,7 @@ import {
   getWranglerConfigCandidates,
   isCloudflareAuthenticationErrorMessage,
   isCloudflareR2DisabledErrorMessage,
+  parseWranglerAuthSource,
   writeCloudflareServerLocalEnvFile,
   writeCloudflareLocalEnvFiles,
 } from './provision.js'
@@ -42,6 +43,22 @@ test('getWranglerConfigCandidates includes the macOS preferences path', () => {
 
 test('buildWranglerLoginArgs requests the default Wrangler scope set', () => {
   assert.deepEqual(buildWranglerLoginArgs(), ['login'])
+})
+
+test('parseWranglerAuthSource reads quoted values from TOML without regex scraping', () => {
+  assert.deepEqual(
+    parseWranglerAuthSource(
+      [
+        'oauth_token = "token-value" # inline comment',
+        "expiration_time = '2026-03-22T00:00:00.000Z'",
+        '',
+      ].join('\n'),
+    ),
+    {
+      oauthToken: 'token-value',
+      expirationTime: '2026-03-22T00:00:00.000Z',
+    },
+  )
 })
 
 test('isCloudflareAuthenticationErrorMessage detects Cloudflare auth failures', () => {

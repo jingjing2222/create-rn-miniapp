@@ -1,5 +1,6 @@
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { minVersion } from 'semver'
 import { getPackageManagerAdapter } from '../package-manager.js'
 import {
   getProviderClientContract,
@@ -172,6 +173,7 @@ function renderServerCheckEnvScriptSource() {
   return [
     "import { existsSync, readFileSync } from 'node:fs'",
     "import path from 'node:path'",
+    "import { parseEnv } from 'node:util'",
     "import { fileURLToPath } from 'node:url'",
     '',
     `const PROVIDER_ENV_KEYS = ${JSON.stringify(providerEnvKeys, null, 2)}`,
@@ -185,28 +187,13 @@ function renderServerCheckEnvScriptSource() {
     "  return JSON.parse(readFileSync(filePath, 'utf8'))",
     '}',
     '',
-    'function parseEnv(filePath) {',
-    '  const source = readFileSync(filePath, "utf8")',
-    '  const env = {}',
-    '',
-    '  for (const line of source.split(/\\r?\\n/)) {',
-    '    const trimmed = line.trim()',
-    "    if (!trimmed || trimmed.startsWith('#')) continue",
-    "    const separatorIndex = trimmed.indexOf('=')",
-    '    if (separatorIndex <= 0) continue',
-    '    env[trimmed.slice(0, separatorIndex)] = trimmed.slice(separatorIndex + 1).trim()',
-    '  }',
-    '',
-    '  return env',
-    '}',
-    '',
     'if (!existsSync(statePath)) {',
     `  console.error(\`[server] missing scaffold state: ${statePathExpr}\`)`,
     '  process.exit(1)',
     '}',
     '',
     'const state = readJson(statePath)',
-    'const env = existsSync(envPath) ? parseEnv(envPath) : {}',
+    `const env = existsSync(envPath) ? parseEnv(readFileSync(envPath, 'utf8')) : {}`,
     'const providerKeys = PROVIDER_ENV_KEYS[state.serverProvider] ?? []',
     'const missingKeys = providerKeys.filter((key) => !(env[key] ?? "").trim())',
     '',
@@ -383,41 +370,20 @@ function renderCloudflareDeployScript(tokens: TemplateTokens) {
     "import { existsSync, readFileSync } from 'node:fs'",
     "import path from 'node:path'",
     "import process from 'node:process'",
+    "import { parseEnv } from 'node:util'",
     "import { fileURLToPath } from 'node:url'",
     '',
     "const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')",
     "const envPath = path.join(serverRoot, '.env.local')",
-    '',
-    'function stripWrappingQuotes(value) {',
-    `  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {`,
-    '    return value.slice(1, -1)',
-    '  }',
-    '',
-    '  return value',
-    '}',
     '',
     'function loadLocalEnv(filePath) {',
     '  if (!existsSync(filePath)) {',
     '    return',
     '  }',
     '',
-    "  const source = readFileSync(filePath, 'utf8')",
+    "  const env = parseEnv(readFileSync(filePath, 'utf8'))",
     '',
-    '  for (const line of source.split(/\\r?\\n/)) {',
-    '    const trimmed = line.trim()',
-    '',
-    "    if (!trimmed || trimmed.startsWith('#')) {",
-    '      continue',
-    '    }',
-    '',
-    "    const separatorIndex = trimmed.indexOf('=')",
-    '    if (separatorIndex <= 0) {',
-    '      continue',
-    '    }',
-    '',
-    '    const key = trimmed.slice(0, separatorIndex).trim()',
-    '    const value = stripWrappingQuotes(trimmed.slice(separatorIndex + 1).trim())',
-    '',
+    '  for (const [key, value] of Object.entries(env)) {',
     '    if (process.env[key] === undefined) {',
     '      process.env[key] = value',
     '    }',
@@ -757,11 +723,14 @@ function renderFirebaseServerReadme(options?: {
 }
 
 function normalizePackageVersionSpec(versionSpec: string | undefined) {
-  const match = versionSpec?.match(/\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?/)
-  return match?.[0] ?? null
+  if (!versionSpec) {
+    return null
+  }
+
+  return minVersion(versionSpec)?.version ?? null
 }
 
-function resolveWranglerSchemaUrl(packageJson: PackageJson) {
+export function resolveWranglerSchemaUrl(packageJson: PackageJson) {
   const version =
     normalizePackageVersionSpec(packageJson.devDependencies?.[WRANGLER_PACKAGE_NAME]) ?? 'latest'
   return `https://unpkg.com/${WRANGLER_PACKAGE_NAME}@${version}/config-schema.json`

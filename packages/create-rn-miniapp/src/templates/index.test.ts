@@ -2453,9 +2453,13 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
   assert.match(functionEntry, /export const getPublicStatus = onCall/)
   assert.match(functionEntry, /normalizedPath === '\/public-status'/)
   assert.match(publicStatusSource, /buildPublicAppStatusDocument/)
-  assert.match(seedPublicStatusSource, /function stripWrappingQuotes\(value: string\)/)
-  assert.match(seedPublicStatusSource, /function loadLocalEnv\(filePath: string\)/)
-  assert.match(seedPublicStatusSource, /const result: Record<string, string> = \{\}/)
+  assert.match(seedPublicStatusSource, /import \{ parseEnv \} from 'node:util'/)
+  assert.doesNotMatch(seedPublicStatusSource, /function stripWrappingQuotes\(value: string\)/)
+  assert.match(
+    seedPublicStatusSource,
+    /function loadLocalEnv\(filePath: string\): Record<string, string> \{/,
+  )
+  assert.match(seedPublicStatusSource, /return parseEnv\(readFileSync\(filePath, 'utf8'\)\)/)
   assert.match(seedPublicStatusSource, /FIREBASE_PROJECT_ID is required/)
   assert.doesNotMatch(functionEntry, new RegExp(FIREBASE_DEFAULT_FUNCTION_REGION))
   assert.match(deployScript, /FIREBASE_PROJECT_ID/)

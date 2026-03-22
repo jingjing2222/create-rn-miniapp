@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { minVersion } from 'semver'
 import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
 import { pathExists, removePathIfExists } from '../templates/filesystem.js'
@@ -93,13 +94,23 @@ export function resolvePackageVersion(packageJson: PackageJson, packageName: str
   )
 }
 
-function stripSimpleVersionPrefix(version: string) {
-  return version.replace(/^[~^]/, '')
+function resolveConcreteVersion(version: string) {
+  const resolved = minVersion(version)
+  return resolved?.version ?? version.replace(/^[^\d]*/, '')
+}
+
+function splitVersionPrefix(version: string) {
+  const match = /^([^\d]*)(.*)$/.exec(version)
+
+  return {
+    prefix: match?.[1] ?? '',
+    value: match?.[2] ?? version,
+  }
 }
 
 export function applyExistingVersionPrefix(currentVersion: string, targetVersion: string) {
-  const prefix = currentVersion.match(/^[~^]/)?.[0] ?? ''
-  return `${prefix}${stripSimpleVersionPrefix(targetVersion)}`
+  const { prefix } = splitVersionPrefix(currentVersion)
+  return `${prefix}${resolveConcreteVersion(splitVersionPrefix(targetVersion).value)}`
 }
 
 export async function resolveFrontendReactVersionAlignment(targetRoot: string) {

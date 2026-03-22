@@ -77,8 +77,19 @@ test('extractJsonPayload strips package-manager log lines around JSON output', (
 
 test('extractJsonPayload strips OSC hyperlink control sequences around JSON output', () => {
   const payload = extractJsonPayload<{ project: string[] }>({
-    stdout: 'prefix \u001b]8;;https://example.com\u0007link\u001b]8;;\u0007',
-    stderr: '{"project":["one","two"]}',
+    stdout: '{"project":["one","two"]}\u001b]8;;https://example.com\u0007link\u001b]8;;\u0007',
+    stderr: 'pnpm warning',
+  })
+
+  assert.deepEqual(payload, {
+    project: ['one', 'two'],
+  })
+})
+
+test('extractJsonPayload reads structured output from stdout only and ignores stderr noise', () => {
+  const payload = extractJsonPayload<{ project: string[] }>({
+    stdout: '{"project":["one","two"]}',
+    stderr: '{"project":["wrong"]}',
   })
 
   assert.deepEqual(payload, {

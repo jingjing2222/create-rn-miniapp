@@ -23,7 +23,7 @@ export type SwcArrayExpression = SwcExpression & {
 }
 
 export function cloneAstNode<T>(value: T) {
-  return JSON.parse(JSON.stringify(value)) as T
+  return structuredClone(value)
 }
 
 export function parseTypeScriptModule(source: string, tsx = false) {

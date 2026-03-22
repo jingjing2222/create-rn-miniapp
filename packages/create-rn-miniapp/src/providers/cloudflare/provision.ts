@@ -4,7 +4,9 @@ import path from 'node:path'
 import process from 'node:process'
 import { log } from '@clack/prompts'
 import Cloudflare from 'cloudflare'
+import envPaths from 'env-paths'
 import { parse } from 'jsonc-parser'
+import { parse as parseToml } from 'smol-toml'
 import type { CommandSpec } from '../../command-spec.js'
 import {
   createCloudflareVitestWranglerConfigSource,
@@ -177,10 +179,18 @@ function hasConfiguredCloudflareApiToken(source: string) {
   return tokenLine.length > 0
 }
 
-function parseWranglerAuthValue(source: string, key: string) {
-  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const match = source.match(new RegExp(`^${escapedKey}\\s*=\\s*"([^"]+)"\\s*$`, 'm'))
-  return match?.[1] ?? null
+export function parseWranglerAuthSource(source: string): WranglerAuth | null {
+  const parsed = parseToml(source)
+  const oauthToken = typeof parsed.oauth_token === 'string' ? parsed.oauth_token : null
+
+  if (!oauthToken) {
+    return null
+  }
+
+  return {
+    oauthToken,
+    expirationTime: typeof parsed.expiration_time === 'string' ? parsed.expiration_time : null,
+  }
 }
 
 export function getWranglerConfigCandidates(options?: {
@@ -193,13 +203,26 @@ export function getWranglerConfigCandidates(options?: {
     options?.xdgConfigHome ?? process.env.XDG_CONFIG_HOME ?? path.join(homeDir, '.config')
   const appData = options?.appData ?? process.env.APPDATA
 
-  return [
+  const legacyCandidates = [
     path.join(homeDir, '.wrangler', 'config', 'default.toml'),
     path.join(xdgConfigHome, '.wrangler', 'config', 'default.toml'),
     path.join(homeDir, 'Library', 'Application Support', '.wrangler', 'config', 'default.toml'),
     path.join(homeDir, 'Library', 'Preferences', '.wrangler', 'config', 'default.toml'),
     ...(appData ? [path.join(appData, '.wrangler', 'config', 'default.toml')] : []),
   ]
+
+  if (options) {
+    return legacyCandidates
+  }
+
+  const runtimePaths = envPaths('.wrangler', { suffix: '' })
+  const runtimeCandidates = [
+    path.join(runtimePaths.config, 'config', 'default.toml'),
+    path.join(runtimePaths.data, 'config', 'default.toml'),
+    ...legacyCandidates,
+  ]
+
+  return [...new Set(runtimeCandidates)]
 }
 
 async function readWranglerAuthToken() {
@@ -209,16 +232,13 @@ async function readWranglerAuthToken() {
     }
 
     const source = await readFile(configPath, 'utf8')
-    const oauthToken = parseWranglerAuthValue(source, 'oauth_token')
+    const auth = parseWranglerAuthSource(source)
 
-    if (!oauthToken) {
+    if (!auth) {
       continue
     }
 
-    return {
-      oauthToken,
-      expirationTime: parseWranglerAuthValue(source, 'expiration_time'),
-    } satisfies WranglerAuth
+    return auth
   }
 
   return null
