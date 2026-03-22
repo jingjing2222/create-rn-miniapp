@@ -433,7 +433,7 @@ async function resolveSelectedSkillsInput(
         { label: '네, 같이 넣을게요', value: 'yes' },
         { label: '아니요, 나중에 직접 설치할게요', value: 'no' },
       ],
-      initialValue: 'no',
+      initialValue: 'yes',
     })) === 'yes'
 
   if (!shouldInstallNow) {

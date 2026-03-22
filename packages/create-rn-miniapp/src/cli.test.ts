@@ -507,6 +507,7 @@ test('resolveCliOptions keeps explicit selected skills without prompting install
 
 test('resolveCliOptions can prompt for recommended skills and return a flat selection', async () => {
   const selectMessages: string[] = []
+  const selectInitialValues: Array<string | undefined> = []
   const multiselectMessages: string[] = []
   const promptSelections: Array<'none' | 'supabase' | 'cloudflare' | 'firebase' | 'yes' | 'no'> = [
     'cloudflare',
@@ -534,6 +535,7 @@ test('resolveCliOptions can prompt for recommended skills and return a flat sele
       },
       async select(options) {
         selectMessages.push(options.message)
+        selectInitialValues.push(options.initialValue)
         const fallback = options.options[0]
 
         if (!fallback) {
@@ -564,6 +566,7 @@ test('resolveCliOptions can prompt for recommended skills and return a flat sele
     '`backoffice`도 같이 만들까요?',
     '추천 agent skills를 지금 같이 설치할까요?',
   ])
+  assert.deepEqual(selectInitialValues, ['none', 'no', 'no', 'yes'])
   assert.deepEqual(multiselectMessages, ['설치할 skill을 골라 주세요.'])
 })
 
