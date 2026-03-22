@@ -1,11 +1,16 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { listInstalledProjectSkillEntries, type InstalledProjectSkill } from '../skills-install.js'
 import {
-  renderSkillsInstallExample,
-  renderSkillsStandardCommandSummary,
-  SKILLS_STRATEGY_README_LINES,
-} from '../root-readme.js'
+  listInstalledProjectSkillEntries,
+  renderSkillsAddCommand,
+  type InstalledProjectSkill,
+} from '../skills-install.js'
+import {
+  SKILLS_CHECK_COMMAND,
+  SKILLS_LIST_COMMAND,
+  SKILLS_UPDATE_COMMAND,
+} from '../skills-contract.js'
+import { SKILLS_STRATEGY_README_LINES } from '../root-readme.js'
 import {
   resolveTemplatesPackageRoot,
   copyDirectoryWithTokens,
@@ -242,14 +247,20 @@ async function renderRootReadmeMarkdown(
           ...(recommendedSkillDefinitions.length > 0
             ? [
                 '',
-                `추천 skill: ${recommendedSkillDefinitions.map((skill) => `\`${skill.id}\``).join(', ')}`,
+                '### Recommended',
+                ...recommendedSkillDefinitions.map(
+                  (skill) => `- \`${skill.id}\`: ${skill.agentsLabel}`,
+                ),
                 '',
-                `설치 예시: \`${renderSkillsInstallExample(recommendedSkillIds)}\``,
+                `설치 예시: \`${renderSkillsAddCommand(recommendedSkillIds)}\``,
               ]
             : []),
         ]),
     '',
-    renderSkillsStandardCommandSummary(),
+    '### Standard commands',
+    `- 설치된 skill 확인: \`${SKILLS_LIST_COMMAND}\``,
+    `- 업데이트 확인: \`${SKILLS_CHECK_COMMAND}\``,
+    `- 최신으로 갱신: \`${SKILLS_UPDATE_COMMAND}\``,
     '',
     '## Verify',
     ...renderRootVerifyStepsMarkdown(tokens.packageManager).split('\n').filter(Boolean),
