@@ -1,3 +1,15 @@
+## 다음 작업: skill SSoT 정리 변경을 release metadata에 반영
+
+### 목표
+- 현재 브랜치의 skill SSoT 정리 결과를 changeset과 PR 설명에 맞게 반영한다.
+- 공개 패키지 diff 기준으로 실제 변경된 패키지만 patch 릴리스 대상으로 올린다.
+- verify를 다시 통과시킨 뒤 한글 PR을 생성한다.
+
+### 작업 순서
+1. `origin/main...HEAD` diff로 공개 패키지 변경 범위를 다시 확인한다.
+2. 변경 범위에 맞는 changeset을 추가하고 release note를 한국어로 작성한다.
+3. `pnpm verify`를 다시 통과시킨 뒤 커밋, 푸시, 한글 PR 생성까지 마친다.
+
 ## 다음 작업: 남은 skill/shared reference SSoT 드리프트 제거
 
 ### 목표
