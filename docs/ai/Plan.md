@@ -238,6 +238,34 @@
 ### 후속 수정
 - patch changeset 범위를 `create-rn-miniapp`, `@create-rn-miniapp/agent-skills`, `@create-rn-miniapp/scaffold-templates` 세 패키지로 바로잡는다.
 - changeset 수정 후 `pnpm verify`를 다시 통과시킨다.
+
+## 다음 작업: skills-manager SSoT 하드컷
+
+### 목표
+- `create-rn-miniapp`는 scaffold만 담당하고, skill install/sync/diff/upgrade와 `docs/skills.md` 렌더링 책임은 전부 `@create-rn-miniapp/skills-manager`로 이동한다.
+- skill metadata, topology 기반 derived rule, manifest reconcile, wrapper script source를 각각 한 군데서만 소유하도록 정리한다.
+- generated repo의 skill lifecycle이 더 이상 `create-rn-miniapp` 내부 구현에 의존하지 않게 만든다.
+
+### 확인된 중복/결합 지점
+- `packages/create-rn-miniapp/src/scaffold/index.ts`가 여전히 `syncGeneratedSkills()`와 `applyDocsTemplates()`를 직접 호출해 scaffold 시점 skill lifecycle을 소유한다.
+- skill catalog가 `packages/create-rn-miniapp/src/templates/skill-catalog.ts`와 `packages/skills-manager/src/skill-catalog.ts`에 중복돼 있다.
+- manifest/reconcile/materialize 로직이 `packages/create-rn-miniapp/src/templates/skills.ts`와 `packages/skills-manager/src/skills.ts`에 중복돼 있다.
+- `docs/skills.md` 렌더링이 `packages/create-rn-miniapp/src/templates/docs.ts`와 `packages/skills-manager/src/docs.ts`에 중복돼 있다.
+- root wrapper script source가 `packages/scaffold-templates/root/*.mjs`와 `packages/skills-manager/src/root.ts`로 갈라져 있다.
+- workspace topology/package manager 판단이 `packages/create-rn-miniapp/src/workspace-inspector.ts`, `packages/skills-manager/src/workspace.ts`, 각 package manager helper에 나뉘어 있다.
+
+### 작업 순서
+1. `skills-manager`에 `install` command를 추가하고, `create-rn-miniapp` scaffold flow는 마지막에 CLI boundary로 `skills-manager install`만 호출하게 바꾼다.
+2. skill catalog를 `@create-rn-miniapp/agent-skills` 기준 metadata로 승격해 `create-rn-miniapp`와 `skills-manager`가 같은 source를 읽게 만든다.
+3. `packages/create-rn-miniapp/src/templates/skills.ts`의 manifest/reconcile/materialize 책임을 제거하고, generated repo skill snapshot 변경은 `skills-manager`만 수행하게 만든다.
+4. `packages/create-rn-miniapp/src/templates/docs.ts`에서 `docs/skills.md` 책임을 제거하고, `skills-manager`가 skills manifest와 installed snapshot 기준으로 렌더하게 만든다.
+5. root wrapper script source를 한 군데로 정리하고, `packages/scaffold-templates`는 그 결과물을 복사만 하도록 맞춘다.
+6. topology/package manager 판별 로직을 shared helper 또는 `skills-manager` SSoT로 정리하고, scaffold 쪽 중복 구현과 관련 테스트를 걷어낸다.
+
+### 테스트/정리 기준
+- `create-rn-miniapp` 테스트는 scaffold 결과와 초기 install 호출 여부만 검증하고, skill lifecycle 세부 동작 회귀는 `skills-manager` 테스트로 이동한다.
+- `create-rn-miniapp`에서 skill 관련 dead code와 template-layer 중복 테스트를 제거한 뒤 `pnpm verify`를 다시 통과시킨다.
+- generated repo wrapper는 `create-rn-miniapp`가 아니라 `@create-rn-miniapp/skills-manager`만 호출한다.
 - 현재 브랜치 diff와 맞는 한국어 changeset 설명을 작성하고, PR 제목/본문도 같은 범위로 갱신한다.
 
 ### 작업 순서
