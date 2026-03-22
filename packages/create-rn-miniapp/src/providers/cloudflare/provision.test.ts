@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import {
+  buildCloudflareDeployCommand,
   buildWranglerLoginArgs,
   buildCloudflareWorkersDevUrl,
   buildCloudflareProvisionExecutionOrder,
@@ -44,6 +45,33 @@ test('getWranglerConfigCandidates includes the macOS preferences path', () => {
 
 test('buildWranglerLoginArgs requests the default Wrangler scope set', () => {
   assert.deepEqual(buildWranglerLoginArgs(), ['login'])
+})
+
+test('buildCloudflareDeployCommand delegates initial deploy to the server deploy script', () => {
+  assert.deepEqual(buildCloudflareDeployCommand('pnpm'), {
+    cwd: '.',
+    command: 'pnpm',
+    args: ['--dir', '.', 'deploy'],
+    label: 'Cloudflare Worker deploy',
+  })
+  assert.deepEqual(buildCloudflareDeployCommand('yarn'), {
+    cwd: '.',
+    command: 'yarn',
+    args: ['--cwd', '.', 'deploy'],
+    label: 'Cloudflare Worker deploy',
+  })
+  assert.deepEqual(buildCloudflareDeployCommand('npm'), {
+    cwd: '.',
+    command: 'npm',
+    args: ['--prefix', '.', 'run', 'deploy'],
+    label: 'Cloudflare Worker deploy',
+  })
+  assert.deepEqual(buildCloudflareDeployCommand('bun'), {
+    cwd: '.',
+    command: 'bun',
+    args: ['run', '--cwd', '.', 'deploy'],
+    label: 'Cloudflare Worker deploy',
+  })
 })
 
 test('parseWranglerAuthSource reads quoted values from TOML without regex scraping', () => {

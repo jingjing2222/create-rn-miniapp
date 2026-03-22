@@ -1,3 +1,28 @@
+## 다음 작업: Cloudflare tRPC 초기 deploy가 app-router build를 우회하지 않게 수정
+
+### 목표
+- Cloudflare+tRPC 생성물에서 초기 provisioning deploy가 `@workspace/app-router` build 산출물을 요구하면서도 direct `wrangler deploy`로 우회하는 문제를 막는다.
+- provisioning 단계와 generated `server/package.json` deploy script가 같은 contract를 따르게 만든다.
+- `packages/app-router/dist`가 아직 없는 fresh scaffold에서도 초기 deploy가 `server deploy` 스크립트 경유로 build를 선행하게 고정한다.
+
+### 작업 순서
+1. Cloudflare provisioning deploy helper가 direct `wrangler deploy` 대신 `server deploy` script contract를 사용해야 한다는 red test를 먼저 추가한다.
+2. provider deploy helper를 package-manager adapter의 directory script 실행 기준으로 바꾸고, generated `server` deploy script와 같은 경로를 타게 만든다.
+3. Cloudflare+tRPC 회귀 테스트와 `pnpm verify`로 fresh scaffold deploy contract를 다시 고정한다.
+
+## 다음 작업: 생성 직후 repo에서 추가 `yarn install` drift 재현 확인
+
+### 목표
+- 실제 스캐폴딩 결과물에서 생성 직후 한 번 더 `yarn install`을 했을 때 lockfile이나 기타 산출물이 바뀌는지 확인한다.
+- 특히 `backoffice` 추가가 포함된 Yarn + Supabase flow에서, 마지막 root install 이후에도 재설치 drift가 남는지 재현 산출물 기준으로 검증한다.
+- 바뀌는 파일이 있다면 그것이 upstream CLI의 안내 문구 착시인지, root finalize 순서 문제인지, Yarn workspace/PnP contract 문제인지 구분한다.
+
+### 작업 순서
+1. 사용자가 방금 생성한 `scaffold-test/test` repo의 현재 상태를 기준선으로 커밋한다.
+2. 커밋 직후 root에서 `yarn install`을 한 번 더 실행한다.
+3. `git status`와 `git diff --stat`로 변경 파일을 확인하고, lockfile/manifest/tooling 산출물 변화를 분류한다.
+4. 결과를 현재 generator flow와 대조해서 실제 bug인지, 안내 문구 문제인지 설명한다.
+
 ## 다음 작업: Supabase JSON parser가 Yarn stdout prelude를 무시하게 보강
 
 ### 목표

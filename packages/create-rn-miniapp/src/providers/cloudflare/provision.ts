@@ -106,6 +106,16 @@ function buildWranglerCommand(
   }
 }
 
+export function buildCloudflareDeployCommand(packageManager: PackageManager): CommandSpec {
+  const adapter = getPackageManagerAdapter(packageManager)
+
+  return {
+    cwd: '.',
+    ...adapter.runScriptInDirectory('.', 'deploy'),
+    label: 'Cloudflare Worker deploy',
+  }
+}
+
 export function buildWranglerLoginArgs() {
   return ['login']
 }
@@ -753,21 +763,14 @@ async function withCloudflareR2EnableRetry<T>(
   }
 }
 
-async function deployCloudflareWorker(
-  packageManager: PackageManager,
-  serverRoot: string,
-  workerName: string,
-) {
+async function deployCloudflareWorker(packageManager: PackageManager, serverRoot: string) {
   log.step('Cloudflare Worker를 배포할게요')
 
   try {
-    const output = await runCommandWithOutput(
-      buildWranglerCommand(packageManager, serverRoot, 'Cloudflare Worker deploy', [
-        'deploy',
-        '--name',
-        workerName,
-      ]),
-    )
+    const output = await runCommandWithOutput({
+      ...buildCloudflareDeployCommand(packageManager),
+      cwd: serverRoot,
+    })
 
     if (output.stdout.trim().length > 0) {
       process.stdout.write(output.stdout)
@@ -1200,7 +1203,7 @@ export async function provisionCloudflareWorker(
 
     if (step === 'deploy-worker') {
       try {
-        await deployCloudflareWorker(options.packageManager, serverRoot, workerName)
+        await deployCloudflareWorker(options.packageManager, serverRoot)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
 
