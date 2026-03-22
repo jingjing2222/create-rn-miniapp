@@ -1,3 +1,64 @@
+## 다음 작업: 미커밋 변경을 목적별로 분리 커밋
+
+### 목표
+- 현재 워킹트리에 남아 있는 Firebase, Cloudflare, skills prompt, root biome preserve 수정들을 목적별로 나눠 커밋한다.
+- 각 커밋은 하나의 계약 변경만 담고, 테스트와 코드가 서로 다른 주제로 섞이지 않게 정리한다.
+- 이미 통과한 `pnpm verify` 상태를 유지하면서 커밋 히스토리를 읽기 쉽게 만든다.
+
+### 작업 순서
+1. 현재 변경 파일 diff를 묶음별로 분류한다.
+2. 파일 단위로 stage해서 Cloudflare, Firebase env, skills prompt, root biome preserve 순으로 분리 커밋한다.
+3. 마지막에 워킹트리가 clean인지 확인한다.
+
+## 다음 작업: scaffold 순서에서 patch 결과가 overwrite되는 경로 전수 검수
+
+### 목표
+- create/add lifecycle 전체에서 provider patch가 넣은 root/workspace 설정이 이후 단계의 template sync나 overwrite로 사라지는 경로가 더 있는지 찾는다.
+- 특히 root `biome.json`, root workspace manifest, root docs/policy sync, server README/state sync, provider finalize 흐름의 순서를 대조한다.
+- 실제로 깨지는 회귀와 잠재 위험을 분리해서 정리하고, 필요하면 후속 수정 shortlist를 만든다.
+
+### 작업 순서
+1. scaffold create/add 순서에서 root overwrite 성격의 단계와 provider patch 단계를 먼저 표로 정리한다.
+2. root template/policy/docs/workspace sync 함수가 기존 파일 내용을 보존하는지, 통째로 다시 쓰는지 분류한다.
+3. provider patch가 root 파일에 side effect를 주는 지점과 이후 overwrite 단계가 충돌하는지 대조한다.
+4. 실제 재현된 Firebase biome 케이스와 같은 패턴이 다른 파일에도 있는지 찾아 findings로 정리한다.
+
+## 다음 작업: skills 설치 뒤 Firebase root biome ignore가 지워지는 회귀 수정
+
+### 목표
+- Firebase server patch가 추가한 `server/functions/lib` root biome ignore가 이후 `syncRootFrontendPolicyFiles()`에서 덮어써지지 않게 만든다.
+- 특히 bun + Firebase + skills auto-install flow에서 root `biome check . --write --unsafe`가 transpiled functions output을 다시 검사하지 않게 고정한다.
+- root policy sync가 provider-specific biome include 확장을 보존하도록 만든다.
+
+### 작업 순서
+1. bun Firebase patch 후 `syncRootFrontendPolicyFiles()`를 호출하면 root biome includes에 Firebase lib ignore가 남아 있어야 한다는 red test를 추가한다.
+2. root biome renderer/sync가 기존 includes의 provider-specific extra entry를 보존하도록 최소 수정한다.
+3. targeted test와 `pnpm verify`로 skills auto-install 이후에도 root biome 단계가 깨지지 않게 고정한다.
+
+## 다음 작업: 추천 agent skills 설치 prompt 기본값을 yes로 변경
+
+### 목표
+- interactive create flow에서 `추천 agent skills를 지금 같이 설치할까요?` prompt의 기본 선택값이 `네, 같이 넣을게요`가 되게 만든다.
+- `--yes`나 explicit `--skill` 동작은 그대로 유지하고, interactive 기본 선택만 바꾼다.
+- CLI 테스트에서 skills install prompt의 `initialValue` 계약을 직접 고정한다.
+
+### 작업 순서
+1. CLI 테스트를 추가해 추천 skills prompt가 `initialValue: 'yes'`를 넘겨야 한다는 red를 만든다.
+2. `resolveSelectedSkillsInput`의 select prompt 기본값을 `yes`로 최소 수정한다.
+3. targeted CLI test와 `pnpm verify`로 회귀 없이 계약을 고정한다.
+
+## 다음 작업: Firebase seed script의 parseEnv 타입 오류 수정
+
+### 목표
+- generated `server/functions/src/seed-public-status.ts`가 bun+tsc 환경에서도 `parseEnv` 반환 타입 때문에 깨지지 않게 만든다.
+- typed env reader helper가 `Record<string, string>` 계약을 지키도록 `undefined` 값을 걸러낸다.
+- shared helper를 고쳐 Firebase generated script와 관련 테스트가 같은 contract를 따르게 만든다.
+
+### 작업 순서
+1. env loader helper와 Firebase template 테스트를 `undefined` filtering 계약 기준으로 먼저 red로 바꾼다.
+2. `renderTypedEnvReaderScriptLines`를 최소 수정해서 `parseEnv` 결과에서 string 값만 남기게 바꾼다.
+3. targeted test와 `pnpm verify`로 bun predeploy build failure가 다시 안 나오게 고정한다.
+
 ## 다음 작업: Cloudflare tRPC 초기 deploy가 app-router build를 우회하지 않게 수정
 
 ### 목표
