@@ -51,7 +51,7 @@ test('buildCloudflareDeployCommand delegates initial deploy to the server deploy
   assert.deepEqual(buildCloudflareDeployCommand('pnpm'), {
     cwd: '.',
     command: 'pnpm',
-    args: ['--dir', '.', 'deploy'],
+    args: ['--dir', '.', 'run', 'deploy'],
     label: 'Cloudflare Worker deploy',
   })
   assert.deepEqual(buildCloudflareDeployCommand('yarn'), {

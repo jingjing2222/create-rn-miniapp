@@ -107,6 +107,15 @@ function buildWranglerCommand(
 }
 
 export function buildCloudflareDeployCommand(packageManager: PackageManager): CommandSpec {
+  if (packageManager === 'pnpm') {
+    return {
+      cwd: '.',
+      command: 'pnpm',
+      args: ['--dir', '.', 'run', 'deploy'],
+      label: 'Cloudflare Worker deploy',
+    }
+  }
+
   const adapter = getPackageManagerAdapter(packageManager)
 
   return {
