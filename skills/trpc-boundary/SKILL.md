@@ -1,5 +1,8 @@
 ---
 name: trpc-boundary
+label: tRPC boundary 변경
+category: optional
+order: 8
 description: Use when you are changing tRPC contracts, app-router shape, or client and server import order across the shared boundary. Do not use for provider runtime layout, remote operations, or generic route and UI work.
 ---
 

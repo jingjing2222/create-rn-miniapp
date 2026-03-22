@@ -1,5 +1,8 @@
 ---
 name: cloudflare-worker
+label: Cloudflare Worker 작업
+category: optional
+order: 5
 description: Use when you need Cloudflare Worker runtime layout, bindings, local dev, or client connection checks. Do not use for tRPC contract order or remote deploy and repair procedures.
 ---
 

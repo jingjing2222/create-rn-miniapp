@@ -1,5 +1,8 @@
 ---
 name: granite-routing
+label: route / page / navigation 패턴
+category: core
+order: 2
 description: Use when you are changing Granite route paths, page entries, params, or navigation flow in the MiniApp frontend. Do not use for capability lookup, provider runtime work, or TDS component selection.
 ---
 

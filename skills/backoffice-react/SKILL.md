@@ -1,5 +1,8 @@
 ---
 name: backoffice-react
+label: backoffice React 작업
+category: optional
+order: 4
 description: Use when you are changing the optional backoffice React/Vite workspace, its state flow, or bundle boundaries. Do not use for MiniApp route work, provider runtime layout, or tRPC contract order.
 ---
 

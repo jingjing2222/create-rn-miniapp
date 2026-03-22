@@ -10,6 +10,7 @@
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm format",
     "publish:dev": "pnpm exec tsx scripts/publish-dev.ts",
+    "sync:skill-catalog": "pnpm exec tsx scripts/sync-skill-catalog.ts",
     "sync:root-readme": "pnpm exec tsx scripts/sync-root-readme.ts",
     "release": "changeset publish",
     "format": "pnpm exec biome format . --write",

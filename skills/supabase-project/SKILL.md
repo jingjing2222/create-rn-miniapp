@@ -1,5 +1,8 @@
 ---
 name: supabase-project
+label: Supabase project 작업
+category: optional
+order: 6
 description: Use when you need Supabase project layout, local dev context, or client connection checks. Do not use for remote db/functions apply procedures or unrelated UI and routing work.
 ---
 

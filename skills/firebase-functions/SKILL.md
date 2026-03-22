@@ -1,5 +1,8 @@
 ---
 name: firebase-functions
+label: Firebase Functions 작업
+category: optional
+order: 7
 description: Use when you need Firebase Functions project layout, local dev context, or client linkage checks. Do not use for deploy, seed, or remote repair procedures.
 ---
 

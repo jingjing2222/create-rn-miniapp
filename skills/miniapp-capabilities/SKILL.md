@@ -1,5 +1,8 @@
 ---
 name: miniapp-capabilities
+label: MiniApp capability / 공식 API 탐색
+category: core
+order: 1
 description: Use when you need MiniApp or AppInToss capability lookup, official API discovery, or pre-implementation capability checks. Do not use for route design, navigation structure, or TDS component choice.
 ---
 

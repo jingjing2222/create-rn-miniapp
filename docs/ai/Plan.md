@@ -1,3 +1,15 @@
+## 다음 작업: skill catalog를 source skill frontmatter에서 파생
+
+### 목표
+- skill id/label/category의 source of truth를 `skills/*/SKILL.md` frontmatter로 올리고, package 쪽 `skill-catalog.ts`는 generated file로 바꾼다.
+- `SKILLS_SOURCE_REPO`도 `packages/create-rn-miniapp/package.json`의 repository URL에서 파생시켜 repo slug 이중 입력을 없앤다.
+- red test로 source skill frontmatter -> generated catalog 정합성과 repo slug 파생을 먼저 고정한 뒤 구현, verify, 커밋, 푸시까지 마친다.
+
+### 작업 순서
+1. skill frontmatter 기반 catalog/generated marker, repo slug 파생을 기대하는 red test를 먼저 추가한다.
+2. skill frontmatter에 metadata를 넣고 `scripts/sync-skill-catalog.ts`로 `skill-catalog.ts`를 generated file로 전환한다.
+3. `skills-contract.ts`, AGENTS/README 관련 문구를 새 SSoT 기준으로 정리하고 `pnpm verify` 후 커밋/푸시한다.
+
 ## 다음 작업: 남은 skills SSoT 드리프트 제거
 
 ### 목표

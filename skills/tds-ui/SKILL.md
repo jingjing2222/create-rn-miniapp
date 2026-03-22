@@ -1,5 +1,8 @@
 ---
 name: tds-ui
+label: TDS UI 선택과 form 패턴
+category: core
+order: 3
 description: Decision skill for choosing TDS React Native components and UI boundaries in MiniApp screens. Use when translating product requirements into TDS components, reconciling public docs with actual exports, or deciding controlled/uncontrolled state patterns. Do not use for route design, capability lookup, provider/runtime work, or non-TDS native module decisions.
 version: 2.0.0
 ---
