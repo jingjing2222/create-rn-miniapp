@@ -1,9 +1,12 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { getPackageManagerAdapter } from '../package-manager.js'
 import {
   resolveTemplatesPackageRoot,
   copyDirectoryWithTokens,
   copyFileWithTokens,
+  resolveSkillsPackageRoot,
 } from './filesystem.js'
 import {
   resolveEnabledWorkspaceFeatures,
@@ -13,6 +16,11 @@ import { renderFrontendPolicyMarkdown } from './frontend-policy.js'
 import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
 import { createRootTemplateExtraTokens, renderRootVerifyStepsMarkdown } from './root.js'
 import { CORE_SKILL_DEFINITIONS } from './skills.js'
+import {
+  readSkillsManifest,
+  resolveManagedSkillSelections,
+  type ResolvedSkillManifestEntry,
+} from './skills.js'
 import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
 
 type DocumentDefinition = {
@@ -49,32 +57,20 @@ function renderAgentsWorkspaceModelSection(options: GeneratedWorkspaceOptions) {
   ])
 }
 
-function renderAgentsSkillRoutingSection(options: GeneratedWorkspaceOptions) {
-  const items = [
-    ...CORE_SKILL_DEFINITIONS.map((skill) => `${skill.agentsLabel}: \`${skill.docsPath}\``),
-    ...resolveSelectedOptionalSkillDefinitions(options).map(
-      (skill) => `${skill.agentsLabel}: \`${skill.docsPath}\``,
-    ),
-  ]
-
-  return renderBulletList(items)
+function renderAgentsSkillRoutingSection(_options: GeneratedWorkspaceOptions) {
+  return renderBulletList([
+    'canonical source: `.agents/skills/*`',
+    'Claude mirror: `.claude/skills/*`',
+    'inventory / ownership / update flow: `docs/skills.md`',
+  ])
 }
 
-function renderDocsIndexSkillStructureSection(options: GeneratedWorkspaceOptions) {
-  const optionalSkills = resolveSelectedOptionalSkillDefinitions(options)
-  const lines = [
-    '- canonical source: `.agents/skills/`',
-    '- Claude mirror: `.claude/skills/`',
-    '',
-    'core skills:',
-    ...CORE_SKILL_DEFINITIONS.map((skill) => `- \`${skill.docsPath}\``),
-  ]
-
-  if (optionalSkills.length > 0) {
-    lines.push('', 'optional skills:', ...optionalSkills.map((skill) => `- \`${skill.docsPath}\``))
-  }
-
-  return `${lines.join('\n')}\n`
+function renderDocsIndexSkillStructureSection(_options: GeneratedWorkspaceOptions) {
+  return renderBulletList([
+    'canonical source: `.agents/skills/`',
+    'Claude mirror: `.claude/skills/`',
+    'inventory / ownership / update flow: `skills.md`',
+  ])
 }
 
 function renderTopologyRootSection(options: GeneratedWorkspaceOptions) {
@@ -175,6 +171,7 @@ function renderAgentsMarkdown(_tokens: TemplateTokens, options: GeneratedWorkspa
     ...repositoryContractLines,
     '- canonical skills: `.agents/skills/*`',
     '- Claude mirror: `.claude/skills/*`',
+    '- inventory / ownership / update flow: `docs/skills.md`',
     '',
     '## Start Here',
     ...startHereLines,
@@ -214,6 +211,7 @@ function renderDocsIndexMarkdown(tokens: TemplateTokens, options: GeneratedWorks
     '',
     '## 운영 메모',
     '- 새 규칙은 먼저 `engineering/*`에 들어갈지, Skill로 분리할지 구분한다.',
+    '- Skill inventory나 ownership 규칙은 `skills.md` 한 곳만 갱신한다.',
     '- 문서 경로를 바꾸면 `AGENTS.md`, `CLAUDE.md`, Copilot instructions, Skill 경로를 같이 갱신한다.',
     '',
   ].join('\n')
@@ -230,6 +228,106 @@ function renderWorkspaceTopologyMarkdown(options: GeneratedWorkspaceOptions) {
     renderSection('ownership', renderTopologyOwnershipSection(options)),
     '',
     renderSection('참고 Skill', renderTopologySkillsSection(options)),
+    '',
+  ].join('\n')
+}
+
+type SkillsDocState = {
+  generatorPackage: string
+  generatorVersion: string
+  catalogPackage: string
+  catalogVersion: string
+  customSkillPolicy: string
+  resolvedSkills: Array<Pick<ResolvedSkillManifestEntry, 'id' | 'mode'>>
+}
+
+async function readPackageIdentity(packageJsonPath: string) {
+  return JSON.parse(await readFile(packageJsonPath, 'utf8')) as {
+    name: string
+    version: string
+  }
+}
+
+async function resolveSkillsDocState(
+  targetRoot: string,
+  options: GeneratedWorkspaceOptions,
+  hints: GeneratedWorkspaceHints,
+): Promise<SkillsDocState> {
+  const manifest = await readSkillsManifest(targetRoot)
+
+  if (manifest) {
+    return {
+      generatorPackage: manifest.generatorPackage,
+      generatorVersion: manifest.generatorVersion,
+      catalogPackage: manifest.catalogPackage,
+      catalogVersion: manifest.catalogVersion,
+      customSkillPolicy: manifest.customSkillPolicy,
+      resolvedSkills: manifest.resolvedSkills.map((entry) => ({
+        id: entry.id,
+        mode: entry.mode,
+      })),
+    }
+  }
+
+  const generatorPackage = await readPackageIdentity(
+    fileURLToPath(new URL('../../package.json', import.meta.url)),
+  )
+  const catalogPackage = await readPackageIdentity(
+    path.join(resolveSkillsPackageRoot(), 'package.json'),
+  )
+  const resolvedSkills = resolveManagedSkillSelections(options, hints.manualExtraSkills ?? []).map(
+    (entry) => ({
+      id: entry.definition.id,
+      mode: entry.mode,
+    }),
+  )
+
+  return {
+    generatorPackage: generatorPackage.name,
+    generatorVersion: generatorPackage.version,
+    catalogPackage: catalogPackage.name,
+    catalogVersion: catalogPackage.version,
+    customSkillPolicy: 'preserve-unmanaged-siblings',
+    resolvedSkills,
+  }
+}
+
+async function renderSkillsMarkdown(
+  targetRoot: string,
+  tokens: TemplateTokens,
+  options: GeneratedWorkspaceOptions,
+  hints: GeneratedWorkspaceHints,
+) {
+  const adapter = getPackageManagerAdapter(tokens.packageManager)
+  const state = await resolveSkillsDocState(targetRoot, options, hints)
+  const managedSkillLines = state.resolvedSkills.map((entry) => `- \`${entry.id}\` (${entry.mode})`)
+
+  return [
+    '# Skills',
+    '',
+    'Skill inventory와 ownership 규칙은 이 문서가 단일 source of truth다.',
+    '',
+    '## Managed Snapshot',
+    '- canonical source: `.agents/skills/*`',
+    '- Claude mirror: `.claude/skills/*`',
+    `- generator package: \`${state.generatorPackage}@${state.generatorVersion}\``,
+    `- catalog package: \`${state.catalogPackage}@${state.catalogVersion}\``,
+    `- custom skill policy: \`${state.customSkillPolicy}\``,
+    '',
+    '## Managed Skills',
+    ...(managedSkillLines.length > 0 ? managedSkillLines : ['- 없음']),
+    '',
+    '## Commands',
+    `- mirror: \`${adapter.runScript('skills:mirror')}\``,
+    `- check: \`${adapter.runScript('skills:check')}\``,
+    `- sync: \`${adapter.runScript('skills:sync')}\``,
+    `- diff: \`${adapter.runScript('skills:diff')}\``,
+    `- upgrade: \`${adapter.runScript('skills:upgrade')}\``,
+    '',
+    '## Ownership',
+    '- `.agents/skills` 아래에서 manifest에 있는 id만 managed snapshot이다.',
+    '- manifest에 없는 sibling entry는 unmanaged custom skill로 취급하고 sync/upgrade에서 보존한다.',
+    '- `.claude/skills`는 직접 수정하지 않는다. mirror는 `skills:mirror`가 관리한다.',
     '',
   ].join('\n')
 }
@@ -260,6 +358,11 @@ const DOCUMENT_DEFINITIONS: DocumentDefinition[] = [
     ownership: 'code',
     render: renderDocsIndexMarkdown,
     startHereOrder: 4,
+  },
+  {
+    relativePath: 'docs/skills.md',
+    ownership: 'code',
+    render: () => '',
   },
   {
     relativePath: 'docs/product/기능명세서.md',
@@ -343,10 +446,11 @@ export async function applyDocsTemplates(
   )
 
   for (const definition of CODE_OWNED_DOC_DEFINITIONS) {
-    await writeCodeOwnedMarkdown(
-      targetRoot,
-      definition.relativePath,
-      definition.render(tokens, options),
-    )
+    const renderedSource =
+      definition.relativePath === 'docs/skills.md'
+        ? await renderSkillsMarkdown(targetRoot, tokens, options, hints)
+        : definition.render(tokens, options)
+
+    await writeCodeOwnedMarkdown(targetRoot, definition.relativePath, renderedSource)
   }
 }

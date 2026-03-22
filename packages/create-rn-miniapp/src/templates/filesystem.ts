@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { getPackageManagerAdapter } from '../package-manager.js'
 import type { TemplateTokens } from './types.js'
 
@@ -16,14 +17,27 @@ export type CopyDirectoryWithTokensOptions = {
   extraTokens?: TemplateReplacementTokens
 }
 
+function resolvePackageRoot(packageName: string, fallbackPackageJsonRelativePath: string) {
+  try {
+    return path.dirname(require.resolve(`${packageName}/package.json`))
+  } catch {
+    const fallbackPackageJsonPath = fileURLToPath(
+      new URL(fallbackPackageJsonRelativePath, import.meta.url),
+    )
+
+    return path.dirname(fallbackPackageJsonPath)
+  }
+}
+
 export function resolveTemplatesPackageRoot() {
-  const packageJsonPath = require.resolve('@create-rn-miniapp/scaffold-templates/package.json')
-  return path.dirname(packageJsonPath)
+  return resolvePackageRoot(
+    '@create-rn-miniapp/scaffold-templates',
+    '../../../scaffold-templates/package.json',
+  )
 }
 
 export function resolveSkillsPackageRoot() {
-  const packageJsonPath = require.resolve('@create-rn-miniapp/scaffold-skills/package.json')
-  return path.dirname(packageJsonPath)
+  return resolvePackageRoot('@create-rn-miniapp/agent-skills', '../../../agent-skills/package.json')
 }
 
 export function replaceTemplateTokens(

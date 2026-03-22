@@ -1,0 +1,11 @@
+{
+  "name": "tds-ui",
+  "version": "2.0.0",
+  "package": {
+    "name": "@toss/tds-react-native",
+    "version": "2.0.2"
+  },
+  "lastVerifiedAt": "2026-03-21",
+  "truthSources": ["generated/catalog.json", "generated/anomalies.json"],
+  "notes": ["Snapshot updates are applied through the catalog release and `skills:upgrade` flow."]
+}

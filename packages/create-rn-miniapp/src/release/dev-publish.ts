@@ -26,7 +26,7 @@ type PrepareDevPublishPackageJsonsResult = {
 const repoRoot = path.resolve(import.meta.dirname, '../../../..')
 const cliPackageName = 'create-rn-miniapp'
 const templatesPackageName = '@create-rn-miniapp/scaffold-templates'
-const skillsPackageName = '@create-rn-miniapp/scaffold-skills'
+const skillsPackageName = '@create-rn-miniapp/agent-skills'
 
 export function formatDevPublishVersion(date: Date): string {
   const year = String(date.getUTCFullYear())
@@ -128,10 +128,10 @@ function main(): void {
   const npmrcPath = createNpmUserConfig(tempRoot, npmToken)
   const cliSourceDir = path.join(repoRoot, 'packages/create-rn-miniapp')
   const templatesSourceDir = path.join(repoRoot, 'packages/scaffold-templates')
-  const skillsSourceDir = path.join(repoRoot, 'packages/scaffold-skills')
+  const skillsSourceDir = path.join(repoRoot, 'packages/agent-skills')
   const cliStageDir = path.join(tempRoot, 'create-rn-miniapp')
   const templatesStageDir = path.join(tempRoot, 'scaffold-templates')
-  const skillsStageDir = path.join(tempRoot, 'scaffold-skills')
+  const skillsStageDir = path.join(tempRoot, 'agent-skills')
 
   try {
     buildWorkspace()

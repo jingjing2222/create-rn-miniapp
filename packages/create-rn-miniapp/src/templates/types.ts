@@ -26,6 +26,7 @@ export type GeneratedSkillsServerProvider = 'supabase' | 'cloudflare' | 'firebas
 
 export type GeneratedWorkspaceHints = {
   serverProvider: GeneratedSkillsServerProvider | null
+  manualExtraSkills?: string[]
 }
 
 export type GeneratedWorkspaceOptions = {

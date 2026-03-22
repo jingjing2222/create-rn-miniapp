@@ -1,3 +1,140 @@
+## 다음 작업: Snapshot-Managed Skill Catalog
+
+### 목표
+- `@create-rn-miniapp/agent-skills`를 `@create-rn-miniapp/agent-skills`로 rename하고, workspace 디렉터리도 `packages/agent-skills`로 맞춘다.
+- 새 이름의 패키지는 “scaffold 내부 자산”이 아니라 “canonical skill catalog package”를 의미한다. 이번 작업에서 별도 repo 분리는 하지 않고, 같은 monorepo 안에서 ownership만 분리한다.
+- generated repo는 계속 `.agents/skills`와 `.claude/skills`에 실제 snapshot을 가진다.
+- 스캐폴더는 `core + derived + manual extra`를 계산해 초기 snapshot과 manifest를 만들고, 이후 업데이트는 explicit `skills diff|sync|upgrade`로만 수행한다.
+- `tds-ui`를 포함한 skill-local self-refresh는 이번 구조로 대체하고 제거 방향으로 수렴시킨다.
+
+### 고정 원칙
+- selection model은 `effective = core + derived + manual`로 고정한다.
+  - `core`: 항상 포함
+  - `derived`: workspace/provider/topology에서 자동 파생
+  - `manual`: scaffold 시 사용자 다중 선택으로만 추가
+- generated repo의 canonical source는 항상 `.agents/skills`다. `.claude/skills`는 전체 mirror이며 직접 수정 대상이 아니다.
+- custom skill은 별도 디렉터리로 분리하지 않고 `.agents/skills/<custom-skill>` sibling entry로 둔다. manifest에 없는 sibling entry는 unmanaged custom skill로 취급한다.
+- `verify`와 일반 agent 실행 흐름에서는 upstream fetch, catalog version 변경, self-refresh를 허용하지 않는다.
+- upstream catalog를 읽는 경로는 `create-miniapp skills diff|sync|upgrade`로 한정한다.
+- generated repo는 symlink mirror를 기본값으로 쓰지 않는다. committed snapshot의 이식성과 cross-platform 안정성을 위해 `.claude/skills`는 복사 mirror로 유지한다.
+
+### manifest schema
+- 경로: `.create-rn-miniapp/skills.json`
+- 이 파일은 code-owned이고 commit 대상이다.
+- 필드:
+  - `schema`
+  - `generatorPackage`
+  - `generatorVersion`
+  - `catalogPackage`
+  - `catalogVersion`
+  - `manualExtraSkills`
+  - `resolvedSkills[{ id, mode, renderedDigest }]`
+  - `customSkillPolicy`
+- `mode`는 `core | derived | manual`만 허용한다.
+- `renderedDigest`는 catalog raw source digest가 아니라, token 반영 후 실제 `.agents/skills/<id>`에 materialize된 출력 기준 digest로 계산한다.
+- `resolvedSkills`에 없는 skill 디렉터리는 user-owned unmanaged entry로 간주하고 sync/upgrade에서 보존한다.
+- `installedAt` 같은 timestamp 필드는 넣지 않는다. code-owned manifest에 시간 필드를 넣으면 sync만으로 불필요한 diff가 생긴다.
+
+### generated repo ownership 모델
+- 현재처럼 `.agents/skills` 전체를 지우고 다시 만드는 방식은 중단한다.
+- `skills sync`는 manifest에 기록된 managed skill id만 reconcile한다.
+  - managed id가 존재하면 해당 디렉터리만 교체 가능
+  - managed id가 사라지면 해당 디렉터리만 제거 가능
+  - unknown/custom sibling skill 디렉터리는 유지
+- `.claude/skills`는 `.agents/skills` 전체를 mirror한다.
+  - managed + unmanaged custom sibling 모두 mirror 대상이다.
+  - `.claude/skills`에서만 존재하는 파일/디렉터리는 drift로 간주하고 `skills:mirror`에서 제거된다.
+
+### root scripts 분리
+- `skills:mirror`
+  - local `.agents/skills -> .claude/skills` 복사만 수행
+  - 네트워크 없음
+- `skills:check`
+  - local mirror/drift 검사만 수행
+  - `verify`에 포함
+  - upstream latest 여부는 절대 확인하지 않음
+- `skills:sync`
+  - manifest의 pinned `generatorVersion`/`catalogVersion`과 현재 topology를 기준으로 managed skills/doc/router를 재materialize
+  - 실행 후 `skills:mirror`까지 수행
+- `skills:diff`
+  - 현재 repo 상태와 `skills sync` 결과 차이를 read-only로 보고
+  - 파일 쓰기 없음
+- `skills:upgrade`
+  - target version(`latest` 또는 명시 버전)으로 manifest의 `generatorVersion`/`catalogVersion`을 갱신한 뒤 `skills:sync`
+- generated repo의 `skills:sync|diff|upgrade`는 단순 로컬 script가 아니라, manifest에 pinned 된 `generatorVersion`을 읽어 `create-miniapp skills ...`를 실행하는 wrapper script로 제공한다.
+  - 예: package manager별 `dlx`/`npx` wrapper에서 pinned version 호출
+  - 이렇게 해야 generated repo가 scaffold internals를 직접 devDependency로 들고 있지 않아도 explicit update flow를 재현할 수 있다.
+
+### CLI surface
+- 새 서브커맨드 추가:
+  - `create-miniapp skills sync --root-dir .`
+  - `create-miniapp skills diff --root-dir .`
+  - `create-miniapp skills upgrade --root-dir . --to latest`
+- create flow:
+  - `--extra-skill <id>` 반복 옵션 추가
+  - interactive multiselect 추가
+  - 선택 가능한 대상은 `manual extra` only
+  - `derived` skill은 체크박스로 고르지 않고 topology에서만 결정
+- add flow:
+  - manifest가 있으면 `manualExtraSkills`를 보존하고 `derived`만 재계산
+  - 기존 manual을 silent drop 하지 않음
+- manifest 없는 기존 repo:
+  - 첫 `skills sync`에서 bootstrap 수행
+  - 현재 topology로 `core/derived`를 추론
+  - catalog에 존재하는 추가 installed skill만 `manual`로 기록
+  - catalog에 없는 sibling entry는 unmanaged custom으로 그대로 둠
+- `skills upgrade` safety:
+  - target catalog에서 사라진 manual skill id가 있으면 silent drop 하지 않고 명시적으로 실패시킨다.
+  - 사용자가 manual 목록을 정리하거나 대체 id를 선택한 뒤 다시 upgrade 하게 만든다.
+
+### 문서 책임 재배치
+- `AGENTS.md`와 `CLAUDE.md`는 thin router만 담당한다.
+  - canonical source: `.agents/skills/*`
+  - Claude mirror: `.claude/skills/*`
+  - 상세 inventory와 ownership 규칙은 `docs/skills.md`로 위임
+- 새 `docs/skills.md`가 소유할 내용:
+  - installed managed skills 목록
+  - 각 skill의 mode(`core/derived/manual`)
+  - current pinned generator/catalog version
+  - `skills:mirror`, `skills:check`, `skills:sync`, `skills:diff`, `skills:upgrade` 사용법
+  - custom skill ownership 규칙
+  - `.claude/skills` 직접 수정 금지 규칙
+- `docs/index.md`는 `docs/skills.md`를 링크만 하고 inventory를 길게 반복하지 않는다.
+- 기존 `skills:sync` 의미는 `skills:mirror`로 명확히 바꾼다.
+
+### tds-ui self-refresh 정리
+- 현재 진행 중인 `tds-ui` self-refresh hook 계획은 이번 작업으로 supersede 한다.
+- `tds-ui`를 포함한 개별 skill은 더 이상 npm/docs를 직접 읽어 generated snapshot을 바꾸지 않는다.
+- freshness 관련 메모가 필요하면 `docs/skills.md`와 catalog metadata에만 남기고, 실제 snapshot 갱신은 항상 `skills:upgrade` 경로로 수렴시킨다.
+
+### 테스트 계획
+- red test부터 추가한다.
+- create 시 `manual` extra multiselect/CLI option이 manifest와 generated snapshot에 반영된다.
+- add 시 manual extras는 유지되고 derived skills만 topology 기준으로 재계산된다.
+- `skills sync`는 managed skill만 수정하고 unknown custom skill 디렉터리는 보존한다.
+- `skills mirror`는 `.agents/skills` 전체를 `.claude/skills`에 정확히 복사한다.
+- `skills check`는 mirror drift만 잡고 upstream 변경은 건드리지 않는다.
+- `skills diff`는 파일을 쓰지 않고 pending diff만 보고한다.
+- `skills upgrade`는 target version으로 manifest와 managed snapshot만 갱신한다.
+- manifest 없는 기존 repo에서 bootstrap sync가 동작한다.
+- target catalog에서 사라진 manual skill id가 있으면 `skills upgrade`가 실패한다.
+- `AGENTS.md`는 thin router로 축소되고 `docs/skills.md`가 inventory를 가진다.
+- generated root wrapper script가 manifest의 pinned version을 읽어 `create-miniapp skills ...`를 실행한다.
+- 주 대상 테스트 파일:
+  - `packages/create-rn-miniapp/src/cli.test.ts`
+  - `packages/create-rn-miniapp/src/templates/index.test.ts`
+  - `packages/create-rn-miniapp/src/scaffold/index.test.ts`
+  - 필요 시 `src/templates/root.ts` 관련 회귀 assertion 추가
+- 완료 전 `pnpm verify`를 반드시 통과시킨다.
+
+### 완료 기준
+- generated repo에는 `.agents/skills`와 `.claude/skills` local snapshot이 남아 있고, custom sibling skill도 깨지지 않는다.
+- `verify`는 upstream과 무관한 local integrity check만 수행한다.
+- upstream 변경 반영은 `skills:upgrade` 또는 `create-miniapp skills upgrade`에서만 일어난다.
+- `AGENTS.md`/`CLAUDE.md`는 얇아지고, inventory와 ownership 규칙은 `docs/skills.md` 한 곳이 소유한다.
+- 기존 `tds-ui` self-refresh 같은 skill-local auto-update 경로가 제거된다.
+- `pnpm verify`를 통과한다.
+
 ## 다음 작업: tds-ui self-refresh hook 추가
 
 ### 목표
@@ -10,11 +147,11 @@
 
 ### 작업 순서
 1. `packages/create-rn-miniapp/src/templates/index.test.ts`와 `src/scaffold/index.test.ts`에 freshness hook script tree, generated repo copy, stale auto-refresh, silent fallback red test를 추가한다.
-2. `packages/scaffold-skills/tds-ui/scripts/*`와 supporting lib를 추가해 npm registry + Toss Mini Docs 기반 refresh pipeline을 구현한다.
+2. `packages/agent-skills/tds-ui/scripts/*`와 supporting lib를 추가해 npm registry + Toss Mini Docs 기반 refresh pipeline을 구현한다.
 3. refresh 결과를 malformed output 관점으로 검증하되, state model/doc URL/package version 같은 최신 사실 변화는 받아들일 수 있게 기준을 조정한다.
 4. generated repo에서 실제 refresh를 돌려 최신 upstream diff를 확인하고, canonical `generated/*`와 `metadata.json`을 그 결과로 갱신한다.
 5. malformed metadata와 direct `refresh-catalog.mjs` 실행까지 fail-open인지 red test로 잠근다.
-6. `packages/scaffold-skills/tds-ui/{SKILL.md,AGENTS.md,metadata.json,generated/catalog.md}`를 hook contract와 refresh metadata에 맞춰 갱신한다.
+6. `packages/agent-skills/tds-ui/{SKILL.md,AGENTS.md,metadata.json,generated/catalog.md}`를 hook contract와 refresh metadata에 맞춰 갱신한다.
 7. targeted test 후 `pnpm verify`까지 다시 통과시키고 커밋한다.
 8. npm dist-tag가 `latest=1.3.8`, `next=2.0.2`인 현재 상태에서는 `latest`가 아직 `1.x`일 때만 `2.0.2`를 refresh target으로 우선 선택하는 예외를 둔다.
 
@@ -52,7 +189,7 @@
 ## 다음 작업: tds-ui decision skill 최종 마이그레이션
 
 ### 목표
-- `packages/scaffold-skills/tds-ui`를 self-contained decision skill 구조로 재정의한다.
+- `packages/agent-skills/tds-ui`를 self-contained decision skill 구조로 재정의한다.
 - `generated/catalog.json`을 truth source로 두고 anomaly, references, rules, output contract를 패키지 내부에서 모두 닫는다.
 - 생성물과 generator metadata가 `.agents/skills/tds-ui`, `.claude/skills/tds-ui`만 가리키게 맞춘다.
 
@@ -73,7 +210,7 @@
 4. acceptance prompt에 맞는 selection/anomaly handling이 문서와 생성물에 반영되는지 확인한 뒤 `pnpm verify`로 마무리한다.
 
 ### 완료 기준
-- `packages/scaffold-skills/tds-ui`만 읽어도 component selection, anomaly handling, answer format이 끝난다.
+- `packages/agent-skills/tds-ui`만 읽어도 component selection, anomaly handling, answer format이 끝난다.
 - docs-backed / export-gap / export-only / blocked 상태가 `catalog.json`, `anomalies.json`, `references`, `rules`에서 분리돼 있다.
 - `navbar`, `chart`, `stepper-row`, export-only 8개, `paragraph`가 decision tree와 anomaly note 규칙에 따라 처리된다.
 - generated core skill 경로가 `.agents/skills/tds-ui`, `.claude/skills/tds-ui`로 고정되고 `pnpm verify`를 통과한다.
@@ -99,7 +236,7 @@
 - changeset 설명은 한국어로 작성하고, 커밋 후 원격 브랜치와 PR에 반영한다.
 
 ### 후속 수정
-- patch changeset 범위를 `create-rn-miniapp`, `@create-rn-miniapp/scaffold-skills`, `@create-rn-miniapp/scaffold-templates` 세 패키지로 바로잡는다.
+- patch changeset 범위를 `create-rn-miniapp`, `@create-rn-miniapp/agent-skills`, `@create-rn-miniapp/scaffold-templates` 세 패키지로 바로잡는다.
 - changeset 수정 후 `pnpm verify`를 다시 통과시킨다.
 - 현재 브랜치 diff와 맞는 한국어 changeset 설명을 작성하고, PR 제목/본문도 같은 범위로 갱신한다.
 
@@ -119,7 +256,7 @@
 
 ### 점검 순서
 1. old skill name / old 경로 / old 문서명이 남아 있는지 repo 전체 grep으로 확인한다.
-2. canonical source(`packages/scaffold-skills`)와 generator metadata(`templates/*`, `scaffold/*`, `patching/*`)가 같은 이름/구조를 소유하는지 대조한다.
+2. canonical source(`packages/agent-skills`)와 generator metadata(`templates/*`, `scaffold/*`, `patching/*`)가 같은 이름/구조를 소유하는지 대조한다.
 3. generated repo 계약인 `AGENTS.md`, `README.md`, `.agents/skills`, `.claude/skills`, `server/.create-rn-miniapp/state.json`, `server/README.md`가 서로 일치하는지 테스트와 렌더링 로직을 함께 읽어 검수한다.
 4. 구현 누락이나 잘못된 ownership이 보이면 severity와 재현 근거를 정리한다.
 
@@ -136,11 +273,11 @@
 - plan first: 구현 전 이 문서를 최신화한다.
 - TDD first: rename/state split/ref 분해는 실패 테스트를 먼저 추가하고 확인한 뒤 구현한다.
 - self-verify first: 마무리 전에 `pnpm verify`를 통과시킨다.
-- templates first: 생성물 규칙은 `packages/scaffold-templates`와 `packages/scaffold-skills`를 정본으로 두고, generator는 그 소스를 렌더링만 한다.
+- templates first: 생성물 규칙은 `packages/scaffold-templates`와 `packages/agent-skills`를 정본으로 두고, generator는 그 소스를 렌더링만 한다.
 - old alias는 두지 않는다. rename 이후 생성물과 entrypoint 문서에는 old name이 남지 않아야 한다.
 
 ### 확인된 현재 상태
-- canonical skill source는 `packages/scaffold-skills/*`이다.
+- canonical skill source는 `packages/agent-skills/*`이다.
 - generated repo 문서/skill 렌더링은 `packages/create-rn-miniapp/src/templates/{skills,feature-catalog,docs,frontend-policy}.ts`가 소유한다.
 - `server/README.md` 생성은 `packages/create-rn-miniapp/src/patching/server.ts`가 소유한다.
 - 현재 core skill 이름은 `miniapp-capabilities`, `granite-routing`, `tds-ui`이고 optional skill 이름은 `cloudflare-worker`, `supabase-project`, `firebase-functions`, `backoffice-react`, `trpc-boundary`이다.
@@ -160,7 +297,7 @@
      - old name이 entrypoint에 남지 않는 assertion을 먼저 추가한다.
 
 2. canonical rename과 mirror 경로 교체
-   - 대상: `packages/scaffold-skills/package.json`, `packages/scaffold-skills/*`, `packages/create-rn-miniapp/src/templates/{skills,feature-catalog,docs,frontend-policy}.ts`, 관련 테스트
+   - 대상: `packages/agent-skills/package.json`, `packages/agent-skills/*`, `packages/create-rn-miniapp/src/templates/{skills,feature-catalog,docs,frontend-policy}.ts`, 관련 테스트
    - 작업:
      - 디렉터리 이름과 `SKILL.md` frontmatter `name`을 함께 rename한다.
      - core skill id와 optional skill metadata를 새 이름으로 교체한다.
@@ -170,7 +307,7 @@
      - rename snapshot/assertion, mirror equality assertion, old name absence assertion을 먼저 추가한다.
 
 3. provider state 분리와 server README 재구성
-   - 대상: `packages/scaffold-skills/{cloudflare-worker,supabase-project,firebase-functions}/**`, `packages/create-rn-miniapp/src/patching/server.ts`, 필요 시 provider finalize tests
+   - 대상: `packages/agent-skills/{cloudflare-worker,supabase-project,firebase-functions}/**`, `packages/create-rn-miniapp/src/patching/server.ts`, 필요 시 provider finalize tests
    - 작업:
      - provider skill에서 existing/create 분기, remoteInitialization 상태, 실제 resource identifier 예시, deploy/init/apply/seed 절차를 제거한다.
      - generated repo에 `server/.create-rn-miniapp/state.json`을 추가하고 최소 필드(`serverProvider`, `serverProjectMode`, `remoteInitialization`, `trpc`, `backoffice`)를 고정한다.
@@ -181,7 +318,7 @@
      - provider별 README/state/script 생성 및 내용 assertion을 먼저 추가한다.
 
 4. provider reference 분해와 overlap 제거
-   - 대상: `packages/scaffold-skills/{cloudflare-worker,supabase-project,firebase-functions,miniapp-capabilities,granite-routing,tds-ui,trpc-boundary}/references/*`
+   - 대상: `packages/agent-skills/{cloudflare-worker,supabase-project,firebase-functions,miniapp-capabilities,granite-routing,tds-ui,trpc-boundary}/references/*`
    - 작업:
      - provider `references/provider-guide.md`를 `overview.md`, `local-dev.md`, `client-connection.md`, `troubleshooting.md`로 분해한다.
      - `miniapp-capabilities`, `granite-routing`, `tds-ui`, `trpc-boundary` description과 본문을 `Use when ... / Do not use for ...` 구조로 재작성한다.
@@ -283,7 +420,7 @@
    - 릴리스 전에는 diff 기준으로 실제 영향 패키지를 묶어 한국어 changeset과 PR 설명을 맞춰야 한다.
 2. 방향
    - `origin/main...HEAD` diff와 publish 대상 package manifest를 기준으로 변경 범위를 요약한다.
-   - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates`, `@create-rn-miniapp/scaffold-skills`에 minor changeset을 한국어로 추가한다.
+   - `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates`, `@create-rn-miniapp/agent-skills`에 minor changeset을 한국어로 추가한다.
    - `pnpm verify`를 다시 실행한 뒤, 같은 diff 기준으로 한국어 PR 초안을 작성한다.
 3. 완료 기준
    - minor changeset이 한국어로 추가된다.
@@ -482,7 +619,7 @@
    - 생성기 코드도 optional doc marker 삽입에 기대고 있어, skill source/mirror를 기준으로 구조를 확장하기 어렵다.
 2. 방향
    - 계약 문서와 skill corpus의 책임을 분리하고, 생성 결과를 기준으로 문서/테스트를 함께 갱신한다.
-   - `packages/scaffold-templates`는 계약 문서와 실제 workspace asset만 남기고, `packages/scaffold-skills`를 새 canonical source로 추가한다.
+   - `packages/scaffold-templates`는 계약 문서와 실제 workspace asset만 남기고, `packages/agent-skills`를 새 canonical source로 추가한다.
    - 생성기는 contract/docs/skills/workspace asset 렌더링 책임으로 쪼개고, `.agents/skills` 정본과 `.claude/skills` mirror를 함께 생성한다.
    - `verify`에는 skills mirror drift 검사를 추가하고, README/테스트/스냅샷을 새 출력 구조 기준으로 갱신한다.
 3. 테스트

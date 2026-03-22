@@ -34,13 +34,13 @@ test('prepareDevPublishPackageJsons rewrites all publish manifests to the same d
       name: 'create-rn-miniapp',
       version: '0.0.9',
       dependencies: {
-        '@create-rn-miniapp/scaffold-skills': 'workspace:*',
+        '@create-rn-miniapp/agent-skills': 'workspace:*',
         '@create-rn-miniapp/scaffold-templates': 'workspace:*',
         yargs: '^18.0.0',
       },
     },
     skillsPackageJson: {
-      name: '@create-rn-miniapp/scaffold-skills',
+      name: '@create-rn-miniapp/agent-skills',
       version: '0.0.9',
     },
     templatesPackageJson: {
@@ -53,7 +53,7 @@ test('prepareDevPublishPackageJsons rewrites all publish manifests to the same d
   assert.equal(prepared.skillsPackageJson.version, '0.0.0-dev.20260315090807')
   assert.equal(prepared.templatesPackageJson.version, '0.0.0-dev.20260315090807')
   assert.equal(
-    prepared.cliPackageJson.dependencies?.['@create-rn-miniapp/scaffold-skills'],
+    prepared.cliPackageJson.dependencies?.['@create-rn-miniapp/agent-skills'],
     '0.0.0-dev.20260315090807',
   )
   assert.equal(
@@ -76,24 +76,24 @@ test('published package names match the released npm packages', () => {
     name: string
   }
   const skillsPackageJson = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, 'packages/scaffold-skills/package.json'), 'utf8'),
+    fs.readFileSync(path.join(repoRoot, 'packages/agent-skills/package.json'), 'utf8'),
   ) as {
     name: string
   }
 
   assert.equal(cliPackageJson.name, 'create-rn-miniapp')
-  assert.equal(cliPackageJson.dependencies?.['@create-rn-miniapp/scaffold-skills'], 'workspace:*')
+  assert.equal(cliPackageJson.dependencies?.['@create-rn-miniapp/agent-skills'], 'workspace:*')
   assert.equal(
     cliPackageJson.dependencies?.['@create-rn-miniapp/scaffold-templates'],
     'workspace:*',
   )
-  assert.equal(skillsPackageJson.name, '@create-rn-miniapp/scaffold-skills')
+  assert.equal(skillsPackageJson.name, '@create-rn-miniapp/agent-skills')
   assert.equal(templatesPackageJson.name, '@create-rn-miniapp/scaffold-templates')
 })
 
 test('scaffold skills package does not hand-maintain one files entry per skill directory', () => {
   const skillsPackageJson = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, 'packages/scaffold-skills/package.json'), 'utf8'),
+    fs.readFileSync(path.join(repoRoot, 'packages/agent-skills/package.json'), 'utf8'),
   ) as {
     files?: string[]
   }
@@ -207,7 +207,7 @@ test('scaffold templates tarball keeps the root assets and new contract docs', (
 
 test('scaffold skills tarball keeps flat skill sources', () => {
   const packJson = execFileSync('npm', ['pack', '--dry-run', '--json'], {
-    cwd: path.join(repoRoot, 'packages/scaffold-skills'),
+    cwd: path.join(repoRoot, 'packages/agent-skills'),
     encoding: 'utf8',
   })
   const [packResult] = JSON.parse(packJson) as Array<{

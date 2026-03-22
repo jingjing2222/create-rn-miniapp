@@ -38,9 +38,17 @@ const EXPECTED_DOCS_TREE = [
   'engineering/workspace-topology.md',
   'index.md',
   'product/기능명세서.md',
+  'skills.md',
 ]
 
-const EXPECTED_SCRIPTS_TREE = ['check-skills.mjs', 'sync-skills.mjs', 'verify-frontend-routes.mjs']
+const EXPECTED_SCRIPTS_TREE = [
+  'check-skills.mjs',
+  'diff-skills.mjs',
+  'mirror-skills.mjs',
+  'sync-skills.mjs',
+  'upgrade-skills.mjs',
+  'verify-frontend-routes.mjs',
+]
 
 const CORE_SKILLS = ['granite-routing', 'miniapp-capabilities', 'tds-ui']
 const LEGACY_SKILL_NAMES = [
@@ -216,6 +224,11 @@ test('migration scaffold combinations generate docs, skills, and the claude mirr
       EXPECTED_SCRIPTS_TREE,
       combo.label,
     )
+    assert.equal(
+      await pathExists(path.join(targetRoot, '.create-rn-miniapp', 'skills.json')),
+      true,
+      combo.label,
+    )
 
     const expectedSkills = [...CORE_SKILLS, ...combo.expectedOptionalSkills].sort((left, right) =>
       left.localeCompare(right),
@@ -234,14 +247,14 @@ test('migration scaffold combinations generate docs, skills, and the claude mirr
       await pathExists(
         path.join(targetRoot, '.agents', 'skills', 'tds-ui', 'scripts', 'ensure-fresh.mjs'),
       ),
-      true,
+      false,
       combo.label,
     )
     assert.equal(
       await pathExists(
         path.join(targetRoot, '.claude', 'skills', 'tds-ui', 'scripts', 'refresh-catalog.mjs'),
       ),
-      true,
+      false,
       combo.label,
     )
 

@@ -81,6 +81,15 @@ test('parseCliArgs parses add mode flags', async () => {
   assert.equal(argv.rootDir, '/tmp/existing-miniapp')
 })
 
+test('parseCliArgs parses repeated extra-skill flags', async () => {
+  const argv = await parseCliArgs(
+    ['--extra-skill', 'release-checks', '--extra-skill', 'perf-audit'],
+    '/workspace',
+  )
+
+  assert.deepEqual(argv.extraSkills, ['release-checks', 'perf-audit'])
+})
+
 test('resolveCliOptions asks for missing values when interactive input is needed', async () => {
   const textCalls: Array<{
     message: string
@@ -457,6 +466,43 @@ test('resolveCliOptions accepts an explicit server-provider without extra server
   assert.equal(resolved.serverProvider, 'cloudflare')
   assert.equal(resolved.serverProjectMode, null)
   assert.deepEqual(selectMessages, ['`tRPC`도 같이 이어드릴까요?', '`backoffice`도 같이 만들까요?'])
+})
+
+test('resolveCliOptions keeps explicit manual extra skills without prompting multiselect', async () => {
+  const resolved = await resolveCliOptions(
+    {
+      add: false,
+      packageManager: 'pnpm',
+      name: 'ebook-miniapp',
+      displayName: '전자책 미니앱',
+      extraSkills: ['backoffice-react'],
+      rootDir: '/tmp/workspace',
+      outputDir: '/tmp/workspace',
+      skipInstall: false,
+      yes: false,
+      help: false,
+      version: false,
+    },
+    {
+      async text() {
+        throw new Error('text prompt should not be called')
+      },
+      async select(options) {
+        const fallback = options.options[0]
+
+        if (!fallback) {
+          throw new Error('선택지가 없습니다.')
+        }
+
+        return fallback.value
+      },
+      async multiselect() {
+        throw new Error('multiselect prompt should not be called')
+      },
+    },
+  )
+
+  assert.deepEqual(resolved.manualExtraSkills, ['backoffice-react'])
 })
 
 test('resolveCliOptions rejects server-project-mode without server-provider', async () => {
@@ -1223,13 +1269,14 @@ test('formatCliHelp renders Korean help text', () => {
   assert.match(help, /--root-dir <디렉터리>/)
   assert.match(help, /--server-provider <supabase\|cloudflare\|firebase>/)
   assert.match(help, /--trpc/)
+  assert.match(help, /--extra-skill <id>/)
   assert.match(help, /--server-project-mode <create\|existing>/)
   assert.doesNotMatch(help, /--with-server/)
   assert.match(help, /도움말 보기/)
   assert.match(help, /버전 보기/)
 })
 
-test('createClackPrompter delegates text input and single-choice selection to clack prompts', async () => {
+test('createClackPrompter delegates text input and choice prompts to clack prompts', async () => {
   const messages: string[] = []
   const prompter = createClackPrompter({
     async text(options) {
@@ -1263,6 +1310,18 @@ test('createClackPrompter delegates text input and single-choice selection to cl
 
       return primary
     },
+    async multiselect<T extends string>(options: {
+      message: string
+      options: Array<{
+        label: string
+        value: T
+        hint?: string
+      }>
+      initialValues?: T[]
+    }) {
+      messages.push(`multiselect:${options.message}`)
+      return options.options.slice(0, 1).map((option) => option.value)
+    },
     isCancel(_value): _value is symbol {
       return false
     },
@@ -1284,14 +1343,21 @@ test('createClackPrompter delegates text input and single-choice selection to cl
     ],
     initialValue: 'none',
   })
+  const multiselectValue = await prompter.multiselect?.({
+    message: '추가로 snapshot에 유지할 manual skill이 있나요?',
+    options: [{ label: 'backoffice-react', value: 'backoffice-react' }],
+    initialValues: [],
+  })
 
   assert.equal(textValue, 'ebook-miniapp')
   assert.equal(selectValue, 'firebase')
+  assert.deepEqual(multiselectValue, ['backoffice-react'])
   assert.deepEqual(messages, [
     'text:appName을 입력해 주세요',
     'guide:앱에서 보이는 이름이라서 자연스럽게 적어주면 돼요.',
     'text:displayName을 입력해 주세요',
     'select:`server` 제공자를 골라 주세요.',
+    'multiselect:추가로 snapshot에 유지할 manual skill이 있나요?',
   ])
 })
 
@@ -1310,6 +1376,9 @@ test('createClackPrompter turns prompt cancellation into a user-facing error', a
       initialValue?: T
     }) {
       return options.options[0]?.value ?? cancelled
+    },
+    async multiselect() {
+      return cancelled
     },
     isCancel(value): value is symbol {
       return value === cancelled

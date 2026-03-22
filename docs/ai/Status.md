@@ -31,7 +31,7 @@
   - `AGENTS.md`
   - `README.md`
     - 루트 계약 문서와 사용자 안내를 새 Skill 기준 이름에 맞춰 재작성
-  - `packages/scaffold-skills/*`
+  - `packages/agent-skills/*`
     - `miniapp`, `granite`, `tds`, `server-cloudflare`, `server-supabase`, `server-firebase` 디렉터리 rename
     - 각 `SKILL.md` frontmatter `name` / `description` 재작성
     - provider reference를 `overview`, `local-dev`, `client-connection`, `troubleshooting`로 분해

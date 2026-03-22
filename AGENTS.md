@@ -14,14 +14,14 @@
 - Status: `docs/ai/Status.md`
 - CLI package: `packages/create-rn-miniapp`
 - Generated AGENTS renderer: `packages/create-rn-miniapp/src/templates/docs.ts`
-- Skill package: `packages/scaffold-skills`
+- Skill package: `packages/agent-skills`
 - Template package: `packages/scaffold-templates`
 - Template CLAUDE: `packages/scaffold-templates/base/CLAUDE.md`
 
 ## Workspace Mental Model
 - `packages/create-rn-miniapp`: generator CLI
 - `packages/scaffold-templates`: generated repo에 복사할 하네스/문서 템플릿
-- `packages/scaffold-skills`: generated repo에 복사할 canonical skill source
+- `packages/agent-skills`: generated repo에 복사할 canonical skill source
 
 ## Skill Source
 - skill 이름, 라벨, docs path, optional 선택 기준은 `packages/create-rn-miniapp/src/templates/skill-catalog.ts`가 소유한다.

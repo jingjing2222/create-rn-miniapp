@@ -36,7 +36,7 @@ async function main() {
   const invocation = resolvePackageManagerCommand(
     packageManager,
     `${generatorPackage}@${generatorVersion}`,
-    ['skills', 'sync', '--root-dir', '.'],
+    ['skills', 'diff', '--root-dir', '.'],
   )
 
   await new Promise((resolve, reject) => {
@@ -51,7 +51,7 @@ async function main() {
         return
       }
 
-      reject(new Error(`skills sync가 실패했습니다. exit code: ${code ?? 'unknown'}`))
+      reject(new Error(`skills diff가 실패했습니다. exit code: ${code ?? 'unknown'}`))
     })
     child.on('error', reject)
   })

@@ -32,9 +32,9 @@ importers:
       '@clack/prompts':
         specifier: ^1.1.0
         version: 1.1.0
-      '@create-rn-miniapp/scaffold-skills':
+      '@create-rn-miniapp/agent-skills':
         specifier: workspace:*
-        version: link:../scaffold-skills
+        version: link:../agent-skills
       '@create-rn-miniapp/scaffold-templates':
         specifier: workspace:*
         version: link:../scaffold-templates
@@ -55,7 +55,7 @@ importers:
         specifier: ^17.0.33
         version: 17.0.35
 
-  packages/scaffold-skills: {}
+  packages/agent-skills: {}
 
   packages/scaffold-templates: {}
 

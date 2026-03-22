@@ -27,16 +27,11 @@ async function main() {
   const rootPackageJson = JSON.parse(await readFile(rootPackageJsonPath, 'utf8'))
   const packageManager = String(rootPackageJson.packageManager ?? '').split('@')[0]
   const generatorPackage = manifest.generatorPackage ?? 'create-rn-miniapp'
-  const generatorVersion = manifest.generatorVersion
-
-  if (!generatorVersion) {
-    throw new Error('skills manifest에 generatorVersion이 없습니다.')
-  }
-
+  const targetVersion = process.argv[2] ?? 'latest'
   const invocation = resolvePackageManagerCommand(
     packageManager,
-    `${generatorPackage}@${generatorVersion}`,
-    ['skills', 'sync', '--root-dir', '.'],
+    `${generatorPackage}@${targetVersion}`,
+    ['skills', 'upgrade', '--root-dir', '.', '--to', targetVersion],
   )
 
   await new Promise((resolve, reject) => {
@@ -51,7 +46,7 @@ async function main() {
         return
       }
 
-      reject(new Error(`skills sync가 실패했습니다. exit code: ${code ?? 'unknown'}`))
+      reject(new Error(`skills upgrade가 실패했습니다. exit code: ${code ?? 'unknown'}`))
     })
     child.on('error', reject)
   })

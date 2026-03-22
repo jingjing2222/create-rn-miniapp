@@ -24,14 +24,6 @@ version: 2.0.0
 - provider/runtime bootstrap
 - TDS 밖 native module 선택
 
-## Freshness hook
-
-1. 먼저 `node scripts/ensure-fresh.mjs`를 실행한다.
-2. `metadata.json.lastVerifiedAt`이 7일 이상 지났으면 최신 `@toss/tds-react-native`와 Toss Mini Docs 기준으로 refresh를 시도한다.
-3. refresh 산출물은 저장 전에 catalog/anomaly/metadata 계약 검증을 통과해야 한다.
-4. refresh가 성공하면 `generated/catalog.json`, `generated/anomalies.json`, `generated/catalog.md`, `AGENTS.md`, `metadata.json`을 다시 쓴다.
-5. refresh가 실패하면 warning만 남기고 현재 snapshot으로 계속 진행한다.
-
 ## Read in order
 
 1. `generated/catalog.json`

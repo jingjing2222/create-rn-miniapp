@@ -11,6 +11,7 @@ import {
   resolveCliOptions,
 } from './cli.js'
 import { addWorkspaces, scaffoldWorkspace } from './scaffold/index.js'
+import { runSkillsCommand } from './skills-command.js'
 import { TRPC_WORKSPACE_PATHS } from './trpc-workspace-metadata.js'
 import { inspectWorkspace } from './workspace-inspector.js'
 
@@ -32,7 +33,14 @@ function describeWorkspaceLayout(options: {
 
 export async function main() {
   try {
-    const argv = await parseCliArgs(hideBin(process.argv))
+    const rawArgs = hideBin(process.argv)
+
+    if (rawArgs[0] === 'skills') {
+      await runSkillsCommand(rawArgs.slice(1))
+      return
+    }
+
+    const argv = await parseCliArgs(rawArgs)
 
     if (argv.help) {
       console.log(formatCliHelp())
@@ -100,6 +108,7 @@ export async function main() {
         `server 프로젝트 연결: ${resolved.serverProvider ? (resolved.skipServerProvisioning ? '이번엔 건너뛸게요' : (resolved.serverProjectMode ?? '목록에서 고를게요')) : '해당 없어요'}`,
         `tRPC 포함: ${String(resolved.withTrpc)}`,
         `backoffice 포함: ${String(resolved.withBackoffice)}`,
+        `manual skill 추가: ${resolved.manualExtraSkills.length > 0 ? resolved.manualExtraSkills.join(', ') : '없음'}`,
       ].join('\n'),
       '이렇게 만들게요',
     )

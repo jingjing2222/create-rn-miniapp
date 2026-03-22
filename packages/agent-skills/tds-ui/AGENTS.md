@@ -8,13 +8,6 @@
 - `generated/catalog.json`
 - `generated/anomalies.json`
 
-## Freshness Hook
-- 먼저 `node scripts/ensure-fresh.mjs`를 실행한다.
-- `metadata.json.lastVerifiedAt`이 7일을 넘기면 최신 `@toss/tds-react-native`와 Toss Mini Docs 기준으로 refresh를 시도한다.
-- refresh 산출물은 저장 전에 catalog/anomaly/metadata 계약 검증을 통과해야 한다.
-- refresh가 성공하면 canonical `.agents/skills/tds-ui` snapshot을 갱신하고 `.claude/skills` mirror를 다시 sync한다.
-- refresh가 실패하면 warning만 남기고 현재 snapshot으로 계속 진행한다.
-
 ## Human References
 - `references/decision-matrix.md`
 - `references/form-patterns.md`

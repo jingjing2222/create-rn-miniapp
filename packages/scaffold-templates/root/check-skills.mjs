@@ -76,7 +76,7 @@ async function main() {
     messages.push(`- 내용이 다른 파일: ${changedFiles.join(', ')}`)
   }
 
-  messages.push('`{{skillsSyncCommand}}`로 mirror를 다시 동기화하세요.')
+  messages.push('`{{skillsMirrorCommand}}`로 mirror를 다시 동기화하세요.')
 
   throw new Error(messages.join('\n'))
 }
