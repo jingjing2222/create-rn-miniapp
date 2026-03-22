@@ -1,3 +1,15 @@
+## 다음 작업: README skills 안내를 단일 skill 예시 기준으로 축약
+
+### 목표
+- 루트 README와 생성물 README의 skills 안내를 더 짧게 줄인다.
+- 여러 skill을 한 번에 설치하는 예시는 제거하고, 단일 skill 설치 예시 한 줄만 남긴다.
+- 생성물 README도 같은 톤으로 맞춰서 과한 목록/명령 설명을 줄인다.
+
+### 작업 순서
+1. 현재 README 회귀 테스트를 단일 skill 예시와 축약 문구 기준으로 먼저 깨뜨린다.
+2. root README renderer와 generated README renderer를 같은 정책으로 간략화한다.
+3. `pnpm verify`를 다시 통과시키고 필요하면 커밋한다.
+
 ## 다음 작업: main 최신과 충돌 정리 후 브랜치 재푸시
 
 ### 목표

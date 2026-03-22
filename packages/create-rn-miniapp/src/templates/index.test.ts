@@ -15,6 +15,8 @@ import {
   ROOT_README_PROVIDER_SECTION_START_MARKER,
   ROOT_README_SKILLS_SECTION_END_MARKER,
   ROOT_README_SKILLS_SECTION_START_MARKER,
+  renderSkillsInstallExample,
+  renderSkillsStandardCommandSummary,
   renderRootReadmeProviderSection,
   renderRootReadmeSkillsSection,
 } from '../root-readme.js'
@@ -23,7 +25,6 @@ import {
   SKILLS_LIST_COMMAND,
   SKILLS_UPDATE_COMMAND,
 } from '../skills-contract.js'
-import { renderSkillsAddCommand } from '../skills-install.js'
 import { CORE_SKILL_DEFINITIONS, SKILL_CATALOG } from './skill-catalog.js'
 import { getTestPackageManagerField } from '../test-support/package-manager.js'
 import * as templateModule from './index.js'
@@ -429,7 +430,7 @@ test('skill taxonomy metadata is centralized in a shared catalog', async () => {
   assert.match(featureCatalogSource, /from '\.\/skill-catalog\.js'/)
   assert.match(skillsInstallSource, /from '\.\/templates\/feature-catalog\.js'/)
   assert.match(skillsInstallSource, /from '\.\/skills-contract\.js'/)
-  assert.match(docsSource, /from '\.\.\/skills-contract\.js'/)
+  assert.match(docsSource, /from '\.\.\/root-readme\.js'/)
   assert.match(skillsContractSource, /PROJECT_SKILLS_CANONICAL_DIR/)
   assert.doesNotMatch(catalogSource, /from '\.\.\/skills-contract\.js'/)
   assert.doesNotMatch(catalogSource, /docsPath:/)
@@ -1001,9 +1002,10 @@ test('README treats generated skills as a first-class scaffold output and avoids
     fileURLToPath(new URL('../../../../README.md', import.meta.url)),
     'utf8',
   )
-  const expectedCoreInstallCommand = renderSkillsAddCommand(
+  const expectedCoreInstallCommand = renderSkillsInstallExample(
     CORE_SKILL_DEFINITIONS.map((skill) => skill.id),
   )
+  const expectedCommandSummary = renderSkillsStandardCommandSummary()
 
   assert.match(
     readmeSource,
@@ -1024,12 +1026,8 @@ test('README treats generated skills as a first-class scaffold output and avoids
     /이 저장소의 `skills\/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README\.md`가 추천 목록을 자동으로 보여줘요\./,
   )
   assert.match(readmeSource, new RegExp(escapeRegExp(expectedCoreInstallCommand)))
-  for (const skill of SKILL_CATALOG) {
-    assert.match(readmeSource, new RegExp(`- \`${escapeRegExp(skill.id)}\``))
-  }
-  for (const command of [SKILLS_LIST_COMMAND, SKILLS_CHECK_COMMAND, SKILLS_UPDATE_COMMAND]) {
-    assert.match(readmeSource, new RegExp(escapeRegExp(command)))
-  }
+  assert.match(readmeSource, new RegExp(escapeRegExp(expectedCommandSummary)))
+  assert.doesNotMatch(readmeSource, /지금 설치할 수 있는 skill id는 이거예요\./)
   assert.doesNotMatch(readmeSource, /canonical/i)
   assert.doesNotMatch(readmeSource, /source of truth/i)
   assert.doesNotMatch(readmeSource, /생성물 계약/)
@@ -1113,7 +1111,7 @@ test('README lists scaffolded skills in user-facing groups without leaking maint
     fileURLToPath(new URL('../../../../README.md', import.meta.url)),
     'utf8',
   )
-  const expectedCoreInstallCommand = renderSkillsAddCommand(
+  const expectedCoreInstallCommand = renderSkillsInstallExample(
     CORE_SKILL_DEFINITIONS.map((skill) => skill.id),
   )
 
@@ -1123,9 +1121,9 @@ test('README lists scaffolded skills in user-facing groups without leaking maint
   assert.match(agentsSource, /Skill source: `skills`/)
   assert.match(readmeSource, /생성된 repo `README\.md`가 추천 목록을 자동으로 보여줘요\./)
   assert.match(readmeSource, new RegExp(escapeRegExp(expectedCoreInstallCommand)))
-  for (const skillId of ['backoffice-react', 'cloudflare-worker', 'trpc-boundary']) {
-    assert.match(readmeSource, new RegExp(`- \`${escapeRegExp(skillId)}\``))
-  }
+  assert.doesNotMatch(readmeSource, /backoffice-react/)
+  assert.doesNotMatch(readmeSource, /cloudflare-worker/)
+  assert.doesNotMatch(readmeSource, /trpc-boundary/)
   assert.doesNotMatch(readmeSource, /^- core:/m)
   assert.doesNotMatch(readmeSource, /^- optional:/m)
   assert.doesNotMatch(readmeSource, /skill-catalog\.ts/)
@@ -1907,9 +1905,8 @@ test('applyDocsTemplates omits local skill routing and docs/skills for base-only
   assert.match(copilot, /AGENTS\.md/)
   assert.match(readme, /## skills 전략/)
   assert.match(readme, /npx skills add/)
+  assert.match(readme, /추천 skill:/)
   assert.match(readme, /miniapp-capabilities/)
-  assert.match(readme, /granite-routing/)
-  assert.match(readme, /tds-ui/)
   assert.match(docsIndex, /repo-contract\.md/)
   assert.match(docsIndex, /frontend-policy\.md/)
   assert.match(docsIndex, /workspace-topology\.md/)
@@ -1937,6 +1934,7 @@ test('applyDocsTemplates keeps backoffice-only workspaces free of server-only to
   assert.match(workspaceTopology, /### backoffice/)
   assert.doesNotMatch(workspaceTopology, /### server/)
   assert.doesNotMatch(workspaceTopology, /backoffice ↔ server 직접 import 금지/)
+  assert.match(readme, /추천 skill:/)
   assert.match(readme, /backoffice-react/)
   assert.doesNotMatch(readme, /cloudflare-worker/)
 })
@@ -1995,7 +1993,7 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
   assert.match(readme, /### Installed/)
   assert.match(readme, /miniapp-capabilities/)
   assert.match(readme, /tds-ui/)
-  assert.doesNotMatch(readme, /### Recommended/)
+  assert.doesNotMatch(readme, /추천 skill:/)
   assert.doesNotMatch(readme, /설치 예시:/)
   assert.doesNotMatch(readme, /npx skills add/)
 })

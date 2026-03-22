@@ -5,7 +5,7 @@ import {
   SKILLS_LIST_COMMAND,
   SKILLS_UPDATE_COMMAND,
 } from './skills-contract.js'
-import { CORE_SKILL_DEFINITIONS, SKILL_CATALOG } from './templates/skill-catalog.js'
+import { CORE_SKILL_DEFINITIONS } from './templates/skill-catalog.js'
 
 export const ROOT_README_SKILLS_SECTION_START_MARKER = '<!-- generated:skills-strategy:start -->'
 export const ROOT_README_SKILLS_SECTION_END_MARKER = '<!-- generated:skills-strategy:end -->'
@@ -19,29 +19,33 @@ export const SKILLS_STRATEGY_README_LINES = [
   '- 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.',
 ]
 
+export function renderSkillsInstallExample(skillIds: readonly string[]) {
+  const exampleSkillId = skillIds[0] ?? CORE_SKILL_DEFINITIONS[0]?.id
+
+  if (!exampleSkillId) {
+    throw new Error('skills install example을 만들 기본 skill id를 찾지 못했어요.')
+  }
+
+  return renderSkillsAddCommand([exampleSkillId])
+}
+
+export function renderSkillsStandardCommandSummary() {
+  return `설치 뒤에는 \`${SKILLS_LIST_COMMAND}\`, \`${SKILLS_CHECK_COMMAND}\`, \`${SKILLS_UPDATE_COMMAND}\`만 기억하면 돼요.`
+}
+
 export function renderRootReadmeSkillsSection() {
   const exampleSkillIds = CORE_SKILL_DEFINITIONS.map((skill) => skill.id)
 
   return [
     ...SKILLS_STRATEGY_README_LINES,
     '',
-    '예를 들어 기본 작업용 skill을 바로 넣고 싶다면 이렇게 하면 돼요.',
+    '예를 들어 필요한 skill 하나를 바로 넣고 싶다면 이렇게 하면 돼요.',
     '',
     '```bash',
-    renderSkillsAddCommand(exampleSkillIds),
+    renderSkillsInstallExample(exampleSkillIds),
     '```',
     '',
-    '지금 설치할 수 있는 skill id는 이거예요.',
-    '',
-    ...SKILL_CATALOG.map((skill) => `- \`${skill.id}\``),
-    '',
-    '설치 뒤에는 표준 명령만 기억하면 돼요.',
-    '',
-    '```bash',
-    SKILLS_LIST_COMMAND,
-    SKILLS_CHECK_COMMAND,
-    SKILLS_UPDATE_COMMAND,
-    '```',
+    renderSkillsStandardCommandSummary(),
   ].join('\n')
 }
 
