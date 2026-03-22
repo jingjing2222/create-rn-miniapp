@@ -3,15 +3,19 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { CommandExecutionError } from '../../commands.js'
 import {
   buildCreateSupabaseProjectArgs,
   extractJsonPayload,
   finalizeSupabaseProvisioning,
   formatSupabaseManualSetupNote,
+  formatSupabaseAccessTokenRequiredMessage,
+  isSupabaseAccessTokenRequiredError,
   pollForNewSupabaseProject,
   resolveSupabaseClientApiKey,
   shouldAutoApplySupabaseRemoteDatabase,
   shouldAutoDeploySupabaseEdgeFunctions,
+  withSupabaseAccessTokenRequirement,
   writeSupabaseServerLocalEnvFile,
   writeSupabaseLocalEnvFiles,
 } from './provision.js'
@@ -103,6 +107,77 @@ test('buildCreateSupabaseProjectArgs appends only the project name positional ar
     'create',
     'test-project',
   ])
+})
+
+test('isSupabaseAccessTokenRequiredError detects token-first auth failures', () => {
+  assert.equal(
+    isSupabaseAccessTokenRequiredError(
+      'Access token not provided. Supply an access token by running supabase login or setting the SUPABASE_ACCESS_TOKEN environment variable.',
+    ),
+    true,
+  )
+  assert.equal(
+    isSupabaseAccessTokenRequiredError(
+      'Cannot use automatic login flow inside non-TTY environments. Please provide --token flag or set the SUPABASE_ACCESS_TOKEN environment variable.',
+    ),
+    true,
+  )
+  assert.equal(
+    isSupabaseAccessTokenRequiredError('Supabase API key 조회 중에 실패했어요. network timeout'),
+    false,
+  )
+})
+
+test('formatSupabaseAccessTokenRequiredMessage explains token-first recovery steps', () => {
+  const message = formatSupabaseAccessTokenRequiredMessage({
+    packageManager: 'yarn',
+    originalError:
+      'Access token not provided. Supply an access token by running supabase login or setting the SUPABASE_ACCESS_TOKEN environment variable.',
+  })
+
+  assert.match(message, /Supabase 인증 토큰이 필요해요\./)
+  assert.match(message, /non-TTY subprocess/)
+  assert.match(message, /SUPABASE_ACCESS_TOKEN/)
+  assert.match(message, /yarn dlx supabase@2\.83\.0 login --token <token>/)
+  assert.match(message, /dashboard\/account\/tokens/)
+  assert.match(message, /Access token not provided/)
+})
+
+test('withSupabaseAccessTokenRequirement converts auth failures without retrying login', async () => {
+  let attempts = 0
+
+  await assert.rejects(
+    withSupabaseAccessTokenRequirement('yarn', async () => {
+      attempts += 1
+
+      throw new CommandExecutionError({
+        label: 'Supabase 프로젝트 목록 조회',
+        command: 'yarn',
+        args: ['dlx', 'supabase@2.83.0', 'projects', 'list', '--output', 'json'],
+        stdout: '',
+        stderr:
+          'Access token not provided. Supply an access token by running supabase login or setting the SUPABASE_ACCESS_TOKEN environment variable.',
+        exitCode: 1,
+      })
+    }),
+    /Supabase 인증 토큰이 필요해요\./,
+  )
+
+  assert.equal(attempts, 1)
+})
+
+test('withSupabaseAccessTokenRequirement preserves unrelated failures', async () => {
+  const expectedError = new Error('network timeout')
+
+  await assert.rejects(
+    withSupabaseAccessTokenRequirement('pnpm', async () => {
+      throw expectedError
+    }),
+    (error) => {
+      assert.equal(error, expectedError)
+      return true
+    },
+  )
 })
 
 test('shouldAutoApplySupabaseRemoteDatabase only enables remote db push for new projects', () => {

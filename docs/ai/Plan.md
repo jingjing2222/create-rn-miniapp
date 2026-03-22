@@ -1,3 +1,16 @@
+## 다음 작업: Supabase non-TTY 로그인 fallback 제거
+
+### 목표
+- Supabase provisioning이 비-TTY 환경에서 `supabase login` interactive flow로 떨어지지 않게 만든다.
+- Supabase 인증은 token-first 계약으로 정리하고, 자동 로그인 불가 상황에서는 `SUPABASE_ACCESS_TOKEN` 설정 안내를 명확히 보여 준다.
+- 기존 scaffold/provision 흐름은 유지하되, non-interactive 환경에서 에러 흐름이 더 이상 잘못된 순서로 흔들리지 않게 고정한다.
+
+### 작업 순서
+1. Supabase provisioning 테스트에 `projects list` 실패 시 non-TTY/token-required 에러는 `supabase login`을 시도하지 않는 red test를 먼저 추가한다.
+2. `provision.ts`에서 interactive login fallback 조건을 분리해서, token-required/non-TTY auth failure는 즉시 사용자 안내 에러로 전환한다.
+3. manual setup note와 에러 문구를 token-first 흐름에 맞춰 정리하고, 필요하면 기존 `.env.local` 안내와 연결한다.
+4. targeted test와 `pnpm verify`를 통과시킨 뒤 단일 목적 커밋으로 정리한다.
+
 ## 다음 작업: dedent 잔여 authored multiline 전수조사
 
 ### 목표
