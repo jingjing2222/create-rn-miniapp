@@ -8,6 +8,44 @@ import { fileURLToPath } from 'node:url'
 const SRC_ROOT = fileURLToPath(new URL('../src/', import.meta.url))
 const FORBIDDEN_RUNTIME_MODULES = ['templates/runtime.ts', 'patching/runtime.ts'] as const
 const FORBIDDEN_INTERNAL_BARRELS = new Set(['templates/index.ts', 'patching/index.ts'])
+const DEDENT_REGRESSION_PATTERNS = [
+  {
+    relativePath: 'patching/server.ts',
+    description: 'renderServerScaffoldStateSection manual line-array assembly',
+    pattern: /function renderServerScaffoldStateSection\(\)\s*{\s*return \[/,
+  },
+  {
+    relativePath: 'patching/ast/granite.ts',
+    description: 'renderGranitePresetSource manual parts assembly',
+    pattern: /const parts = \[/,
+  },
+  {
+    relativePath: 'templates/server.ts',
+    description: 'renderFirebaseFunctionsGitignore manual line-array assembly',
+    pattern:
+      /function renderFirebaseFunctionsGitignore\(packageManager: string\)\s*{\s*const lines = \['lib\/', 'node_modules\/'\]/,
+  },
+  {
+    relativePath: 'providers/cloudflare/provision.ts',
+    description: 'formatCloudflareManualSetupNote manual line-array assembly',
+    pattern: /export function formatCloudflareManualSetupNote[\s\S]*?const lines = \[/,
+  },
+  {
+    relativePath: 'providers/supabase/provision.ts',
+    description: 'formatSupabaseManualSetupNote manual line-array assembly',
+    pattern: /export function formatSupabaseManualSetupNote[\s\S]*?const lines = \[/,
+  },
+  {
+    relativePath: 'providers/firebase/provision.ts',
+    description: 'firebase fallback message inline newline assembly',
+    pattern: /return `\$\{options\.rawMessage\}\\n상세 로그: \$\{debugLogPath\}`/,
+  },
+  {
+    relativePath: 'providers/firebase/provision.ts',
+    description: 'formatFirebaseManualSetupNote manual line-array assembly',
+    pattern: /export function formatFirebaseManualSetupNote[\s\S]*?const lines = \[/,
+  },
+] as const
 
 async function listSourceFiles(currentDir: string): Promise<string[]> {
   const { readdir } = await import('node:fs/promises')
@@ -379,6 +417,19 @@ test('non-test implementation modules do not build authored multiline strings wi
       staticJoinSites,
       [],
       `static multiline array join found in ${path.relative(SRC_ROOT, filePath)}: ${staticJoinSites.join(', ')}`,
+    )
+  }
+})
+
+test('runtime authored multiline helpers do not regress to manual string assembly', async () => {
+  for (const rule of DEDENT_REGRESSION_PATTERNS) {
+    const filePath = path.join(SRC_ROOT, rule.relativePath)
+    const source = await readFile(filePath, 'utf8')
+
+    assert.equal(
+      rule.pattern.test(source),
+      false,
+      `manual multiline assembly found in ${rule.relativePath}: ${rule.description}`,
     )
   }
 })

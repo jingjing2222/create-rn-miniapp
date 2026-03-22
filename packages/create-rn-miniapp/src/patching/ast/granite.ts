@@ -470,29 +470,30 @@ export function renderGranitePresetSource(serverProvider: ServerProvider | null)
     throw new Error(`지원하지 않는 frontend provider preset입니다: ${serverProvider}`)
   }
 
-  const parts = [
-    "import path from 'node:path'",
-    "import dotenv from 'dotenv'",
-    '',
-    FRONTEND_REPO_ROOT_PREAMBLE.trimEnd(),
-    frontendEnvConfig.preamble.trimEnd(),
-    `export const scaffoldEnvBindings = ${frontendEnvConfig.bindingsSource}`,
-  ]
+  const firebaseResolverSource =
+    serverProvider === 'firebase'
+      ? dedent`
+          ${FIREBASE_CRYPTO_SHIM_PREAMBLE.trimEnd()}
 
-  if (serverProvider === 'firebase') {
-    parts.push('', FIREBASE_CRYPTO_SHIM_PREAMBLE.trimEnd())
-    parts.push('export const firebaseBuildResolver = { alias: cryptoModuleAliases }')
-    parts.push(
-      dedent`
-  export const firebaseMetroResolver = {
-    conditionNames: ['react-native', 'browser', 'require', 'default'],
-    extraNodeModules: { crypto: cryptoShimPath, 'node:crypto': cryptoShimPath },
-  }
-`,
-    )
-  }
+          export const firebaseBuildResolver = { alias: cryptoModuleAliases }
 
-  return `${parts.join('\n\n').trimEnd()}\n`
+          export const firebaseMetroResolver = {
+            conditionNames: ['react-native', 'browser', 'require', 'default'],
+            extraNodeModules: { crypto: cryptoShimPath, 'node:crypto': cryptoShimPath },
+          }
+        `
+      : ''
+
+  return `${dedent`
+    import path from 'node:path'
+    import dotenv from 'dotenv'
+
+    ${FRONTEND_REPO_ROOT_PREAMBLE.trimEnd()}
+
+    ${frontendEnvConfig.preamble.trimEnd()}
+
+    export const scaffoldEnvBindings = ${frontendEnvConfig.bindingsSource}
+  `.trimEnd()}${firebaseResolverSource ? `\n\n${firebaseResolverSource}` : ''}\n`
 }
 
 export function patchGraniteConfigSource(

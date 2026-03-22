@@ -2404,6 +2404,10 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
     path.join(targetRoot, 'server', 'scripts', 'firebase-functions-deploy.mjs'),
     'utf8',
   )
+  const functionsGitignore = await readFile(
+    path.join(targetRoot, 'server', 'functions', '.gitignore'),
+    'utf8',
+  )
 
   assert.equal(firebaserc.projects?.default, 'ebook-firebase')
   assert.equal(serverPackageJson.dependencies?.['google-auth-library'], '^10.6.1')
@@ -2453,6 +2457,7 @@ test('applyFirebaseServerWorkspaceTemplate creates firebase server skeleton with
   )
   assert.equal(functionsPackageJson.devDependencies?.tsx, '^4.20.5')
   assert.equal(functionsPackageJson.devDependencies?.typescript, '^5.7.3')
+  assert.equal(functionsGitignore, 'lib/\nnode_modules/\n')
   assert.match(serverFirestoreRules, /rules_version = '2'/)
   assert.deepEqual(serverFirestoreIndexes.indexes, [])
   assert.deepEqual(serverFirestoreIndexes.fieldOverrides, [])

@@ -151,6 +151,17 @@ function formatSupabaseEdgeFunctionSkipGuidance() {
   ]
 }
 
+function renderOptionalTextBlock(lines: string[]) {
+  if (lines.length === 0) {
+    return ''
+  }
+
+  return dedent`
+
+    ${lines.join('\n')}
+  `
+}
+
 export function extractJsonPayload<T>(output: Pick<CommandOutput, 'stdout' | 'stderr'>) {
   const cleanedStdout = stripCliStructuredOutput(output.stdout)
   const fullStdout = cleanedStdout
@@ -204,50 +215,45 @@ export function formatSupabaseManualSetupNote(options: {
     options.projectRef,
     '<Supabase Settings > API에서 복사한 Publishable key>',
   )
-  const lines = [
-    'Supabase publishable key를 자동으로 가져오지 못했습니다. 아래 URL에서 키를 확인한 뒤 직접 넣어주세요.',
-    '',
-    getSupabaseApiSettingsUrl(options.projectRef),
-    '',
-    path.join(options.targetRoot, 'frontend', '.env.local'),
-    env.frontend.trimEnd(),
-  ]
-
-  if (options.hasBackoffice) {
-    lines.push(
-      '',
-      path.join(options.targetRoot, 'backoffice', '.env.local'),
-      env.backoffice.trimEnd(),
-    )
-  }
-
-  lines.push(
-    '',
-    path.join(options.targetRoot, 'server', '.env.local'),
-    createSupabaseServerEnvValues(options.projectRef, '<프로젝트 DB password>').trimEnd(),
-  )
-
-  if (options.didApplyRemoteDb === false) {
-    lines.push('', ...formatSupabaseRemoteDbSkipGuidance())
-  }
-
-  if (options.didDeployEdgeFunctions === false) {
-    lines.push('', ...formatSupabaseEdgeFunctionSkipGuidance())
-  }
-
   const secretGuidance = formatSupabaseSecretGuidance({
     projectRef: options.projectRef,
     hasDbPassword: options.hasDbPassword,
     hasAccessToken: options.hasAccessToken ?? false,
   })
+  const backofficeBlock = options.hasBackoffice
+    ? dedent`
 
-  if (secretGuidance.length > 0) {
-    lines.push('', ...secretGuidance)
-  }
+        ${path.join(options.targetRoot, 'backoffice', '.env.local')}
+        ${env.backoffice.trimEnd()}
+      `
+    : ''
+  const remoteDbSkipBlock =
+    options.didApplyRemoteDb === false
+      ? renderOptionalTextBlock(formatSupabaseRemoteDbSkipGuidance())
+      : ''
+  const edgeFunctionSkipBlock =
+    options.didDeployEdgeFunctions === false
+      ? renderOptionalTextBlock(formatSupabaseEdgeFunctionSkipGuidance())
+      : ''
+  const secretGuidanceBlock = renderOptionalTextBlock(secretGuidance)
+  const serverEnv = createSupabaseServerEnvValues(
+    options.projectRef,
+    '<프로젝트 DB password>',
+  ).trimEnd()
 
   return {
     title: 'Supabase 연결 값을 이렇게 넣어 주세요',
-    body: lines.join('\n'),
+    body: dedent`
+      Supabase publishable key를 자동으로 가져오지 못했습니다. 아래 URL에서 키를 확인한 뒤 직접 넣어주세요.
+
+      ${getSupabaseApiSettingsUrl(options.projectRef)}
+
+      ${path.join(options.targetRoot, 'frontend', '.env.local')}
+      ${env.frontend.trimEnd()}${backofficeBlock}
+
+      ${path.join(options.targetRoot, 'server', '.env.local')}
+      ${serverEnv}${remoteDbSkipBlock}${edgeFunctionSkipBlock}${secretGuidanceBlock}
+    `,
   }
 }
 

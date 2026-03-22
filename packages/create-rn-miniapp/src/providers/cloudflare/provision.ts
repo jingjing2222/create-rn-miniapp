@@ -858,49 +858,44 @@ export function formatCloudflareManualSetupNote(options: {
   r2BucketName: string
   didInitializeRemoteContent?: boolean
 }): ProvisioningNote {
-  const lines = [
-    `Cloudflare Worker \`${options.workerName}\`의 배포 URL을 확인한 뒤 아래 파일에 직접 넣어 주세요.`,
-  ]
+  const skippedInitializationBlock =
+    options.didInitializeRemoteContent === false
+      ? dedent`
 
-  if (options.didInitializeRemoteContent === false) {
-    lines.push('', '기존 Cloudflare Worker를 골라서 원격 초기화는 자동으로 건너뛰었어요.')
-  }
+          기존 Cloudflare Worker를 골라서 원격 초기화는 자동으로 건너뛰었어요.
+        `
+      : ''
+  const backofficeBlock = options.hasBackoffice
+    ? dedent`
 
-  lines.push(
-    '',
-    path.join(options.targetRoot, 'frontend', '.env.local'),
-    'MINIAPP_API_BASE_URL=<배포된 Worker URL>',
-  )
-
-  if (options.hasBackoffice) {
-    lines.push(
-      '',
-      path.join(options.targetRoot, 'backoffice', '.env.local'),
-      'VITE_API_BASE_URL=<배포된 Worker URL>',
-    )
-  }
-
-  lines.push(
-    '',
-    path.join(options.targetRoot, 'server', '.env.local'),
-    createCloudflareServerEnvValues({
-      accountId: options.accountId,
-      workerName: options.workerName,
-      d1DatabaseId: options.d1DatabaseId,
-      d1DatabaseName: options.d1DatabaseName,
-      r2BucketName: options.r2BucketName,
-      apiToken: '<optional api token>',
-    }).trimEnd(),
-    '',
-    'server/.env.local 에는 Cloudflare Worker, D1, R2 메타데이터를 적어둬요.',
-    'server/package.json 의 deploy 는 server/.env.local 의 auth 값을 읽고 wrangler.jsonc 기준으로 원격 Worker를 다시 배포해요.',
-    '',
-    ...buildCloudflareApiTokenGuideLines(),
-  )
+        ${path.join(options.targetRoot, 'backoffice', '.env.local')}
+        VITE_API_BASE_URL=<배포된 Worker URL>
+      `
+    : ''
+  const tokenGuideBlock = renderOptionalMarkdownLines(buildCloudflareApiTokenGuideLines())
+  const serverEnv = createCloudflareServerEnvValues({
+    accountId: options.accountId,
+    workerName: options.workerName,
+    d1DatabaseId: options.d1DatabaseId,
+    d1DatabaseName: options.d1DatabaseName,
+    r2BucketName: options.r2BucketName,
+    apiToken: '<optional api token>',
+  }).trimEnd()
 
   return {
     title: 'Cloudflare API URL을 이렇게 넣어 주세요',
-    body: lines.join('\n'),
+    body: dedent`
+      Cloudflare Worker \`${options.workerName}\`의 배포 URL을 확인한 뒤 아래 파일에 직접 넣어 주세요.${skippedInitializationBlock}
+
+      ${path.join(options.targetRoot, 'frontend', '.env.local')}
+      MINIAPP_API_BASE_URL=<배포된 Worker URL>${backofficeBlock}
+
+      ${path.join(options.targetRoot, 'server', '.env.local')}
+      ${serverEnv}
+
+      server/.env.local 에는 Cloudflare Worker, D1, R2 메타데이터를 적어둬요.
+      server/package.json 의 deploy 는 server/.env.local 의 auth 값을 읽고 wrangler.jsonc 기준으로 원격 Worker를 다시 배포해요.${tokenGuideBlock}
+    `,
   }
 }
 

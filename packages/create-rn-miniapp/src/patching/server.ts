@@ -325,14 +325,18 @@ async function writeServerScaffoldSupportFiles(
 }
 
 function renderServerScaffoldStateSection() {
-  return [
-    '## Scaffold State',
-    '',
-    `- scaffold 상태의 source of truth는 \`server/${SERVER_SCAFFOLD_STATE_RELATIVE_PATH}\`예요.`,
-    '- provider skill을 읽거나 원격 명령을 실행하기 전에 이 파일과 이 README를 먼저 확인해요.',
-    `- read-only 확인용으로 ${SERVER_SCAFFOLD_READ_ONLY_SCRIPTS.map((filePath) => `\`node ./${filePath}\``).join(', ')}를 먼저 실행해요.`,
-    '- state에는 provider, project mode, remoteInitialization, tRPC, backoffice 포함 여부가 들어 있어요.',
-  ]
+  const readOnlyScriptCommands = SERVER_SCAFFOLD_READ_ONLY_SCRIPTS.map(
+    (filePath) => `\`node ./${filePath}\``,
+  ).join(', ')
+
+  return dedent`
+    ## Scaffold State
+
+    - scaffold 상태의 source of truth는 \`server/${SERVER_SCAFFOLD_STATE_RELATIVE_PATH}\`예요.
+    - provider skill을 읽거나 원격 명령을 실행하기 전에 이 파일과 이 README를 먼저 확인해요.
+    - read-only 확인용으로 ${readOnlyScriptCommands}를 먼저 실행해요.
+    - state에는 provider, project mode, remoteInitialization, tRPC, backoffice 포함 여부가 들어 있어요.
+  `
 }
 
 function renderServerRemoteOpsSection(commands: string[]) {
@@ -491,7 +495,7 @@ function renderSupabaseServerReadme(options?: {
       package.json
     \`\`\`
     
-    ${(renderServerScaffoldStateSection()).join('\n')}
+    ${renderServerScaffoldStateSection()}
 
     ${renderServerReadmeCliVersionsSection('supabase')}
     
@@ -577,7 +581,7 @@ function renderCloudflareServerReadme(options?: {
       package.json
     \`\`\`
     
-    ${(renderServerScaffoldStateSection()).join('\n')}
+    ${renderServerScaffoldStateSection()}
 
     ${renderServerReadmeCliVersionsSection('cloudflare')}
     
@@ -671,7 +675,7 @@ function renderFirebaseServerReadme(options?: {
       package.json
     \`\`\`
     
-    ${(renderServerScaffoldStateSection()).join('\n')}
+    ${renderServerScaffoldStateSection()}
 
     ${renderServerReadmeCliVersionsSection('firebase')}
     

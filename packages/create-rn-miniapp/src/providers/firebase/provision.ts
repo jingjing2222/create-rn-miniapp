@@ -1258,7 +1258,10 @@ export function formatFirebaseAddFirebaseFailureMessage(options: {
 `
   }
 
-  return `${options.rawMessage}\n상세 로그: ${debugLogPath}`
+  return dedent`
+    ${options.rawMessage}
+    상세 로그: ${debugLogPath}
+  `
 }
 
 export function formatFirebaseFunctionsDeployFailureMessage(options: {
@@ -1874,55 +1877,47 @@ export function formatFirebaseManualSetupNote(options: {
     },
     options.functionRegion,
   )
+  const skippedInitializationBlock =
+    options.didInitializeRemoteContent === false
+      ? renderOptionalMarkdownLines([
+          '기존 Firebase 프로젝트를 골라서 Blaze와 build IAM 확인은 먼저 진행했고, 원격 초기화와 배포는 자동으로 건너뛰었어요.',
+        ])
+      : ''
+  const backofficeBlock = options.hasBackoffice
+    ? dedent`
 
-  const lines = [
-    'Firebase Web SDK 설정을 자동으로 가져오지 못했어요. 아래 URL에서 앱 설정을 확인한 뒤 직접 넣어 주세요.',
-  ]
-
-  if (options.didInitializeRemoteContent === false) {
-    lines.push(
-      '',
-      '기존 Firebase 프로젝트를 골라서 Blaze와 build IAM 확인은 먼저 진행했고, 원격 초기화와 배포는 자동으로 건너뛰었어요.',
-    )
-  }
-
-  lines.push(
-    '',
-    FIREBASE_CONSOLE_SETTINGS_URL(options.projectId),
-    '',
-    path.join(options.targetRoot, 'frontend', '.env.local'),
-    env.frontend.trimEnd(),
-  )
-
-  if (options.hasBackoffice) {
-    lines.push(
-      '',
-      path.join(options.targetRoot, 'backoffice', '.env.local'),
-      env.backoffice.trimEnd(),
-    )
-  }
-
-  lines.push(
-    '',
-    path.join(options.targetRoot, 'server', '.env.local'),
-    createFirebaseServerEnvValues(
-      options.projectId,
-      options.functionRegion,
-      options.hasConfiguredToken ? '<기존 값 유지>' : '',
-      options.hasConfiguredCredentials ? '<기존 값 유지>' : '',
-    ).trimEnd(),
-    '',
-    ...createFirebaseDeployAuthLines({
+        ${path.join(options.targetRoot, 'backoffice', '.env.local')}
+        ${env.backoffice.trimEnd()}
+      `
+    : ''
+  const deployAuthBlock = renderOptionalMarkdownLines(
+    createFirebaseDeployAuthLines({
       packageManager: options.packageManager,
       projectId: options.projectId,
       hasConfiguredToken: options.hasConfiguredToken,
       hasConfiguredCredentials: options.hasConfiguredCredentials,
     }),
   )
+  const serverEnv = createFirebaseServerEnvValues(
+    options.projectId,
+    options.functionRegion,
+    options.hasConfiguredToken ? '<기존 값 유지>' : '',
+    options.hasConfiguredCredentials ? '<기존 값 유지>' : '',
+  ).trimEnd()
 
   return {
     title: 'Firebase 연결 값을 이렇게 넣어 주세요',
-    body: lines.join('\n'),
+    body: dedent`
+      Firebase Web SDK 설정을 자동으로 가져오지 못했어요. 아래 URL에서 앱 설정을 확인한 뒤 직접 넣어 주세요.${skippedInitializationBlock}
+
+      ${FIREBASE_CONSOLE_SETTINGS_URL(options.projectId)}
+
+      ${path.join(options.targetRoot, 'frontend', '.env.local')}
+      ${env.frontend.trimEnd()}${backofficeBlock}
+
+      ${path.join(options.targetRoot, 'server', '.env.local')}
+      ${serverEnv}${deployAuthBlock}
+    `,
   } satisfies ProvisioningNote
 }
 

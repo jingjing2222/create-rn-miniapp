@@ -1,3 +1,16 @@
+## 다음 작업: dedent 잔여 authored multiline 전수조사
+
+### 목표
+- `packages/create-rn-miniapp/src` runtime 코드에서 아직 `dedent`로 올려야 하는 authored multiline string이 남았는지 다시 전수 조사한다.
+- 계산형 line collection과 runtime data join은 예외로 두고, 사람이 직접 쓴 block/string assembly만 후보로 분류한다.
+- 이번 턴은 구현보다 감사 범위를 먼저 닫고, 파일/패턴별로 바로 바꿔야 할 후보와 그대로 둬도 되는 예외를 구분해 기록한다.
+
+### 작업 순서
+1. `patching`, `templates/docs`, `providers`, `기타 runtime/helpers` 네 영역으로 나눠 병렬 감사한다.
+2. `join('\n')`, multiline template literal, fragment concatenation, conditional block assembly를 다시 훑어서 authored block 후보를 모은다.
+3. 후보마다 `dedent 필요`, `계산형 예외`, `애매하지만 유지 가능`으로 분류한다.
+4. 결과를 합쳐 다음 구현 턴에서 바로 수정 가능한 shortlist로 정리한다.
+
 ## 다음 작업: server README에 pinned CLI 버전 기입
 
 ### 목표

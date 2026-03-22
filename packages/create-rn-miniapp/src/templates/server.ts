@@ -525,15 +525,19 @@ function renderFirebaseServerGitignore() {
 }
 
 function renderFirebaseFunctionsGitignore(packageManager: string) {
-  const lines = ['lib/', 'node_modules/']
-
   if (packageManager === 'yarn') {
-    lines.push('.yarn/', '.pnp.*')
+    return dedentWithTrailingNewline`
+      lib/
+      node_modules/
+      .yarn/
+      .pnp.*
+    `
   }
 
-  lines.push('')
-
-  return lines.join('\n')
+  return dedentWithTrailingNewline`
+    lib/
+    node_modules/
+  `
 }
 
 function renderFirebaseFunctionsYarnrc() {
