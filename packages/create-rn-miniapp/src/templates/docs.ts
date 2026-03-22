@@ -20,6 +20,7 @@ import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
 import { createRootTemplateExtraTokens, renderRootVerifyStepsMarkdown } from './root.js'
 import { SKILL_CATALOG } from './skill-catalog.js'
 import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
+import dedent, { dedentWithTrailingNewline } from '../dedent.js'
 
 type DocumentDefinition = {
   relativePath: string
@@ -63,8 +64,12 @@ function renderTopologyRootSection(options: GeneratedWorkspaceOptions) {
 
 function renderTopologyRolesSection(options: GeneratedWorkspaceOptions) {
   const blocks = resolveEnabledWorkspaceFeatures(options).flatMap((feature) =>
-    (feature.roleSections ?? []).map((section) =>
-      [`### ${section.heading}`, ...section.lines(options)].join('\n'),
+    (feature.roleSections ?? []).map(
+      (section) =>
+        dedent`
+        ### ${section.heading}
+        ${(section.lines(options)).join('\n')}
+      `,
     ),
   )
 
@@ -137,24 +142,23 @@ async function renderAgentsMarkdown(
     getDocumentDefinition('docs/engineering/frontend-policy.md').relativePath,
   )
 
-  return [
-    '# AGENTS.md',
-    '',
-    `이 문서는 생성물 루트의 빠른 진입점입니다. 상세 저장소 계약과 완료 기준은 ${repoContractPath}가 소유하고, workspace별 정책은 \`docs/engineering/*\`가 소유합니다.`,
-    '',
-    '## Repository Contract',
-    ...repositoryContractLines,
-    '',
-    '## Start Here',
-    ...startHereLines,
-    '',
-    renderSection('Workspace Model', renderAgentsWorkspaceModelSection(options)),
-    '',
-    '## Done',
-    `- 세부 완료 기준은 ${repoContractPath}를 따른다.`,
-    `- frontend 변경은 ${frontendPolicyPath}까지 같이 확인한다.`,
-    '',
-  ].join('\n')
+  return dedentWithTrailingNewline`
+    # AGENTS.md
+    
+    이 문서는 생성물 루트의 빠른 진입점입니다. 상세 저장소 계약과 완료 기준은 ${repoContractPath}가 소유하고, workspace별 정책은 \`docs/engineering/*\`가 소유합니다.
+    
+    ## Repository Contract
+    ${(repositoryContractLines).join('\n')}
+    
+    ## Start Here
+    ${(startHereLines).join('\n')}
+    
+    ${renderSection('Workspace Model', renderAgentsWorkspaceModelSection(options))}
+    
+    ## Done
+    - 세부 완료 기준은 ${repoContractPath}를 따른다.
+    - frontend 변경은 ${frontendPolicyPath}까지 같이 확인한다.
+  `
 }
 
 function renderDocsIndexMarkdown(tokens: TemplateTokens) {
@@ -162,40 +166,38 @@ function renderDocsIndexMarkdown(tokens: TemplateTokens) {
     (document) => `- ${formatDocsRelativePath(document.relativePath)}`,
   )
 
-  return [
-    '# docs index',
-    '',
-    '문서 루트는 얇게 유지하고, 상세 규칙은 하위 문서와 Skill로 분리합니다.',
-    '',
-    '## 문서 구조',
-    '- `ai/`: `Plan`, `Status`, `Decisions`, `Prompt`',
-    '- `product/`: 제품 요구사항',
-    '- `engineering/`: 강제 규칙과 구조 정책',
-    '',
-    '## engineering 문서',
-    ...engineeringDocLines,
-    '',
-    renderSection('verify', renderRootVerifyStepsMarkdown(tokens.packageManager)),
-    '',
-    '## 운영 메모',
-    '- 새 규칙은 먼저 `engineering/*`에 들어갈지, README optional guide에 들어갈지 구분한다.',
-    '- agent skill 설치/업데이트 안내는 루트 `README.md`를 따른다.',
-    '- 문서 경로를 바꾸면 `AGENTS.md`, `CLAUDE.md`, Copilot instructions, Skill 경로를 같이 갱신한다.',
-    '',
-  ].join('\n')
+  return dedentWithTrailingNewline`
+    # docs index
+    
+    문서 루트는 얇게 유지하고, 상세 규칙은 하위 문서와 Skill로 분리합니다.
+    
+    ## 문서 구조
+    - \`ai/\`: \`Plan\`, \`Status\`, \`Decisions\`, \`Prompt\`
+    - \`product/\`: 제품 요구사항
+    - \`engineering/\`: 강제 규칙과 구조 정책
+    
+    ## engineering 문서
+    ${(engineeringDocLines).join('\n')}
+    
+    ${renderSection('verify', renderRootVerifyStepsMarkdown(tokens.packageManager))}
+    
+    ## 운영 메모
+    - 새 규칙은 먼저 \`engineering/*\`에 들어갈지, README optional guide에 들어갈지 구분한다.
+    - agent skill 설치/업데이트 안내는 루트 \`README.md\`를 따른다.
+    - 문서 경로를 바꾸면 \`AGENTS.md\`, \`CLAUDE.md\`, Copilot instructions, Skill 경로를 같이 갱신한다.
+  `
 }
 
 function renderWorkspaceTopologyMarkdown(options: GeneratedWorkspaceOptions) {
-  return [
-    '# Workspace Topology',
-    '',
-    renderSection('루트 구조', renderTopologyRootSection(options)),
-    '',
-    renderSection('역할 분리', renderTopologyRolesSection(options)),
-    '',
-    renderSection('ownership', renderTopologyOwnershipSection(options)),
-    '',
-  ].join('\n')
+  return dedentWithTrailingNewline`
+    # Workspace Topology
+    
+    ${renderSection('루트 구조', renderTopologyRootSection(options))}
+    
+    ${renderSection('역할 분리', renderTopologyRolesSection(options))}
+    
+    ${renderSection('ownership', renderTopologyOwnershipSection(options))}
+  `
 }
 
 function renderInstalledSkillReadmeLines(installedSkillIds: string[]) {
@@ -210,6 +212,33 @@ function renderInstalledSkillReadmeLines(installedSkillIds: string[]) {
   })
 }
 
+function renderRootReadmeSkillSection(options: {
+  installedSkillIds: string[]
+  recommendedSkillIds: string[]
+  recommendedSkillLabels: string[]
+}) {
+  if (options.installedSkillIds.length > 0) {
+    return dedent`
+      현재 project-local skills가 설치되어 있어요.
+
+      ### Installed
+      ${renderInstalledSkillReadmeLines(options.installedSkillIds).join('\n')}
+    `
+  }
+
+  if (options.recommendedSkillLabels.length === 0) {
+    return '필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.'
+  }
+
+  return dedent`
+    필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.
+
+    추천 skill: ${options.recommendedSkillLabels.join(', ')}
+
+    설치 예시: \`${renderSkillsInstallExample(options.recommendedSkillIds)}\`
+  `
+}
+
 async function renderRootReadmeMarkdown(
   tokens: TemplateTokens,
   options: GeneratedWorkspaceOptions,
@@ -217,44 +246,31 @@ async function renderRootReadmeMarkdown(
 ) {
   const recommendedSkillDefinitions = resolveRecommendedSkillDefinitions(options)
   const recommendedSkillIds = recommendedSkillDefinitions.map((skill) => skill.id)
+  const recommendedSkillLabels = recommendedSkillDefinitions.map((skill) => `\`${skill.id}\``)
   const installedSkillIds = installedSkills.map((skill) => skill.id)
 
-  return [
-    `# ${tokens.displayName}`,
-    '',
-    '`create-miniapp`로 생성한 MiniApp workspace예요.',
-    '',
-    '## Start Here',
-    '- `AGENTS.md`: 에이전트용 빠른 계약과 시작 순서',
-    '- `docs/index.md`: 문서 구조와 verify 동선',
-    '- `docs/product/기능명세서.md`: 제품 요구사항',
-    '',
-    ...SKILLS_STRATEGY_README_LINES,
-    ...(installedSkillIds.length > 0
-      ? [
-          '현재 project-local skills가 설치되어 있어요.',
-          '',
-          '### Installed',
-          ...renderInstalledSkillReadmeLines(installedSkillIds),
-        ]
-      : [
-          '필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.',
-          ...(recommendedSkillDefinitions.length > 0
-            ? [
-                '',
-                `추천 skill: ${recommendedSkillDefinitions.map((skill) => `\`${skill.id}\``).join(', ')}`,
-                '',
-                `설치 예시: \`${renderSkillsInstallExample(recommendedSkillIds)}\``,
-              ]
-            : []),
-        ]),
-    '',
-    renderSkillsStandardCommandSummary(),
-    '',
-    '## Verify',
-    ...renderRootVerifyStepsMarkdown(tokens.packageManager).split('\n').filter(Boolean),
-    '',
-  ].join('\n')
+  return dedentWithTrailingNewline`
+    # ${tokens.displayName}
+    
+    \`create-miniapp\`로 생성한 MiniApp workspace예요.
+    
+    ## Start Here
+    - \`AGENTS.md\`: 에이전트용 빠른 계약과 시작 순서
+    - \`docs/index.md\`: 문서 구조와 verify 동선
+    - \`docs/product/기능명세서.md\`: 제품 요구사항
+    
+    ${(SKILLS_STRATEGY_README_LINES).join('\n')}
+    ${renderRootReadmeSkillSection({
+      installedSkillIds,
+      recommendedSkillIds,
+      recommendedSkillLabels,
+    })}
+    
+    ${renderSkillsStandardCommandSummary()}
+    
+    ## Verify
+    ${(renderRootVerifyStepsMarkdown(tokens.packageManager).split('\n').filter(Boolean)).join('\n')}
+  `
 }
 
 const DOCUMENT_DEFINITIONS: DocumentDefinition[] = [

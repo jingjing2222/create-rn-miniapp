@@ -10,6 +10,7 @@ import {
   parseTypeScriptModule,
   printTypeScriptModule,
 } from './shared.js'
+import dedent from '../../dedent.js'
 
 function isDocumentGetElementByIdRoot(expression: SwcExpression | undefined) {
   const candidate =
@@ -30,15 +31,15 @@ function isDocumentGetElementByIdRoot(expression: SwcExpression | undefined) {
 
 function createRootGuardStatements(renderArgument: SwcExpression) {
   const statements = parseStatements(
-    [
-      "const rootElement = document.getElementById('root')",
-      '',
-      'if (!rootElement) {',
-      "  throw new Error('Root element not found')",
-      '}',
-      '',
-      'createRoot(rootElement).render(null)',
-    ].join('\n'),
+    dedent`
+  const rootElement = document.getElementById('root')
+
+  if (!rootElement) {
+    throw new Error('Root element not found')
+  }
+
+  createRoot(rootElement).render(null)
+`,
     true,
   )
 

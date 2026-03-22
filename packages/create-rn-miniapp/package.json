@@ -28,6 +28,7 @@
     "@create-rn-miniapp/scaffold-templates": "workspace:*",
     "@swc/core": "^1.15.18",
     "cloudflare": "^5.2.0",
+    "dedent": "1.7.2",
     "env-paths": "^3.0.0",
     "execa": "^9.6.1",
     "gray-matter": "^4.0.3",

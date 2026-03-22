@@ -18,6 +18,7 @@ import {
   type SwcObjectExpression,
   upsertObjectProperty,
 } from './shared.js'
+import dedent, { dedentWithTrailingNewline } from '../../dedent.js'
 
 function getDefineConfigObject(module: SwcModule) {
   const exportStatement = module.body.find(
@@ -148,27 +149,25 @@ function ensureRepoRootWatchFolder(configObject: SwcObjectExpression) {
   })
 }
 
-const FRONTEND_REPO_ROOT_PREAMBLE = [
-  "export const workspaceRepoRoot = path.resolve(process.cwd(), '../')",
-  '',
-].join('\n')
+const FRONTEND_REPO_ROOT_PREAMBLE = dedentWithTrailingNewline`
+  export const workspaceRepoRoot = path.resolve(process.cwd(), '../')
+`
 
-const FIREBASE_CRYPTO_SHIM_PREAMBLE = [
-  "const cryptoShimPath = path.join(process.cwd(), 'src/shims/crypto.ts')",
-  'const cryptoModuleAliases = [',
-  '  {',
-  "    from: 'crypto',",
-  '    to: cryptoShimPath,',
-  '    exact: true,',
-  '  },',
-  '  {',
-  "    from: 'node:crypto',",
-  '    to: cryptoShimPath,',
-  '    exact: true,',
-  '  },',
-  ']',
-  '',
-].join('\n')
+const FIREBASE_CRYPTO_SHIM_PREAMBLE = dedentWithTrailingNewline`
+  const cryptoShimPath = path.join(process.cwd(), 'src/shims/crypto.ts')
+  const cryptoModuleAliases = [
+    {
+      from: 'crypto',
+      to: cryptoShimPath,
+      exact: true,
+    },
+    {
+      from: 'node:crypto',
+      to: cryptoShimPath,
+      exact: true,
+    },
+  ]
+`
 
 function createFrontendEnvPreamble(
   bindings: Array<{
@@ -188,31 +187,31 @@ function createFrontendEnvPreamble(
     return `const ${binding.identifierName} = ${resolver}('${binding.envName}')${defaultSuffix}`
   })
 
-  return [
-    "dotenv.config({ path: path.join(process.cwd(), '.env') })",
-    "dotenv.config({ path: path.join(process.cwd(), '.env.local'), override: true })",
-    '',
-    `function resolveMiniappEnv(name: ${envNameUnion}) {`,
-    '  const value = process.env[name]',
-    '',
-    '  if (!value || value.trim().length === 0) {',
-    "    throw new Error('[frontend] ' + name + ' is required. Set frontend/.env.local before running dev/build.')",
-    '  }',
-    '',
-    '  return value.trim()',
-    '}',
-    '',
-    ...(hasOptionalBindings
-      ? [
-          `function resolveOptionalMiniappEnv(name: ${envNameUnion}) {`,
-          '  return process.env[name]?.trim() ?? ""',
-          '}',
-          '',
-        ]
-      : []),
-    ...envStatements,
-    '',
-  ].join('\n')
+  return dedentWithTrailingNewline`
+    dotenv.config({ path: path.join(process.cwd(), '.env') })
+    dotenv.config({ path: path.join(process.cwd(), '.env.local'), override: true })
+    
+    function resolveMiniappEnv(name: ${envNameUnion}) {
+      const value = process.env[name]
+    
+      if (!value || value.trim().length === 0) {
+        throw new Error('[frontend] ' + name + ' is required. Set frontend/.env.local before running dev/build.')
+      }
+    
+      return value.trim()
+    }
+    
+    ${
+      hasOptionalBindings
+        ? dedentWithTrailingNewline`
+            function resolveOptionalMiniappEnv(name: ${envNameUnion}) {
+              return process.env[name]?.trim() ?? ""
+            }
+          `
+        : ''
+    }
+    ${(envStatements).join('\n')}
+  `
 }
 
 const FRONTEND_PROVIDER_ENV_CONFIG = {
@@ -458,7 +457,11 @@ function removeFirebaseCryptoShimResolvers(configObject: SwcObjectExpression) {
 
 export function renderGranitePresetSource(serverProvider: ServerProvider | null) {
   if (!serverProvider) {
-    return `${["import path from 'node:path'", '', FRONTEND_REPO_ROOT_PREAMBLE].join('\n').trimEnd()}\n`
+    return `${dedent`
+      import path from 'node:path'
+      
+      ${FRONTEND_REPO_ROOT_PREAMBLE}
+    `.trimEnd()}\n`
   }
 
   const frontendEnvConfig = FRONTEND_PROVIDER_ENV_CONFIG[serverProvider]
@@ -480,12 +483,12 @@ export function renderGranitePresetSource(serverProvider: ServerProvider | null)
     parts.push('', FIREBASE_CRYPTO_SHIM_PREAMBLE.trimEnd())
     parts.push('export const firebaseBuildResolver = { alias: cryptoModuleAliases }')
     parts.push(
-      [
-        'export const firebaseMetroResolver = {',
-        "  conditionNames: ['react-native', 'browser', 'require', 'default'],",
-        "  extraNodeModules: { crypto: cryptoShimPath, 'node:crypto': cryptoShimPath },",
-        '}',
-      ].join('\n'),
+      dedent`
+  export const firebaseMetroResolver = {
+    conditionNames: ['react-native', 'browser', 'require', 'default'],
+    extraNodeModules: { crypto: cryptoShimPath, 'node:crypto': cryptoShimPath },
+  }
+`,
     )
   }
 

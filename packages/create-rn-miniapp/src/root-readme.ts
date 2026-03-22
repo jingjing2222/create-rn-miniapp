@@ -6,6 +6,7 @@ import {
   SKILLS_UPDATE_COMMAND,
 } from './skills-contract.js'
 import { CORE_SKILL_DEFINITIONS } from './templates/skill-catalog.js'
+import dedent from './dedent.js'
 
 export const ROOT_README_SKILLS_SECTION_START_MARKER = '<!-- generated:skills-strategy:start -->'
 export const ROOT_README_SKILLS_SECTION_END_MARKER = '<!-- generated:skills-strategy:end -->'
@@ -36,30 +37,32 @@ export function renderSkillsStandardCommandSummary() {
 export function renderRootReadmeSkillsSection() {
   const exampleSkillIds = CORE_SKILL_DEFINITIONS.map((skill) => skill.id)
 
-  return [
-    ...SKILLS_STRATEGY_README_LINES,
-    '',
-    '예를 들어 필요한 skill 하나를 바로 넣고 싶다면 이렇게 하면 돼요.',
-    '',
-    '```bash',
-    renderSkillsInstallExample(exampleSkillIds),
-    '```',
-    '',
-    renderSkillsStandardCommandSummary(),
-  ].join('\n')
+  return dedent`
+    ${(SKILLS_STRATEGY_README_LINES).join('\n')}
+    
+    예를 들어 필요한 skill 하나를 바로 넣고 싶다면 이렇게 하면 돼요.
+    
+    \`\`\`bash
+    ${renderSkillsInstallExample(exampleSkillIds)}
+    \`\`\`
+    
+    ${renderSkillsStandardCommandSummary()}
+  `
 }
 
 export function renderRootReadmeProviderSection() {
-  return [
-    '## server provider 고르기',
-    '',
-    ...SERVER_PROVIDERS.map((provider) => {
-      const adapter = getServerProviderAdapter(provider)
-      return `- \`${provider}\`: ${adapter.readmeDescription}`
-    }),
-    '',
-    '상세 연결 순서와 운영 방식은 생성된 repo의 `server/README.md`와 루트 문서를 보면 돼요.',
-  ].join('\n')
+  return dedent`
+    ## server provider 고르기
+    
+    ${(
+      SERVER_PROVIDERS.map((provider) => {
+        const adapter = getServerProviderAdapter(provider)
+        return `- \`${provider}\`: ${adapter.readmeDescription}`
+      })
+    ).join('\n')}
+    
+    상세 연결 순서와 운영 방식은 생성된 repo의 \`server/README.md\`와 루트 문서를 보면 돼요.
+  `
 }
 
 function replaceManagedBlock(

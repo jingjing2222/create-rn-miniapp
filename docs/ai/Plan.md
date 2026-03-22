@@ -1,3 +1,29 @@
+## 다음 작업: runtime dedent 잔여 authored block 재감사
+
+### 목표
+- 1차 `dedent` 전환 뒤에도 남아 있는 runtime `join('\n')` 사용처를 다시 전수 조사한다.
+- 계산형 line collection과 `dedent` 내부 interpolation join은 예외로 남기고, 사람이 직접 authoring한 multiline block이 남아 있으면 추가로 `dedent`로 올린다.
+- audit 결과를 테스트와 `pnpm verify`로 다시 고정한다.
+
+### 작업 순서
+1. 남아 있는 runtime `join('\n')`를 파일별로 분류해서 계산형 예외와 authored multiline 후보를 나눈다.
+2. 아직 array literal/fragment 조립으로 남아 있는 authored block은 `dedent` 또는 `dedentWithTrailingNewline`으로 전환한다.
+3. targeted test와 `pnpm verify`로 회귀를 다시 확인한다.
+
+## 다음 작업: runtime multiline string을 dedent 기준으로 정리
+
+### 목표
+- `packages/create-rn-miniapp/src` 런타임 코드에서 사람이 직접 authoring한 multiline 문자열을 `['...'].join('\n')` 대신 `dedent` 기준으로 정리한다.
+- `dedent`는 `create-rn-miniapp` direct dependency로 추가하고, 얇은 로컬 helper 경유로만 import하게 통일한다.
+- 테스트 문자열은 이번 1차 범위에서 제외하고, runtime source에 새 static array literal `join('\n')` 패턴이 남지 않게 meta-test로 막는다.
+
+### 작업 순서
+1. `docs/ai/Plan.md` 갱신 후, runtime source에 남아 있는 static array literal `join('\n')`를 감지하는 red test를 먼저 추가한다.
+2. `packages/create-rn-miniapp`에 `dedent`를 direct dependency로 추가하고, `src/dedent.ts` 같은 얇은 helper를 만든다.
+3. `patching/*`, `templates/*`, `providers/*` 순서로 사람이 작성한 multiline literal을 `dedent` tagged template로 전환한다. 줄바꿈 contract가 필요한 경우 trailing newline을 명시적으로 유지한다.
+4. 계산형 line collection(`map/filter/slice` 결과 join 등)만 예외로 남기고, meta-test allowlist를 최소 범위로 고정한다.
+5. targeted test와 `pnpm verify`를 통과시킨 뒤 단일 목적 커밋으로 정리한다.
+
 ## 다음 작업: root workspace topology를 manifest-driven으로 전환
 
 ### 목표

@@ -27,175 +27,168 @@ import {
   type WorkspacePatchOptions,
   writeTextFile,
 } from './shared.js'
+import { dedentWithTrailingNewline } from '../dedent.js'
 
-const BACKOFFICE_ENV_TYPES = [
-  '/// <reference types="vite/client" />',
-  '',
-  'interface ImportMetaEnv {',
-  '  readonly VITE_SUPABASE_URL: string',
-  '  readonly VITE_SUPABASE_PUBLISHABLE_KEY: string',
-  '}',
-  '',
-  'interface ImportMeta {',
-  '  readonly env: ImportMetaEnv',
-  '}',
-  '',
-].join('\n')
+const BACKOFFICE_ENV_TYPES = dedentWithTrailingNewline`
+  /// <reference types="vite/client" />
 
-const BACKOFFICE_CLOUDFLARE_ENV_TYPES = [
-  '/// <reference types="vite/client" />',
-  '',
-  'interface ImportMetaEnv {',
-  '  readonly VITE_API_BASE_URL: string',
-  '}',
-  '',
-  'interface ImportMeta {',
-  '  readonly env: ImportMetaEnv',
-  '}',
-  '',
-].join('\n')
+  interface ImportMetaEnv {
+    readonly VITE_SUPABASE_URL: string
+    readonly VITE_SUPABASE_PUBLISHABLE_KEY: string
+  }
 
-const BACKOFFICE_FIREBASE_ENV_TYPES = [
-  '/// <reference types="vite/client" />',
-  '',
-  'interface ImportMetaEnv {',
-  '  readonly VITE_FIREBASE_API_KEY: string',
-  '  readonly VITE_FIREBASE_AUTH_DOMAIN: string',
-  '  readonly VITE_FIREBASE_PROJECT_ID: string',
-  '  readonly VITE_FIREBASE_STORAGE_BUCKET: string',
-  '  readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string',
-  '  readonly VITE_FIREBASE_APP_ID: string',
-  '  readonly VITE_FIREBASE_MEASUREMENT_ID: string',
-  '}',
-  '',
-  'interface ImportMeta {',
-  '  readonly env: ImportMetaEnv',
-  '}',
-  '',
-].join('\n')
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
+`
 
-const BACKOFFICE_SUPABASE_CLIENT = [
-  "import { createClient, type SupabaseClient } from '@supabase/supabase-js'",
-  '',
-  'function resolveSupabaseUrl() {',
-  "  const value = import.meta.env.VITE_SUPABASE_URL?.trim() ?? ''",
-  '',
-  '  if (!value) {',
-  "    throw new Error('[backoffice] VITE_SUPABASE_URL is required.')",
-  '  }',
-  '',
-  '  return value',
-  '}',
-  '',
-  'function resolveSupabasePublishableKey() {',
-  "  const value = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? ''",
-  '',
-  '  if (!value) {',
-  "    throw new Error('[backoffice] VITE_SUPABASE_PUBLISHABLE_KEY is required.')",
-  '  }',
-  '',
-  '  return value',
-  '}',
-  '',
-  'function isSafeHttpUrl(value: string) {',
-  '  try {',
-  '    const parsed = new URL(value)',
-  "    return parsed.protocol === 'http:' || parsed.protocol === 'https:'",
-  '  } catch {',
-  '    return false',
-  '  }',
-  '}',
-  '',
-  'const supabaseUrl = resolveSupabaseUrl()',
-  'if (!isSafeHttpUrl(supabaseUrl)) {',
-  '  throw new Error(',
-  "    '[backoffice] VITE_SUPABASE_URL must be a valid http(s) URL. Received: ' + supabaseUrl",
-  '  )',
-  '}',
-  '',
-  'export const supabase: SupabaseClient = createClient(',
-  '  supabaseUrl,',
-  '  resolveSupabasePublishableKey(),',
-  '  {',
-  '    auth: {',
-  '      persistSession: true,',
-  '      autoRefreshToken: true,',
-  '      detectSessionInUrl: false,',
-  '    },',
-  '  },',
-  ')',
-  '',
-].join('\n')
+const BACKOFFICE_CLOUDFLARE_ENV_TYPES = dedentWithTrailingNewline`
+  /// <reference types="vite/client" />
 
-const BACKOFFICE_CLOUDFLARE_API_CLIENT = [
-  'function isSafeHttpUrl(value: string) {',
-  '  try {',
-  '    const parsed = new URL(value)',
-  "    return parsed.protocol === 'http:' || parsed.protocol === 'https:'",
-  '  } catch {',
-  '    return false',
-  '  }',
-  '}',
-  '',
-  'function resolveApiBaseUrl() {',
-  "  const configured = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''",
-  '',
-  '  if (!isSafeHttpUrl(configured)) {',
-  '    throw new Error(',
-  "      '[backoffice] VITE_API_BASE_URL must be a valid http(s) URL. Received: ' + (configured || '<empty>')",
-  '    )',
-  '  }',
-  '',
-  "  return configured.replace(/\\/$/, '')",
-  '}',
-  '',
-  'export const apiBaseUrl = resolveApiBaseUrl()',
-  '',
-  'export function resolveApiUrl(pathname: string) {',
-  "  const normalizedPath = pathname.replace(/^\\//, '')",
-  "  return new URL(normalizedPath, apiBaseUrl + '/').toString()",
-  '}',
-  '',
-  'export async function apiFetch(pathname: string, init?: RequestInit) {',
-  '  return fetch(resolveApiUrl(pathname), init)',
-  '}',
-  '',
-].join('\n')
+  interface ImportMetaEnv {
+    readonly VITE_API_BASE_URL: string
+  }
 
-const BACKOFFICE_FIREBASE_APP = [
-  "import { getApp, getApps, initializeApp } from 'firebase/app'",
-  '',
-  'const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID?.trim()',
-  '',
-  'const firebaseConfig = {',
-  '  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,',
-  '  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,',
-  '  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,',
-  '  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,',
-  '  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,',
-  '  appId: import.meta.env.VITE_FIREBASE_APP_ID,',
-  '  ...(measurementId ? { measurementId } : {}),',
-  '}',
-  '',
-  'export const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)',
-  '',
-].join('\n')
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
+`
 
-const BACKOFFICE_FIREBASE_FIRESTORE = [
-  "import { getFirestore } from 'firebase/firestore'",
-  "import { firebaseApp } from './firebase'",
-  '',
-  'export const firestore = getFirestore(firebaseApp)',
-  '',
-].join('\n')
+const BACKOFFICE_FIREBASE_ENV_TYPES = dedentWithTrailingNewline`
+  /// <reference types="vite/client" />
 
-const BACKOFFICE_FIREBASE_STORAGE = [
-  "import { getStorage } from 'firebase/storage'",
-  "import { firebaseApp } from './firebase'",
-  '',
-  'export const storage = getStorage(firebaseApp)',
-  '',
-].join('\n')
+  interface ImportMetaEnv {
+    readonly VITE_FIREBASE_API_KEY: string
+    readonly VITE_FIREBASE_AUTH_DOMAIN: string
+    readonly VITE_FIREBASE_PROJECT_ID: string
+    readonly VITE_FIREBASE_STORAGE_BUCKET: string
+    readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string
+    readonly VITE_FIREBASE_APP_ID: string
+    readonly VITE_FIREBASE_MEASUREMENT_ID: string
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
+`
+
+const BACKOFFICE_SUPABASE_CLIENT = dedentWithTrailingNewline`
+  import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+
+  function resolveSupabaseUrl() {
+    const value = import.meta.env.VITE_SUPABASE_URL?.trim() ?? ''
+
+    if (!value) {
+      throw new Error('[backoffice] VITE_SUPABASE_URL is required.')
+    }
+
+    return value
+  }
+
+  function resolveSupabasePublishableKey() {
+    const value = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? ''
+
+    if (!value) {
+      throw new Error('[backoffice] VITE_SUPABASE_PUBLISHABLE_KEY is required.')
+    }
+
+    return value
+  }
+
+  function isSafeHttpUrl(value: string) {
+    try {
+      const parsed = new URL(value)
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    } catch {
+      return false
+    }
+  }
+
+  const supabaseUrl = resolveSupabaseUrl()
+  if (!isSafeHttpUrl(supabaseUrl)) {
+    throw new Error(
+      '[backoffice] VITE_SUPABASE_URL must be a valid http(s) URL. Received: ' + supabaseUrl
+    )
+  }
+
+  export const supabase: SupabaseClient = createClient(
+    supabaseUrl,
+    resolveSupabasePublishableKey(),
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    },
+  )
+`
+
+const BACKOFFICE_CLOUDFLARE_API_CLIENT = dedentWithTrailingNewline`
+  function isSafeHttpUrl(value: string) {
+    try {
+      const parsed = new URL(value)
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    } catch {
+      return false
+    }
+  }
+
+  function resolveApiBaseUrl() {
+    const configured = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
+
+    if (!isSafeHttpUrl(configured)) {
+      throw new Error(
+        '[backoffice] VITE_API_BASE_URL must be a valid http(s) URL. Received: ' + (configured || '<empty>')
+      )
+    }
+
+    return configured.replace(/\\/$/, '')
+  }
+
+  export const apiBaseUrl = resolveApiBaseUrl()
+
+  export function resolveApiUrl(pathname: string) {
+    const normalizedPath = pathname.replace(/^\\//, '')
+    return new URL(normalizedPath, apiBaseUrl + '/').toString()
+  }
+
+  export async function apiFetch(pathname: string, init?: RequestInit) {
+    return fetch(resolveApiUrl(pathname), init)
+  }
+`
+
+const BACKOFFICE_FIREBASE_APP = dedentWithTrailingNewline`
+  import { getApp, getApps, initializeApp } from 'firebase/app'
+
+  const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID?.trim()
+
+  const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    ...(measurementId ? { measurementId } : {}),
+  }
+
+  export const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+`
+
+const BACKOFFICE_FIREBASE_FIRESTORE = dedentWithTrailingNewline`
+  import { getFirestore } from 'firebase/firestore'
+  import { firebaseApp } from './firebase'
+
+  export const firestore = getFirestore(firebaseApp)
+`
+
+const BACKOFFICE_FIREBASE_STORAGE = dedentWithTrailingNewline`
+  import { getStorage } from 'firebase/storage'
+  import { firebaseApp } from './firebase'
+
+  export const storage = getStorage(firebaseApp)
+`
 
 async function writeBackofficeSupabaseBootstrap(backofficeRoot: string) {
   await writeTextFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), BACKOFFICE_ENV_TYPES)

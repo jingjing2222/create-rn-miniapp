@@ -10,6 +10,7 @@ import { getPackageManagerAdapter, type PackageManager } from '../../package-man
 import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
 import { pathExists } from '../../templates/filesystem.js'
 import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
+import dedent, { dedentWithTrailingNewline } from '../../dedent.js'
 
 type SupabaseProject = {
   id: string
@@ -74,27 +75,24 @@ function createSupabaseEnvValues(projectRef: string, publishableKey: string) {
   const supabaseUrl = `https://${projectRef}.supabase.co`
 
   return {
-    frontend: [
-      `MINIAPP_SUPABASE_URL=${supabaseUrl}`,
-      `MINIAPP_SUPABASE_PUBLISHABLE_KEY=${publishableKey}`,
-      '',
-    ].join('\n'),
-    backoffice: [
-      `VITE_SUPABASE_URL=${supabaseUrl}`,
-      `VITE_SUPABASE_PUBLISHABLE_KEY=${publishableKey}`,
-      '',
-    ].join('\n'),
+    frontend: dedentWithTrailingNewline`
+  MINIAPP_SUPABASE_URL=${supabaseUrl}
+  MINIAPP_SUPABASE_PUBLISHABLE_KEY=${publishableKey}
+`,
+    backoffice: dedentWithTrailingNewline`
+  VITE_SUPABASE_URL=${supabaseUrl}
+  VITE_SUPABASE_PUBLISHABLE_KEY=${publishableKey}
+`,
   }
 }
 
 function createSupabaseServerEnvValues(projectRef: string, dbPassword = '', accessToken = '') {
-  return [
-    '# Used by server/package.json db:apply and functions:deploy for remote Supabase operations.',
-    `SUPABASE_PROJECT_REF=${projectRef}`,
-    `SUPABASE_DB_PASSWORD=${dbPassword}`,
-    `SUPABASE_ACCESS_TOKEN=${accessToken}`,
-    '',
-  ].join('\n')
+  return dedentWithTrailingNewline`
+  # Used by server/package.json db:apply and functions:deploy for remote Supabase operations.
+  SUPABASE_PROJECT_REF=${projectRef}
+  SUPABASE_DB_PASSWORD=${dbPassword}
+  SUPABASE_ACCESS_TOKEN=${accessToken}
+`
 }
 
 function getSupabaseApiSettingsUrl(projectRef: string) {
@@ -714,25 +712,31 @@ export async function finalizeSupabaseProvisioning(options: {
     return [
       {
         title: 'Supabase 연결 값을 적어뒀어요',
-        body: [
-          hasBackoffice
-            ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 적어뒀어요.'
-            : 'frontend/.env.local 에 Supabase 연결 값을 적어뒀어요.',
-          'server/.env.local 에도 필요한 값을 적어뒀어요.',
-          ...(options.provisionedProject.didApplyRemoteDb
-            ? []
-            : formatSupabaseRemoteDbSkipGuidance()),
-          ...(options.provisionedProject.didDeployEdgeFunctions
-            ? []
-            : formatSupabaseEdgeFunctionSkipGuidance()),
-          ...(serverEnv.hasDbPassword && serverEnv.hasAccessToken
-            ? []
-            : formatSupabaseSecretGuidance({
-                projectRef: options.provisionedProject.projectRef,
-                hasDbPassword: serverEnv.hasDbPassword,
-                hasAccessToken: serverEnv.hasAccessToken,
-              })),
-        ].join('\n'),
+        body: dedent`
+          ${
+            hasBackoffice
+              ? 'frontend/.env.local 과 backoffice/.env.local 에 Supabase 연결 값을 적어뒀어요.'
+              : 'frontend/.env.local 에 Supabase 연결 값을 적어뒀어요.'
+          }
+          server/.env.local 에도 필요한 값을 적어뒀어요.
+          ${(
+            options.provisionedProject.didApplyRemoteDb ? [] : formatSupabaseRemoteDbSkipGuidance()
+          ).join('\n')}
+          ${(
+            options.provisionedProject.didDeployEdgeFunctions
+              ? []
+              : formatSupabaseEdgeFunctionSkipGuidance()
+          ).join('\n')}
+          ${(
+            serverEnv.hasDbPassword && serverEnv.hasAccessToken
+              ? []
+              : formatSupabaseSecretGuidance({
+                  projectRef: options.provisionedProject.projectRef,
+                  hasDbPassword: serverEnv.hasDbPassword,
+                  hasAccessToken: serverEnv.hasAccessToken,
+                })
+          ).join('\n')}
+        `,
       },
     ] satisfies ProvisioningNote[]
   }

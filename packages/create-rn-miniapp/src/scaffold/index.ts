@@ -48,6 +48,7 @@ import {
   resolveRootWorkspaces,
 } from './helpers.js'
 import type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
+import dedent from '../dedent.js'
 
 export type { AddWorkspaceOptions, ScaffoldOptions } from './types.js'
 export {
@@ -177,11 +178,11 @@ async function maybeInstallSelectedSkills(options: {
       notes: [
         {
           title: 'Agent skills',
-          body: [
-            '추천 agent skills 자동 설치는 건너뛰었어요.',
-            message,
-            `필요하면 나중에 직접 실행해 주세요: \`${renderSkillsAddCommand(options.selectedSkills)}\``,
-          ].join('\n'),
+          body: dedent`
+            추천 agent skills 자동 설치는 건너뛰었어요.
+            ${message}
+            필요하면 나중에 직접 실행해 주세요: \`${renderSkillsAddCommand(options.selectedSkills)}\`
+          `,
         },
       ] satisfies ProvisioningNote[],
     }

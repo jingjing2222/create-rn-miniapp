@@ -13,6 +13,7 @@ import {
 } from './skills-contract.js'
 import { resolveRecommendedSkillDefinitions } from './templates/feature-catalog.js'
 import { SKILL_CATALOG, getSkillDefinition, type SkillId } from './templates/skill-catalog.js'
+import dedent from './dedent.js'
 
 type SkillRecommendationContext = {
   serverProvider: ServerProvider | null
@@ -132,15 +133,17 @@ export function renderInstalledSkillsSummary(
     return leftId.localeCompare(rightId)
   })
 
-  return [
-    'project-local skills를 설치했어요.',
-    ...normalizedSkills.map((skill) =>
-      typeof skill === 'string'
-        ? `- ${skill}`
-        : `- ${skill.id}: \`${createProjectSkillDirectoryPath(skill.id, skill.skillsRoot)}\``,
-    ),
-    `필요하면 \`${SKILLS_LIST_COMMAND}\`로 다시 확인해 주세요.`,
-  ].join('\n')
+  return dedent`
+    project-local skills를 설치했어요.
+    ${(
+      normalizedSkills.map((skill) =>
+        typeof skill === 'string'
+          ? `- ${skill}`
+          : `- ${skill.id}: \`${createProjectSkillDirectoryPath(skill.id, skill.skillsRoot)}\``,
+      )
+    ).join('\n')}
+    필요하면 \`${SKILLS_LIST_COMMAND}\`로 다시 확인해 주세요.
+  `
 }
 
 async function resolveSkillsSource() {

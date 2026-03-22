@@ -22,6 +22,7 @@ import {
 } from './skills-install.js'
 import { pathExists } from './templates/filesystem.js'
 import type { WorkspaceInspection } from './workspace-inspector.js'
+import dedent from './dedent.js'
 
 export type ParsedCliArgs = {
   add: boolean
@@ -245,42 +246,42 @@ export async function parseCliArgs(rawArgs: string[], cwd = process.cwd()) {
 export function formatCliHelp() {
   const serverProviderList = SERVER_PROVIDERS.join('|')
 
-  return [
-    '사용법',
-    '  create-miniapp [옵션]',
-    '',
-    '옵션',
-    '  --add                          이미 생성된 워크스페이스에 빠진 `server`/`backoffice` 추가',
-    '  --package-manager <pnpm|yarn|npm|bun> package manager 지정',
-    '  --name <app-name>              Granite appName과 생성 디렉터리 이름',
-    '  --display-name <표시 이름>     사용자에게 보이는 앱 이름',
-    '  --skill <id>                   같이 설치할 skill id 반복 지정',
-    '  --no-git                       생성 완료 후 루트 git init 생략',
-    `  --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정`,
-    '  --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정',
-    '  --trpc                         `cloudflare` server provider 위에 tRPC overlay 추가',
-    '  --with-backoffice              `backoffice` 워크스페이스 포함',
-    '  --root-dir <디렉터리>          `--add`에서 수정할 기존 모노레포 루트 디렉터리',
-    '  --output-dir <디렉터리>        생성할 모노레포의 상위 디렉터리',
-    '  --skip-install                 마지막 루트 package manager install 생략',
-    '  --yes                          선택형 질문을 기본값으로 진행',
-    '  --help                         도움말 보기',
-    '  --version                      버전 보기',
-    '',
-    '예시',
-    '  create-miniapp --package-manager yarn --name my-miniapp --display-name "내 미니앱"',
-    '  create-miniapp --name my-miniapp --display-name "내 미니앱"',
-    '  create-miniapp --name my-miniapp --server-provider supabase --with-backoffice',
-    '  create-miniapp --name my-miniapp --server-provider cloudflare',
-    '  create-miniapp --name my-miniapp --server-provider cloudflare --trpc',
-    '  create-miniapp --name my-miniapp --server-provider firebase',
-    '  create-miniapp --name my-miniapp --server-provider supabase --server-project-mode existing',
-    '  create-miniapp --name my-miniapp --server-provider cloudflare --server-project-mode existing',
-    '  create-miniapp --add --server-provider supabase',
-    '  create-miniapp --add --root-dir /path/to/existing-miniapp --with-backoffice',
-    '',
-    '옵션으로 주어지지 않은 값은 인터랙티브 입력으로 이어집니다.',
-  ].join('\n')
+  return dedent`
+  사용법
+    create-miniapp [옵션]
+
+  옵션
+    --add                          이미 생성된 워크스페이스에 빠진 \`server\`/\`backoffice\` 추가
+    --package-manager <pnpm|yarn|npm|bun> package manager 지정
+    --name <app-name>              Granite appName과 생성 디렉터리 이름
+    --display-name <표시 이름>     사용자에게 보이는 앱 이름
+    --skill <id>                   같이 설치할 skill id 반복 지정
+    --no-git                       생성 완료 후 루트 git init 생략
+    --server-provider <${serverProviderList}>   \`server\` 워크스페이스 제공자 지정
+    --server-project-mode <create|existing> server 원격 리소스 연결 방식 지정
+    --trpc                         \`cloudflare\` server provider 위에 tRPC overlay 추가
+    --with-backoffice              \`backoffice\` 워크스페이스 포함
+    --root-dir <디렉터리>          \`--add\`에서 수정할 기존 모노레포 루트 디렉터리
+    --output-dir <디렉터리>        생성할 모노레포의 상위 디렉터리
+    --skip-install                 마지막 루트 package manager install 생략
+    --yes                          선택형 질문을 기본값으로 진행
+    --help                         도움말 보기
+    --version                      버전 보기
+
+  예시
+    create-miniapp --package-manager yarn --name my-miniapp --display-name "내 미니앱"
+    create-miniapp --name my-miniapp --display-name "내 미니앱"
+    create-miniapp --name my-miniapp --server-provider supabase --with-backoffice
+    create-miniapp --name my-miniapp --server-provider cloudflare
+    create-miniapp --name my-miniapp --server-provider cloudflare --trpc
+    create-miniapp --name my-miniapp --server-provider firebase
+    create-miniapp --name my-miniapp --server-provider supabase --server-project-mode existing
+    create-miniapp --name my-miniapp --server-provider cloudflare --server-project-mode existing
+    create-miniapp --add --server-provider supabase
+    create-miniapp --add --root-dir /path/to/existing-miniapp --with-backoffice
+
+  옵션으로 주어지지 않은 값은 인터랙티브 입력으로 이어집니다.
+`
 }
 
 function validateServerProjectMode(
