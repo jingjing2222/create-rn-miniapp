@@ -313,3 +313,20 @@ test('runCommandWithOutput includes stdout and stderr in failure messages', asyn
     },
   )
 })
+
+test('runCommandWithOutput wraps missing executable errors with the command label', async () => {
+  await assert.rejects(
+    runCommandWithOutput({
+      cwd: '/tmp',
+      command: '__definitely_missing_create_rn_miniapp_command__',
+      args: [],
+      label: '실패 테스트',
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error)
+      assert.match(error.message, /실패 테스트 중에 실패했어요/)
+      assert.match(error.message, /__definitely_missing_create_rn_miniapp_command__/)
+      return true
+    },
+  )
+})

@@ -27,6 +27,9 @@
     "@clack/prompts": "^1.1.0",
     "@create-rn-miniapp/scaffold-templates": "workspace:*",
     "@swc/core": "^1.15.18",
+    "cloudflare": "^5.2.0",
+    "execa": "^9.6.1",
+    "gray-matter": "^4.0.3",
     "jsonc-parser": "^3.3.1",
     "yargs": "^18.0.0"
   },

@@ -1,13 +1,10 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-
-type SkillFrontmatter = {
-  id: string
-  agentsLabel: string
-  category: 'core' | 'optional'
-  order: number
-}
+import {
+  parseSkillFrontmatter,
+  type SkillFrontmatter,
+} from '../packages/create-rn-miniapp/src/skills-frontmatter.js'
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url))
 const skillsRoot = path.join(repoRoot, 'skills')
@@ -117,49 +114,6 @@ function renderSkillMetadataEntries(skills: SkillFrontmatter[]) {
         `  '${skill.id}': {\n    agentsLabel: '${escapeSingleQuotes(skill.agentsLabel)}',\n  },`,
     )
     .join('\n')
-}
-
-function parseSkillFrontmatter(source: string, expectedId: string): SkillFrontmatter {
-  const frontmatter = /^---\n([\s\S]*?)\n---/m.exec(source)?.[1]
-
-  if (!frontmatter) {
-    throw new Error(`frontmatter를 찾지 못했어요: ${expectedId}`)
-  }
-
-  const id = readFrontmatterField(frontmatter, 'name')
-  const agentsLabel = readFrontmatterField(frontmatter, 'label')
-  const category = readFrontmatterField(frontmatter, 'category')
-  const rawOrder = readFrontmatterField(frontmatter, 'order')
-  const order = Number.parseInt(rawOrder, 10)
-
-  if (id !== expectedId) {
-    throw new Error(`skill id가 디렉터리명과 다릅니다: ${expectedId} != ${id}`)
-  }
-
-  if (category !== 'core' && category !== 'optional') {
-    throw new Error(`skill category가 잘못됐어요: ${expectedId} -> ${category}`)
-  }
-
-  if (!Number.isFinite(order)) {
-    throw new Error(`skill order가 숫자가 아니에요: ${expectedId} -> ${rawOrder}`)
-  }
-
-  return {
-    id,
-    agentsLabel,
-    category,
-    order,
-  }
-}
-
-function readFrontmatterField(frontmatter: string, fieldName: string) {
-  const match = new RegExp(`^${fieldName}:\\s*(.+)$`, 'm').exec(frontmatter)
-
-  if (!match?.[1]) {
-    throw new Error(`frontmatter field를 찾지 못했어요: ${fieldName}`)
-  }
-
-  return match[1].trim()
 }
 
 function escapeSingleQuotes(source: string) {

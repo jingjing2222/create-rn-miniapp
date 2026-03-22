@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { log } from '@clack/prompts'
+import Cloudflare from 'cloudflare'
 import { parse } from 'jsonc-parser'
 import type { CommandSpec } from '../../command-spec.js'
 import {
@@ -26,21 +27,6 @@ type CloudflareAccount = {
   name: string
 }
 
-type CloudflareWorkerScript = {
-  id?: string
-  tag?: string
-}
-
-type CloudflareD1Database = {
-  uuid?: string
-  id?: string
-  name?: string
-}
-
-type CloudflareR2Bucket = {
-  name?: string
-}
-
 type WranglerD1Binding = {
   binding?: string
   database_id?: string
@@ -53,8 +39,6 @@ type WranglerR2Binding = {
 }
 
 type CloudflareSubdomainResult = {
-  enabled?: boolean
-  previews_enabled?: boolean
   subdomain?: string
 }
 
@@ -92,18 +76,14 @@ const CLOUDFLARE_WORKERS_AUTH_DOC_URL =
 const CLOUDFLARE_D1_BINDING_NAME = 'DB'
 const CLOUDFLARE_R2_BINDING_NAME = 'STORAGE'
 
-type CloudflareApiEnvelope<T> = {
-  success: boolean
-  errors?: Array<{
-    message?: string
-  }>
-  result: T
-}
-
-const CLOUDFLARE_API_BASE_URL = 'https://api.cloudflare.com/client/v4'
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function createCloudflareClient(authToken: string) {
+  return new Cloudflare({
+    apiToken: authToken,
+  })
 }
 
 function buildWranglerCommand(
@@ -282,102 +262,73 @@ async function refreshWranglerAuth(packageManager: PackageManager, cwd: string) 
   return nextAuth
 }
 
-async function requestCloudflareApi<T>(
-  authToken: string,
-  pathname: string,
-  init?: RequestInit,
-): Promise<T> {
-  const response = await fetch(`${CLOUDFLARE_API_BASE_URL}${pathname}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  })
+async function listCloudflareAccounts(authToken: string) {
+  const accounts: CloudflareAccount[] = []
 
-  const payload = (await response.json()) as CloudflareApiEnvelope<T>
-
-  if (!response.ok || !payload.success) {
-    const errorMessage =
-      payload.errors?.map((error) => error.message).find(Boolean) ??
-      `Cloudflare API 요청에 실패했습니다. (${response.status})`
-    throw new Error(errorMessage)
+  for await (const account of createCloudflareClient(authToken).accounts.list()) {
+    if (account.id && account.name) {
+      accounts.push({
+        id: account.id,
+        name: account.name,
+      })
+    }
   }
 
-  return payload.result
-}
-
-async function listCloudflareAccounts(authToken: string) {
-  return await requestCloudflareApi<CloudflareAccount[]>(authToken, '/accounts')
+  return accounts
 }
 
 async function listCloudflareWorkers(authToken: string, accountId: string) {
-  const scripts = await requestCloudflareApi<CloudflareWorkerScript[]>(
-    authToken,
-    `/accounts/${accountId}/workers/scripts`,
-  )
+  const workerNames: string[] = []
 
-  return scripts
-    .map((script) => script.id ?? script.tag ?? null)
-    .filter((scriptName): scriptName is string => Boolean(scriptName))
+  for await (const script of createCloudflareClient(authToken).workers.scripts.list({
+    account_id: accountId,
+  })) {
+    if (script.id) {
+      workerNames.push(script.id)
+    }
+  }
+
+  return workerNames
 }
 
 async function listCloudflareD1Databases(authToken: string, accountId: string) {
-  const result = await requestCloudflareApi<
-    CloudflareD1Database[] | { databases?: CloudflareD1Database[] }
-  >(authToken, `/accounts/${accountId}/d1/database`)
+  const databases: Array<{ id: string; name: string }> = []
 
-  const databases = Array.isArray(result)
-    ? result
-    : Array.isArray(result.databases)
-      ? result.databases
-      : []
+  for await (const database of createCloudflareClient(authToken).d1.database.list({
+    account_id: accountId,
+  })) {
+    if (database.uuid && database.name) {
+      databases.push({
+        id: database.uuid,
+        name: database.name,
+      })
+    }
+  }
 
   return databases
-    .map((database) => ({
-      id: database.uuid ?? database.id ?? null,
-      name: database.name?.trim() ?? null,
-    }))
-    .filter((database): database is { id: string; name: string } =>
-      Boolean(database.id && database.name),
-    )
 }
 
 async function listCloudflareR2Buckets(authToken: string, accountId: string) {
-  const result = await requestCloudflareApi<
-    CloudflareR2Bucket[] | { buckets?: CloudflareR2Bucket[] }
-  >(authToken, `/accounts/${accountId}/r2/buckets`)
+  const result = await createCloudflareClient(authToken).r2.buckets.list({
+    account_id: accountId,
+  })
 
-  const buckets = Array.isArray(result)
-    ? result
-    : Array.isArray(result.buckets)
-      ? result.buckets
-      : []
-
-  return buckets
+  return (result.buckets ?? [])
     .map((bucket) => bucket.name?.trim() ?? null)
     .filter((bucketName): bucketName is string => Boolean(bucketName))
 }
 
 async function getAccountSubdomain(authToken: string, accountId: string) {
-  return await requestCloudflareApi<CloudflareSubdomainResult>(
-    authToken,
-    `/accounts/${accountId}/workers/subdomain`,
-  )
+  return (await createCloudflareClient(authToken).workers.subdomains.get({
+    account_id: accountId,
+  })) satisfies CloudflareSubdomainResult
 }
 
 async function createAccountSubdomain(authToken: string, accountId: string, subdomain: string) {
-  await requestCloudflareApi<CloudflareSubdomainResult>(
-    authToken,
-    `/accounts/${accountId}/workers/subdomain`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({
-        subdomain,
-      }),
-    },
-  )
+  await createCloudflareClient(authToken).workers.subdomains.update({
+    account_id: accountId,
+    subdomain,
+  })
 
   return subdomain
 }
@@ -410,17 +361,11 @@ async function ensureWorkerSubdomainEnabled(
   accountId: string,
   workerName: string,
 ) {
-  await requestCloudflareApi<CloudflareSubdomainResult>(
-    authToken,
-    `/accounts/${accountId}/workers/scripts/${workerName}/subdomain`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        enabled: true,
-        previews_enabled: true,
-      }),
-    },
-  )
+  await createCloudflareClient(authToken).workers.scripts.subdomain.create(workerName, {
+    account_id: accountId,
+    enabled: true,
+    previews_enabled: true,
+  })
 }
 
 async function selectCloudflareAccount(prompt: CliPrompter, accounts: CloudflareAccount[]) {

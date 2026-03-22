@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { parse } from 'jsonc-parser'
 import {
   createCloudflareServerScriptCatalog,
   createFirebaseServerScriptCatalog,
@@ -128,7 +129,7 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
   const granitePreset = await readFile(path.join(frontendRoot, 'scaffold.preset.ts'), 'utf8')
   const tsconfigSource = await readFile(path.join(frontendRoot, 'tsconfig.json'), 'utf8')
-  const tsconfig = JSON.parse(tsconfigSource) as {
+  const tsconfig = parse(tsconfigSource) as {
     compilerOptions?: {
       module?: string
       types?: string[]
@@ -153,7 +154,7 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   )
   assert.equal(tsconfig.compilerOptions?.module, 'esnext')
   assert.deepEqual(tsconfig.compilerOptions?.types, ['node'])
-  assert.doesNotMatch(tsconfigSource, /frontend tsconfig comment/)
+  assert.match(tsconfigSource, /frontend tsconfig comment/)
   assert.equal(await pathExists(path.join(frontendRoot, '.env.local.example')), false)
   assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'supabase.ts')), false)
 })
@@ -1160,7 +1161,7 @@ test('patchBackofficeWorkspace adds supabase bootstrap when supabase server prov
   assert.match(tsconfigSource, /"module": "esnext"/)
   assert.match(tsconfigAppSource, /"module": "esnext"/)
   assert.match(tsconfigNodeSource, /"module": "esnext"/)
-  assert.doesNotMatch(tsconfigAppSource, /Bundler mode/)
+  assert.match(tsconfigAppSource, /Bundler mode/)
   assert.match(mainSource, /const rootElement = document\.getElementById\('root'\)/)
   assert.match(mainSource, /throw new Error\('Root element not found'\)/)
   assert.match(appSource, /type=["']button["']/)

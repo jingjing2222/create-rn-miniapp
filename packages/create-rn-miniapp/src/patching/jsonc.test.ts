@@ -30,6 +30,28 @@ test('patchTsconfigModuleSource can enable allowImportingTsExtensions for source
   assert.equal(parsed.compilerOptions?.noEmit, true)
 })
 
+test('patchTsconfigModuleSource preserves JSONC comments while updating compilerOptions', () => {
+  const source = [
+    '{',
+    '  // keep this comment',
+    '  "compilerOptions": {',
+    '    // existing option',
+    '    "module": "commonjs"',
+    '  }',
+    '}',
+    '',
+  ].join('\n')
+
+  const next = patchTsconfigModuleSource(source, {
+    includeNodeTypes: true,
+  })
+
+  assert.match(next, /\/\/ keep this comment/)
+  assert.match(next, /\/\/ existing option/)
+  assert.match(next, /"module": "esnext"/)
+  assert.match(next, /"types": \[/)
+})
+
 test('patchWranglerConfigSource can upsert Cloudflare account, D1, and R2 bindings', () => {
   const source = [
     '{',
@@ -77,6 +99,28 @@ test('patchWranglerConfigSource can upsert Cloudflare account, D1, and R2 bindin
       remote: true,
     },
   ])
+})
+
+test('patchWranglerConfigSource preserves JSONC comments and unrelated field order', () => {
+  const source = [
+    '{',
+    '  // schema comment',
+    '  "$schema": "https://unpkg.com/wrangler@4.73.0/config-schema.json",',
+    '  "name": "ebook-worker",',
+    '  // account comment',
+    '  "main": "src/index.ts"',
+    '}',
+    '',
+  ].join('\n')
+
+  const next = patchWranglerConfigSource(source, {
+    accountId: 'account-123',
+  })
+
+  assert.match(next, /\/\/ schema comment/)
+  assert.match(next, /\/\/ account comment/)
+  assert.match(next, /"account_id": "account-123"/)
+  assert.equal(next.indexOf('"name"') < next.indexOf('"main"'), true)
 })
 
 test('patchWranglerConfigSource updates existing Cloudflare bindings in place', () => {

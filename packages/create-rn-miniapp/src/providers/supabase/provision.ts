@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { log } from '@clack/prompts'
 import type { CommandSpec } from '../../command-spec.js'
 import { runCommand, runCommandWithOutput, type CommandOutput } from '../../commands.js'
@@ -141,38 +142,10 @@ function formatSupabaseEdgeFunctionSkipGuidance() {
   ]
 }
 
-function stripAnsi(value: string) {
-  let result = ''
-
-  for (let index = 0; index < value.length; index += 1) {
-    const codePoint = value.charCodeAt(index)
-
-    if (codePoint === 0x1b && value[index + 1] === '[') {
-      index += 2
-
-      while (index < value.length) {
-        const controlTerminator = value.charCodeAt(index)
-
-        if (controlTerminator >= 0x40 && controlTerminator <= 0x7e) {
-          break
-        }
-
-        index += 1
-      }
-
-      continue
-    }
-
-    result += value[index]
-  }
-
-  return result
-}
-
 export function extractJsonPayload<T>(output: Pick<CommandOutput, 'stdout' | 'stderr'>) {
   const lines = `${output.stdout}\n${output.stderr}`
     .split(/\r?\n/)
-    .map((line) => stripAnsi(line).trimEnd())
+    .map((line) => stripVTControlCharacters(line).trimEnd())
     .filter((line) => line.trim().length > 0)
 
   for (let start = 0; start < lines.length; start += 1) {

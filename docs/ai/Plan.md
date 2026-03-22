@@ -1,3 +1,27 @@
+## 다음 작업: de-facto cleanup 브랜치에 main 최신 반영 후 충돌 정리
+
+### 목표
+- `codex/de-facto-cleanup` 브랜치에 최신 `origin/main`을 반영한다.
+- 충돌이 나면 현재 PR의 표준 라이브러리 전환 의도를 유지하면서 live contract 기준으로만 정리한다.
+- 정리 후 `pnpm verify`를 다시 통과시키고 브랜치를 재푸시한다.
+
+### 작업 순서
+1. `origin/main`을 fetch한 뒤 현재 브랜치에 병합한다.
+2. 충돌 파일이 생기면 실제 최신 main 내용과 현재 변경 의도를 같이 읽고 수동 정리한다.
+3. `pnpm verify`를 다시 통과시킨 뒤 merge commit과 함께 원격 브랜치로 푸시한다.
+
+## 다음 작업: 표준/데팍토 대비 직접 구현 영역 2차 감사
+
+### 목표
+- 1차 감사에서 찾은 frontmatter, JSONC, provisioning 외에 남아 있는 직접 구현 영역을 더 찾는다.
+- 특히 generic plumbing, AST/patching, release/dev tooling처럼 “표준 툴이 있는데 직접 든 것”을 추가로 찾는다.
+- 결과는 SSoT 문맥과 분리해서, 유지 비용과 ecosystem 표준 기준으로만 정리한다.
+
+### 작업 순서
+1. scripts, src runtime module, provisioning helper를 다시 훑어서 generic utility 성격의 직접 구현을 추린다.
+2. 표준/데팍토 대체재가 있는 후보는 근거와 함께 severity를 매긴다.
+3. 바로 바꿀 후보와 남겨도 되는 후보를 구분해서 기록한다.
+
 ## 다음 작업: README skills 안내를 단일 skill 예시 기준으로 축약
 
 ### 목표

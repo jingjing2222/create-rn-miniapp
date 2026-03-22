@@ -75,6 +75,17 @@ test('extractJsonPayload strips package-manager log lines around JSON output', (
   })
 })
 
+test('extractJsonPayload strips OSC hyperlink control sequences around JSON output', () => {
+  const payload = extractJsonPayload<{ project: string[] }>({
+    stdout: 'prefix \u001b]8;;https://example.com\u0007link\u001b]8;;\u0007',
+    stderr: '{"project":["one","two"]}',
+  })
+
+  assert.deepEqual(payload, {
+    project: ['one', 'two'],
+  })
+})
+
 test('buildCreateSupabaseProjectArgs appends only the project name positional arg', () => {
   assert.deepEqual(buildCreateSupabaseProjectArgs('test-project'), [
     'projects',

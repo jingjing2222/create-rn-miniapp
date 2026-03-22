@@ -1,82 +1,67 @@
-import { parse } from 'jsonc-parser'
+import {
+  applyEdits,
+  findNodeAtLocation,
+  getNodeValue,
+  modify,
+  parseTree,
+  type JSONPath,
+  type ModificationOptions,
+} from 'jsonc-parser'
 
 const JSONC_PARSE_OPTIONS = {
   allowTrailingComma: true,
+}
+
+const JSONC_FORMATTING_OPTIONS = {
+  insertSpaces: true,
+  tabSize: 2,
+  eol: '\n',
+  insertFinalNewline: true,
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-type OrderedJsonEntry = {
-  key: string
-  value: unknown
-}
-
 type PackageJsonSectionName = 'scripts' | 'dependencies' | 'devDependencies'
 
-function parseOrderedJsonObjectEntries(source: string) {
-  const parsed = parse(source, [], JSONC_PARSE_OPTIONS)
+function assertRootObject(source: string) {
+  const root = parseTree(source, [], JSONC_PARSE_OPTIONS)
 
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  if (!root || root.type !== 'object') {
     throw new Error('루트 package.json을 JSON 객체로 파싱하지 못했습니다.')
   }
 
-  return Object.entries(parsed).map(([key, value]) => ({ key, value }))
+  return root
 }
 
-function upsertOrderedJsonEntry(
-  entries: OrderedJsonEntry[],
-  key: string,
+function readObjectValue(source: string, path: JSONPath) {
+  const node = findNodeAtLocation(assertRootObject(source), path)
+  return node ? getNodeValue(node) : undefined
+}
+
+function hasObjectProperty(source: string, key: string) {
+  const root = assertRootObject(source)
+  return root.children?.some((child) => child.children?.[0]?.value === key) ?? false
+}
+
+function applyPackageJsonEdit(
+  source: string,
+  path: JSONPath,
   value: unknown,
-  options?: {
-    afterKey?: string
-  },
+  options?: Omit<ModificationOptions, 'formattingOptions'>,
 ) {
-  const existingIndex = entries.findIndex((entry) => entry.key === key)
-  const nextEntry = { key, value }
-
-  if (existingIndex !== -1) {
-    entries.splice(existingIndex, 1)
-  }
-
-  if (options?.afterKey) {
-    const anchorIndex = entries.findIndex((entry) => entry.key === options.afterKey)
-
-    if (anchorIndex !== -1) {
-      entries.splice(anchorIndex + 1, 0, nextEntry)
-      return
-    }
-  }
-
-  if (existingIndex !== -1 && existingIndex <= entries.length) {
-    entries.splice(existingIndex, 0, nextEntry)
-    return
-  }
-
-  entries.push(nextEntry)
+  return applyEdits(
+    source,
+    modify(source, path, value, {
+      formattingOptions: JSONC_FORMATTING_OPTIONS,
+      ...options,
+    }),
+  )
 }
 
-function removeOrderedJsonEntry(entries: OrderedJsonEntry[], key: string) {
-  const existingIndex = entries.findIndex((entry) => entry.key === key)
-
-  if (existingIndex !== -1) {
-    entries.splice(existingIndex, 1)
-  }
-}
-
-function stringifyOrderedJsonEntries(entries: OrderedJsonEntry[]) {
-  const object: Record<string, unknown> = {}
-
-  for (const entry of entries) {
-    object[entry.key] = entry.value
-  }
-
-  return `${JSON.stringify(object, null, 2)}\n`
-}
-
-function readStringMapSection(entries: OrderedJsonEntry[], key: PackageJsonSectionName) {
-  const value = entries.find((entry) => entry.key === key)?.value
+function readStringMapSection(source: string, key: PackageJsonSectionName) {
+  const value = readObjectValue(source, [key])
 
   if (!isRecord(value)) {
     return {}
@@ -85,6 +70,28 @@ function readStringMapSection(entries: OrderedJsonEntry[], key: PackageJsonSecti
   return Object.fromEntries(
     Object.entries(value).filter(([, candidate]) => typeof candidate === 'string'),
   ) as Record<string, string>
+}
+
+function createInsertionIndexResolver(options?: { afterKey?: string; beforeKeys?: string[] }) {
+  return (properties: string[]) => {
+    if (options?.afterKey) {
+      const afterIndex = properties.indexOf(options.afterKey)
+
+      if (afterIndex !== -1) {
+        return afterIndex + 1
+      }
+    }
+
+    for (const beforeKey of options?.beforeKeys ?? []) {
+      const beforeIndex = properties.indexOf(beforeKey)
+
+      if (beforeIndex !== -1) {
+        return beforeIndex
+      }
+    }
+
+    return properties.length
+  }
 }
 
 export function patchPackageJsonSource(
@@ -100,35 +107,57 @@ export function patchPackageJsonSource(
     removeFromSections?: Partial<Record<PackageJsonSectionName, string[]>>
   },
 ) {
-  const entries = parseOrderedJsonObjectEntries(source)
+  let nextSource = source
+
+  assertRootObject(nextSource)
 
   for (const key of patch.removeTopLevel ?? []) {
-    removeOrderedJsonEntry(entries, key)
+    nextSource = applyPackageJsonEdit(nextSource, [key], undefined)
   }
 
   for (const sectionName of ['scripts', 'dependencies', 'devDependencies'] as const) {
-    const existingSection = readStringMapSection(entries, sectionName)
+    const removeKeys = patch.removeFromSections?.[sectionName] ?? []
+    const upsertEntries = Object.entries(patch.upsertSections?.[sectionName] ?? {})
+    const existingSection = readStringMapSection(nextSource, sectionName)
     const nextSection = { ...existingSection }
 
-    for (const key of patch.removeFromSections?.[sectionName] ?? []) {
+    for (const key of removeKeys) {
       delete nextSection[key]
     }
 
-    Object.assign(nextSection, patch.upsertSections?.[sectionName] ?? {})
+    Object.assign(nextSection, Object.fromEntries(upsertEntries))
 
-    const hadSection = entries.some((entry) => entry.key === sectionName)
-    if (hadSection || Object.keys(nextSection).length > 0) {
-      upsertOrderedJsonEntry(entries, sectionName, nextSection)
+    const hadSection = hasObjectProperty(nextSource, sectionName)
+    if (!hadSection && Object.keys(nextSection).length === 0) {
+      continue
+    }
+
+    if (!hadSection && Object.keys(nextSection).length > 0) {
+      nextSource = applyPackageJsonEdit(nextSource, [sectionName], {})
+    }
+
+    for (const key of removeKeys) {
+      nextSource = applyPackageJsonEdit(nextSource, [sectionName, key], undefined)
+    }
+
+    for (const [key, value] of upsertEntries) {
+      nextSource = applyPackageJsonEdit(nextSource, [sectionName, key], value)
+    }
+
+    if (hadSection && Object.keys(nextSection).length === 0) {
+      nextSource = applyPackageJsonEdit(nextSource, [sectionName], {})
     }
   }
 
   for (const entry of patch.upsertTopLevel ?? []) {
-    upsertOrderedJsonEntry(entries, entry.key, entry.value, {
-      afterKey: entry.afterKey,
+    nextSource = applyPackageJsonEdit(nextSource, [entry.key], entry.value, {
+      getInsertionIndex: createInsertionIndexResolver({
+        afterKey: entry.afterKey,
+      }),
     })
   }
 
-  return stringifyOrderedJsonEntries(entries)
+  return nextSource
 }
 
 export function patchRootPackageJsonSource(
@@ -144,6 +173,7 @@ export function patchRootPackageJsonSource(
       {
         key: 'packageManager',
         value: patch.packageManagerField,
+        afterKey: 'private',
       },
       ...(patch.workspaces
         ? [

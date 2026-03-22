@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { execa, ExecaError } from 'execa'
 import type { CommandSpec } from './command-spec.js'
 import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
 import { getServerProviderAdapter, type ServerProvider } from './providers/index.js'
@@ -118,40 +118,44 @@ export function buildAddCommandPlan(options: AddPlanOptions) {
 }
 
 async function executeCommand(spec: CommandSpec, captureOutput: boolean) {
-  return await new Promise<CommandOutput>((resolve, reject) => {
-    let stdout = ''
-    let stderr = ''
-    const child = spawn(spec.command, spec.args, {
+  try {
+    const result = await execa(spec.command, spec.args, {
       cwd: spec.cwd,
-      stdio: captureOutput ? ['ignore', 'pipe', 'pipe'] : 'inherit',
-      shell: false,
+      stdin: 'ignore',
+      stdout: captureOutput ? 'pipe' : 'inherit',
+      stderr: captureOutput ? 'pipe' : 'inherit',
+      reject: false,
     })
 
-    if (captureOutput) {
-      child.stdout?.on('data', (chunk) => {
-        stdout += String(chunk)
-      })
-      child.stderr?.on('data', (chunk) => {
-        stderr += String(chunk)
-      })
+    const stdout = result.stdout ?? ''
+    const stderr = result.stderr ?? ''
+
+    if (result.exitCode === 0) {
+      return { stdout, stderr }
     }
 
-    child.on('error', reject)
-    child.on('exit', (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr })
-        return
-      }
+    const combinedOutput = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n')
 
-      const combinedOutput = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n')
+    throw new Error(
+      `${spec.label} 중에 실패했어요. (${spec.command} ${spec.args.join(' ')})${captureOutput && combinedOutput ? `\n${combinedOutput}` : ''}`,
+    )
+  } catch (error) {
+    if (error instanceof ExecaError) {
+      const combinedOutput = [error.stdout, error.stderr, error.shortMessage]
+        .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
+        .map((part) => part.trim())
+        .join('\n')
 
-      reject(
-        new Error(
-          `${spec.label} 중에 실패했어요. (${spec.command} ${spec.args.join(' ')})${captureOutput && combinedOutput ? `\n${combinedOutput}` : ''}`,
-        ),
+      throw new Error(
+        `${spec.label} 중에 실패했어요. (${spec.command} ${spec.args.join(' ')})${combinedOutput ? `\n${combinedOutput}` : ''}`,
       )
-    })
-  })
+    }
+
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(
+      `${spec.label} 중에 실패했어요. (${spec.command} ${spec.args.join(' ')})\n${message}`,
+    )
+  }
 }
 
 export async function runCommand(spec: CommandSpec) {
