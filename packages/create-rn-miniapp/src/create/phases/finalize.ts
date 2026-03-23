@@ -7,37 +7,11 @@ import {
   maybeFinalizeFirebaseProvisioning,
   maybeFinalizeSupabaseProvisioning,
 } from '../../scaffold/provisioning.js'
-import { buildServerScaffoldState } from '../../server/project.js'
+import {
+  buildServerScaffoldState,
+  resolveFinalRemoteInitializationState,
+} from '../../server/project.js'
 import type { CreateContext } from '../context.js'
-
-function resolveCreateRemoteInitialization(ctx: CreateContext) {
-  if (ctx.options.serverProvider === 'supabase') {
-    return ctx.provisionedSupabaseProject
-      ? ctx.provisionedSupabaseProject.didApplyRemoteDb ||
-        ctx.provisionedSupabaseProject.didDeployEdgeFunctions
-        ? 'applied'
-        : 'skipped'
-      : (ctx.initialServerState?.remoteInitialization ?? 'not-run')
-  }
-
-  if (ctx.options.serverProvider === 'cloudflare') {
-    return ctx.provisionedCloudflareWorker
-      ? ctx.provisionedCloudflareWorker.didInitializeRemoteContent
-        ? 'applied'
-        : 'skipped'
-      : (ctx.initialServerState?.remoteInitialization ?? 'not-run')
-  }
-
-  if (ctx.options.serverProvider === 'firebase') {
-    return ctx.provisionedFirebaseProject
-      ? ctx.provisionedFirebaseProject.didInitializeRemoteContent
-        ? 'applied'
-        : 'skipped'
-      : (ctx.initialServerState?.remoteInitialization ?? 'not-run')
-  }
-
-  return 'not-run'
-}
 
 export async function finalizeCreateWorkspace(ctx: CreateContext) {
   ctx.notes.push(
@@ -71,7 +45,13 @@ export async function finalizeCreateWorkspace(ctx: CreateContext) {
       ctx.provisionedCloudflareWorker?.mode ??
       ctx.provisionedFirebaseProject?.mode ??
       ctx.options.serverProjectMode,
-    remoteInitialization: resolveCreateRemoteInitialization(ctx),
+    remoteInitialization: resolveFinalRemoteInitializationState({
+      serverProvider: ctx.options.serverProvider,
+      initialServerState: ctx.initialServerState,
+      provisionedSupabaseProject: ctx.provisionedSupabaseProject,
+      provisionedCloudflareWorker: ctx.provisionedCloudflareWorker,
+      provisionedFirebaseProject: ctx.provisionedFirebaseProject,
+    }),
     trpc: ctx.initialServerState?.trpc ?? ctx.trpcEnabled,
     backoffice: ctx.initialServerState?.backoffice ?? ctx.options.withBackoffice,
   })

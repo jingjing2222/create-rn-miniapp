@@ -19,7 +19,7 @@ import { renderFrontendPolicyMarkdown } from './frontend-policy.js'
 import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
 import { createRootTemplateExtraTokens, renderRootVerifyStepsMarkdown } from './root.js'
 import { SKILL_CATALOG } from './skill-catalog.js'
-import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
+import type { GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
 import dedent, { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
 type DocumentDefinition = {
@@ -355,14 +355,10 @@ async function writeCodeOwnedMarkdown(targetRoot: string, relativePath: string, 
   await writeFile(targetPath, source, 'utf8')
 }
 
-export async function applyDocsTemplates(
-  targetRoot: string,
-  tokens: TemplateTokens,
-  hints: GeneratedWorkspaceHints,
-) {
+export async function applyDocsTemplates(targetRoot: string, tokens: TemplateTokens) {
   const templatesRoot = resolveTemplatesPackageRoot()
   const baseTemplateDir = path.join(templatesRoot, 'base')
-  const options = await resolveGeneratedWorkspaceOptions(targetRoot, hints)
+  const options = await resolveGeneratedWorkspaceOptions(targetRoot)
   const installedSkills = await listInstalledProjectSkillEntries(targetRoot)
   const extraTokens = createRootTemplateExtraTokens(tokens.packageManager)
   const renderContext = {

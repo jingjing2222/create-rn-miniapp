@@ -1,15 +1,19 @@
-import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions } from './types.js'
-import { hasTrpcWorkspace, inspectWorkspaceTopology } from '../workspace/topology.js'
+import type { GeneratedWorkspaceOptions } from './types.js'
+import { detectServerProvider } from '../providers/index.js'
+import { readServerScaffoldState } from '../server/project.js'
+import { resolveWorkspaceOptionalState } from '../workspace/optional-state.js'
+import { inspectWorkspaceTopology } from '../workspace/topology.js'
 
 export async function resolveGeneratedWorkspaceOptions(
   targetRoot: string,
-  hints: GeneratedWorkspaceHints,
 ): Promise<GeneratedWorkspaceOptions> {
   const topology = await inspectWorkspaceTopology(targetRoot)
+  const detectedServerProvider = topology.hasServer ? await detectServerProvider(targetRoot) : null
+  const serverScaffoldState = topology.hasServer ? await readServerScaffoldState(targetRoot) : null
 
-  return {
-    hasBackoffice: topology.hasBackoffice,
-    serverProvider: topology.hasServer ? hints.serverProvider : null,
-    hasTrpc: hasTrpcWorkspace(topology),
-  }
+  return resolveWorkspaceOptionalState({
+    topology,
+    detectedServerProvider,
+    serverScaffoldState,
+  })
 }

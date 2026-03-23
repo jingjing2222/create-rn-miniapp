@@ -3,6 +3,7 @@ import path from 'node:path'
 import npa from 'npm-package-arg'
 import { readGraniteConfigMetadata } from '../patching/ast/index.js'
 import { toDefaultDisplayName } from './layout.js'
+import { resolveWorkspaceOptionalState } from './optional-state.js'
 import { PACKAGE_MANAGERS, type PackageManager } from '../runtime/package-manager.js'
 import { detectServerProvider, type ServerProvider } from '../providers/index.js'
 import { readServerScaffoldState, type ServerScaffoldState } from '../server/project.js'
@@ -97,11 +98,11 @@ export async function inspectWorkspace(rootDir: string): Promise<WorkspaceInspec
   const actualHasTrpc = hasTrpcWorkspace(topology)
   const detectedServerProvider = hasServer ? await detectServerProvider(resolvedRootDir) : null
   const serverScaffoldState = hasServer ? await readServerScaffoldState(resolvedRootDir) : null
-  const serverProvider =
-    hasServer && serverScaffoldState ? serverScaffoldState.serverProvider : detectedServerProvider
-  const hasBackoffice =
-    hasServer && serverScaffoldState ? serverScaffoldState.backoffice : actualHasBackoffice
-  const hasTrpc = hasServer && serverScaffoldState ? serverScaffoldState.trpc : actualHasTrpc
+  const optionalState = resolveWorkspaceOptionalState({
+    topology,
+    detectedServerProvider,
+    serverScaffoldState,
+  })
 
   if (serverScaffoldState && detectedServerProvider) {
     assertConsistentServerScaffoldState({
@@ -118,9 +119,9 @@ export async function inspectWorkspace(rootDir: string): Promise<WorkspaceInspec
     appName: metadata.appName,
     displayName: metadata.displayName ?? toDefaultDisplayName(metadata.appName),
     hasServer,
-    hasBackoffice,
-    hasTrpc,
-    serverProvider,
+    hasBackoffice: optionalState.hasBackoffice,
+    hasTrpc: optionalState.hasTrpc,
+    serverProvider: optionalState.serverProvider,
     serverScaffoldState,
   }
 }

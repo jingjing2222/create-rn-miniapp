@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -92,6 +92,19 @@ async function materializeMigrationWorkspace(targetRoot: string, combo: Migratio
   if (combo.serverProvider) {
     await mkdir(path.join(targetRoot, 'server'), { recursive: true })
     workspaces.push('server')
+
+    if (combo.serverProvider === 'supabase') {
+      await mkdir(path.join(targetRoot, 'server', 'supabase'), { recursive: true })
+      await writeFile(path.join(targetRoot, 'server', 'supabase', 'config.toml'), '', 'utf8')
+    }
+
+    if (combo.serverProvider === 'cloudflare') {
+      await writeFile(path.join(targetRoot, 'server', 'wrangler.jsonc'), '{}\n', 'utf8')
+    }
+
+    if (combo.serverProvider === 'firebase') {
+      await writeFile(path.join(targetRoot, 'server', 'firebase.json'), '{}\n', 'utf8')
+    }
   }
 
   if (combo.withTrpc) {
@@ -106,7 +119,7 @@ async function materializeMigrationWorkspace(targetRoot: string, combo: Migratio
   }
 
   await applyRootTemplates(targetRoot, tokens, workspaces)
-  await applyDocsTemplates(targetRoot, tokens, { serverProvider: combo.serverProvider })
+  await applyDocsTemplates(targetRoot, tokens)
 }
 
 test('buildRootFinalizePlan keeps pnpm root finalize steps minimal', () => {
@@ -224,6 +237,8 @@ test('add scaffold flow does not re-derive manifest topology from filesystem pro
     'utf8',
   )
 
+  assert.match(resolveSource, /resolveAddServerState\(/)
+  assert.doesNotMatch(resolveSource, /function buildAddInitialServerState/)
   assert.doesNotMatch(
     resolveSource,
     /trpc: await pathExists\(path\.join\(targetRoot, 'packages', 'contracts'\)\)/,
@@ -232,6 +247,22 @@ test('add scaffold flow does not re-derive manifest topology from filesystem pro
     resolveSource,
     /backoffice: await pathExists\(path\.join\(targetRoot, 'backoffice'\)\)/,
   )
+})
+
+test('create and add finalize phases delegate remote initialization resolution to server project helper', async () => {
+  const createFinalizeSource = await readFile(
+    fileURLToPath(new URL('../create/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+  const addFinalizeSource = await readFile(
+    fileURLToPath(new URL('../add/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(createFinalizeSource, /resolveFinalRemoteInitializationState\(/)
+  assert.match(addFinalizeSource, /resolveFinalRemoteInitializationState\(/)
+  assert.doesNotMatch(createFinalizeSource, /function resolveCreateRemoteInitialization/)
+  assert.doesNotMatch(addFinalizeSource, /function resolveAddRemoteInitialization/)
 })
 
 test('skill auto-install captures raw copy logs and reports installed skill summary instead', async () => {
@@ -386,6 +417,20 @@ test('buildCreateExecutionOrder runs server scaffold before backoffice scaffold'
     'server Supabase Edge Function 만들기',
     'backoffice Vite 만들기',
   ])
+})
+
+test('buildCreateLifecycleOrder composes phase lifecycle labels from create phase modules', async () => {
+  const ordersSource = await readFile(
+    fileURLToPath(new URL('./orders.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(ordersSource, /listCreateScaffoldLifecycleLabels/)
+  assert.match(ordersSource, /listCreateProvisionLifecycleLabels/)
+  assert.match(ordersSource, /listCreatePatchLifecycleLabels/)
+  assert.match(ordersSource, /listCreateFinalizeLifecycleLabels/)
+  assert.doesNotMatch(ordersSource, /labels\.push\('server 워크스페이스 준비하기'/)
+  assert.doesNotMatch(ordersSource, /labels\.push\('루트 템플릿 적용하기'/)
 })
 
 test('buildCreateLifecycleOrder applies root templates and server patch before firebase provisioning', () => {

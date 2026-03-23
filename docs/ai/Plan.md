@@ -1,3 +1,17 @@
+## 다음 작업: SSOT 기준 create/add 상태 계산과 docs 흐름 중복 제거
+
+### 목표
+- add flow에서 `serverFlowState`와 `initialServerState`가 같은 입력을 중복 계산하지 않게 합친다.
+- create/add finalize의 remote initialization 최종 판정을 공용 helper로 모은다.
+- docs 렌더에서 `serverProvider`를 caller hint에 의존하지 않고 실제 workspace inspection 결과로 맞춘다.
+- lifecycle order helper가 실제 coordinator 흐름과 같은 source를 보게 정리한다.
+
+### 작업 순서
+1. 관련 테스트를 먼저 추가하거나 보강해서 현재 중복 계산 지점을 실패로 고정한다.
+2. `flow-state`, `server/project`, `workspace/inspect`, `scaffold/orders` 축으로 공용 계산 함수를 모은다.
+3. create/add/docs 쪽 호출부를 새 공용 계산으로 교체한다.
+4. 타깃 테스트와 `pnpm verify`를 통과시킨 뒤 단일 목적 커밋으로 정리한다.
+
 ## 다음 작업: create/add flow-first 리팩터링의 출력 순서와 진행 로그 회귀 복구
 
 ### 목표

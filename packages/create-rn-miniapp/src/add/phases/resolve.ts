@@ -1,56 +1,21 @@
 import { buildAddCommandPhases } from '../../runtime/commands.js'
-import { resolveAddServerFlowState } from '../../scaffold/flow-state.js'
-import {
-  buildServerScaffoldState,
-  resolveRequestedRemoteInitializationState,
-} from '../../server/project.js'
+import { resolveAddServerState } from '../../scaffold/flow-state.js'
 import type { AddContext } from '../context.js'
 
-function buildAddInitialServerState(ctx: AddContext) {
-  const { options } = ctx
-  const serverProvider = options.withServer
-    ? options.serverProvider
-    : (options.serverProvider ?? options.existingServerProvider)
-
-  if (!serverProvider) {
-    return null
-  }
-
-  if (options.withServer) {
-    return buildServerScaffoldState({
-      serverProvider,
-      serverProjectMode: options.serverProjectMode,
-      remoteInitialization: resolveRequestedRemoteInitializationState({
-        serverProjectMode: options.serverProjectMode,
-        skipServerProvisioning: options.skipServerProvisioning,
-      }),
-      trpc: ctx.trpcEnabled,
-      backoffice: options.withBackoffice || options.existingHasBackoffice,
-    })
-  }
-
-  return {
-    serverProvider,
-    serverProjectMode: options.existingServerScaffoldState?.serverProjectMode ?? null,
-    remoteInitialization: options.existingServerScaffoldState?.remoteInitialization ?? 'not-run',
-    trpc:
-      ctx.trpcEnabled ||
-      options.existingServerScaffoldState?.trpc === true ||
-      options.existingHasTrpc,
-    backoffice:
-      options.withBackoffice ||
-      options.existingServerScaffoldState?.backoffice === true ||
-      options.existingHasBackoffice,
-  }
-}
-
 export async function resolveAddContext(ctx: AddContext) {
-  const serverFlowState = resolveAddServerFlowState({
+  const serverState = resolveAddServerState({
     existingServerProvider: ctx.options.existingServerProvider,
+    existingServerScaffoldState: ctx.options.existingServerScaffoldState,
+    existingHasBackoffice: ctx.options.existingHasBackoffice,
+    existingHasTrpc: ctx.options.existingHasTrpc,
     requestedServerProvider: ctx.options.serverProvider,
+    requestedServerProjectMode: ctx.options.serverProjectMode,
+    skipServerProvisioning: ctx.options.skipServerProvisioning,
     withServer: ctx.options.withServer,
     withTrpc: ctx.options.withTrpc,
+    withBackoffice: ctx.options.withBackoffice,
   })
+  const { serverFlowState } = serverState
   const trpcEnabled = serverFlowState.trpcEnabled
   const resolvedContext = {
     ...ctx,
@@ -66,6 +31,6 @@ export async function resolveAddContext(ctx: AddContext) {
 
   return {
     ...resolvedContext,
-    initialServerState: buildAddInitialServerState(resolvedContext),
+    initialServerState: serverState.initialServerState,
   }
 }

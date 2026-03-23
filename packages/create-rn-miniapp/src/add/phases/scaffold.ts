@@ -10,7 +10,7 @@ import {
   maybePrepareTrpcWorkspace,
   resolveRootWorkspaces,
 } from '../../scaffold/helpers.js'
-import { CLOUDFLARE_PREINSTALL_LABEL } from '../../scaffold/orders.js'
+import { CLOUDFLARE_PREINSTALL_LABEL } from '../../scaffold/lifecycle-labels.js'
 import { syncRootWorkspaceManifest } from '../../templates/root.js'
 import type { AddContext } from '../context.js'
 

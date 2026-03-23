@@ -39,6 +39,15 @@ export type ProvisioningNote = {
   body: string
 }
 
+type SupabaseProvisioningSummary = {
+  didApplyRemoteDb: boolean
+  didDeployEdgeFunctions: boolean
+} | null
+
+type RemoteContentProvisioningSummary = {
+  didInitializeRemoteContent: boolean
+} | null
+
 export function resolveRequestedRemoteInitializationState(options: {
   serverProjectMode: ServerProjectMode | null
   skipServerProvisioning: boolean
@@ -68,4 +77,41 @@ export function buildServerScaffoldState(options: {
     trpc: options.trpc,
     backoffice: options.backoffice,
   }
+}
+
+export function resolveFinalRemoteInitializationState(options: {
+  serverProvider: ServerProvider | null
+  initialServerState: ServerScaffoldState | null
+  provisionedSupabaseProject: SupabaseProvisioningSummary
+  provisionedCloudflareWorker: RemoteContentProvisioningSummary
+  provisionedFirebaseProject: RemoteContentProvisioningSummary
+}): ServerRemoteInitializationState {
+  const fallback = options.initialServerState?.remoteInitialization ?? 'not-run'
+
+  if (options.serverProvider === 'supabase') {
+    return options.provisionedSupabaseProject
+      ? options.provisionedSupabaseProject.didApplyRemoteDb ||
+        options.provisionedSupabaseProject.didDeployEdgeFunctions
+        ? 'applied'
+        : 'skipped'
+      : fallback
+  }
+
+  if (options.serverProvider === 'cloudflare') {
+    return options.provisionedCloudflareWorker
+      ? options.provisionedCloudflareWorker.didInitializeRemoteContent
+        ? 'applied'
+        : 'skipped'
+      : fallback
+  }
+
+  if (options.serverProvider === 'firebase') {
+    return options.provisionedFirebaseProject
+      ? options.provisionedFirebaseProject.didInitializeRemoteContent
+        ? 'applied'
+        : 'skipped'
+      : fallback
+  }
+
+  return 'not-run'
 }

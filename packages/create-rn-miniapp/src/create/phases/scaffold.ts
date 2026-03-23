@@ -12,7 +12,7 @@ import {
   maybeWriteNpmWorkspaceConfig,
   resolveRootWorkspaces,
 } from '../../scaffold/helpers.js'
-import { CLOUDFLARE_PREINSTALL_LABEL } from '../../scaffold/orders.js'
+import { CLOUDFLARE_PREINSTALL_LABEL } from '../../scaffold/lifecycle-labels.js'
 import { ensureEmptyDirectory } from '../../templates/filesystem.js'
 import { applyRootTemplates, syncRootWorkspaceManifest } from '../../templates/root.js'
 import type { CreateContext } from '../context.js'

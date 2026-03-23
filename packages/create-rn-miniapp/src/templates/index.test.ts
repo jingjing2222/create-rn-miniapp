@@ -51,17 +51,32 @@ async function materializeDocsWorkspaceState(
     hasBackoffice?: boolean
     hasServer?: boolean
     hasTrpc?: boolean
+    serverProvider?: 'supabase' | 'cloudflare' | 'firebase' | null
   },
 ) {
   const resolvedOptions = {
     hasBackoffice: false,
     hasServer: false,
     hasTrpc: false,
+    serverProvider: null,
     ...options,
   }
 
   if (resolvedOptions.hasServer) {
     await mkdir(path.join(targetRoot, 'server'), { recursive: true })
+
+    if (resolvedOptions.serverProvider === 'supabase') {
+      await mkdir(path.join(targetRoot, 'server', 'supabase'), { recursive: true })
+      await writeFile(path.join(targetRoot, 'server', 'supabase', 'config.toml'), '', 'utf8')
+    }
+
+    if (resolvedOptions.serverProvider === 'cloudflare') {
+      await writeFile(path.join(targetRoot, 'server', 'wrangler.jsonc'), '{}\n', 'utf8')
+    }
+
+    if (resolvedOptions.serverProvider === 'firebase') {
+      await writeFile(path.join(targetRoot, 'server', 'firebase.json'), '{}\n', 'utf8')
+    }
   }
 
   if (resolvedOptions.hasBackoffice) {
@@ -71,15 +86,6 @@ async function materializeDocsWorkspaceState(
   if (resolvedOptions.hasTrpc) {
     await mkdir(path.join(targetRoot, 'packages', 'contracts'), { recursive: true })
     await mkdir(path.join(targetRoot, 'packages', 'app-router'), { recursive: true })
-  }
-}
-
-function createDocsHints(overrides?: {
-  serverProvider?: 'supabase' | 'cloudflare' | 'firebase' | null
-}) {
-  return {
-    serverProvider: null,
-    ...overrides,
   }
 }
 
@@ -1267,7 +1273,7 @@ test('AGENTS markdown delegates detailed repository contract rules to repo-contr
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
 
@@ -1283,7 +1289,7 @@ test('applyDocsTemplates keeps AGENTS skill-free and renders README onboarding w
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
   const claude = await readFile(path.join(targetRoot, 'CLAUDE.md'), 'utf8')
@@ -1381,12 +1387,10 @@ test('frontend policy derives restriction prose and enforcement from a shared ma
   )
 })
 
-test('resolveGeneratedWorkspaceOptions derives optional docs state from the actual workspace tree', async (t) => {
+test('resolveGeneratedWorkspaceOptions derives optional docs state from actual workspace metadata', async (t) => {
   const targetRoot = await createTempTargetRoot(t)
 
-  let options = await resolveGeneratedWorkspaceOptions(targetRoot, {
-    serverProvider: 'cloudflare',
-  })
+  let options = await resolveGeneratedWorkspaceOptions(targetRoot)
   assert.deepEqual(options, {
     hasBackoffice: false,
     serverProvider: null,
@@ -1394,12 +1398,11 @@ test('resolveGeneratedWorkspaceOptions derives optional docs state from the actu
   })
 
   await mkdir(path.join(targetRoot, 'server'), { recursive: true })
+  await writeFile(path.join(targetRoot, 'server', 'wrangler.jsonc'), '{}\n', 'utf8')
   await mkdir(path.join(targetRoot, 'backoffice'), { recursive: true })
   await mkdir(path.join(targetRoot, 'packages', 'contracts'), { recursive: true })
 
-  options = await resolveGeneratedWorkspaceOptions(targetRoot, {
-    serverProvider: 'cloudflare',
-  })
+  options = await resolveGeneratedWorkspaceOptions(targetRoot)
   assert.deepEqual(options, {
     hasBackoffice: true,
     serverProvider: 'cloudflare',
@@ -1408,9 +1411,7 @@ test('resolveGeneratedWorkspaceOptions derives optional docs state from the actu
 
   await mkdir(path.join(targetRoot, 'packages', 'app-router'), { recursive: true })
 
-  options = await resolveGeneratedWorkspaceOptions(targetRoot, {
-    serverProvider: 'cloudflare',
-  })
+  options = await resolveGeneratedWorkspaceOptions(targetRoot)
   assert.deepEqual(options, {
     hasBackoffice: true,
     serverProvider: 'cloudflare',
@@ -1744,7 +1745,7 @@ test('applyDocsTemplates renders verify sections from the shared root verify met
   const tokens = createTokens('pnpm')
 
   await applyRootTemplates(targetRoot, tokens, ['frontend'])
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
 
   const rootPackageJson = JSON.parse(
     await readFile(path.join(targetRoot, 'package.json'), 'utf8'),
@@ -1908,7 +1909,7 @@ test('applyDocsTemplates omits local skill routing and docs/skills for base-only
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
   const claude = await readFile(path.join(targetRoot, 'CLAUDE.md'), 'utf8')
@@ -1950,7 +1951,7 @@ test('applyDocsTemplates keeps backoffice-only workspaces free of server-only to
     hasBackoffice: true,
   })
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
 
   const workspaceTopology = await readFile(
     path.join(targetRoot, 'docs', 'engineering', 'workspace-topology.md'),
@@ -1983,7 +1984,7 @@ test('applyDocsTemplates keeps AGENTS free of local skill routing even when proj
     'utf8',
   )
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
 
   const agents = await readFile(path.join(targetRoot, 'AGENTS.md'), 'utf8')
 
@@ -2011,7 +2012,7 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
     'utf8',
   )
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
 
   const readme = await readFile(path.join(targetRoot, 'README.md'), 'utf8')
 
@@ -2034,7 +2035,7 @@ test('applyDocsTemplates keeps frontend policy generic even when project-local c
     await writeFile(path.join(targetRoot, 'skills', skillId, 'SKILL.md'), `# ${skillId}\n`, 'utf8')
   }
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
 
   const frontendPolicy = await readFile(
     path.join(targetRoot, 'docs', 'engineering', 'frontend-policy.md'),
@@ -2054,7 +2055,7 @@ test('applyDocsTemplates rerenders README recommendations when optional workspac
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
 
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints())
+  await applyDocsTemplates(targetRoot, tokens)
   let readme = await readFile(path.join(targetRoot, 'README.md'), 'utf8')
   assert.doesNotMatch(readme, /cloudflare-worker/)
   assert.doesNotMatch(readme, /backoffice-react/)
@@ -2063,8 +2064,9 @@ test('applyDocsTemplates rerenders README recommendations when optional workspac
     hasBackoffice: true,
     hasServer: true,
     hasTrpc: true,
+    serverProvider: 'cloudflare',
   })
-  await applyDocsTemplates(targetRoot, tokens, createDocsHints({ serverProvider: 'cloudflare' }))
+  await applyDocsTemplates(targetRoot, tokens)
 
   readme = await readFile(path.join(targetRoot, 'README.md'), 'utf8')
 

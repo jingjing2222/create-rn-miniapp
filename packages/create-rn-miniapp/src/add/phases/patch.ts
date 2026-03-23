@@ -36,9 +36,7 @@ async function syncAddManifestAfterOptionalWorkspaces(ctx: AddContext) {
 }
 
 async function applyAddDocs(ctx: AddContext) {
-  await applyDocsTemplates(ctx.targetRoot, ctx.tokens, {
-    serverProvider: ctx.serverFlowState?.finalServerProvider ?? null,
-  })
+  await applyDocsTemplates(ctx.targetRoot, ctx.tokens)
 
   return ctx
 }

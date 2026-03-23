@@ -24,10 +24,6 @@ export type TemplateTokens = {
   verifyCommand: string
 }
 
-export type GeneratedWorkspaceHints = {
-  serverProvider: ServerProvider | null
-}
-
 export type GeneratedWorkspaceOptions = {
   hasBackoffice: boolean
   serverProvider: ServerProvider | null

@@ -100,9 +100,7 @@ async function maybeInstallSelectedSkills(ctx: CreateContext) {
 }
 
 async function applyCreateDocs(ctx: CreateContext) {
-  await applyDocsTemplates(ctx.targetRoot, ctx.tokens, {
-    serverProvider: ctx.options.serverProvider,
-  })
+  await applyDocsTemplates(ctx.targetRoot, ctx.tokens)
 
   return ctx
 }
