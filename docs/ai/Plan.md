@@ -1,3 +1,29 @@
+## 다음 작업: Granite runtime preset import 회귀 fix changeset 추가와 한글 PR 생성
+
+### 목표
+- 이번 Granite runtime preset import 회귀 수정 내용을 `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates` 두 패키지 patch changeset으로 기록한다.
+- 커밋 메시지와 PR 제목/본문을 한국어 `fix:` 형식으로 정리한다.
+- `pnpm verify` 증거를 유지한 상태로 브랜치를 push하고 PR 생성까지 마무리한다.
+
+### 작업 순서
+1. `docs/ai/Plan.md`를 먼저 갱신하고, 현재 브랜치/원격 상태와 publish 대상 패키지를 다시 확인한다.
+2. 한글 설명의 patch changeset 파일을 추가한다.
+3. 검증 상태를 다시 확인한 뒤 작업 브랜치에서 커밋하고 원격에 push한다.
+4. GitHub PR을 한글 `fix:` 제목/본문으로 생성하고 링크를 기록한다.
+
+## 다음 작업: Granite runtime config의 scaffold preset 상대 import 회귀 수정
+
+### 목표
+- generated `frontend/granite.config.ts`가 AppInToss build에서 `.granite/.ait-runtime-*.config.ts`로 복사되어도 `scaffold.preset.ts`를 안정적으로 읽게 만든다.
+- failing test로 먼저 `scaffold.preset.ts`를 `process.cwd()` 기준으로 로드해야 한다는 계약을 고정한다.
+- 최소 수정으로 patcher AST를 정리하고, `pnpm verify`까지 통과시킨다.
+
+### 작업 순서
+1. `docs/ai/Plan.md`를 갱신하고, example scaffold와 AIT build 경로를 대조해 root cause를 확정한다.
+2. `packages/create-rn-miniapp/src/patching/index.test.ts`에서 Granite config가 상대 import 대신 cwd 기반 preset loader를 사용해야 한다는 failing test를 먼저 만든다.
+3. `packages/create-rn-miniapp/src/patching/ast/granite.ts`를 최소 수정해 새 계약을 만족시킨다.
+4. 타깃 테스트와 `pnpm verify`로 회귀가 없는지 확인한다.
+
 ## 다음 작업: Supabase 초기 scaffold 자동 db push 제거
 
 ### 목표

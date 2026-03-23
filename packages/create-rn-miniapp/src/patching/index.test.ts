@@ -68,6 +68,27 @@ function assertReadmeIncludesPinnedCliVersions(
   }
 }
 
+function assertGraniteConfigUsesWorkspaceCwdPresetLoader(
+  graniteConfig: string,
+  expectedPresetBindings: string[],
+) {
+  assert.match(graniteConfig, /import path from 'node:path'/)
+  assert.match(graniteConfig, /import \{ createRequire \} from 'node:module'/)
+  assert.match(graniteConfig, /const require = createRequire\(import\.meta\.url\)/)
+  assert.match(
+    graniteConfig,
+    /const scaffoldPreset = require\(path\.join\(process\.cwd\(\), 'scaffold\.preset\.ts'\)\)/,
+  )
+  assert.doesNotMatch(graniteConfig, /from '\.\/scaffold\.preset'/)
+
+  for (const bindingName of expectedPresetBindings) {
+    assert.match(
+      graniteConfig,
+      new RegExp(`const ${bindingName} = scaffoldPreset\\.${bindingName}`),
+    )
+  }
+}
+
 test('patchFrontendWorkspace keeps supabase bootstrap out when no server provider is selected', async (t) => {
   const targetRoot = await createTempWorkspace(t)
   const frontendRoot = path.join(targetRoot, 'frontend')
@@ -168,9 +189,7 @@ test('patchFrontendWorkspace keeps supabase bootstrap out when no server provide
   assert.equal(packageJson.devDependencies?.typescript, '^5.8.3')
   assert.equal(packageJson.devDependencies?.['@types/node'], '^24.10.1')
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
-  assert.match(graniteConfig, /import \{ workspaceRepoRoot \} from '\.\/scaffold\.preset'/)
-  assert.doesNotMatch(graniteConfig, /import path from 'node:path'/)
-  assert.doesNotMatch(graniteConfig, /process\.cwd\(\)/)
+  assertGraniteConfigUsesWorkspaceCwdPresetLoader(graniteConfig, ['workspaceRepoRoot'])
   assert.match(graniteConfig, /watchFolders:\s*\[\s*workspaceRepoRoot\s*\]/)
   assert.match(granitePreset, /import path from 'node:path'/)
   assert.match(
@@ -564,10 +583,10 @@ test('patchFrontendWorkspace adds supabase bootstrap when supabase server provid
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
   assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
   assert.doesNotMatch(graniteConfig, /^\/\/\/ <reference types="node" \/>/)
-  assert.match(
-    graniteConfig,
-    /import \{ scaffoldEnvBindings, workspaceRepoRoot \} from '\.\/scaffold\.preset'/,
-  )
+  assertGraniteConfigUsesWorkspaceCwdPresetLoader(graniteConfig, [
+    'scaffoldEnvBindings',
+    'workspaceRepoRoot',
+  ])
   assert.match(graniteConfig, /watchFolders:\s*\[\s*workspaceRepoRoot\s*\]/)
   assert.match(
     graniteConfig,
@@ -693,10 +712,10 @@ test('patchFrontendWorkspace adds cloudflare API bootstrap when cloudflare serve
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
   assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
-  assert.match(
-    graniteConfig,
-    /import \{ scaffoldEnvBindings, workspaceRepoRoot \} from '\.\/scaffold\.preset'/,
-  )
+  assertGraniteConfigUsesWorkspaceCwdPresetLoader(graniteConfig, [
+    'scaffoldEnvBindings',
+    'workspaceRepoRoot',
+  ])
   assert.match(
     graniteConfig,
     /plugins:\s*\[\s*env\(scaffoldEnvBindings,\s*\{\s*dts:\s*false\s*\}\),/,
@@ -1036,10 +1055,12 @@ test('patchFrontendWorkspace adds firebase bootstrap when firebase server provid
   assert.equal(packageJson.devDependencies?.['@granite-js/plugin-env'], '1.0.7')
   assert.equal(packageJson.devDependencies?.dotenv, '^16.4.7')
   assert.match(graniteConfig, /import \{ env \} from '@granite-js\/plugin-env'/)
-  assert.match(
-    graniteConfig,
-    /import \{ firebaseBuildResolver, firebaseMetroResolver, scaffoldEnvBindings, workspaceRepoRoot \} from '\.\/scaffold\.preset'/,
-  )
+  assertGraniteConfigUsesWorkspaceCwdPresetLoader(graniteConfig, [
+    'firebaseBuildResolver',
+    'firebaseMetroResolver',
+    'scaffoldEnvBindings',
+    'workspaceRepoRoot',
+  ])
   assert.match(
     graniteConfig,
     /plugins:\s*\[\s*env\(scaffoldEnvBindings,\s*\{\s*dts:\s*false\s*\}\),/,

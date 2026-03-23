@@ -2,6 +2,7 @@ import type { ServerProvider } from '../../providers/index.js'
 import type { TemplateTokens } from '../../templates/types.js'
 import {
   ensureImport,
+  ensureTopLevelStatementBlock,
   escapeRegExp,
   extractTopLevelStatementKey,
   getObjectProperty,
@@ -291,6 +292,7 @@ const FRONTEND_PROVIDER_ENV_CONFIG = {
 
 const GRANITE_CONFIG_REMOVABLE_IMPORT_SOURCES = new Set([
   'node:path',
+  'node:module',
   'dotenv',
   '@granite-js/plugin-env',
   './scaffold.preset',
@@ -299,6 +301,12 @@ const GRANITE_CONFIG_REMOVABLE_IMPORT_SOURCES = new Set([
 const GRANITE_CONFIG_REMOVABLE_STATEMENT_KEYS = new Set([
   'var:appRoot',
   'var:repoRoot',
+  'var:require',
+  'var:scaffoldPreset',
+  'var:workspaceRepoRoot',
+  'var:scaffoldEnvBindings',
+  'var:firebaseBuildResolver',
+  'var:firebaseMetroResolver',
   'var:cryptoShimPath',
   'var:cryptoModuleAliases',
   'fn:resolveMiniappEnv',
@@ -316,6 +324,8 @@ function formatGraniteConfigSource(source: string) {
   let next = source
 
   for (const marker of [
+    'const require =',
+    'const scaffoldPreset =',
     'const repoRoot =',
     'const workspaceRepoRoot =',
     'dotenv.config({',
@@ -339,8 +349,8 @@ function formatGraniteConfigSource(source: string) {
   return next
 }
 
-function syncGranitePresetImport(module: SwcModule, serverProvider: ServerProvider | null) {
-  const importSpecifiers =
+function renderGranitePresetLoaderBlock(serverProvider: ServerProvider | null) {
+  const bindingNames =
     serverProvider === 'firebase'
       ? [
           'firebaseBuildResolver',
@@ -352,6 +362,18 @@ function syncGranitePresetImport(module: SwcModule, serverProvider: ServerProvid
         ? ['scaffoldEnvBindings', 'workspaceRepoRoot']
         : ['workspaceRepoRoot']
 
+  const bindingStatements = bindingNames
+    .map((bindingName) => `const ${bindingName} = scaffoldPreset.${bindingName}`)
+    .join('\n')
+
+  return dedentWithTrailingNewline`
+    const require = createRequire(import.meta.url)
+    const scaffoldPreset = require(path.join(process.cwd(), 'scaffold.preset.ts'))
+    ${bindingStatements}
+  `
+}
+
+function syncGranitePresetLoader(module: SwcModule, serverProvider: ServerProvider | null) {
   module.body = module.body.filter((statement) => {
     if (statement.type !== 'ImportDeclaration') {
       return true
@@ -361,15 +383,14 @@ function syncGranitePresetImport(module: SwcModule, serverProvider: ServerProvid
     return source ? !GRANITE_CONFIG_REMOVABLE_IMPORT_SOURCES.has(source) : true
   })
 
-  ensureImport(
-    module,
-    './scaffold.preset',
-    `import { ${importSpecifiers.join(', ')} } from './scaffold.preset'`,
-  )
+  ensureImport(module, 'node:path', `import path from 'node:path'`)
+  ensureImport(module, 'node:module', `import { createRequire } from 'node:module'`)
 
   if (serverProvider) {
     ensureImport(module, '@granite-js/plugin-env', `import { env } from '@granite-js/plugin-env'`)
   }
+
+  ensureTopLevelStatementBlock(module, renderGranitePresetLoaderBlock(serverProvider))
 }
 
 function removeLegacyGraniteInlineStatements(module: SwcModule) {
@@ -510,8 +531,8 @@ export function patchGraniteConfigSource(
 
   upsertObjectProperty(configObject, 'appName', JSON.stringify(tokens.appName))
   updateAppsInTossBrand(configObject, tokens)
-  syncGranitePresetImport(module, serverProvider)
   removeLegacyGraniteInlineStatements(module)
+  syncGranitePresetLoader(module, serverProvider)
   ensureRepoRootWatchFolder(configObject)
   syncProviderPlugin(configObject, serverProvider)
 
