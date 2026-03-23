@@ -1,5 +1,13 @@
 # create-rn-miniapp
 
+## 0.1.6
+
+### Patch Changes
+
+- 028ff03: AppInToss runtime build가 Granite 설정 파일을 `.granite/.ait-runtime-*.config.ts`로 복사해 실행할 때도 frontend scaffold preset을 안정적으로 읽도록 수정했습니다. generated `granite.config.ts`가 상대 import 대신 `process.cwd()` 기준 preset loader를 사용하도록 바꾸고, 관련 회귀 테스트를 추가했습니다.
+- Updated dependencies [028ff03]
+  - @create-rn-miniapp/scaffold-templates@0.1.6
+
 ## 0.1.5
 
 ### Patch Changes
