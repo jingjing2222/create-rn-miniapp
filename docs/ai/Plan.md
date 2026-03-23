@@ -1,3 +1,16 @@
+## 다음 작업: 두 패키지 patch changeset 추가와 한글 PR 생성
+
+### 목표
+- 이번 브랜치의 skill 정리와 공식 Apps-in-Toss skill 연동 변경을 publish 대상 두 패키지에 대한 patch release로 기록한다.
+- `create-rn-miniapp`와 `@create-rn-miniapp/scaffold-templates`를 모두 포함하는 changeset을 한국어 설명으로 추가한다.
+- changeset까지 포함한 브랜치를 원격에 push하고, 한국어 제목/본문으로 PR을 생성한다.
+
+### 작업 순서
+1. publish 대상 패키지와 현재 변경 범위를 다시 확인한다.
+2. 두 패키지를 함께 올리는 patch changeset을 추가한다.
+3. 변경을 커밋하고 원격 브랜치에 push한다.
+4. 검증을 다시 실행한 뒤 한국어 PR 제목/본문으로 PR을 생성한다.
+
 ## 다음 작업: README install example skill 집합의 SSoT 정리
 
 ### 목표
