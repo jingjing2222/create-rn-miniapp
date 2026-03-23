@@ -6,7 +6,7 @@ import {
   buildCommandPlan,
   CommandExecutionError,
   runCommandWithOutput,
-} from './commands.js'
+} from './runtime/commands.js'
 
 test('buildCommandPlan keeps AppInToss frontend steps first', () => {
   const targetRoot = path.join('/tmp', 'ebook')

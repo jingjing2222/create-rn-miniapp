@@ -1,11 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { listInstalledProjectSkillEntries, type InstalledProjectSkill } from '../skills-install.js'
+import { listInstalledProjectSkillEntries, type InstalledProjectSkill } from '../skills/install.js'
 import {
   GENERATED_REPO_SKILLS_STRATEGY_README_LINES,
   renderSkillsInstallExample,
   renderSkillsStandardCommandSummary,
-} from '../root-readme.js'
+} from '../docs/root-readme.js'
 import {
   resolveTemplatesPackageRoot,
   copyDirectoryWithTokens,
@@ -20,7 +20,7 @@ import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
 import { createRootTemplateExtraTokens, renderRootVerifyStepsMarkdown } from './root.js'
 import { SKILL_CATALOG } from './skill-catalog.js'
 import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
-import dedent, { dedentWithTrailingNewline } from '../dedent.js'
+import dedent, { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
 type DocumentDefinition = {
   relativePath: string

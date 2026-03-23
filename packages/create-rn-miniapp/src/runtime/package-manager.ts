@@ -4,7 +4,7 @@ import {
   CREATE_VITE_CLI,
   type ExternalCliTool,
 } from './external-tooling.js'
-import type { TrpcWorkspacePath } from './trpc-workspace-metadata.js'
+import type { TrpcWorkspacePath } from '../workspace/trpc.js'
 
 export const PACKAGE_MANAGERS = ['pnpm', 'yarn', 'npm', 'bun'] as const
 

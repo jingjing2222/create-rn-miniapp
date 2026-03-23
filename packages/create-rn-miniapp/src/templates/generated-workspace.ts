@@ -1,5 +1,5 @@
 import type { GeneratedWorkspaceHints, GeneratedWorkspaceOptions } from './types.js'
-import { hasTrpcWorkspace, inspectWorkspaceTopology } from '../workspace-topology.js'
+import { hasTrpcWorkspace, inspectWorkspaceTopology } from '../workspace/topology.js'
 
 export async function resolveGeneratedWorkspaceOptions(
   targetRoot: string,

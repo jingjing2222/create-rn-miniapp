@@ -16,7 +16,7 @@ import {
   buildCreateLifecycleOrder,
   buildRootGitSetupPlan,
   buildRootFinalizePlan,
-} from './index.js'
+} from './orders.js'
 
 type MigrationCombo = {
   label: string
@@ -219,42 +219,45 @@ test('migration scaffold combinations generate docs, README onboarding, and only
 })
 
 test('add scaffold flow does not re-derive manifest topology from filesystem probes', async () => {
-  const scaffoldSource = await readFile(
-    fileURLToPath(new URL('./index.ts', import.meta.url)),
+  const resolveSource = await readFile(
+    fileURLToPath(new URL('../add/phases/resolve.ts', import.meta.url)),
     'utf8',
   )
 
   assert.doesNotMatch(
-    scaffoldSource,
+    resolveSource,
     /trpc: await pathExists\(path\.join\(targetRoot, 'packages', 'contracts'\)\)/,
   )
   assert.doesNotMatch(
-    scaffoldSource,
+    resolveSource,
     /backoffice: await pathExists\(path\.join\(targetRoot, 'backoffice'\)\)/,
   )
 })
 
 test('skill auto-install captures raw copy logs and reports installed skill summary instead', async () => {
-  const scaffoldSource = await readFile(
-    fileURLToPath(new URL('./index.ts', import.meta.url)),
+  const patchSource = await readFile(
+    fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
     'utf8',
   )
 
-  assert.match(scaffoldSource, /runCommandWithOutput\(installCommand\)/)
-  assert.match(scaffoldSource, /listInstalledProjectSkillEntries\(options\.targetRoot\)/)
-  assert.match(scaffoldSource, /renderInstalledSkillsSummary\(/)
-  assert.doesNotMatch(scaffoldSource, /runCommand\(installCommand\)/)
-  assert.doesNotMatch(scaffoldSource, /options\.selectedSkills\.join\('\\n- '\)/)
+  assert.match(patchSource, /runCommandWithOutput\(installCommand\)/)
+  assert.match(patchSource, /listInstalledProjectSkillEntries\(ctx\.targetRoot\)/)
+  assert.match(patchSource, /renderInstalledSkillsSummary\(/)
+  assert.doesNotMatch(patchSource, /runCommand\(installCommand\)/)
+  assert.doesNotMatch(patchSource, /ctx\.options\.selectedSkills\.join\('\\n- '\)/)
 })
 
 test('skill auto-install re-syncs root frontend policy files after installation succeeds', async () => {
-  const scaffoldSource = await readFile(
-    fileURLToPath(new URL('./index.ts', import.meta.url)),
+  const patchSource = await readFile(
+    fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
     'utf8',
   )
 
-  assert.match(scaffoldSource, /if \(installedSkills\.didInstall\) \{/)
-  assert.match(scaffoldSource, /syncRootFrontendPolicyFiles\(targetRoot, options\.packageManager\)/)
+  assert.match(patchSource, /if \(installedSkills\.didInstall\) \{/)
+  assert.match(
+    patchSource,
+    /syncRootFrontendPolicyFiles\(ctx\.targetRoot, ctx\.options\.packageManager\)/,
+  )
 })
 
 test('buildRootFinalizePlan adds yarn sdk generation after root install', () => {

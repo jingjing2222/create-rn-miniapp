@@ -1,7 +1,7 @@
 import { execa, ExecaError } from 'execa'
 import type { CommandSpec } from './command-spec.js'
 import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
-import { getServerProviderAdapter, type ServerProvider } from './providers/index.js'
+import { getServerProviderAdapter, type ServerProvider } from '../providers/index.js'
 
 export type CommandOutput = {
   stdout: string

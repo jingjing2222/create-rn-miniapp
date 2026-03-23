@@ -2,7 +2,7 @@ import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promi
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { getPackageManagerAdapter } from '../package-manager.js'
+import { getPackageManagerAdapter } from '../runtime/package-manager.js'
 import type { TemplateTokens } from './types.js'
 
 const NPMRC_SOURCE = 'legacy-peer-deps=true\n'

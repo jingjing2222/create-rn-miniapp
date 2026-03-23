@@ -9,12 +9,12 @@ import {
   FIREBASE_TOOLS_CLI,
   SUPABASE_CLI,
   WRANGLER_CLI,
-} from '../external-tooling.js'
+} from '../runtime/external-tooling.js'
 import {
   createCloudflareServerScriptCatalog,
   createFirebaseServerScriptCatalog,
   createSupabaseServerScriptCatalog,
-} from '../server-script-catalog.js'
+} from '../server/script-catalog.js'
 import { syncRootFrontendPolicyFiles } from '../templates/root.js'
 import {
   patchBackofficeWorkspace,

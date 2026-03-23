@@ -1,5 +1,5 @@
-import type { SkillFrontmatter } from './skills-frontmatter.js'
-import { dedentWithTrailingNewline } from './dedent.js'
+import type { SkillFrontmatter } from './frontmatter.js'
+import { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
 type SkillMetadata = Pick<SkillFrontmatter, 'id' | 'agentsLabel' | 'category'>
 

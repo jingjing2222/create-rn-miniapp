@@ -1,7 +1,7 @@
 import path from 'node:path'
-import type { CommandSpec } from '../command-spec.js'
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
-import type { ServerScaffoldState } from '../server-project.js'
+import type { CommandSpec } from '../runtime/command-spec.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
+import type { ServerScaffoldState } from '../server/project.js'
 import type { OptionalSkillId } from '../templates/skill-catalog.js'
 import {
   ensureBackofficeFirebaseBootstrap,

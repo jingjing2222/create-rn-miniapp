@@ -1,6 +1,6 @@
-import type { PackageManager } from '../package-manager.js'
+import type { PackageManager } from '../runtime/package-manager.js'
 import { resolveRootHelperScriptCommands } from './root-script-catalog.js'
-import { dedentWithTrailingNewline } from '../dedent.js'
+import { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
 type NativeImportPatternRule = {
   group: string[]

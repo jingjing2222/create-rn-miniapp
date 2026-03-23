@@ -1,28 +1,28 @@
 import path from 'node:path'
 import { isCancel, log, multiselect, password, select, text } from '@clack/prompts'
 import yargs from 'yargs'
-import { assertValidAppName, toDefaultDisplayName } from './layout.js'
-import { PACKAGE_MANAGERS, type PackageManager } from './package-manager.js'
+import { assertValidAppName, toDefaultDisplayName } from '../workspace/layout.js'
+import { PACKAGE_MANAGERS, type PackageManager } from '../runtime/package-manager.js'
 import {
   SERVER_PROJECT_MODES,
   type ServerProjectMode,
   type ServerScaffoldState,
-} from './server-project.js'
+} from '../server/project.js'
 import {
   SERVER_PROVIDERS,
   SERVER_PROVIDER_OPTIONS,
   serverProviderSupportsTrpc,
   type ServerProvider,
-} from './providers/index.js'
-import type { SkillId } from './templates/skill-catalog.js'
+} from '../providers/index.js'
+import type { SkillId } from '../templates/skill-catalog.js'
 import {
   normalizeSelectedSkillIds,
   resolveRecommendedSkillIds,
   resolveSelectableSkills,
-} from './skills-install.js'
-import { pathExists } from './templates/filesystem.js'
-import type { WorkspaceInspection } from './workspace-inspector.js'
-import dedent from './dedent.js'
+} from '../skills/install.js'
+import { pathExists } from '../templates/filesystem.js'
+import type { WorkspaceInspection } from '../workspace/inspect.js'
+import dedent from '../runtime/dedent.js'
 
 export type ParsedCliArgs = {
   add: boolean

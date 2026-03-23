@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import type { CliPrompter } from '../cli.js'
+import type { CliPrompter } from '../cli/index.js'
 import { promptShouldInitializeExistingRemoteContent } from './shared.js'
 
 type SelectConfig = {

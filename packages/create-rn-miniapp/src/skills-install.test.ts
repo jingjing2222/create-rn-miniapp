@@ -13,8 +13,8 @@ import {
   renderInstalledSkillsSummary,
   renderSkillsAddCommand,
   resolveRecommendedSkillIds,
-} from './skills-install.js'
-import { SKILLS_LIST_COMMAND, SKILLS_SOURCE_REPO } from './skills-contract.js'
+} from './skills/install.js'
+import { SKILLS_LIST_COMMAND, SKILLS_SOURCE_REPO } from './skills/contract.js'
 
 function escapeRegExp(source: string) {
   return source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -64,7 +64,7 @@ test('skills source repo slug is derived from the published package repository',
     repository?: { url?: string }
   }
   const skillsContractSource = await readFile(
-    fileURLToPath(new URL('./skills-contract.ts', import.meta.url)),
+    fileURLToPath(new URL('./skills/contract.ts', import.meta.url)),
     'utf8',
   )
 

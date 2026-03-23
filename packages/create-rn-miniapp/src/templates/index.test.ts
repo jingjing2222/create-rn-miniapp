@@ -9,7 +9,7 @@ import {
   getPackageManagerAdapter,
   PACKAGE_MANAGERS,
   type PackageManager,
-} from '../package-manager.js'
+} from '../runtime/package-manager.js'
 import {
   ROOT_README_PROVIDER_SECTION_END_MARKER,
   ROOT_README_PROVIDER_SECTION_START_MARKER,
@@ -20,12 +20,12 @@ import {
   renderSkillsStandardCommandSummary,
   renderRootReadmeProviderSection,
   renderRootReadmeSkillsSection,
-} from '../root-readme.js'
+} from '../docs/root-readme.js'
 import {
   SKILLS_CHECK_COMMAND,
   SKILLS_LIST_COMMAND,
   SKILLS_UPDATE_COMMAND,
-} from '../skills-contract.js'
+} from '../skills/contract.js'
 import { CORE_SKILL_DEFINITIONS, SKILL_CATALOG } from './skill-catalog.js'
 import { getTestPackageManagerField } from '../test-support/package-manager.js'
 import * as templateModule from './index.js'
@@ -412,12 +412,12 @@ test('skill taxonomy metadata is centralized in a shared catalog', async () => {
     'utf8',
   )
   const skillsInstallSource = await readFile(
-    fileURLToPath(new URL('../skills-install.ts', import.meta.url)),
+    fileURLToPath(new URL('../skills/install.ts', import.meta.url)),
     'utf8',
   )
   const docsSource = await readFile(fileURLToPath(new URL('./docs.ts', import.meta.url)), 'utf8')
   const skillsContractSource = await readFile(
-    fileURLToPath(new URL('../skills-contract.ts', import.meta.url)),
+    fileURLToPath(new URL('../skills/contract.ts', import.meta.url)),
     'utf8',
   )
   const sharedFeatureSource = await readFile(
@@ -427,9 +427,9 @@ test('skill taxonomy metadata is centralized in a shared catalog', async () => {
 
   assert.match(catalogSource, /export const SKILL_CATALOG/)
   assert.match(featureCatalogSource, /from '\.\/skill-catalog\.js'/)
-  assert.match(skillsInstallSource, /from '\.\/templates\/feature-catalog\.js'/)
-  assert.match(skillsInstallSource, /from '\.\/skills-contract\.js'/)
-  assert.match(docsSource, /from '\.\.\/root-readme\.js'/)
+  assert.match(skillsInstallSource, /from '\.\.\/templates\/feature-catalog\.js'/)
+  assert.match(skillsInstallSource, /from '\.\/contract\.js'/)
+  assert.match(docsSource, /from '\.\.\/docs\/root-readme\.js'/)
   assert.match(skillsContractSource, /PROJECT_SKILLS_CANONICAL_DIR/)
   assert.doesNotMatch(catalogSource, /from '\.\.\/skills-contract\.js'/)
   assert.doesNotMatch(catalogSource, /docsPath:/)
@@ -540,7 +540,7 @@ test('generated docs and inspectors derive workspace topology from a shared help
     'utf8',
   )
   const workspaceInspectorSource = await readFile(
-    fileURLToPath(new URL('../workspace-inspector.ts', import.meta.url)),
+    fileURLToPath(new URL('../workspace/inspect.ts', import.meta.url)),
     'utf8',
   )
   const templateTypesSource = await readFile(
@@ -548,8 +548,8 @@ test('generated docs and inspectors derive workspace topology from a shared help
     'utf8',
   )
 
-  assert.match(generatedWorkspaceSource, /from '\.\.\/workspace-topology\.js'/)
-  assert.match(workspaceInspectorSource, /from '\.\/workspace-topology\.js'/)
+  assert.match(generatedWorkspaceSource, /from '\.\.\/workspace\/topology\.js'/)
+  assert.match(workspaceInspectorSource, /from '\.\/topology\.js'/)
   assert.match(
     templateTypesSource,
     /import type \{ ServerProvider \} from '\.\.\/providers\/index\.js'/,
@@ -862,11 +862,11 @@ test('tRPC workspace descriptors come from templates/trpc metadata', async () =>
 test('tRPC workspace paths are not hardcoded outside the shared workspace metadata', async () => {
   const cliSource = await readFile(fileURLToPath(new URL('../index.ts', import.meta.url)), 'utf8')
   const packageManagerSource = await readFile(
-    fileURLToPath(new URL('../package-manager.ts', import.meta.url)),
+    fileURLToPath(new URL('../runtime/package-manager.ts', import.meta.url)),
     'utf8',
   )
   const trpcMetadataSource = await readFile(
-    fileURLToPath(new URL('../trpc-workspace-metadata.ts', import.meta.url)),
+    fileURLToPath(new URL('../workspace/trpc.ts', import.meta.url)),
     'utf8',
   )
   const patchingSharedSource = await readFile(
@@ -874,7 +874,7 @@ test('tRPC workspace paths are not hardcoded outside the shared workspace metada
     'utf8',
   )
   const workspaceTopologySource = await readFile(
-    fileURLToPath(new URL('../workspace-topology.ts', import.meta.url)),
+    fileURLToPath(new URL('../workspace/topology.ts', import.meta.url)),
     'utf8',
   )
 

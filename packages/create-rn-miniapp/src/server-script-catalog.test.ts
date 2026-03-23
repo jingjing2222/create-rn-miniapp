@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getPackageManagerAdapter } from './package-manager.js'
+import { getPackageManagerAdapter } from './runtime/package-manager.js'
 import {
   renderServerReadmeScriptLines,
   renderServerRemoteOpsCommands,
   type ServerScriptCatalogEntry,
-} from './server-script-catalog.js'
+} from './server/script-catalog.js'
 
 const DEPLOY_ENTRY: ServerScriptCatalogEntry = {
   name: 'deploy',

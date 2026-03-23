@@ -10,7 +10,7 @@ import {
   parseTypeScriptModule,
   printTypeScriptModule,
 } from './shared.js'
-import dedent from '../../dedent.js'
+import dedent from '../../runtime/dedent.js'
 
 function isDocumentGetElementByIdRoot(expression: SwcExpression | undefined) {
   const candidate =

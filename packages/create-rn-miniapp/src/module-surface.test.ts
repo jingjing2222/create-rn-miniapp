@@ -332,6 +332,15 @@ test('non-index source modules do not use re-export syntax', async () => {
   }
 })
 
+test('root entry delegates orchestration through dedicated create and add coordinators', async () => {
+  const entrySource = await readFile(path.join(SRC_ROOT, 'index.ts'), 'utf8')
+
+  assert.match(entrySource, /from '\.\/cli\/index\.js'/)
+  assert.match(entrySource, /from '\.\/create\/index\.js'/)
+  assert.match(entrySource, /from '\.\/add\/index\.js'/)
+  assert.doesNotMatch(entrySource, /from '\.\/scaffold\/index\.js'/)
+})
+
 test('non-index source modules are not pure forwarding facades', async () => {
   const sourceFiles = await listSourceFiles(SRC_ROOT)
   const nonIndexFiles = sourceFiles.filter((filePath) => path.basename(filePath) !== 'index.ts')

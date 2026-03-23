@@ -4,18 +4,18 @@ import path from 'node:path'
 import { stripVTControlCharacters } from 'node:util'
 import { log } from '@clack/prompts'
 import JSON5 from 'json5'
-import type { CommandSpec } from '../../command-spec.js'
-import { extractJsonPayload } from '../../cli-structured-output.js'
-import { FIREBASE_TOOLS_CLI } from '../../external-tooling.js'
+import type { CommandSpec } from '../../runtime/command-spec.js'
+import { extractJsonPayload } from '../../cli/structured-output.js'
+import { FIREBASE_TOOLS_CLI } from '../../runtime/external-tooling.js'
 import {
   CommandExecutionError,
   runCommand,
   runCommandWithOutput,
   type CommandOutput,
-} from '../../commands.js'
-import type { CliPrompter } from '../../cli.js'
-import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
-import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
+} from '../../runtime/commands.js'
+import type { CliPrompter } from '../../cli/index.js'
+import { getPackageManagerAdapter, type PackageManager } from '../../runtime/package-manager.js'
+import type { ProvisioningNote, ServerProjectMode } from '../../server/project.js'
 import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
 import { pathExists } from '../../templates/filesystem.js'
 import {
@@ -23,7 +23,7 @@ import {
   patchFirebaseFunctionRegion,
   patchFirebaseServerProjectId,
 } from '../../templates/server.js'
-import dedent, { dedentWithTrailingNewline } from '../../dedent.js'
+import dedent, { dedentWithTrailingNewline } from '../../runtime/dedent.js'
 
 type FirebaseProject = {
   projectId: string

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { pathExists } from './templates/filesystem.js'
+import type { ServerProvider } from '../providers/index.js'
+import { pathExists } from '../templates/filesystem.js'
 
 export const SERVER_PROJECT_MODES = ['create', 'existing'] as const
 
@@ -36,4 +37,35 @@ export async function readServerScaffoldState(
 export type ProvisioningNote = {
   title: string
   body: string
+}
+
+export function resolveRequestedRemoteInitializationState(options: {
+  serverProjectMode: ServerProjectMode | null
+  skipServerProvisioning: boolean
+}): ServerRemoteInitializationState {
+  if (options.skipServerProvisioning || options.serverProjectMode === null) {
+    return 'not-run'
+  }
+
+  return options.serverProjectMode === 'create' ? 'applied' : 'skipped'
+}
+
+export function buildServerScaffoldState(options: {
+  serverProvider: ServerProvider | null
+  serverProjectMode: ServerProjectMode | null
+  remoteInitialization: ServerRemoteInitializationState
+  trpc: boolean
+  backoffice: boolean
+}): ServerScaffoldState | null {
+  if (!options.serverProvider) {
+    return null
+  }
+
+  return {
+    serverProvider: options.serverProvider,
+    serverProjectMode: options.serverProjectMode,
+    remoteInitialization: options.remoteInitialization,
+    trpc: options.trpc,
+    backoffice: options.backoffice,
+  }
 }

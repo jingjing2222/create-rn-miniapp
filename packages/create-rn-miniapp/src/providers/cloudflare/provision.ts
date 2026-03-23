@@ -8,19 +8,19 @@ import Cloudflare from 'cloudflare'
 import envPaths from 'env-paths'
 import { parse } from 'jsonc-parser'
 import { parse as parseToml } from 'smol-toml'
-import type { CommandSpec } from '../../command-spec.js'
-import { WRANGLER_CLI } from '../../external-tooling.js'
+import type { CommandSpec } from '../../runtime/command-spec.js'
+import { WRANGLER_CLI } from '../../runtime/external-tooling.js'
 import {
   createCloudflareVitestWranglerConfigSource,
   patchWranglerConfigSource,
 } from '../../patching/jsonc.js'
-import { runCommand, runCommandWithOutput, type CommandOutput } from '../../commands.js'
-import type { CliPrompter } from '../../cli.js'
-import { getPackageManagerAdapter, type PackageManager } from '../../package-manager.js'
-import type { ProvisioningNote, ServerProjectMode } from '../../server-project.js'
+import { runCommand, runCommandWithOutput, type CommandOutput } from '../../runtime/commands.js'
+import type { CliPrompter } from '../../cli/index.js'
+import { getPackageManagerAdapter, type PackageManager } from '../../runtime/package-manager.js'
+import type { ProvisioningNote, ServerProjectMode } from '../../server/project.js'
 import { pathExists } from '../../templates/filesystem.js'
 import { promptShouldInitializeExistingRemoteContent } from '../shared.js'
-import dedent, { dedentWithTrailingNewline } from '../../dedent.js'
+import dedent, { dedentWithTrailingNewline } from '../../runtime/dedent.js'
 
 type WranglerAuth = {
   oauthToken: string

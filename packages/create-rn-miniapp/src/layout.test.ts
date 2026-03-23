@@ -5,7 +5,7 @@ import {
   generatedWorkspaceLayout,
   isValidAppName,
   toDefaultDisplayName,
-} from './layout.js'
+} from './workspace/layout.js'
 
 test('generated workspace layout stays flat', () => {
   assert.deepEqual(generatedWorkspaceLayout, ['frontend', 'backoffice', 'server'])

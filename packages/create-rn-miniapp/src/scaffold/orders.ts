@@ -1,7 +1,7 @@
-import type { CommandSpec } from '../command-spec.js'
-import { buildCreateCommandPhases } from '../commands.js'
-import { YARN_SDKS_CLI } from '../external-tooling.js'
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import type { CommandSpec } from '../runtime/command-spec.js'
+import { buildCreateCommandPhases } from '../runtime/commands.js'
+import { YARN_SDKS_CLI } from '../runtime/external-tooling.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
 import { resolveCreateTrpcEnabled } from './flow-state.js'
 

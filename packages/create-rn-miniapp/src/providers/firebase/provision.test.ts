@@ -3,8 +3,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import type { CliPrompter } from '../../cli.js'
-import { CommandExecutionError } from '../../commands.js'
+import type { CliPrompter } from '../../cli/index.js'
+import { CommandExecutionError } from '../../runtime/commands.js'
 import {
   buildFirebaseCommand,
   buildFirebaseFirestoreDatabaseCreateCommand,

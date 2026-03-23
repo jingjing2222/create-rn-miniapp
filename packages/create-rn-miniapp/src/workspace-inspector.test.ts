@@ -4,11 +4,8 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { getTestPackageManagerField } from './test-support/package-manager.js'
-import {
-  APP_ROUTER_WORKSPACE_PATH,
-  LEGACY_TRPC_WORKSPACE_PACKAGE_PATH,
-} from './trpc-workspace-metadata.js'
-import { inspectWorkspace } from './workspace-inspector.js'
+import { APP_ROUTER_WORKSPACE_PATH, LEGACY_TRPC_WORKSPACE_PACKAGE_PATH } from './workspace/trpc.js'
+import { inspectWorkspace } from './workspace/inspect.js'
 
 async function createTempWorkspace(t: test.TestContext) {
   const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-inspector-'))

@@ -1,13 +1,13 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import npa from 'npm-package-arg'
-import { readGraniteConfigMetadata } from './patching/ast/index.js'
+import { readGraniteConfigMetadata } from '../patching/ast/index.js'
 import { toDefaultDisplayName } from './layout.js'
-import { PACKAGE_MANAGERS, type PackageManager } from './package-manager.js'
-import { detectServerProvider, type ServerProvider } from './providers/index.js'
-import { readServerScaffoldState, type ServerScaffoldState } from './server-project.js'
-import { pathExists } from './templates/filesystem.js'
-import { hasTrpcWorkspace, inspectWorkspaceTopology } from './workspace-topology.js'
+import { PACKAGE_MANAGERS, type PackageManager } from '../runtime/package-manager.js'
+import { detectServerProvider, type ServerProvider } from '../providers/index.js'
+import { readServerScaffoldState, type ServerScaffoldState } from '../server/project.js'
+import { pathExists } from '../templates/filesystem.js'
+import { hasTrpcWorkspace, inspectWorkspaceTopology } from './topology.js'
 
 type RootPackageJson = {
   packageManager?: string

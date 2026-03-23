@@ -1,4 +1,4 @@
-import { dedentWithTrailingNewline } from '../dedent.js'
+import { dedentWithTrailingNewline } from '../runtime/dedent.js'
 export const TRPC_CLIENT_VERSION = '^11.13.4'
 export const TRPC_SERVER_VERSION = '^11.13.4'
 export const APP_ROUTER_WORKSPACE_DEPENDENCY = 'workspace:*'

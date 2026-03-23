@@ -2,8 +2,8 @@ import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { parse as parseJsonc } from 'jsonc-parser'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
-import { pathExists } from './templates/filesystem.js'
-import type { RootWorkspacePattern } from './templates/types.js'
+import { pathExists } from '../templates/filesystem.js'
+import type { RootWorkspacePattern } from '../templates/types.js'
 
 const NORMALIZED_PACKAGE_WORKSPACE = 'packages/*' as const
 

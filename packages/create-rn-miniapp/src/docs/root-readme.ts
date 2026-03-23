@@ -1,12 +1,12 @@
-import { SERVER_PROVIDERS, getServerProviderAdapter } from './providers/index.js'
-import { renderSkillsAddCommand } from './skills-install.js'
+import { SERVER_PROVIDERS, getServerProviderAdapter } from '../providers/index.js'
+import { renderSkillsAddCommand } from '../skills/install.js'
 import {
   SKILLS_CHECK_COMMAND,
   SKILLS_LIST_COMMAND,
   SKILLS_UPDATE_COMMAND,
-} from './skills-contract.js'
-import { CORE_SKILL_DEFINITIONS, SKILL_CATALOG } from './templates/skill-catalog.js'
-import dedent from './dedent.js'
+} from '../skills/contract.js'
+import { CORE_SKILL_DEFINITIONS, SKILL_CATALOG } from '../templates/skill-catalog.js'
+import dedent from '../runtime/dedent.js'
 
 export const ROOT_README_SKILLS_SECTION_START_MARKER = '<!-- generated:skills-strategy:start -->'
 export const ROOT_README_SKILLS_SECTION_END_MARKER = '<!-- generated:skills-strategy:end -->'

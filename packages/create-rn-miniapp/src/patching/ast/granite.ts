@@ -18,7 +18,7 @@ import {
   type SwcObjectExpression,
   upsertObjectProperty,
 } from './shared.js'
-import dedent, { dedentWithTrailingNewline } from '../../dedent.js'
+import dedent, { dedentWithTrailingNewline } from '../../runtime/dedent.js'
 
 function getDefineConfigObject(module: SwcModule) {
   const exportStatement = module.body.find(

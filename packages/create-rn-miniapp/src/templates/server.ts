@@ -1,17 +1,17 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { FIREBASE_TOOLS_CLI, SUPABASE_CLI } from '../external-tooling.js'
+import { FIREBASE_TOOLS_CLI, SUPABASE_CLI } from '../runtime/external-tooling.js'
 import {
   renderProcessEnvLoaderScriptLines,
   renderTypedEnvReaderScriptLines,
-} from '../env-loader-script.js'
-import { getPackageManagerAdapter } from '../package-manager.js'
+} from '../server/env-loader-script.js'
+import { getPackageManagerAdapter } from '../runtime/package-manager.js'
 import {
   createFirebaseServerScriptCatalog,
   createServerScriptRecord,
   createSupabaseServerScriptCatalog,
   renderFirebaseFunctionsInstallCommand,
-} from '../server-script-catalog.js'
+} from '../server/script-catalog.js'
 import {
   readJsonTemplate,
   resolveTemplatesPackageRoot,
@@ -24,7 +24,7 @@ import type {
   TemplateTokens,
   WorkspaceName,
 } from './types.js'
-import { dedentWithTrailingNewline } from '../dedent.js'
+import { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
 export const SUPABASE_DEFAULT_FUNCTION_NAME = 'api'
 export const FIREBASE_DEFAULT_FUNCTION_NAME = 'api'
