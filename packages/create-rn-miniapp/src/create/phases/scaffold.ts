@@ -8,6 +8,7 @@ import {
   maybePatchServerWorkspace,
   maybePrepareServerWorkspace,
   maybePrepareTrpcWorkspace,
+  resolveCreateRootWorkspaces,
   maybeWriteNpmWorkspaceConfig,
   resolveRootWorkspaces,
 } from '../../scaffold/helpers.js'
@@ -57,7 +58,15 @@ async function prepareCreateServerWorkspace(ctx: CreateContext) {
 }
 
 async function applyCreateRootWorkspaceTemplates(ctx: CreateContext) {
-  await applyRootTemplates(ctx.targetRoot, ctx.tokens, await resolveRootWorkspaces(ctx.targetRoot))
+  await applyRootTemplates(
+    ctx.targetRoot,
+    ctx.tokens,
+    resolveCreateRootWorkspaces({
+      serverProvider: ctx.options.serverProvider,
+      withBackoffice: ctx.options.withBackoffice,
+      withTrpc: ctx.options.withTrpc,
+    }),
+  )
   return ctx
 }
 
@@ -127,19 +136,20 @@ export async function scaffoldCreateWorkspace(ctx: CreateContext) {
 
   await ensureEmptyDirectory(ctx.targetRoot)
 
-  if (ctx.options.serverProvider) {
-    await mkdir(path.join(ctx.targetRoot, 'server'), { recursive: true })
-  }
-
   ctx = {
     ...ctx,
     commandPhases,
   }
 
+  ctx = await applyCreateRootWorkspaceTemplates(ctx)
+
+  if (ctx.options.serverProvider) {
+    await mkdir(path.join(ctx.targetRoot, 'server'), { recursive: true })
+  }
+
   ctx = await scaffoldCreateFrontend(ctx)
   ctx = await scaffoldCreateServer(ctx)
   ctx = await prepareCreateServerWorkspace(ctx)
-  ctx = await applyCreateRootWorkspaceTemplates(ctx)
   ctx = await prepareCreateTrpcWorkspace(ctx)
   ctx = await patchCreateServerWorkspace(ctx)
   ctx = await syncCreateManifestBeforeProvisioning(ctx)

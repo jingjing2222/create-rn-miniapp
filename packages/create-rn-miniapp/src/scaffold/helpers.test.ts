@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { resolveRootWorkspaces } from './helpers.js'
+import { resolveCreateRootWorkspaces, resolveRootWorkspaces } from './helpers.js'
 
 async function createTempTargetRoot(t: test.TestContext) {
   const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-scaffold-helpers-'))
@@ -72,4 +72,33 @@ test('resolveRootWorkspaces reads package.json workspaces when a pnpm manifest i
     'packages/*',
     'backoffice',
   ])
+})
+
+test('resolveCreateRootWorkspaces derives the initial root manifest from create options', () => {
+  assert.deepEqual(
+    resolveCreateRootWorkspaces({
+      serverProvider: 'cloudflare',
+      withBackoffice: true,
+      withTrpc: true,
+    }),
+    ['frontend', 'server', 'packages/*', 'backoffice'],
+  )
+
+  assert.deepEqual(
+    resolveCreateRootWorkspaces({
+      serverProvider: 'firebase',
+      withBackoffice: false,
+      withTrpc: true,
+    }),
+    ['frontend', 'server'],
+  )
+
+  assert.deepEqual(
+    resolveCreateRootWorkspaces({
+      serverProvider: null,
+      withBackoffice: true,
+      withTrpc: false,
+    }),
+    ['frontend', 'backoffice'],
+  )
 })

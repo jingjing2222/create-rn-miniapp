@@ -2,11 +2,20 @@ import path from 'node:path'
 import { log } from '@clack/prompts'
 import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 import { getServerProviderAdapter, type ServerProvider } from '../providers/index.js'
-import { resolveRootWorkspacePatterns } from '../workspace/root-workspaces.js'
+import { resolveCreateTrpcEnabled } from './flow-state.js'
+import {
+  normalizeRootWorkspacePatterns,
+  resolveRootWorkspacePatterns,
+} from '../workspace/root-workspaces.js'
+import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from '../workspace/trpc.js'
 import type { ServerScaffoldState } from '../server/project.js'
 import { pathExists, writeWorkspaceNpmrc } from '../templates/filesystem.js'
 import { applyTrpcWorkspaceTemplate } from '../templates/trpc.js'
-import type { RootWorkspacePattern, TemplateTokens } from '../templates/types.js'
+import {
+  ROOT_WORKSPACE_ORDER,
+  type RootWorkspacePattern,
+  type TemplateTokens,
+} from '../templates/types.js'
 
 export function createTemplateTokens(options: {
   appName: string
@@ -38,6 +47,39 @@ export async function maybeWriteNpmWorkspaceConfig(
 
 export async function resolveRootWorkspaces(targetRoot: string): Promise<RootWorkspacePattern[]> {
   return resolveRootWorkspacePatterns(targetRoot)
+}
+
+export function resolveCreateRootWorkspaces(options: {
+  serverProvider: ServerProvider | null
+  withBackoffice: boolean
+  withTrpc: boolean
+}): RootWorkspacePattern[] {
+  const trpcEnabled = resolveCreateTrpcEnabled({
+    serverProvider: options.serverProvider,
+    withTrpc: options.withTrpc,
+  })
+
+  return normalizeRootWorkspacePatterns(
+    ROOT_WORKSPACE_ORDER.filter((workspace) => {
+      if (workspace === 'frontend') {
+        return true
+      }
+
+      if (workspace === 'server') {
+        return options.serverProvider !== null
+      }
+
+      if (workspace === 'backoffice') {
+        return options.withBackoffice
+      }
+
+      if (workspace === CONTRACTS_WORKSPACE_PATH || workspace === APP_ROUTER_WORKSPACE_PATH) {
+        return trpcEnabled
+      }
+
+      return false
+    }),
+  )
 }
 
 export async function maybePrepareServerWorkspace(options: {
