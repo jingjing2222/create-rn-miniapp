@@ -153,7 +153,7 @@ function formatSupabaseSecretGuidance(options: {
 
 function formatSupabaseRemoteDbSkipGuidance() {
   return [
-    '기존 Supabase 프로젝트를 골라서 원격 DB 반영은 자동으로 건너뛰었어요.',
+    'Supabase 원격 DB 반영은 스캐폴딩 중에 자동으로 하지 않았어요.',
     '필요하면 server/package.json 의 `db:apply`를 직접 실행해 주세요.',
   ]
 }
@@ -356,10 +356,10 @@ export function formatSupabaseManualSetupNote(options: {
 }
 
 export function shouldAutoApplySupabaseRemoteDatabase(
-  mode: ServerProjectMode,
-  shouldInitializeExistingRemoteContent = false,
+  _mode: ServerProjectMode,
+  _shouldInitializeExistingRemoteContent = false,
 ) {
-  return mode === 'create' || shouldInitializeExistingRemoteContent
+  return false
 }
 
 export function shouldAutoDeploySupabaseEdgeFunctions(
@@ -648,17 +648,6 @@ async function linkSupabaseProject(
   )
 }
 
-async function pushSupabaseDatabase(packageManager: PackageManager, serverRoot: string) {
-  log.step('server DB 변경을 반영할게요')
-  await runCommand(
-    buildSupabaseCommand(packageManager, serverRoot, 'server Supabase db push', [
-      'db',
-      'push',
-      '--include-all',
-    ]),
-  )
-}
-
 async function deploySupabaseFunctions(
   packageManager: PackageManager,
   serverRoot: string,
@@ -767,10 +756,6 @@ export async function provisionSupabaseProject(
         resolvedProjectMode,
         shouldInitializeExistingRemoteContent,
       )
-
-      if (didApplyRemoteDb) {
-        await pushSupabaseDatabase(options.packageManager, serverRoot)
-      }
 
       const didDeployEdgeFunctions = shouldAutoDeploySupabaseEdgeFunctions(
         resolvedProjectMode,

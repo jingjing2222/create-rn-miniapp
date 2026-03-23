@@ -249,11 +249,10 @@ test('withSupabaseAccessTokenRequirement preserves unrelated failures', async ()
   )
 })
 
-test('shouldAutoApplySupabaseRemoteDatabase only enables remote db push for new projects', () => {
-  assert.equal(shouldAutoApplySupabaseRemoteDatabase('create'), true)
+test('shouldAutoApplySupabaseRemoteDatabase always disables automatic remote db push during provisioning', () => {
+  assert.equal(shouldAutoApplySupabaseRemoteDatabase('create'), false)
   assert.equal(shouldAutoApplySupabaseRemoteDatabase('existing'), false)
-  assert.equal(shouldAutoApplySupabaseRemoteDatabase('existing', true), true)
-  assert.equal(shouldAutoApplySupabaseRemoteDatabase('existing', false), false)
+  assert.equal(shouldAutoApplySupabaseRemoteDatabase('existing', true), false)
 })
 
 test('shouldAutoDeploySupabaseEdgeFunctions only enables auto deploy for new projects', () => {
@@ -462,7 +461,7 @@ test('finalizeSupabaseProvisioning writes env files for existing projects when p
     assert.match(notes[0]?.body ?? '', /dashboard\/project\/abc123\/database\/settings/)
     assert.match(
       notes[0]?.body ?? '',
-      /기존 Supabase 프로젝트를 골라서 원격 DB 반영은 자동으로 건너뛰었어요\./,
+      /Supabase 원격 DB 반영은 스캐폴딩 중에 자동으로 하지 않았어요\./,
     )
     assert.match(notes[0]?.body ?? '', /server\/package\.json 의 `db:apply`/)
     assert.match(
@@ -543,7 +542,7 @@ test('finalizeSupabaseProvisioning skips password guidance when server db passwo
     assert.doesNotMatch(notes[0]?.body ?? '', /SUPABASE_DB_PASSWORD 는 비어 있어요/)
     assert.match(
       notes[0]?.body ?? '',
-      /기존 Supabase 프로젝트를 골라서 원격 DB 반영은 자동으로 건너뛰었어요\./,
+      /Supabase 원격 DB 반영은 스캐폴딩 중에 자동으로 하지 않았어요\./,
     )
     assert.match(
       notes[0]?.body ?? '',
@@ -585,7 +584,7 @@ test('finalizeSupabaseProvisioning falls back to manual setup guidance when publ
     assert.match(notes[0]?.body ?? '', /dashboard\/project\/abc123\/database\/settings/)
     assert.match(
       notes[0]?.body ?? '',
-      /기존 Supabase 프로젝트를 골라서 원격 DB 반영은 자동으로 건너뛰었어요\./,
+      /Supabase 원격 DB 반영은 스캐폴딩 중에 자동으로 하지 않았어요\./,
     )
     assert.match(notes[0]?.body ?? '', /server\/package\.json 의 `db:apply`/)
     assert.match(
@@ -594,6 +593,35 @@ test('finalizeSupabaseProvisioning falls back to manual setup guidance when publ
     )
     assert.match(notes[0]?.body ?? '', /server\/package\.json 의 `functions:deploy`/)
     assert.match(serverEnv, /^SUPABASE_PROJECT_REF=abc123$/m)
+  } finally {
+    await rm(targetRoot, { recursive: true, force: true })
+  }
+})
+
+test('finalizeSupabaseProvisioning uses the same db skip guidance for create mode', async () => {
+  const targetRoot = await mkdtemp(
+    path.join(os.tmpdir(), 'create-rn-miniapp-supabase-create-skip-db-push-'),
+  )
+
+  try {
+    const notes = await finalizeSupabaseProvisioning({
+      targetRoot,
+      provisionedProject: {
+        projectRef: 'abc123',
+        publishableKey: 'sb_publishable_123',
+        dbPassword: 'generated-password',
+        accessToken: null,
+        didApplyRemoteDb: false,
+        didDeployEdgeFunctions: true,
+        mode: 'create',
+      },
+    })
+
+    assert.match(
+      notes[0]?.body ?? '',
+      /Supabase 원격 DB 반영은 스캐폴딩 중에 자동으로 하지 않았어요\./,
+    )
+    assert.doesNotMatch(notes[0]?.body ?? '', /기존 Supabase 프로젝트를 골라서/)
   } finally {
     await rm(targetRoot, { recursive: true, force: true })
   }

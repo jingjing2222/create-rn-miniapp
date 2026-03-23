@@ -1,3 +1,16 @@
+## 다음 작업: Supabase 초기 scaffold 자동 db push 제거
+
+### 목표
+- create scaffold에서 Supabase project를 새로 만들더라도 remote `db push`를 자동으로 실행하지 않게 한다.
+- Supabase CLI의 migration history mismatch를 회피하기 위한 조건 분기를 더 늘리지 않고, 초기 provisioning contract를 단순하게 만든다.
+- remote DB 반영은 생성 이후 사용자가 명시적으로 `server/package.json`의 `db:apply`를 실행하는 흐름만 남긴다.
+
+### 작업 순서
+1. 현재 Supabase provisioning 테스트 중 create mode에서 auto `db push`를 기대하는 지점을 failing test로 먼저 뒤집는다.
+2. `provision.ts`에서 auto remote DB apply 판정을 제거하거나 항상 false가 되도록 최소 수정한다.
+3. finalize note와 관련 문구를 새 contract에 맞게 정리한다.
+4. `pnpm verify` 후 PR #94 브랜치를 업데이트한다.
+
 ## 다음 작업: PR #91 merge conflict 해소와 재푸시
 
 ### 목표
