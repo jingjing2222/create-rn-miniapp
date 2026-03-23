@@ -1,3 +1,4 @@
+import { log } from '@clack/prompts'
 import { writeServerScaffoldState } from '../../patching/server.js'
 import { runCommand } from '../../runtime/commands.js'
 import { buildRootFinalizePlan } from '../../scaffold/orders.js'
@@ -90,6 +91,7 @@ export async function finalizeAddWorkspace(ctx: AddContext) {
       packageManager: ctx.options.packageManager,
       serverProvider: finalServerProvider,
     })) {
+      log.step(command.label)
       await runCommand(command)
     }
   }

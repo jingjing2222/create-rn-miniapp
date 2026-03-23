@@ -1,3 +1,16 @@
+## 다음 작업: create/add flow-first 리팩터링의 출력 순서와 진행 로그 회귀 복구
+
+### 목표
+- create flow에서 skill 설치 note가 provider provisioning note 뒤에 보이던 기존 출력 순서를 복구한다.
+- create/add finalize 단계에서 root git/setup 및 finalize 명령 실행 전에 `log.step(command.label)`를 다시 출력해 기존 진행 로그를 복구한다.
+- 회귀는 source-based test와 `pnpm verify`로 먼저 고정하고, 최소 수정만 적용한다.
+
+### 작업 순서
+1. `docs/ai/Plan.md`를 먼저 갱신하고, 회귀 범위를 note 순서와 finalize progress log로 한정한다.
+2. 관련 흐름 파일에 대한 failing test를 추가해 기존 체감 동작 계약을 먼저 고정한다.
+3. create/add phase 코드를 최소 수정해 테스트를 통과시킨다.
+4. `pnpm verify` 후 단일 목적 커밋으로 정리한다.
+
 ## 다음 작업: create/add flow-first 브랜치 changeset 추가와 한글 PR 생성
 
 ### 목표

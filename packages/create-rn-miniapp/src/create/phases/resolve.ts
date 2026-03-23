@@ -17,6 +17,7 @@ export async function resolveCreateContext(options: CreateOptions): Promise<Crea
     options,
     targetRoot: path.resolve(options.outputDir, options.appName),
     notes: [],
+    installedSkillNotes: [],
     tokens: createTemplateTokens({
       appName: options.appName,
       displayName: options.displayName,

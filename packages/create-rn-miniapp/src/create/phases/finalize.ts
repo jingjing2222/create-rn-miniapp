@@ -1,3 +1,4 @@
+import { log } from '@clack/prompts'
 import { writeServerScaffoldState } from '../../patching/server.js'
 import { runCommand } from '../../runtime/commands.js'
 import { buildRootFinalizePlan, buildRootGitSetupPlan } from '../../scaffold/orders.js'
@@ -61,6 +62,7 @@ export async function finalizeCreateWorkspace(ctx: CreateContext) {
       serverProvider: ctx.options.serverProvider,
     })),
   )
+  ctx.notes.push(...ctx.installedSkillNotes)
 
   const finalServerState = buildServerScaffoldState({
     serverProvider: ctx.options.serverProvider,
@@ -80,6 +82,7 @@ export async function finalizeCreateWorkspace(ctx: CreateContext) {
 
   if (!ctx.options.noGit) {
     for (const command of buildRootGitSetupPlan({ targetRoot: ctx.targetRoot })) {
+      log.step(command.label)
       await runCommand(command)
     }
   }
@@ -90,6 +93,7 @@ export async function finalizeCreateWorkspace(ctx: CreateContext) {
       packageManager: ctx.options.packageManager,
       serverProvider: ctx.options.serverProvider,
     })) {
+      log.step(command.label)
       await runCommand(command)
     }
   }

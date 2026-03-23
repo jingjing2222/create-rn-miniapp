@@ -31,6 +31,7 @@ export type CreateContext = {
   options: CreateOptions
   targetRoot: string
   notes: ProvisioningNote[]
+  installedSkillNotes: ProvisioningNote[]
   tokens: TemplateTokens
   trpcEnabled: boolean
   initialServerState: ServerScaffoldState | null

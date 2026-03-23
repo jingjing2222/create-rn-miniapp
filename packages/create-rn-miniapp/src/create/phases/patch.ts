@@ -143,7 +143,10 @@ export async function patchCreateWorkspace(ctx: CreateContext) {
     await syncRootFrontendPolicyFiles(ctx.targetRoot, ctx.options.packageManager)
   }
 
-  ctx.notes.push(...installedSkills.notes)
+  ctx = {
+    ...ctx,
+    installedSkillNotes: installedSkills.notes,
+  }
   ctx = await applyCreateDocs(ctx)
   ctx = await patchCreateFrontend(ctx)
   ctx = await patchCreateBackoffice(ctx)

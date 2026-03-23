@@ -260,6 +260,38 @@ test('skill auto-install re-syncs root frontend policy files after installation 
   )
 })
 
+test('create skill auto-install defers summary notes until finalize appends provisioning notes first', async () => {
+  const patchSource = await readFile(
+    fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
+    'utf8',
+  )
+  const finalizeSource = await readFile(
+    fileURLToPath(new URL('../create/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(patchSource, /ctx\.notes\.push\(\.\.\.installedSkills\.notes\)/)
+  assert.match(patchSource, /installedSkillNotes: installedSkills\.notes/)
+  assert.match(
+    finalizeSource,
+    /ctx\.notes\.push\([\s\S]*maybeFinalizeSupabaseProvisioning[\s\S]*ctx\.notes\.push\(\.\.\.ctx\.installedSkillNotes\)/,
+  )
+})
+
+test('create and add finalize phases keep root command progress logs visible', async () => {
+  const createFinalizeSource = await readFile(
+    fileURLToPath(new URL('../create/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+  const addFinalizeSource = await readFile(
+    fileURLToPath(new URL('../add/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(createFinalizeSource, /log\.step\(command\.label\)\s+await runCommand\(command\)/)
+  assert.match(addFinalizeSource, /log\.step\(command\.label\)\s+await runCommand\(command\)/)
+})
+
 test('buildRootFinalizePlan adds yarn sdk generation after root install', () => {
   const targetRoot = path.join('/tmp', 'ebook')
   const plan = buildRootFinalizePlan({
