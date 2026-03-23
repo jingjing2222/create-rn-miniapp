@@ -1,19 +1,19 @@
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { minVersion } from 'semver'
-import { renderProcessEnvLoaderScriptLines } from '../env-loader-script.js'
-import { WRANGLER_CLI } from '../external-tooling.js'
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import { renderProcessEnvLoaderScriptLines } from '../server/env-loader-script.js'
+import { WRANGLER_CLI } from '../runtime/external-tooling.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 import {
   getProviderClientContract,
   PROVIDER_CLIENT_CONTRACTS,
   resolveProviderClientLinkFiles,
-} from '../provider-client-contract.js'
+} from '../server/client-contract.js'
 import {
   SERVER_SCAFFOLD_STATE_DIR,
   SERVER_SCAFFOLD_STATE_RELATIVE_PATH,
   type ServerScaffoldState,
-} from '../server-project.js'
+} from '../server/project.js'
 import {
   createCloudflareServerScriptCatalog,
   createFirebaseServerScriptCatalog,
@@ -22,8 +22,8 @@ import {
   renderServerRemoteOpsCommands,
   renderServerReadmeScriptLines,
   type ServerScriptCatalogEntry,
-} from '../server-script-catalog.js'
-import { renderServerReadmeCliVersionsSection } from '../server-readme-cli-versions.js'
+} from '../server/script-catalog.js'
+import { renderServerReadmeCliVersionsSection } from '../server/readme-cli-versions.js'
 import {
   pathExists,
   removePathIfExists,
@@ -67,8 +67,8 @@ import {
   FIREBASE_LOGIN_CI_GUIDE_ASSET_CANDIDATES,
   FIREBASE_SERVICE_ACCOUNT_GUIDE_ASSET_CANDIDATES,
   SUPABASE_ACCESS_TOKEN_GUIDE_ASSET_CANDIDATES,
-} from '../server-guide-assets.js'
-import dedent, { dedentWithTrailingNewline } from '../dedent.js'
+} from '../server/guide-assets.js'
+import dedent, { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
 const CLOUDFLARE_SERVER_LOCAL_FILES = [
   '.gitignore',

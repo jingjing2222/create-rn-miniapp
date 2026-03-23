@@ -1,4 +1,4 @@
-import type { ServerProvider } from './providers/index.js'
+import type { ServerProvider } from '../providers/index.js'
 
 export type WorkspaceClientContract = {
   envFile: string

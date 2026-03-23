@@ -12,7 +12,7 @@ import {
   parseCliArgs,
   resolveAddCliOptions,
   resolveCliOptions,
-} from './cli.js'
+} from './cli/index.js'
 
 test('parseCliArgs parses long-form CLI options with yargs', async () => {
   const argv = await parseCliArgs(

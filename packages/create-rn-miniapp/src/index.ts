@@ -9,11 +9,12 @@ import {
   parseCliArgs,
   resolveAddCliOptions,
   resolveCliOptions,
-} from './cli.js'
-import { addWorkspaces, scaffoldWorkspace } from './scaffold/index.js'
-import { TRPC_WORKSPACE_PATHS } from './trpc-workspace-metadata.js'
-import { inspectWorkspace } from './workspace-inspector.js'
-import dedent from './dedent.js'
+} from './cli/index.js'
+import { runAdd } from './add/index.js'
+import { runCreate } from './create/index.js'
+import { TRPC_WORKSPACE_PATHS } from './workspace/trpc.js'
+import { inspectWorkspace } from './workspace/inspect.js'
+import dedent from './runtime/dedent.js'
 
 const require = createRequire(import.meta.url)
 const packageJson = require('../package.json') as { version: string }
@@ -75,7 +76,7 @@ export async function main() {
         '이렇게 반영할게요',
       )
 
-      const result = await addWorkspaces({
+      const result = await runAdd({
         ...resolved,
         prompt,
       })
@@ -108,7 +109,7 @@ export async function main() {
       '이렇게 만들게요',
     )
 
-    const result = await scaffoldWorkspace({
+    const result = await runCreate({
       ...resolved,
       prompt,
     })

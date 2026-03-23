@@ -1,4 +1,4 @@
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 
 export function getTestPackageManagerField(packageManager: PackageManager) {
   return getPackageManagerAdapter(packageManager).packageManagerField

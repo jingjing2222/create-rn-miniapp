@@ -1,28 +1,81 @@
-## 다음 작업: 두 패키지 patch changeset 추가와 한글 PR 생성
+## 다음 작업: PR #91 merge conflict 해소와 재푸시
 
 ### 목표
-- 이번 브랜치의 skill 정리와 공식 Apps-in-Toss skill 연동 변경을 publish 대상 두 패키지에 대한 patch release로 기록한다.
-- `create-rn-miniapp`와 `@create-rn-miniapp/scaffold-templates`를 모두 포함하는 changeset을 한국어 설명으로 추가한다.
-- changeset까지 포함한 브랜치를 원격에 push하고, 한국어 제목/본문으로 PR을 생성한다.
+- `origin/main` 최신 변경을 현재 PR 브랜치에 반영해 GitHub merge conflict를 해소한다.
+- 겹치는 파일은 실제 source of truth를 기준으로 최소 수정만 적용하고, 기존 skill 정리 의도를 유지한다.
+- 충돌 해소 후 전체 검증을 다시 실행하고 브랜치를 재푸시한다.
 
 ### 작업 순서
-1. publish 대상 패키지와 현재 변경 범위를 다시 확인한다.
-2. 두 패키지를 함께 올리는 patch changeset을 추가한다.
-3. 변경을 커밋하고 원격 브랜치에 push한다.
-4. 검증을 다시 실행한 뒤 한국어 PR 제목/본문으로 PR을 생성한다.
+1. `origin/main`과 현재 브랜치의 공통 조상 이후 변경 파일을 확인해 충돌 범위를 좁힌다.
+2. `origin/main`을 현재 브랜치에 병합하고, 충돌 파일을 source of truth 기준으로 수동 정리한다.
+3. 충돌 해소 커밋 전후로 `pnpm verify`를 다시 실행해 회귀가 없는지 확인한다.
+4. 브랜치를 원격에 재푸시하고 PR merge 상태를 다시 확인한다.
 
-## 다음 작업: README install example skill 집합의 SSoT 정리
+## 다음 작업: CLI package publish manifest 경고 제거
 
 ### 목표
-- root README install example이 사용하는 기본 skill 집합을 한 곳에서만 조합하게 만든다.
-- 공식 always-on skill과 local core overlay skill을 섞는 기본 예시 집합이 `root-readme.ts` 안 여러 군데에서 따로 조합되지 않게 한다.
-- helper를 source of truth로 올리고 README/template 테스트를 그 helper 기준으로 맞춘 뒤 `pnpm verify`로 확인한다.
+- `create-rn-miniapp` 패키지 publish 시 npm이 `bin`과 `repository.url`을 자동 보정하지 않게 manifest를 정규형으로 맞춘다.
+- release 테스트에 publish manifest 계약을 추가해 같은 경고가 다시 생기지 않게 고정한다.
+- `npm publish --dry-run --ignore-scripts`와 `pnpm verify`를 근거로 수정 결과를 확인한 뒤 단일 목적 커밋으로 정리한다.
 
 ### 작업 순서
-1. failing test를 먼저 추가해 README install example 기본 skill ids가 dedicated helper에서만 파생돼야 한다는 red를 만든다.
-2. `root-readme.ts`가 fallback install example과 managed section example에서 같은 helper를 사용하도록 최소 수정한다.
-3. 관련 README/template 테스트를 helper 기준으로 정리한다.
-4. targeted test 후 `pnpm verify`를 실행한다.
+1. release 테스트에 CLI publish manifest 계약을 먼저 추가해 red를 만든다.
+2. `packages/create-rn-miniapp/package.json`을 npm 정규형에 맞게 최소 수정한다.
+3. dry-run publish와 `pnpm verify`로 경고/회귀 여부를 확인한다.
+4. 변경을 단일 목적 커밋으로 정리하고 원격 브랜치에 push한다.
+
+## 다음 작업: SSOT 기준 create/add 상태 계산과 docs 흐름 중복 제거
+
+### 목표
+- add flow에서 `serverFlowState`와 `initialServerState`가 같은 입력을 중복 계산하지 않게 합친다.
+- create/add finalize의 remote initialization 최종 판정을 공용 helper로 모은다.
+- docs 렌더에서 `serverProvider`를 caller hint에 의존하지 않고 실제 workspace inspection 결과로 맞춘다.
+- lifecycle order helper가 실제 coordinator 흐름과 같은 source를 보게 정리한다.
+
+### 작업 순서
+1. 관련 테스트를 먼저 추가하거나 보강해서 현재 중복 계산 지점을 실패로 고정한다.
+2. `flow-state`, `server/project`, `workspace/inspect`, `scaffold/orders` 축으로 공용 계산 함수를 모은다.
+3. create/add/docs 쪽 호출부를 새 공용 계산으로 교체한다.
+4. 타깃 테스트와 `pnpm verify`를 통과시킨 뒤 단일 목적 커밋으로 정리한다.
+
+## 다음 작업: create/add flow-first 리팩터링의 출력 순서와 진행 로그 회귀 복구
+
+### 목표
+- create flow에서 skill 설치 note가 provider provisioning note 뒤에 보이던 기존 출력 순서를 복구한다.
+- create/add finalize 단계에서 root git/setup 및 finalize 명령 실행 전에 `log.step(command.label)`를 다시 출력해 기존 진행 로그를 복구한다.
+- 회귀는 source-based test와 `pnpm verify`로 먼저 고정하고, 최소 수정만 적용한다.
+
+### 작업 순서
+1. `docs/ai/Plan.md`를 먼저 갱신하고, 회귀 범위를 note 순서와 finalize progress log로 한정한다.
+2. 관련 흐름 파일에 대한 failing test를 추가해 기존 체감 동작 계약을 먼저 고정한다.
+3. create/add phase 코드를 최소 수정해 테스트를 통과시킨다.
+4. `pnpm verify` 후 단일 목적 커밋으로 정리한다.
+
+## 다음 작업: create/add flow-first 브랜치 changeset 추가와 한글 PR 생성
+
+### 목표
+- 이번 브랜치 변경을 `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates` 두 패키지의 patch changeset으로 기록한다.
+- changeset 설명, 커밋 메시지, PR 제목/본문을 모두 한국어로 정리한다.
+- fresh `pnpm verify` 결과를 근거로 원격 브랜치 업데이트와 PR 생성까지 마무리한다.
+
+### 작업 순서
+1. `docs/ai/Plan.md`를 먼저 갱신하고, publish 대상 패키지와 브랜치/인증 상태를 다시 확인한다.
+2. 두 패키지를 함께 올리는 patch changeset 파일을 한국어 설명으로 추가한다.
+3. `pnpm verify`를 다시 실행해 증거를 확보한 뒤 changeset만 별도 커밋으로 정리하고 push한다.
+4. GitHub PR을 한국어 제목/본문으로 생성하고 링크를 기록한다.
+
+## 다음 작업: create/add flow-first 리팩터링 설계와 구현 계획 수립
+
+### 목표
+- `packages/create-rn-miniapp/src`를 create/add 흐름이 먼저 보이는 구조로 재정리한다.
+- 디렉토리만 나누는 데서 끝내지 않고, `src/index.ts -> src/create/index.ts | src/add/index.ts -> phase -> domain facade -> implementation` 흐름이 코드에서 직접 읽히게 만든다.
+- non-index re-export forwarding file 없이 경계를 정리하고, 설계 문서와 구현 계획을 먼저 확정한다.
+
+### 작업 순서
+1. worktree 브랜치에서 baseline `pnpm verify`를 확인하고 현재 구조를 다시 점검한다.
+2. flow-first 리팩터링 설계를 `docs/superpowers/specs` 문서로 기록한다.
+3. 설계 기준에 맞는 구현 계획을 `docs/superpowers/plans` 문서로 쪼개 작성한다.
+4. 사용자가 설계/계획을 확인한 뒤 구현에 들어간다.
 
 ## 다음 작업: README 사용 사례 bullet을 목적 중심 카피로 정리
 

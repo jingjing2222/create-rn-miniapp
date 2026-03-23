@@ -1,4 +1,4 @@
-import { APPS_IN_TOSS_SKILLS_SOURCE_REPO, SKILLS_SOURCE_REPO } from './skills-contract.js'
+import { APPS_IN_TOSS_SKILLS_SOURCE_REPO, SKILLS_SOURCE_REPO } from './skills/contract.js'
 import {
   SKILL_CATALOG as LOCAL_SKILL_CATALOG,
   type SkillDefinition as LocalSkillDefinition,

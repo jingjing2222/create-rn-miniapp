@@ -3,8 +3,8 @@ import {
   APP_ROUTER_WORKSPACE_PATH,
   CONTRACTS_WORKSPACE_PATH,
   LEGACY_TRPC_WORKSPACE_PACKAGE_PATH,
-} from './trpc-workspace-metadata.js'
-import { pathExists } from './templates/filesystem.js'
+} from './trpc.js'
+import { pathExists } from '../templates/filesystem.js'
 
 export type WorkspaceTopologySnapshot = {
   hasServer: boolean

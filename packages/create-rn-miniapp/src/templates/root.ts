@@ -1,8 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { patchRootPackageJsonSource } from '../patching/package-json.js'
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
-import { normalizeRootWorkspacePatterns, renderPnpmWorkspaceManifest } from '../root-workspaces.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
+import {
+  normalizeRootWorkspacePatterns,
+  renderPnpmWorkspaceManifest,
+} from '../workspace/root-workspaces.js'
 import {
   resolveFrontendPolicyRuleSet,
   renderFrontendPolicyVerifierSource,

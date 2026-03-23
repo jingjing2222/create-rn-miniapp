@@ -1,7 +1,7 @@
 import path from 'node:path'
-import type { CommandSpec } from '../command-spec.js'
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
-import type { ServerScaffoldState } from '../server-project.js'
+import type { CommandSpec } from '../runtime/command-spec.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
+import type { ServerScaffoldState } from '../server/project.js'
 import type { OptionalSkillId } from '../templates/skill-catalog.js'
 import {
   ensureBackofficeFirebaseBootstrap,
@@ -49,8 +49,7 @@ export type ServerProviderAdapter = {
   supportsTrpc: boolean
   optionalSkillId?: OptionalSkillId
   detect(rootDir: string): Promise<boolean>
-  buildCreatePlan(options: ProviderPlanOptions): CommandSpec[]
-  buildAddPlan(options: ProviderPlanOptions): CommandSpec[]
+  buildPlan(options: ProviderPlanOptions): CommandSpec[]
   prepareServerWorkspace?(options: ProviderWorkspaceOptions): Promise<void>
   patchServerWorkspace(options: ProviderPatchOptions): Promise<void>
   bootstrapFrontend?(options: Omit<ProviderPatchOptions, 'packageManager'>): Promise<void>
@@ -66,14 +65,7 @@ const supabaseAdapter: ServerProviderAdapter = {
   async detect(rootDir) {
     return pathExists(path.join(rootDir, 'server', 'supabase', 'config.toml'))
   },
-  buildCreatePlan(options) {
-    return buildSupabaseBootstrapPlan({
-      targetRoot: options.targetRoot,
-      packageManager: options.packageManager,
-      functionName: SUPABASE_DEFAULT_FUNCTION_NAME,
-    })
-  },
-  buildAddPlan(options) {
+  buildPlan(options) {
     return buildSupabaseBootstrapPlan({
       targetRoot: options.targetRoot,
       packageManager: options.packageManager,
@@ -118,10 +110,7 @@ const cloudflareAdapter: ServerProviderAdapter = {
       (await pathExists(path.join(rootDir, 'server', 'wrangler.toml')))
     )
   },
-  buildCreatePlan(options) {
-    return buildCloudflarePlan(options)
-  },
-  buildAddPlan(options) {
+  buildPlan(options) {
     return buildCloudflarePlan(options)
   },
   async patchServerWorkspace(options) {
@@ -148,10 +137,7 @@ const firebaseAdapter: ServerProviderAdapter = {
   async detect(rootDir) {
     return pathExists(path.join(rootDir, 'server', 'firebase.json'))
   },
-  buildCreatePlan() {
-    return []
-  },
-  buildAddPlan() {
+  buildPlan() {
     return []
   },
   async prepareServerWorkspace(options) {

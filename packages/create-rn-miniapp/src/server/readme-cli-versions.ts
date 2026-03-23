@@ -4,9 +4,9 @@ import {
   SUPABASE_CLI,
   WRANGLER_CLI,
   type ExternalCliTool,
-} from './external-tooling.js'
-import type { ServerProvider } from './providers/index.js'
-import dedent from './dedent.js'
+} from '../runtime/external-tooling.js'
+import type { ServerProvider } from '../providers/index.js'
+import dedent from '../runtime/dedent.js'
 
 const SERVER_README_CLI_TOOLS = {
   cloudflare: [CREATE_CLOUDFLARE_CLI, WRANGLER_CLI],

@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const packageJson = require('../package.json') as {
+const packageJson = require('../../package.json') as {
   repository?: {
     url?: string
   }

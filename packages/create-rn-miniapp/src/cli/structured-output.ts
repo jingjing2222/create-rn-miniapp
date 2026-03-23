@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from 'node:util'
-import type { CommandOutput } from './commands.js'
+import type { CommandOutput } from '../runtime/commands.js'
 
 const YARN_STDOUT_LOG_PATTERN = /^(?:➤\s+)?YN\d{4}:/u
 const ANSI_ESCAPE = String.fromCharCode(0x1b)

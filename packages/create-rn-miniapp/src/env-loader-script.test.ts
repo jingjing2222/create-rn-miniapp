@@ -3,7 +3,7 @@ import test from 'node:test'
 import {
   renderProcessEnvLoaderScriptLines,
   renderTypedEnvReaderScriptLines,
-} from './env-loader-script.js'
+} from './server/env-loader-script.js'
 
 test('renderProcessEnvLoaderScriptLines emits a parseEnv-based process env loader', () => {
   assert.deepEqual(renderProcessEnvLoaderScriptLines(), [

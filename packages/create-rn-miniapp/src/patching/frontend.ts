@@ -34,7 +34,7 @@ import {
   writeFrontendGranitePreset,
   writeTextFile,
 } from './shared.js'
-import { dedentWithTrailingNewline } from '../dedent.js'
+import { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
 const FRONTEND_STARTER_HERO_ASSET_RELATIVE_PATH =
   'root/assets/frontend/miniapp-starter-hero.lottie.json'

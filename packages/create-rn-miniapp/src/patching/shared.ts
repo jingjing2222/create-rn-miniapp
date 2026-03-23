@@ -1,15 +1,12 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { minVersion } from 'semver'
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
 import { pathExists, removePathIfExists } from '../templates/filesystem.js'
 import { getFirebaseWebSdkVersion } from '../templates/server.js'
 import type { TemplateTokens } from '../templates/types.js'
-import {
-  APP_ROUTER_WORKSPACE_PATH,
-  resolveWorkspaceRelativeTrpcPath,
-} from '../trpc-workspace-metadata.js'
+import { APP_ROUTER_WORKSPACE_PATH, resolveWorkspaceRelativeTrpcPath } from '../workspace/trpc.js'
 import {
   patchBackofficeAppSource,
   patchBackofficeMainSource,

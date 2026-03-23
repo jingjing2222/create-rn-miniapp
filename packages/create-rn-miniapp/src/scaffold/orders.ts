@@ -1,11 +1,16 @@
-import type { CommandSpec } from '../command-spec.js'
-import { buildCreateCommandPhases } from '../commands.js'
-import { YARN_SDKS_CLI } from '../external-tooling.js'
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import type { CommandSpec } from '../runtime/command-spec.js'
+import {
+  listCreateFinalizeLifecycleLabels,
+  listCreatePatchLifecycleLabels,
+  listCreateProvisionLifecycleLabels,
+  listCreateScaffoldLifecycleLabels,
+} from '../create/lifecycle.js'
+import { buildCreateCommandPhases } from '../runtime/commands.js'
+import { YARN_SDKS_CLI } from '../runtime/external-tooling.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
+import { ROOT_GIT_INIT_LABEL, ROOT_GIT_MAIN_BRANCH_LABEL } from './lifecycle-labels.js'
 import { resolveCreateTrpcEnabled } from './flow-state.js'
-
-export const CLOUDFLARE_PREINSTALL_LABEL = '루트 Cloudflare workspace 의존성을 먼저 설치하기'
 
 export function buildRootFinalizePlan(options: {
   targetRoot: string
@@ -52,13 +57,13 @@ export function buildRootGitSetupPlan(options: { targetRoot: string }) {
       cwd: options.targetRoot,
       command: 'git',
       args: ['init'],
-      label: '루트 git 저장소 만들기',
+      label: ROOT_GIT_INIT_LABEL,
     },
     {
       cwd: options.targetRoot,
       command: 'git',
       args: ['symbolic-ref', 'HEAD', 'refs/heads/main'],
-      label: '루트 기본 브랜치를 main으로 맞추기',
+      label: ROOT_GIT_MAIN_BRANCH_LABEL,
     },
   ] satisfies CommandSpec[]
 }
@@ -89,42 +94,35 @@ export function buildCreateLifecycleOrder(options: CreateOrderOptions) {
     serverProvider: options.serverProvider,
     withTrpc: options.withTrpc ?? false,
   })
-  const labels = [
-    ...phases.frontend.map((command) => command.label),
-    ...phases.server.map((command) => command.label),
+
+  return [
+    ...listCreateScaffoldLifecycleLabels({
+      commandPhases: phases,
+      noGit: options.noGit,
+      serverProvider: options.serverProvider,
+      trpcEnabled,
+      withBackoffice: options.withBackoffice,
+    }),
+    ...listCreateProvisionLifecycleLabels({
+      commandPhases: phases,
+      noGit: options.noGit,
+      serverProvider: options.serverProvider,
+      trpcEnabled,
+      withBackoffice: options.withBackoffice,
+    }),
+    ...listCreatePatchLifecycleLabels({
+      commandPhases: phases,
+      noGit: options.noGit,
+      serverProvider: options.serverProvider,
+      trpcEnabled,
+      withBackoffice: options.withBackoffice,
+    }),
+    ...listCreateFinalizeLifecycleLabels({
+      commandPhases: phases,
+      noGit: options.noGit,
+      serverProvider: options.serverProvider,
+      trpcEnabled,
+      withBackoffice: options.withBackoffice,
+    }),
   ]
-
-  if (options.serverProvider) {
-    labels.push('server 워크스페이스 준비하기')
-  }
-
-  labels.push('루트 템플릿 적용하기')
-
-  if (options.serverProvider) {
-    labels.push('server 워크스페이스 다듬기', 'server provisioning 하기')
-  }
-
-  if (trpcEnabled) {
-    labels.splice(
-      labels.indexOf('server provisioning 하기'),
-      0,
-      '루트 workspace manifest 먼저 맞추기',
-    )
-  }
-
-  if (options.serverProvider === 'cloudflare') {
-    labels.splice(labels.indexOf('server provisioning 하기'), 0, CLOUDFLARE_PREINSTALL_LABEL)
-  }
-
-  labels.push(...phases.backoffice.map((command) => command.label))
-
-  if (options.withBackoffice || trpcEnabled) {
-    labels.push('루트 workspace manifest 맞추기')
-  }
-
-  if (!options.noGit) {
-    labels.push('루트 git 저장소 만들기', '루트 기본 브랜치를 main으로 맞추기')
-  }
-
-  return labels
 }

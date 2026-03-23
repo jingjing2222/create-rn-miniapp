@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { parseSkillFrontmatter } from './skills-frontmatter.js'
+import { parseSkillFrontmatter } from './skills/frontmatter.js'
 
 test('parseSkillFrontmatter reads quoted YAML values with colons', () => {
   const source = [

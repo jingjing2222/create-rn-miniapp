@@ -2,7 +2,6 @@
 // Execution starts in scaffold/providers; this file only groups area modules.
 
 export type {
-  GeneratedWorkspaceHints,
   GeneratedWorkspaceOptions,
   TemplateTokens,
   WorkspaceName,

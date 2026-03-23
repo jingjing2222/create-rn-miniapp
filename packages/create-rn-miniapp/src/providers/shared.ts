@@ -1,4 +1,4 @@
-import type { CliPrompter } from '../cli.js'
+import type { CliPrompter } from '../cli/index.js'
 
 const INITIALIZE_REMOTE_CONTENT_SENTINEL = '__initialize_remote_content__'
 const SKIP_REMOTE_CONTENT_INITIALIZATION_SENTINEL = '__skip_remote_content_initialization__'

@@ -1,4 +1,4 @@
-import { getPackageManagerAdapter, type PackageManager } from '../package-manager.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 import type { TemplateReplacementTokens } from './filesystem.js'
 
 export const FRONTEND_POLICY_CHECK_SCRIPT_NAME = 'frontend:policy:check'

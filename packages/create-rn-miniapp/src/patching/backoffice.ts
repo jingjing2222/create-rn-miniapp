@@ -27,7 +27,7 @@ import {
   type WorkspacePatchOptions,
   writeTextFile,
 } from './shared.js'
-import { dedentWithTrailingNewline } from '../dedent.js'
+import { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
 const BACKOFFICE_ENV_TYPES = dedentWithTrailingNewline`
   /// <reference types="vite/client" />

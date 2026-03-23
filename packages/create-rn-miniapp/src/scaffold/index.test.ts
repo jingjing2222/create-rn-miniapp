@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -16,7 +16,7 @@ import {
   buildCreateLifecycleOrder,
   buildRootGitSetupPlan,
   buildRootFinalizePlan,
-} from './index.js'
+} from './orders.js'
 
 type MigrationCombo = {
   label: string
@@ -92,6 +92,19 @@ async function materializeMigrationWorkspace(targetRoot: string, combo: Migratio
   if (combo.serverProvider) {
     await mkdir(path.join(targetRoot, 'server'), { recursive: true })
     workspaces.push('server')
+
+    if (combo.serverProvider === 'supabase') {
+      await mkdir(path.join(targetRoot, 'server', 'supabase'), { recursive: true })
+      await writeFile(path.join(targetRoot, 'server', 'supabase', 'config.toml'), '', 'utf8')
+    }
+
+    if (combo.serverProvider === 'cloudflare') {
+      await writeFile(path.join(targetRoot, 'server', 'wrangler.jsonc'), '{}\n', 'utf8')
+    }
+
+    if (combo.serverProvider === 'firebase') {
+      await writeFile(path.join(targetRoot, 'server', 'firebase.json'), '{}\n', 'utf8')
+    }
   }
 
   if (combo.withTrpc) {
@@ -106,7 +119,7 @@ async function materializeMigrationWorkspace(targetRoot: string, combo: Migratio
   }
 
   await applyRootTemplates(targetRoot, tokens, workspaces)
-  await applyDocsTemplates(targetRoot, tokens, { serverProvider: combo.serverProvider })
+  await applyDocsTemplates(targetRoot, tokens)
 }
 
 test('buildRootFinalizePlan keeps pnpm root finalize steps minimal', () => {
@@ -219,42 +232,123 @@ test('migration scaffold combinations generate docs, README onboarding, and only
 })
 
 test('add scaffold flow does not re-derive manifest topology from filesystem probes', async () => {
-  const scaffoldSource = await readFile(
-    fileURLToPath(new URL('./index.ts', import.meta.url)),
+  const resolveSource = await readFile(
+    fileURLToPath(new URL('../add/phases/resolve.ts', import.meta.url)),
     'utf8',
   )
 
+  assert.match(resolveSource, /resolveAddServerState\(/)
+  assert.doesNotMatch(resolveSource, /function buildAddInitialServerState/)
   assert.doesNotMatch(
-    scaffoldSource,
+    resolveSource,
     /trpc: await pathExists\(path\.join\(targetRoot, 'packages', 'contracts'\)\)/,
   )
   assert.doesNotMatch(
-    scaffoldSource,
+    resolveSource,
     /backoffice: await pathExists\(path\.join\(targetRoot, 'backoffice'\)\)/,
   )
 })
 
-test('skill auto-install captures raw copy logs and reports installed skill summary instead', async () => {
+test('create scaffold flow reuses the tokens resolved up front instead of recomputing them', async () => {
   const scaffoldSource = await readFile(
-    fileURLToPath(new URL('./index.ts', import.meta.url)),
+    fileURLToPath(new URL('../create/phases/scaffold.ts', import.meta.url)),
     'utf8',
   )
 
-  assert.match(scaffoldSource, /runCommandWithOutput\(installCommand\)/)
-  assert.match(scaffoldSource, /listInstalledProjectSkillEntries\(options\.targetRoot\)/)
-  assert.match(scaffoldSource, /renderInstalledSkillsSummary\(/)
-  assert.doesNotMatch(scaffoldSource, /runCommand\(installCommand\)/)
-  assert.doesNotMatch(scaffoldSource, /options\.selectedSkills\.join\('\\n- '\)/)
+  assert.doesNotMatch(scaffoldSource, /createTemplateTokens\(/)
+})
+
+test('create and add finalize phases delegate remote initialization resolution to server project helper', async () => {
+  const createFinalizeSource = await readFile(
+    fileURLToPath(new URL('../create/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+  const addFinalizeSource = await readFile(
+    fileURLToPath(new URL('../add/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+  const serverProjectSource = await readFile(
+    fileURLToPath(new URL('../server/project.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(serverProjectSource, /resolveFinalRemoteInitializationState\(/)
+  assert.doesNotMatch(createFinalizeSource, /function resolveCreateRemoteInitialization/)
+  assert.doesNotMatch(addFinalizeSource, /function resolveAddRemoteInitialization/)
+})
+
+test('create and add finalize phases delegate final scaffold state assembly to server project helper', async () => {
+  const createFinalizeSource = await readFile(
+    fileURLToPath(new URL('../create/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+  const addFinalizeSource = await readFile(
+    fileURLToPath(new URL('../add/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(createFinalizeSource, /resolveFinalServerScaffoldState\(/)
+  assert.match(addFinalizeSource, /resolveFinalServerScaffoldState\(/)
+  assert.doesNotMatch(createFinalizeSource, /buildServerScaffoldState\(\{/)
+  assert.doesNotMatch(addFinalizeSource, /buildServerScaffoldState\(\{/)
+})
+
+test('skill auto-install captures raw copy logs and reports installed skill summary instead', async () => {
+  const patchSource = await readFile(
+    fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(patchSource, /runCommandWithOutput\(installCommand\)/)
+  assert.match(patchSource, /listInstalledProjectSkillEntries\(ctx\.targetRoot\)/)
+  assert.match(patchSource, /renderInstalledSkillsSummary\(/)
+  assert.doesNotMatch(patchSource, /runCommand\(installCommand\)/)
+  assert.doesNotMatch(patchSource, /ctx\.options\.selectedSkills\.join\('\\n- '\)/)
 })
 
 test('skill auto-install re-syncs root frontend policy files after installation succeeds', async () => {
-  const scaffoldSource = await readFile(
-    fileURLToPath(new URL('./index.ts', import.meta.url)),
+  const patchSource = await readFile(
+    fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
     'utf8',
   )
 
-  assert.match(scaffoldSource, /if \(installedSkills\.didInstall\) \{/)
-  assert.match(scaffoldSource, /syncRootFrontendPolicyFiles\(targetRoot, options\.packageManager\)/)
+  assert.match(patchSource, /if \(installedSkills\.didInstall\) \{/)
+  assert.match(
+    patchSource,
+    /syncRootFrontendPolicyFiles\(ctx\.targetRoot, ctx\.options\.packageManager\)/,
+  )
+})
+
+test('create skill auto-install defers summary notes until finalize appends provisioning notes first', async () => {
+  const patchSource = await readFile(
+    fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
+    'utf8',
+  )
+  const finalizeSource = await readFile(
+    fileURLToPath(new URL('../create/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(patchSource, /ctx\.notes\.push\(\.\.\.installedSkills\.notes\)/)
+  assert.match(patchSource, /installedSkillNotes: installedSkills\.notes/)
+  assert.match(
+    finalizeSource,
+    /ctx\.notes\.push\([\s\S]*maybeFinalizeSupabaseProvisioning[\s\S]*ctx\.notes\.push\(\.\.\.ctx\.installedSkillNotes\)/,
+  )
+})
+
+test('create and add finalize phases keep root command progress logs visible', async () => {
+  const createFinalizeSource = await readFile(
+    fileURLToPath(new URL('../create/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+  const addFinalizeSource = await readFile(
+    fileURLToPath(new URL('../add/phases/finalize.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(createFinalizeSource, /log\.step\(command\.label\)\s+await runCommand\(command\)/)
+  assert.match(addFinalizeSource, /log\.step\(command\.label\)\s+await runCommand\(command\)/)
 })
 
 test('buildRootFinalizePlan adds yarn sdk generation after root install', () => {
@@ -351,6 +445,37 @@ test('buildCreateExecutionOrder runs server scaffold before backoffice scaffold'
     'server Supabase Edge Function 만들기',
     'backoffice Vite 만들기',
   ])
+})
+
+test('buildCreateLifecycleOrder composes phase lifecycle labels from create phase modules', async () => {
+  const ordersSource = await readFile(
+    fileURLToPath(new URL('./orders.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(ordersSource, /listCreateScaffoldLifecycleLabels/)
+  assert.match(ordersSource, /listCreateProvisionLifecycleLabels/)
+  assert.match(ordersSource, /listCreatePatchLifecycleLabels/)
+  assert.match(ordersSource, /listCreateFinalizeLifecycleLabels/)
+  assert.doesNotMatch(ordersSource, /labels\.push\('server 워크스페이스 준비하기'/)
+  assert.doesNotMatch(ordersSource, /labels\.push\('루트 템플릿 적용하기'/)
+})
+
+test('command plan builders derive shared server and backoffice phases from common helpers', async () => {
+  const runtimeSource = await readFile(
+    fileURLToPath(new URL('../runtime/commands.ts', import.meta.url)),
+    'utf8',
+  )
+  const providersSource = await readFile(
+    fileURLToPath(new URL('../providers/index.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(runtimeSource, /buildServerCommands\(/)
+  assert.match(runtimeSource, /buildBackofficeCommands\(/)
+  assert.match(providersSource, /buildPlan\(/)
+  assert.doesNotMatch(providersSource, /buildCreatePlan\(/)
+  assert.doesNotMatch(providersSource, /buildAddPlan\(/)
 })
 
 test('buildCreateLifecycleOrder applies root templates and server patch before firebase provisioning', () => {

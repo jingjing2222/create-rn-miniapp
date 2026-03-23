@@ -1,24 +1,24 @@
 import { readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
-import type { CommandSpec } from './command-spec.js'
-import { SKILLS_CLI } from './external-tooling.js'
+import type { CommandSpec } from '../runtime/command-spec.js'
+import { SKILLS_CLI } from '../runtime/external-tooling.js'
 import {
   getInstallableSkillDefinition,
   INSTALLABLE_SKILL_CATALOG,
   resolveAlwaysRecommendedSkillDefinitions,
   type InstallableSkillId,
-} from './installable-skill-catalog.js'
-import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
-import type { ServerProvider } from './providers/index.js'
+} from '../installable-skill-catalog.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
+import type { ServerProvider } from '../providers/index.js'
 import {
   createProjectSkillDirectoryPath,
   createSkillsAddArgs,
   PROJECT_SKILLS_DIR_CANDIDATES,
   SKILLS_LIST_COMMAND,
   SKILLS_SOURCE_REPO,
-} from './skills-contract.js'
-import { resolveRecommendedSkillDefinitions } from './templates/feature-catalog.js'
-import dedent from './dedent.js'
+} from './contract.js'
+import { resolveRecommendedSkillDefinitions } from '../templates/feature-catalog.js'
+import dedent from '../runtime/dedent.js'
 
 type SkillRecommendationContext = {
   serverProvider: ServerProvider | null
@@ -174,7 +174,7 @@ async function resolveSkillsSource(sourceRepo: string) {
     return sourceRepo
   }
 
-  const localRepoRoot = path.resolve(import.meta.dirname, '../../..')
+  const localRepoRoot = path.resolve(import.meta.dirname, '../../../..')
 
   if (await pathExists(path.join(localRepoRoot, 'skills'))) {
     return localRepoRoot

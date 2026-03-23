@@ -1,5 +1,5 @@
-import { FIREBASE_TOOLS_CLI, SUPABASE_CLI } from './external-tooling.js'
-import { getPackageManagerAdapter, type PackageManager } from './package-manager.js'
+import { FIREBASE_TOOLS_CLI, SUPABASE_CLI } from '../runtime/external-tooling.js'
+import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 
 export type ServerScriptCatalogEntry = {
   name: string

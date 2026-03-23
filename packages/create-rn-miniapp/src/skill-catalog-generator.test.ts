@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { renderSkillCatalogSource } from './skill-catalog-generator.js'
+import { renderSkillCatalogSource } from './skills/catalog-generator.js'
 
 test('renderSkillCatalogSource escapes labels with JSON-safe string serialization', () => {
   const source = renderSkillCatalogSource([

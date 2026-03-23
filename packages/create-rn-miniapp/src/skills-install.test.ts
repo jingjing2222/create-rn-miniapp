@@ -13,12 +13,12 @@ import {
   renderInstalledSkillsSummary,
   renderSkillsAddCommand,
   resolveRecommendedSkillIds,
-} from './skills-install.js'
+} from './skills/install.js'
 import {
   APPS_IN_TOSS_SKILLS_SOURCE_REPO,
   SKILLS_LIST_COMMAND,
   SKILLS_SOURCE_REPO,
-} from './skills-contract.js'
+} from './skills/contract.js'
 
 function escapeRegExp(source: string) {
   return source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -75,15 +75,21 @@ test('skills source repo slug is derived from the published package repository',
     repository?: { url?: string }
   }
   const skillsContractSource = await readFile(
-    fileURLToPath(new URL('./skills-contract.ts', import.meta.url)),
+    fileURLToPath(new URL('./skills/contract.ts', import.meta.url)),
     'utf8',
   )
 
   assert.equal(
     SKILLS_SOURCE_REPO,
-    packageJson.repository?.url?.replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, ''),
+    packageJson.repository?.url
+      ?.replace(/^git\+/, '')
+      .replace(/^https:\/\/github\.com\//, '')
+      .replace(/\.git$/, ''),
   )
-  assert.equal(packageJson.repository?.url, 'https://github.com/jingjing2222/create-rn-miniapp.git')
+  assert.equal(
+    packageJson.repository?.url,
+    'git+https://github.com/jingjing2222/create-rn-miniapp.git',
+  )
   assert.doesNotMatch(
     skillsContractSource,
     new RegExp(escapeRegExp(`export const SKILLS_SOURCE_REPO = '${SKILLS_SOURCE_REPO}'`)),

@@ -1,6 +1,6 @@
-import type { PackageManager } from '../package-manager.js'
+import type { PackageManager } from '../runtime/package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
-import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from '../trpc-workspace-metadata.js'
+import { APP_ROUTER_WORKSPACE_PATH, CONTRACTS_WORKSPACE_PATH } from '../workspace/trpc.js'
 
 export const ROOT_WORKSPACE_ORDER = [
   'frontend',
@@ -22,10 +22,6 @@ export type TemplateTokens = {
   packageManagerRunCommand?: string
   packageManagerExecCommand?: string
   verifyCommand: string
-}
-
-export type GeneratedWorkspaceHints = {
-  serverProvider: ServerProvider | null
 }
 
 export type GeneratedWorkspaceOptions = {
