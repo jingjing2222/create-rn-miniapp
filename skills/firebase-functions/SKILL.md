@@ -19,7 +19,7 @@ description: Use when you need Firebase Functions project layout, local dev cont
 ## Do not use for
 
 - deploy, seed, Firestore repair 같은 원격 mutate 절차 실행
-- MiniApp capability 탐색: `miniapp-capabilities`
+- MiniApp/AppInToss capability 탐색: `docs-search` 또는 공식 문서
 - route/page/navigation 설계: `granite-routing`
 
 ## 읽는 순서

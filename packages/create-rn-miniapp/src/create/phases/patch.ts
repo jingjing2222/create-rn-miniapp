@@ -5,7 +5,7 @@ import { patchFrontendWorkspace } from '../../patching/frontend.js'
 import { runCommand, runCommandWithOutput } from '../../runtime/commands.js'
 import dedent from '../../runtime/dedent.js'
 import {
-  buildSkillsInstallCommand,
+  buildSkillsInstallCommands,
   listInstalledProjectSkillEntries,
   renderInstalledSkillsSummary,
   renderSkillsAddCommand,
@@ -48,13 +48,13 @@ async function syncCreateManifestAfterOptionalWorkspaces(ctx: CreateContext) {
 }
 
 async function maybeInstallSelectedSkills(ctx: CreateContext) {
-  const installCommand = await buildSkillsInstallCommand({
+  const installCommands = await buildSkillsInstallCommands({
     packageManager: ctx.options.packageManager,
     targetRoot: ctx.targetRoot,
     skillIds: ctx.options.selectedSkills,
   })
 
-  if (!installCommand) {
+  if (installCommands.length === 0) {
     return {
       didInstall: false,
       notes: [] as ProvisioningNote[],
@@ -62,8 +62,10 @@ async function maybeInstallSelectedSkills(ctx: CreateContext) {
   }
 
   try {
-    log.step(installCommand.label)
-    await runCommandWithOutput(installCommand)
+    for (const installCommand of installCommands) {
+      log.step(installCommand.label)
+      await runCommandWithOutput(installCommand)
+    }
     const installedSkills = await listInstalledProjectSkillEntries(ctx.targetRoot)
 
     return {

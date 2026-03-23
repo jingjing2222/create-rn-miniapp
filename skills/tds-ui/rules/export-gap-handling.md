@@ -13,7 +13,7 @@ reference:
   - references/export-gaps.md
 ---
 
-# Catalog Export Gap Handling
+# Export Gap Handling
 
 ## Incorrect
 

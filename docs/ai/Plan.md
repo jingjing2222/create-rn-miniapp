@@ -1,3 +1,16 @@
+## 다음 작업: PR #91 merge conflict 해소와 재푸시
+
+### 목표
+- `origin/main` 최신 변경을 현재 PR 브랜치에 반영해 GitHub merge conflict를 해소한다.
+- 겹치는 파일은 실제 source of truth를 기준으로 최소 수정만 적용하고, 기존 skill 정리 의도를 유지한다.
+- 충돌 해소 후 전체 검증을 다시 실행하고 브랜치를 재푸시한다.
+
+### 작업 순서
+1. `origin/main`과 현재 브랜치의 공통 조상 이후 변경 파일을 확인해 충돌 범위를 좁힌다.
+2. `origin/main`을 현재 브랜치에 병합하고, 충돌 파일을 source of truth 기준으로 수동 정리한다.
+3. 충돌 해소 커밋 전후로 `pnpm verify`를 다시 실행해 회귀가 없는지 확인한다.
+4. 브랜치를 원격에 재푸시하고 PR merge 상태를 다시 확인한다.
+
 ## 다음 작업: CLI package publish manifest 경고 제거
 
 ### 목표

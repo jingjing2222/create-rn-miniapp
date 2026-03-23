@@ -6,7 +6,7 @@ import type { ServerProvider } from '../providers/index.js'
 import type { buildCreateCommandPhases } from '../runtime/commands.js'
 import type { PackageManager } from '../runtime/package-manager.js'
 import type { ProvisioningNote, ServerProjectMode, ServerScaffoldState } from '../server/project.js'
-import type { SkillId } from '../templates/skill-catalog.js'
+import type { InstallableSkillId } from '../installable-skill-catalog.js'
 import type { TemplateTokens } from '../templates/types.js'
 
 export type CreateOptions = {
@@ -14,7 +14,7 @@ export type CreateOptions = {
   packageManager: PackageManager
   appName: string
   displayName: string
-  selectedSkills: SkillId[]
+  selectedSkills: InstallableSkillId[]
   outputDir: string
   noGit: boolean
   serverProvider: ServerProvider | null

@@ -65,11 +65,13 @@ pnpm verify
 ## skills 전략
 - `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 방법만 알려줘요.
 - 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 바로 하면 돼요.
-- 이 저장소의 `skills/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.
+- 추천 목록에는 공식 `docs-search`, `project-validator`와 workspace overlay skill이 같이 들어가요.
+- 이 저장소의 `skills/`는 scaffold/workspace 특화 overlay skill만 관리하고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.
 
 바로 설치할 수 있는 skill id와 용도는 이래요.
 
-- `miniapp-capabilities`: MiniApp capability / 공식 API 탐색
+- `docs-search`: Apps-in-Toss / TDS 공식 문서 검색
+- `project-validator`: AppInToss 프로젝트 구조 검증
 - `granite-routing`: route / page / navigation 패턴
 - `tds-ui`: TDS UI 선택과 form 패턴
 - `backoffice-react`: backoffice React 작업
@@ -81,7 +83,8 @@ pnpm verify
 예를 들어 필요한 skill 하나를 바로 넣고 싶다면 이렇게 하면 돼요.
 
 ```bash
-npx skills add jingjing2222/create-rn-miniapp --skill miniapp-capabilities --copy
+npx skills add toss/apps-in-toss-skills --skill docs-search --skill project-validator --copy
+npx skills add jingjing2222/create-rn-miniapp --skill granite-routing --skill tds-ui --copy
 ```
 
 설치 뒤에는 `npx skills list`, `npx skills check`, `npx skills update`만 기억하면 돼요.

@@ -6,9 +6,6 @@ type SkillMetadata = {
 }
 
 const CORE_SKILL_METADATA_BY_ID = {
-  'miniapp-capabilities': {
-    agentsLabel: 'MiniApp capability / 공식 API 탐색',
-  },
   'granite-routing': {
     agentsLabel: 'route / page / navigation 패턴',
   },

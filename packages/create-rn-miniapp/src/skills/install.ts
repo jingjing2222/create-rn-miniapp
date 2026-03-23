@@ -2,6 +2,12 @@ import { readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import type { CommandSpec } from '../runtime/command-spec.js'
 import { SKILLS_CLI } from '../runtime/external-tooling.js'
+import {
+  getInstallableSkillDefinition,
+  INSTALLABLE_SKILL_CATALOG,
+  resolveAlwaysRecommendedSkillDefinitions,
+  type InstallableSkillId,
+} from '../installable-skill-catalog.js'
 import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 import type { ServerProvider } from '../providers/index.js'
 import {
@@ -12,7 +18,6 @@ import {
   SKILLS_SOURCE_REPO,
 } from './contract.js'
 import { resolveRecommendedSkillDefinitions } from '../templates/feature-catalog.js'
-import { SKILL_CATALOG, getSkillDefinition, type SkillId } from '../templates/skill-catalog.js'
 import dedent from '../runtime/dedent.js'
 
 type SkillRecommendationContext = {
@@ -81,11 +86,11 @@ export async function listInstalledProjectSkills(targetRoot: string) {
 }
 
 export function normalizeSelectedSkillIds(rawSkillIds: string[] | undefined) {
-  const normalized: SkillId[] = []
+  const normalized: InstallableSkillId[] = []
   const seen = new Set<string>()
 
   for (const rawSkillId of rawSkillIds ?? []) {
-    const definition = getSkillDefinition(rawSkillId as SkillId)
+    const definition = getInstallableSkillDefinition(rawSkillId)
 
     if (seen.has(definition.id)) {
       continue
@@ -99,28 +104,46 @@ export function normalizeSelectedSkillIds(rawSkillIds: string[] | undefined) {
 }
 
 export function resolveRecommendedSkillIds(context: SkillRecommendationContext) {
-  return resolveRecommendedSkillDefinitions({
+  const recommendedSkillIds: InstallableSkillId[] = []
+  const seen = new Set<string>()
+  const localRecommendedSkillDefinitions = resolveRecommendedSkillDefinitions({
     hasBackoffice: context.hasBackoffice,
     serverProvider: context.serverProvider,
     hasTrpc: context.hasTrpc,
-  }).map((skill) => skill.id)
+  })
+
+  for (const definition of [
+    ...resolveAlwaysRecommendedSkillDefinitions(),
+    ...localRecommendedSkillDefinitions.map((skill) => getInstallableSkillDefinition(skill.id)),
+  ]) {
+    if (seen.has(definition.id)) {
+      continue
+    }
+
+    recommendedSkillIds.push(definition.id)
+    seen.add(definition.id)
+  }
+
+  return recommendedSkillIds
 }
 
 export function resolveSelectableSkills() {
-  return SKILL_CATALOG
+  return INSTALLABLE_SKILL_CATALOG
 }
 
 export function renderSkillsAddCommand(skillIds: string[]) {
-  const baseArgs = [
-    'npx',
-    'skills',
-    ...createSkillsAddArgs({
-      source: SKILLS_SOURCE_REPO,
-      skillIds,
-    }),
-  ]
-
-  return baseArgs.join(' ')
+  return groupSkillIdsBySource(skillIds as InstallableSkillId[])
+    .map((group) =>
+      [
+        'npx',
+        'skills',
+        ...createSkillsAddArgs({
+          source: group.sourceRepo,
+          skillIds: group.skillIds,
+        }),
+      ].join(' '),
+    )
+    .join('\n')
 }
 
 export function renderInstalledSkillsSummary(
@@ -146,38 +169,71 @@ export function renderInstalledSkillsSummary(
   `
 }
 
-async function resolveSkillsSource() {
+async function resolveSkillsSource(sourceRepo: string) {
+  if (sourceRepo !== SKILLS_SOURCE_REPO) {
+    return sourceRepo
+  }
+
   const localRepoRoot = path.resolve(import.meta.dirname, '../../../..')
 
   if (await pathExists(path.join(localRepoRoot, 'skills'))) {
     return localRepoRoot
   }
 
-  return SKILLS_SOURCE_REPO
+  return sourceRepo
 }
 
-export async function buildSkillsInstallCommand(options: {
+function groupSkillIdsBySource(skillIds: readonly InstallableSkillId[]) {
+  const groups = new Map<string, InstallableSkillId[]>()
+  const seen = new Set<string>()
+
+  for (const skillId of skillIds) {
+    const definition = getInstallableSkillDefinition(skillId)
+
+    if (seen.has(definition.id)) {
+      continue
+    }
+
+    const nextGroup = groups.get(definition.sourceRepo) ?? []
+    nextGroup.push(definition.id)
+    groups.set(definition.sourceRepo, nextGroup)
+    seen.add(definition.id)
+  }
+
+  return [...groups.entries()].map(([sourceRepo, groupedSkillIds]) => ({
+    sourceRepo,
+    skillIds: groupedSkillIds,
+  }))
+}
+
+export async function buildSkillsInstallCommands(options: {
   packageManager: PackageManager
   targetRoot: string
-  skillIds: SkillId[]
-}): Promise<CommandSpec | null> {
+  skillIds: InstallableSkillId[]
+}): Promise<CommandSpec[]> {
   if (options.skillIds.length === 0) {
-    return null
+    return []
   }
 
   const adapter = getPackageManagerAdapter(options.packageManager)
-  const source = await resolveSkillsSource()
+  const commands: CommandSpec[] = []
 
-  return {
-    cwd: options.targetRoot,
-    ...adapter.dlx(
-      SKILLS_CLI,
-      createSkillsAddArgs({
-        source,
-        skillIds: options.skillIds,
-        yes: true,
-      }),
-    ),
-    label: '추천 agent skills 설치하기',
+  for (const group of groupSkillIdsBySource(options.skillIds)) {
+    const source = await resolveSkillsSource(group.sourceRepo)
+
+    commands.push({
+      cwd: options.targetRoot,
+      ...adapter.dlx(
+        SKILLS_CLI,
+        createSkillsAddArgs({
+          source,
+          skillIds: group.skillIds,
+          yes: true,
+        }),
+      ),
+      label: '추천 agent skills 설치하기',
+    })
   }
+
+  return commands
 }

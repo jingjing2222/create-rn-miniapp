@@ -3,17 +3,18 @@ impact: high
 tags:
   - tds-ui
   - decision
-  - catalog
+  - docs
 incorrect:
   - "문서가 없는 export-only 항목을 기본 추천한다."
 correct:
   - "먼저 doc-backed 후보를 고르고 anomaly는 note로 분리한다."
 reference:
-  - generated/catalog.json
+  - docs-search
+  - generated/anomalies.json
   - references/decision-matrix.md
 ---
 
-# Catalog Doc Backed First
+# Doc Backed First
 
 ## Incorrect
 

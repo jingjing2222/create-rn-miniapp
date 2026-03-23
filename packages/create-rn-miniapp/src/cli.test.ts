@@ -509,6 +509,8 @@ test('resolveCliOptions can prompt for recommended skills and return a flat sele
   const selectMessages: string[] = []
   const selectInitialValues: Array<string | undefined> = []
   const multiselectMessages: string[] = []
+  const multiselectInitialValues: string[][] = []
+  const multiselectOptionValues: string[][] = []
   const promptSelections: Array<'none' | 'supabase' | 'cloudflare' | 'firebase' | 'yes' | 'no'> = [
     'cloudflare',
     'yes',
@@ -552,14 +554,24 @@ test('resolveCliOptions can prompt for recommended skills and return a flat sele
       },
       async multiselect(options) {
         multiselectMessages.push(options.message)
-        return ['miniapp-capabilities', 'cloudflare-worker'] as Array<
-          (typeof options.options)[number]['value']
-        >
+        multiselectInitialValues.push([...(options.initialValues ?? [])])
+        multiselectOptionValues.push(options.options.map((option) => option.value))
+        return [
+          'docs-search',
+          'project-validator',
+          'granite-routing',
+          'cloudflare-worker',
+        ] as Array<(typeof options.options)[number]['value']>
       },
     },
   )
 
-  assert.deepEqual(resolved.selectedSkills, ['miniapp-capabilities', 'cloudflare-worker'])
+  assert.deepEqual(resolved.selectedSkills, [
+    'docs-search',
+    'project-validator',
+    'granite-routing',
+    'cloudflare-worker',
+  ])
   assert.deepEqual(selectMessages, [
     '`server` 제공자를 골라 주세요.',
     '`tRPC`도 같이 이어드릴까요?',
@@ -568,6 +580,19 @@ test('resolveCliOptions can prompt for recommended skills and return a flat sele
   ])
   assert.deepEqual(selectInitialValues, ['none', 'no', 'no', 'yes'])
   assert.deepEqual(multiselectMessages, ['설치할 skill을 골라 주세요.'])
+  assert.deepEqual(multiselectInitialValues, [
+    [
+      'docs-search',
+      'project-validator',
+      'granite-routing',
+      'tds-ui',
+      'backoffice-react',
+      'cloudflare-worker',
+      'trpc-boundary',
+    ],
+  ])
+  assert.ok(multiselectOptionValues[0]?.includes('docs-search'))
+  assert.ok(multiselectOptionValues[0]?.includes('project-validator'))
 })
 
 test('resolveCliOptions rejects server-project-mode without server-provider', async () => {

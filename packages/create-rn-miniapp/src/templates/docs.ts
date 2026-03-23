@@ -1,6 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { listInstalledProjectSkillEntries, type InstalledProjectSkill } from '../skills/install.js'
+import { getInstallableSkillDefinition } from '../installable-skill-catalog.js'
+import {
+  listInstalledProjectSkillEntries,
+  resolveRecommendedSkillIds,
+  type InstalledProjectSkill,
+} from '../skills/install.js'
 import {
   GENERATED_REPO_SKILLS_STRATEGY_README_LINES,
   renderSkillsInstallExample,
@@ -11,14 +16,10 @@ import {
   copyDirectoryWithTokens,
   copyFileWithTokens,
 } from './filesystem.js'
-import {
-  resolveEnabledWorkspaceFeatures,
-  resolveRecommendedSkillDefinitions,
-} from './feature-catalog.js'
+import { resolveEnabledWorkspaceFeatures } from './feature-catalog.js'
 import { renderFrontendPolicyMarkdown } from './frontend-policy.js'
 import { resolveGeneratedWorkspaceOptions } from './generated-workspace.js'
 import { createRootTemplateExtraTokens, renderRootVerifyStepsMarkdown } from './root.js'
-import { SKILL_CATALOG } from './skill-catalog.js'
 import type { GeneratedWorkspaceOptions, TemplateTokens } from './types.js'
 import dedent, { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
@@ -206,13 +207,12 @@ function renderWorkspaceTopologyMarkdown(options: GeneratedWorkspaceOptions) {
 
 function renderInstalledSkillReadmeLines(installedSkillIds: string[]) {
   return installedSkillIds.map((skillId) => {
-    const definition = SKILL_CATALOG.find((skill) => skill.id === skillId)
-
-    if (!definition) {
+    try {
+      const definition = getInstallableSkillDefinition(skillId)
+      return `- \`${definition.id}\`: ${definition.agentsLabel}`
+    } catch {
       return `- \`${skillId}\``
     }
-
-    return `- \`${definition.id}\`: ${definition.agentsLabel}`
   })
 }
 
@@ -239,15 +239,21 @@ function renderRootReadmeSkillSection(options: {
 
     추천 skill: ${options.recommendedSkillLabels.join(', ')}
 
-    설치 예시: \`${renderSkillsInstallExample(options.recommendedSkillIds)}\`
+    설치 예시:
+    \`\`\`bash
+    ${renderSkillsInstallExample(options.recommendedSkillIds)}
+    \`\`\`
   `
 }
 
 async function renderRootReadmeMarkdown(context: DocsRenderContext) {
   const { tokens, options, installedSkills } = context
-  const recommendedSkillDefinitions = resolveRecommendedSkillDefinitions(options)
-  const recommendedSkillIds = recommendedSkillDefinitions.map((skill) => skill.id)
-  const recommendedSkillLabels = recommendedSkillDefinitions.map((skill) => `\`${skill.id}\``)
+  const recommendedSkillIds = resolveRecommendedSkillIds({
+    hasBackoffice: options.hasBackoffice,
+    serverProvider: options.serverProvider,
+    hasTrpc: options.hasTrpc,
+  })
+  const recommendedSkillLabels = recommendedSkillIds.map((skillId) => `\`${skillId}\``)
   const installedSkillIds = installedSkills.map((skill) => skill.id)
 
   return dedentWithTrailingNewline`

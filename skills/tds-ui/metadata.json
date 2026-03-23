@@ -6,8 +6,10 @@
     "version": "2.0.2"
   },
   "lastVerifiedAt": "2026-03-21",
-  "truthSources": ["generated/catalog.json", "generated/anomalies.json"],
+  "truthSources": ["generated/anomalies.json", "docs-search"],
   "notes": [
+    "Use docs-search or official TDS docs for public component lookup.",
+    "Use anomalies.json as the local overlay for slug aliases, export gaps, and docs-missing gates.",
     "Update this skill through the repository source and standard `npx skills update` flow."
   ]
 }

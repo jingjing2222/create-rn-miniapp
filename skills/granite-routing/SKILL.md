@@ -18,7 +18,7 @@ description: Use when you are changing Granite route paths, page entries, params
 
 ## Do not use for
 
-- MiniApp capability / 공식 API 탐색: `miniapp-capabilities`
+- MiniApp/AppInToss capability / 공식 API 탐색: `docs-search` 또는 공식 문서
 - TDS component 선택과 UI boundary: `tds-ui`
 - tRPC contract/app-router 변경 순서: `trpc-boundary`
 
@@ -26,7 +26,7 @@ description: Use when you are changing Granite route paths, page entries, params
 
 1. `references/patterns.md`에서 route/page/navigation 패턴을 확인한다.
 2. 강제 규칙과 금지 import는 `../shared/references/frontend-policy.md`를 기준으로 본다.
-3. 기능 존재 여부는 `miniapp-capabilities`, UI 선택은 `tds-ui`로 넘긴다.
+3. 기능 존재 여부와 공식 API lookup은 `docs-search` 또는 Granite/AppInToss 공식 문서로 확인하고, UI 선택은 `tds-ui`로 넘긴다.
 
 ## 핵심 원칙
 

@@ -7,9 +7,9 @@ tags:
 incorrect:
   - "navbar를 일반 root export처럼 적고 import path를 생략한다."
 correct:
-  - "catalog의 rootImportPath를 적고 export gap note를 남긴다."
+  - "정해진 extension import path를 적고 export gap note를 남긴다."
 reference:
-  - generated/catalog.json
+  - generated/anomalies.json
   - references/export-gaps.md
 ---
 

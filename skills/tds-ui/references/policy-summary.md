@@ -1,7 +1,7 @@
 # Policy Summary
 
-- truth source는 `generated/catalog.json`과 `generated/anomalies.json`이다.
-- 선택 순서는 cluster 분류 -> doc-backed 후보 -> anomaly note 순서다.
+- truth source는 `generated/anomalies.json`과 `docs-search`/공식 TDS 문서다.
+- 선택 순서는 docs-search 또는 공식 문서로 doc-backed 후보 확인 -> decision matrix 적용 -> anomaly note 순서다.
 - RN primitive를 직접 추천하지 않는다.
 - export-only 추천 시에는 반드시 doc-backed fallback을 같이 쓴다.
 - `paragraph`는 blocked-by-default다.

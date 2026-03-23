@@ -8,7 +8,7 @@ incorrect:
 correct:
   - "controlled와 uncontrolled를 분리해서 적고 선택 이유를 남긴다."
 reference:
-  - generated/catalog.json
+  - docs-search
   - references/form-patterns.md
 ---
 

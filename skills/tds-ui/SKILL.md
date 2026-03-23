@@ -29,13 +29,14 @@ version: 2.0.0
 
 ## Read in order
 
-1. `generated/catalog.json`
+1. `metadata.json`
 2. `generated/anomalies.json`
-3. `references/decision-matrix.md`
-4. `references/form-patterns.md`
-5. `references/layout-and-navigation.md`
-6. `references/feedback-and-loading.md`
-7. `rules/*.md`
+3. `docs-search` 또는 TDS React Native 공식 문서
+4. `references/decision-matrix.md`
+5. `references/form-patterns.md`
+6. `references/layout-and-navigation.md`
+7. `references/feedback-and-loading.md`
+8. `rules/*.md`
 
 ## Decision algorithm
 
@@ -45,19 +46,19 @@ version: 2.0.0
    - list / list-summary / grid / accordion / step-flow / hero-amount / article / disclaimer / chart
    - primary-action / text-action / icon-action / dialog / toast / loading / result / error-page
    - top-nav / bottom-action / sheet
-2. 문서가 있고 root export도 명확한 컴포넌트를 먼저 고른다.
-3. docs slug mismatch는 catalog alias를 따른다.
+2. `docs-search` 또는 공식 문서에서 doc-backed 후보를 먼저 찾는다.
+3. docs slug mismatch는 anomaly alias를 따른다.
    - `chart` -> docs `Chart/bar-chart`
    - `stepper-row` -> docs `stepper`
 4. export mismatch는 anomaly 규칙을 따른다.
-   - `navbar`는 docs는 있지만 root export path가 다를 수 있으므로 catalog의 `rootImportPath`를 먼저 확인한다.
+   - `navbar`는 docs는 있지만 root export path가 다르므로 `@toss/tds-react-native/extensions/page-navbar`를 먼저 확인한다.
 5. public docs 없는 export는 기본 추천 대상이 아니다.
    - `agreement`, `bottom-cta`, `bottom-sheet`, `fixed-bottom-cta`, `icon`, `tooltip`, `top`, `txt`
    - 이 항목은 사용자가 명시적으로 요구하거나 기존 코드베이스에서 이미 쓰고 있을 때만 추천한다.
    - 추천 시 반드시 `export-only / docs-missing`이라고 표시한다.
 6. `paragraph`는 기본 추천 금지다.
    - component dir는 있지만 root export와 public docs가 약하다.
-7. 상태 관리는 문서 기준을 그대로 따른다.
+7. 상태 관리는 공식 문서와 `references/form-patterns.md` 기준을 그대로 따른다.
    - controlled: `value`/`onChange`, `checked`/`onCheckedChange`, `onValueChange`
    - uncontrolled: `defaultValue`, `defaultChecked`
 8. 최종 답변에는 반드시 아래를 포함한다.

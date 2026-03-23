@@ -1,6 +1,6 @@
 # tds-ui Decision Matrix
 
-이 문서는 `generated/catalog.json`의 cluster 이름을 사람이 읽는 선택 기준으로 풀어쓴다.
+이 문서는 TDS React Native 공식 문서와 `docs-search`로 찾은 public surface를 사람이 읽는 선택 기준으로 풀어쓴 overlay다.
 
 ## input-choice
 
@@ -36,7 +36,7 @@
 
 ## list-navigation-layout
 
-리스트/레이아웃/콘텐츠 군은 공식 문서상 세로 목록(`List`, `ListRow`, `ListHeader`, `ListFooter`), key/value 요약(`TableRow`), grid 배치(`GridList`), FAQ/accordion(`BoardRow`), step flow(`Stepper`), top navigation(`Navbar`), large amount hero(`AmountTop`), disclaimer(`BottomInfo`), long-form content(`Post`), framed media/icon/lottie(`Asset`), status chip(`Badge`), horizontal swipe surface(`Carousel`), bar chart(`BarChart`), onboarding highlight(`Highlight`), separator(`Border`), gradient/shadow visual utility(`Gradient`, `Shadow`)로 나뉜다. `BottomInfo`는 특히 법적 고지/면책 문구에 적합하고 `Post`와 함께 쓰도록 안내한다. `Navbar`는 docs-backed지만 export-gap이 있다.
+리스트/레이아웃/콘텐츠 군은 공식 문서상 세로 목록(`List`, `ListRow`, `ListHeader`, `ListFooter`), key/value 요약(`TableRow`), grid 배치(`GridList`), FAQ/accordion(`BoardRow`), step flow(`Stepper`, skill id `stepper-row`), top navigation(`Navbar`, skill id `navbar`), large amount hero(`AmountTop`), disclaimer(`BottomInfo`), long-form content(`Post`), framed media/icon/lottie(`Asset`), status chip(`Badge`), horizontal swipe surface(`Carousel`), bar chart(`BarChart`, skill id `chart`), onboarding highlight(`Highlight`), separator(`Border`), gradient/shadow visual utility(`Gradient`, `Shadow`)로 나뉜다. `BottomInfo`는 특히 법적 고지/면책 문구에 적합하고 `Post`와 함께 쓰도록 안내한다. `Navbar`는 docs-backed지만 export-gap이 있다.
 
 - `List` + `ListRow`: 설정/메뉴/계정/내역 리스트의 기본 조합으로 고정한다.
 - `ListHeader`: 섹션 제목 + 보조설명 + 우측 액세서리가 있는 헤더에 쓴다.
@@ -44,8 +44,8 @@
 - `TableRow`: key/value summary, 송금 정보, 상품 정보 같은 2열 요약에 쓴다.
 - `GridList`: 1/2/3열 카드나 아이콘 메뉴에 쓴다.
 - `BoardRow`: FAQ, 아코디언, 접힘/펼침 설명 셀에 쓴다.
-- `Stepper`: 단계 흐름, 진행 단계, 절차 요약에 쓴다.
-- `Navbar`: 상단 navigation bar에 쓴다. 단, import path는 catalog를 먼저 본다.
+- `stepper-row`: docs component는 `Stepper`다. 단계 흐름, 진행 단계, 절차 요약에 쓴다.
+- `navbar`: docs component는 `Navbar`다. 상단 navigation bar에 쓰고 import path는 `@toss/tds-react-native/extensions/page-navbar`를 사용한다.
 
 ## content-display
 
@@ -55,7 +55,7 @@
 - `Asset`: 이미지/아이콘/Lottie를 정해진 frame shape 안에 넣어야 할 때 쓴다.
 - `Badge`: 상태 인식용 강조 chip에 쓴다.
 - `Carousel`: 배너/카드/이미지의 가로 스와이프 surface에 쓴다.
-- `BarChart`: 막대형 데이터 시각화에 쓴다.
+- `chart`: docs component는 `BarChart`다. 막대형 데이터 시각화에 쓴다.
 - `Highlight`: 온보딩/튜토리얼의 특정 UI 강조에 쓴다.
 - `Border`: 섹션/리스트 구분선에 쓴다.
 - `Gradient`, `Shadow`: TDS visual utility가 필요할 때만 쓴다.

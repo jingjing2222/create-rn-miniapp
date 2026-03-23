@@ -5,7 +5,7 @@ import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import {
-  buildSkillsInstallCommand,
+  buildSkillsInstallCommands,
   hasInstalledProjectSkills,
   listInstalledProjectSkillEntries,
   listInstalledProjectSkills,
@@ -14,7 +14,11 @@ import {
   renderSkillsAddCommand,
   resolveRecommendedSkillIds,
 } from './skills/install.js'
-import { SKILLS_LIST_COMMAND, SKILLS_SOURCE_REPO } from './skills/contract.js'
+import {
+  APPS_IN_TOSS_SKILLS_SOURCE_REPO,
+  SKILLS_LIST_COMMAND,
+  SKILLS_SOURCE_REPO,
+} from './skills/contract.js'
 
 function escapeRegExp(source: string) {
   return source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -35,7 +39,8 @@ test('resolveRecommendedSkillIds returns a flat recommended list for the current
       hasTrpc: true,
     }),
     [
-      'miniapp-capabilities',
+      'docs-search',
+      'project-validator',
       'granite-routing',
       'tds-ui',
       'backoffice-react',
@@ -46,13 +51,19 @@ test('resolveRecommendedSkillIds returns a flat recommended list for the current
 })
 
 test('renderSkillsAddCommand produces the standard npx skills command', () => {
-  const expectedCommand = ['npx', 'skills', 'add', SKILLS_SOURCE_REPO]
-    .concat(['--skill', 'miniapp-capabilities', '--skill', 'granite-routing', '--skill', 'tds-ui'])
-    .concat(['--copy'])
-    .join(' ')
+  const expectedCommand = [
+    ['npx', 'skills', 'add', APPS_IN_TOSS_SKILLS_SOURCE_REPO]
+      .concat(['--skill', 'docs-search', '--skill', 'project-validator'])
+      .concat(['--copy'])
+      .join(' '),
+    ['npx', 'skills', 'add', SKILLS_SOURCE_REPO]
+      .concat(['--skill', 'granite-routing', '--skill', 'tds-ui'])
+      .concat(['--copy'])
+      .join(' '),
+  ].join('\n')
 
   assert.equal(
-    renderSkillsAddCommand(['miniapp-capabilities', 'granite-routing', 'tds-ui']),
+    renderSkillsAddCommand(['docs-search', 'project-validator', 'granite-routing', 'tds-ui']),
     expectedCommand,
   )
 })
@@ -89,39 +100,60 @@ test('renderInstalledSkillsSummary renders discovered project-local skill paths'
   assert.equal(
     renderInstalledSkillsSummary([
       { id: 'tds-ui', skillsRoot: 'skills' },
-      { id: 'miniapp-capabilities', skillsRoot: '.agents/skills' },
+      { id: 'granite-routing', skillsRoot: '.agents/skills' },
     ]),
     [
       'project-local skills를 설치했어요.',
-      '- miniapp-capabilities: `.agents/skills/miniapp-capabilities`',
+      '- granite-routing: `.agents/skills/granite-routing`',
       '- tds-ui: `skills/tds-ui`',
       `필요하면 \`${SKILLS_LIST_COMMAND}\`로 다시 확인해 주세요.`,
     ].join('\n'),
   )
 })
 
-test('buildSkillsInstallCommand uses the package manager dlx adapter and local repo source in development', async () => {
+test('buildSkillsInstallCommands groups selected skills by source repo and uses the local repo source in development', async () => {
   const targetRoot = '/tmp/ebook-miniapp'
-  const command = await buildSkillsInstallCommand({
+  const commands = await buildSkillsInstallCommands({
     packageManager: 'pnpm',
     targetRoot,
-    skillIds: ['miniapp-capabilities', 'tds-ui'],
+    skillIds: ['docs-search', 'project-validator', 'granite-routing', 'tds-ui'],
   })
 
-  assert.ok(command)
-  assert.equal(command.cwd, targetRoot)
-  assert.equal(command.command, 'pnpm')
-  assert.deepEqual(command.args, [
-    'dlx',
-    'skills@1.4.5',
-    'add',
-    path.resolve(import.meta.dirname, '../../..'),
-    '--skill',
-    'miniapp-capabilities',
-    '--skill',
-    'tds-ui',
-    '--copy',
-    '-y',
+  assert.deepEqual(commands, [
+    {
+      cwd: targetRoot,
+      command: 'pnpm',
+      args: [
+        'dlx',
+        'skills@1.4.5',
+        'add',
+        APPS_IN_TOSS_SKILLS_SOURCE_REPO,
+        '--skill',
+        'docs-search',
+        '--skill',
+        'project-validator',
+        '--copy',
+        '-y',
+      ],
+      label: '추천 agent skills 설치하기',
+    },
+    {
+      cwd: targetRoot,
+      command: 'pnpm',
+      args: [
+        'dlx',
+        'skills@1.4.5',
+        'add',
+        path.resolve(import.meta.dirname, '../../..'),
+        '--skill',
+        'granite-routing',
+        '--skill',
+        'tds-ui',
+        '--copy',
+        '-y',
+      ],
+      label: '추천 agent skills 설치하기',
+    },
   ])
 })
 

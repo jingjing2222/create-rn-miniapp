@@ -14,7 +14,7 @@ import {
   serverProviderSupportsTrpc,
   type ServerProvider,
 } from '../providers/index.js'
-import type { SkillId } from '../templates/skill-catalog.js'
+import type { InstallableSkillId } from '../installable-skill-catalog.js'
 import {
   normalizeSelectedSkillIds,
   resolveRecommendedSkillIds,
@@ -111,7 +111,7 @@ export type ResolvedCliOptions = {
   packageManager: PackageManager
   appName: string
   displayName: string
-  selectedSkills: SkillId[]
+  selectedSkills: InstallableSkillId[]
   noGit: boolean
   serverProvider: ServerProvider | null
   serverProjectMode: ServerProjectMode | null

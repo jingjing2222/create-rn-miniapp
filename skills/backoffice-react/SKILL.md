@@ -18,7 +18,7 @@ description: Use when you are changing the optional backoffice React/Vite worksp
 
 ## Do not use for
 
-- MiniApp capability 탐색: `miniapp-capabilities`
+- MiniApp/AppInToss capability 탐색: `docs-search` 또는 공식 문서
 - Granite route/page/navigation 설계: `granite-routing`
 - TDS UI 선택: `tds-ui`
 - provider runtime layout, 원격 상태, client 연결 점검: provider skill

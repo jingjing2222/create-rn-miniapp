@@ -16,6 +16,7 @@ import {
   ROOT_README_SKILLS_SECTION_END_MARKER,
   ROOT_README_SKILLS_SECTION_START_MARKER,
   renderRootReadmeSkillCatalogLines,
+  resolveRootReadmeInstallExampleSkillIds,
   renderSkillsInstallExample,
   renderSkillsStandardCommandSummary,
   renderRootReadmeProviderSection,
@@ -140,8 +141,8 @@ const TDS_UI_REFERENCE_FILES = [
 ]
 
 const TDS_UI_RULE_FILES = [
-  'rules/catalog-doc-backed-first.md',
-  'rules/catalog-export-gap-handling.md',
+  'rules/doc-backed-first.md',
+  'rules/export-gap-handling.md',
   'rules/state-controlled-uncontrolled.md',
   'rules/screen-states-loading-error-empty.md',
   'rules/no-rn-primitive-when-tds-exists.md',
@@ -186,13 +187,16 @@ function renderTdsUiAgentsMarkdown() {
   return [
     '# tds-ui AGENTS (Generated)',
     '',
-    '이 파일은 `metadata.json`, `generated/catalog.json`, `generated/anomalies.json`에서 파생된 generated output이다.',
+    '이 파일은 `metadata.json`, `generated/anomalies.json`, 공식 TDS 문서 조회 규칙에서 파생된 generated output이다.',
     '수정은 truth source를 바꾼 뒤 재생성된 결과만 반영한다.',
     '',
     '## Truth Sources',
-    ...['metadata.json', 'generated/catalog.json', 'generated/anomalies.json'].map(
-      (filePath) => `- \`${filePath}\``,
-    ),
+    ...[
+      'metadata.json',
+      'generated/anomalies.json',
+      'docs-search',
+      'TDS React Native 공식 문서',
+    ].map((filePath) => `- \`${filePath}\``),
     '',
     '## Human References',
     ...TDS_UI_REFERENCE_FILES.map((filePath) => `- \`${filePath}\``),
@@ -206,66 +210,6 @@ function renderTdsUiAgentsMarkdown() {
     '## Contract Enforcement',
     ...TDS_UI_OUTPUT_CONTRACT_ENFORCEMENT_LINES,
     '',
-  ].join('\n')
-}
-
-function renderTdsUiCatalogProjection(
-  catalog: Array<{
-    name: string
-    cluster: string
-    docsSlug: string | null
-    rootImportPath: string
-    selectionStatus: string
-  }>,
-  metadata: {
-    packageVersion: string
-    lastVerifiedAt: string
-  },
-) {
-  const metadataLine = `- package: \`@toss/tds-react-native@${metadata.packageVersion}\``
-  const verifiedLine = `- last verified: \`${metadata.lastVerifiedAt}\``
-  const truthSourceLine = '- truth source: `generated/catalog.json`'
-  const totalLine = `- total components: \`${catalog.length}\``
-  const clusterOrder = [
-    'input-choice',
-    'actions-feedback',
-    'list-navigation-layout',
-    'content-display',
-    'guarded-export-only',
-    'blocked-by-default',
-  ]
-  const clusterNotes: Record<string, string[]> = {
-    'list-navigation-layout': [
-      '- anomaly: `navbar` is docs-backed, but use the catalog `rootImportPath`',
-      '- anomaly: `stepper-row` docs slug is `stepper`',
-    ],
-    'content-display': ['- anomaly: `chart` docs slug is `Chart/bar-chart`'],
-    'guarded-export-only': [
-      '- gate these by default and include a doc-backed fallback in the answer',
-    ],
-    'blocked-by-default': ['- do not recommend by default'],
-  }
-
-  return [
-    '# tds-ui Catalog Projection (Generated)',
-    '',
-    metadataLine,
-    verifiedLine,
-    truthSourceLine,
-    totalLine,
-    '',
-    ...clusterOrder.flatMap((cluster) => {
-      const entries = catalog
-        .filter((entry) => entry.cluster === cluster)
-        .map((entry) => entry.name)
-      return [
-        `## ${cluster} (${entries.length})`,
-        '',
-        `- ${entries.map((entry) => `\`${entry}\``).join(', ')}`,
-        ...(clusterNotes[cluster] ?? []),
-        '',
-      ]
-    }),
   ].join('\n')
 }
 
@@ -525,10 +469,7 @@ test('skill docs share a single frontend policy path reference', async () => {
   const sharedReferenceSource = await readFile(sharedReferencePath, 'utf8')
   const skillDocs = [
     '../../../../skills/granite-routing/SKILL.md',
-    '../../../../skills/miniapp-capabilities/SKILL.md',
     '../../../../skills/granite-routing/references/patterns.md',
-    '../../../../skills/miniapp-capabilities/references/feature-map.md',
-    '../../../../skills/miniapp-capabilities/references/full-index.md',
   ]
 
   assert.match(sharedReferenceSource, /docs\/engineering\/frontend-policy\.md/)
@@ -597,8 +538,6 @@ test('tds-ui canonical skill package is self-contained and decision-driven', asy
   const expectedFiles = [
     'AGENTS.md',
     'generated/anomalies.json',
-    'generated/catalog.json',
-    'generated/catalog.md',
     'metadata.json',
     'references/decision-matrix.md',
     'references/display-patterns.md',
@@ -608,8 +547,8 @@ test('tds-ui canonical skill package is self-contained and decision-driven', asy
     'references/layout-and-navigation.md',
     'references/policy-summary.md',
     'rules/accessibility-interactive-elements.md',
-    'rules/catalog-doc-backed-first.md',
-    'rules/catalog-export-gap-handling.md',
+    'rules/doc-backed-first.md',
+    'rules/export-gap-handling.md',
     'rules/export-only-gated.md',
     'rules/navbar-import-gap.md',
     'rules/no-rn-primitive-when-tds-exists.md',
@@ -622,135 +561,42 @@ test('tds-ui canonical skill package is self-contained and decision-driven', asy
 
   const skillSource = await readFile(path.join(tdsUiRoot, 'SKILL.md'), 'utf8')
   const agentsSource = await readFile(path.join(tdsUiRoot, 'AGENTS.md'), 'utf8')
+  const decisionMatrixSource = await readFile(
+    path.join(tdsUiRoot, 'references', 'decision-matrix.md'),
+    'utf8',
+  )
   const policySummarySource = await readFile(
     path.join(tdsUiRoot, 'references', 'policy-summary.md'),
     'utf8',
   )
-  assert.match(skillSource, /generated\/catalog\.json/)
+  assert.match(skillSource, /metadata\.json/)
   assert.match(skillSource, /generated\/anomalies\.json/)
+  assert.match(skillSource, /docs-search/)
   assert.match(skillSource, /references\/decision-matrix\.md/)
   assert.match(skillSource, /rules\/\*\.md/)
   assert.match(skillSource, /추천 컴포넌트/)
   assert.match(skillSource, /anomaly note/i)
   assert.match(skillSource, /incomplete answer/)
   assert.match(skillSource, /doc-backed fallback/)
+  assert.doesNotMatch(skillSource, /generated\/catalog\.json/)
   assert.doesNotMatch(skillSource, /ensure-fresh|refresh-catalog/)
   assert.equal(agentsSource, renderTdsUiAgentsMarkdown())
 
   const metadata = JSON.parse(await readFile(path.join(tdsUiRoot, 'metadata.json'), 'utf8')) as {
     package: { name: string; version: string }
     lastVerifiedAt: string
+    truthSources: string[]
   }
   assert.equal(metadata.package.name, '@toss/tds-react-native')
   assert.equal(metadata.package.version, '2.0.2')
   assert.equal(metadata.lastVerifiedAt, '2026-03-21')
+  assert.deepEqual(metadata.truthSources, ['generated/anomalies.json', 'docs-search'])
 
-  const catalog = JSON.parse(
-    await readFile(path.join(tdsUiRoot, 'generated', 'catalog.json'), 'utf8'),
-  ) as Array<{
-    name: string
-    cluster: string
-    selectionStatus: string
-    rootExported: boolean
-    componentDirExists: boolean
-    rootImportPath: string
-    docsStatus: string
-    docsSlug: string | null
-    docUrl: string | null
-    stateModel: {
-      controlled: string[]
-      uncontrolled: string[]
-    }
-    useWhen: string[]
-    avoidWhen: string[]
-    knownCaveats: string[]
-    packageVersion: string
-    lastVerifiedAt: string
-  }>
-
-  const searchField = catalog.find((entry) => entry.name === 'search-field')
-  const navbar = catalog.find((entry) => entry.name === 'navbar')
-  const agreement = catalog.find((entry) => entry.name === 'agreement')
-  const paragraph = catalog.find((entry) => entry.name === 'paragraph')
-  const chart = catalog.find((entry) => entry.name === 'chart')
-  const stepperRow = catalog.find((entry) => entry.name === 'stepper-row')
-  const catalogProjectionSource = await readFile(
-    path.join(tdsUiRoot, 'generated', 'catalog.md'),
-    'utf8',
-  )
-
-  assert.equal(
-    catalogProjectionSource,
-    renderTdsUiCatalogProjection(catalog, {
-      packageVersion: metadata.package.version,
-      lastVerifiedAt: metadata.lastVerifiedAt,
-    }),
-  )
-
-  assert.equal(searchField?.cluster, 'input-choice')
-  assert.equal(searchField?.selectionStatus, 'doc-backed')
-  assert.equal(searchField?.rootExported, true)
-  assert.equal(searchField?.componentDirExists, true)
-  assert.equal(searchField?.rootImportPath, '@toss/tds-react-native')
-  assert.equal(searchField?.docsStatus, 'public-docs')
-  assert.equal(searchField?.docsSlug, 'search-field')
-  assert.equal(
-    searchField?.docUrl,
-    'https://tossmini-docs.toss.im/tds-react-native/components/search-field/',
-  )
-  assert.deepEqual(searchField?.stateModel, {
-    controlled: ['value', 'onChange'],
-    uncontrolled: ['defaultValue'],
-  })
-  assert.ok(searchField?.useWhen.includes('search query input'))
-  assert.ok(searchField?.avoidWhen.includes('free-form non-search text entry'))
-  assert.ok(
-    searchField?.knownCaveats.includes('prefer over text-field when the primary intent is search'),
-  )
-  assert.equal(searchField?.packageVersion, '2.0.2')
-  assert.equal(searchField?.lastVerifiedAt, '2026-03-21')
-
-  assert.equal(navbar?.cluster, 'list-navigation-layout')
-  assert.equal(navbar?.selectionStatus, 'export-gap')
-  assert.equal(navbar?.rootExported, false)
-  assert.equal(navbar?.componentDirExists, true)
-  assert.equal(navbar?.rootImportPath, '@toss/tds-react-native/extensions/page-navbar')
-  assert.equal(navbar?.docsStatus, 'public-docs')
-  assert.equal(navbar?.docsSlug, 'navbar')
-  assert.equal(navbar?.docUrl, 'https://tossmini-docs.toss.im/tds-react-native/components/navbar/')
-  assert.deepEqual(navbar?.stateModel, {
-    controlled: [],
-    uncontrolled: [],
-  })
-  assert.ok(
-    navbar?.knownCaveats.includes(
-      'docs-backed but import path differs from the package root export',
-    ),
-  )
-
-  assert.equal(agreement?.cluster, 'guarded-export-only')
-  assert.equal(agreement?.selectionStatus, 'export-only')
-  assert.equal(agreement?.rootExported, true)
-  assert.equal(agreement?.componentDirExists, true)
-  assert.equal(agreement?.rootImportPath, '@toss/tds-react-native')
-  assert.equal(agreement?.docsStatus, 'no-public-docs')
-  assert.equal(agreement?.docsSlug, null)
-  assert.equal(agreement?.docUrl, null)
-  assert.ok(
-    agreement?.knownCaveats.includes('export-only / docs-missing: provide a doc-backed fallback'),
-  )
-
-  assert.equal(paragraph?.cluster, 'blocked-by-default')
-  assert.equal(paragraph?.selectionStatus, 'blocked')
-  assert.equal(paragraph?.rootExported, false)
-  assert.equal(paragraph?.componentDirExists, true)
-  assert.equal(paragraph?.rootImportPath, '')
-  assert.equal(paragraph?.docsStatus, 'no-public-docs')
-  assert.equal(paragraph?.docsSlug, null)
-  assert.equal(paragraph?.docUrl, null)
-  assert.ok(paragraph?.knownCaveats.includes('dir-only-weak: do not recommend by default'))
-  assert.equal(chart?.docsSlug, 'Chart/bar-chart')
-  assert.equal(stepperRow?.docsSlug, 'stepper')
+  assert.match(decisionMatrixSource, /SearchField/)
+  assert.match(decisionMatrixSource, /stepper-row/)
+  assert.match(decisionMatrixSource, /navbar/)
+  assert.match(decisionMatrixSource, /BarChart/)
+  assert.doesNotMatch(decisionMatrixSource, /generated\/catalog\.json/)
 
   const anomalies = JSON.parse(
     await readFile(path.join(tdsUiRoot, 'generated', 'anomalies.json'), 'utf8'),
@@ -792,7 +638,12 @@ test('tds-ui canonical skill package is self-contained and decision-driven', asy
     assert.match(ruleSource, /reference:/, ruleFile)
     assert.match(ruleSource, /## Incorrect/, ruleFile)
     assert.match(ruleSource, /## Correct/, ruleFile)
+    assert.doesNotMatch(ruleSource, /generated\/catalog\.json/, ruleFile)
   }
+
+  assert.match(policySummarySource, /generated\/anomalies\.json/)
+  assert.match(policySummarySource, /docs-search/)
+  assert.doesNotMatch(policySummarySource, /generated\/catalog\.json/)
 
   for (const contractEnforcementLine of TDS_UI_OUTPUT_CONTRACT_ENFORCEMENT_LINES) {
     assert.match(policySummarySource, new RegExp(escapeRegExp(contractEnforcementLine)))
@@ -1031,7 +882,7 @@ test('README treats generated skills as a first-class scaffold output and avoids
     'utf8',
   )
   const expectedCoreInstallCommand = renderSkillsInstallExample(
-    CORE_SKILL_DEFINITIONS.map((skill) => skill.id),
+    resolveRootReadmeInstallExampleSkillIds(),
   )
   const expectedCommandSummary = renderSkillsStandardCommandSummary()
 
@@ -1051,9 +902,16 @@ test('README treats generated skills as a first-class scaffold output and avoids
   )
   assert.match(
     readmeSource,
-    /이 저장소의 `skills\/`에는 MiniApp 작업에 맞춘 skill source가 들어 있고, 생성된 repo `README\.md`가 추천 목록을 자동으로 보여줘요\./,
+    /추천 목록에는 공식 `docs-search`, `project-validator`와 workspace overlay skill이 같이 들어가요\./,
+  )
+  assert.match(
+    readmeSource,
+    /이 저장소의 `skills\/`는 scaffold\/workspace 특화 overlay skill만 관리하고, 생성된 repo `README\.md`가 추천 목록을 자동으로 보여줘요\./,
   )
   assert.match(readmeSource, /바로 설치할 수 있는 skill id와 용도는 이래요\./)
+  assert.match(readmeSource, /`docs-search`: Apps-in-Toss \/ TDS 공식 문서 검색/)
+  assert.match(readmeSource, /`project-validator`: AppInToss 프로젝트 구조 검증/)
+  assert.doesNotMatch(readmeSource, /miniapp-capabilities/)
   assert.match(readmeSource, new RegExp(escapeRegExp(expectedCoreInstallCommand)))
   assert.match(readmeSource, new RegExp(escapeRegExp(expectedCommandSummary)))
   assert.doesNotMatch(readmeSource, /지금 설치할 수 있는 skill id는 이거예요\./)
@@ -1087,13 +945,19 @@ test('root README managed sections stay synced with shared renderers', async () 
   )
 })
 
-test('skill references do not hardcode the project-local skills root when sibling paths are enough', async () => {
-  const featureMapSource = await readFile(
-    fileURLToPath(
-      new URL('../../../../skills/miniapp-capabilities/references/feature-map.md', import.meta.url),
-    ),
-    'utf8',
+test('root README install example skill ids come from a single helper', () => {
+  assert.deepEqual(resolveRootReadmeInstallExampleSkillIds(), [
+    'docs-search',
+    'project-validator',
+    ...CORE_SKILL_DEFINITIONS.map((skill) => skill.id),
+  ])
+  assert.equal(
+    renderSkillsInstallExample([]),
+    renderSkillsInstallExample(resolveRootReadmeInstallExampleSkillIds()),
   )
+})
+
+test('granite routing references official docs-search instead of removed local capability mirrors', async () => {
   const routingPatternsSource = await readFile(
     fileURLToPath(
       new URL('../../../../skills/granite-routing/references/patterns.md', import.meta.url),
@@ -1101,13 +965,9 @@ test('skill references do not hardcode the project-local skills root when siblin
     'utf8',
   )
 
-  assert.doesNotMatch(featureMapSource, /\.agents\/skills\//)
   assert.doesNotMatch(routingPatternsSource, /\.agents\/skills\//)
-  assert.doesNotMatch(featureMapSource, /\.\.\/tds-ui\//)
-  assert.doesNotMatch(routingPatternsSource, /\.\.\/miniapp-capabilities\//)
-  assert.match(featureMapSource, /`tds-ui` skill의 generated catalog/)
-  assert.match(routingPatternsSource, /`miniapp-capabilities` skill의 feature map/)
-  assert.match(routingPatternsSource, /`miniapp-capabilities` skill의 full index/)
+  assert.doesNotMatch(routingPatternsSource, /miniapp-capabilities/)
+  assert.match(routingPatternsSource, /docs-search/)
 })
 
 test('shared frontend policy reference stays synced with the frontend policy renderer', async () => {
@@ -1141,7 +1001,7 @@ test('README lists scaffolded skills in user-facing groups without leaking maint
     'utf8',
   )
   const expectedCoreInstallCommand = renderSkillsInstallExample(
-    CORE_SKILL_DEFINITIONS.map((skill) => skill.id),
+    resolveRootReadmeInstallExampleSkillIds(),
   )
 
   assert.doesNotMatch(agentsSource, /^- core:/m)
@@ -1572,7 +1432,7 @@ test('applyRootTemplates keeps biome guidance stable even when local core skills
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
 
-  for (const skillId of ['miniapp-capabilities', 'granite-routing', 'tds-ui']) {
+  for (const skillId of ['granite-routing', 'tds-ui']) {
     await mkdir(path.join(targetRoot, 'skills', skillId), { recursive: true })
     await writeFile(path.join(targetRoot, 'skills', skillId, 'SKILL.md'), `# ${skillId}\n`, 'utf8')
   }
@@ -1966,7 +1826,10 @@ test('applyDocsTemplates omits local skill routing and docs/skills for base-only
   assert.match(readme, /## skills 전략/)
   assert.match(readme, /npx skills add/)
   assert.match(readme, /추천 skill:/)
-  assert.match(readme, /miniapp-capabilities/)
+  assert.match(readme, /docs-search/)
+  assert.match(readme, /project-validator/)
+  assert.match(readme, /granite-routing/)
+  assert.match(readme, /tds-ui/)
   assert.match(docsIndex, /repo-contract\.md/)
   assert.match(docsIndex, /frontend-policy\.md/)
   assert.match(docsIndex, /workspace-topology\.md/)
@@ -1995,6 +1858,8 @@ test('applyDocsTemplates keeps backoffice-only workspaces free of server-only to
   assert.doesNotMatch(workspaceTopology, /### server/)
   assert.doesNotMatch(workspaceTopology, /backoffice ↔ server 직접 import 금지/)
   assert.match(readme, /추천 skill:/)
+  assert.match(readme, /docs-search/)
+  assert.match(readme, /project-validator/)
   assert.match(readme, /backoffice-react/)
   assert.doesNotMatch(readme, /cloudflare-worker/)
 })
@@ -2030,7 +1895,7 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
   const tokens = createTokens('pnpm')
 
   await mkdir(path.join(targetRoot, '.agents', 'skills', 'tds-ui'), { recursive: true })
-  await mkdir(path.join(targetRoot, '.agents', 'skills', 'miniapp-capabilities'), {
+  await mkdir(path.join(targetRoot, '.agents', 'skills', 'granite-routing'), {
     recursive: true,
   })
   await writeFile(
@@ -2039,8 +1904,8 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
     'utf8',
   )
   await writeFile(
-    path.join(targetRoot, '.agents', 'skills', 'miniapp-capabilities', 'SKILL.md'),
-    '# MiniApp\n',
+    path.join(targetRoot, '.agents', 'skills', 'granite-routing', 'SKILL.md'),
+    '# Granite\n',
     'utf8',
   )
 
@@ -2051,7 +1916,7 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
   assert.match(readme, /## skills 전략/)
   assert.match(readme, /현재 project-local skills가 설치되어 있어요\./)
   assert.match(readme, /### Installed/)
-  assert.match(readme, /miniapp-capabilities/)
+  assert.match(readme, /granite-routing/)
   assert.match(readme, /tds-ui/)
   assert.doesNotMatch(readme, /추천 skill:/)
   assert.doesNotMatch(readme, /설치 예시:/)
@@ -2062,7 +1927,7 @@ test('applyDocsTemplates keeps frontend policy generic even when project-local c
   const targetRoot = await createTempTargetRoot(t)
   const tokens = createTokens('pnpm')
 
-  for (const skillId of ['miniapp-capabilities', 'granite-routing', 'tds-ui']) {
+  for (const skillId of ['granite-routing', 'tds-ui']) {
     await mkdir(path.join(targetRoot, 'skills', skillId), { recursive: true })
     await writeFile(path.join(targetRoot, 'skills', skillId, 'SKILL.md'), `# ${skillId}\n`, 'utf8')
   }
@@ -2074,7 +1939,6 @@ test('applyDocsTemplates keeps frontend policy generic even when project-local c
     'utf8',
   )
 
-  assert.doesNotMatch(frontendPolicy, /skills\/miniapp-capabilities\/SKILL\.md/)
   assert.doesNotMatch(frontendPolicy, /skills\/granite-routing\/SKILL\.md/)
   assert.doesNotMatch(frontendPolicy, /skills\/tds-ui\/SKILL\.md/)
   assert.match(frontendPolicy, /TDS를 기준으로 구현한다/)

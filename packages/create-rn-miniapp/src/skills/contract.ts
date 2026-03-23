@@ -8,6 +8,7 @@ const packageJson = require('../../package.json') as {
 }
 
 export const SKILLS_SOURCE_REPO = resolveGitHubRepositorySlug(packageJson.repository?.url)
+export const APPS_IN_TOSS_SKILLS_SOURCE_REPO = 'toss/apps-in-toss-skills'
 export const PROJECT_SKILLS_CANONICAL_DIR = '.agents/skills'
 export const PROJECT_SKILLS_MIRROR_DIR = '.claude/skills'
 export const PROJECT_SKILLS_LOCAL_DIR = 'skills'
