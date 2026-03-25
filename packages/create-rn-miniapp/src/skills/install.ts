@@ -17,6 +17,10 @@ import {
   SKILLS_LIST_COMMAND,
   SKILLS_SOURCE_REPO,
 } from './contract.js'
+import {
+  groupSkillIdsBySource,
+  renderSkillsAddCommand as renderSkillsAddCommandImpl,
+} from './add-command.js'
 import { resolveRecommendedSkillDefinitions } from '../templates/feature-catalog.js'
 import dedent from '../runtime/dedent.js'
 
@@ -132,18 +136,7 @@ export function resolveSelectableSkills() {
 }
 
 export function renderSkillsAddCommand(skillIds: string[]) {
-  return groupSkillIdsBySource(skillIds as InstallableSkillId[])
-    .map((group) =>
-      [
-        'npx',
-        'skills',
-        ...createSkillsAddArgs({
-          source: group.sourceRepo,
-          skillIds: group.skillIds,
-        }),
-      ].join(' '),
-    )
-    .join('\n')
+  return renderSkillsAddCommandImpl(skillIds)
 }
 
 export function renderInstalledSkillsSummary(
@@ -181,29 +174,6 @@ async function resolveSkillsSource(sourceRepo: string) {
   }
 
   return sourceRepo
-}
-
-function groupSkillIdsBySource(skillIds: readonly InstallableSkillId[]) {
-  const groups = new Map<string, InstallableSkillId[]>()
-  const seen = new Set<string>()
-
-  for (const skillId of skillIds) {
-    const definition = getInstallableSkillDefinition(skillId)
-
-    if (seen.has(definition.id)) {
-      continue
-    }
-
-    const nextGroup = groups.get(definition.sourceRepo) ?? []
-    nextGroup.push(definition.id)
-    groups.set(definition.sourceRepo, nextGroup)
-    seen.add(definition.id)
-  }
-
-  return [...groups.entries()].map(([sourceRepo, groupedSkillIds]) => ({
-    sourceRepo,
-    skillIds: groupedSkillIds,
-  }))
 }
 
 export async function buildSkillsInstallCommands(options: {

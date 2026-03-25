@@ -1,7 +1,7 @@
 import type { SkillFrontmatter } from './frontmatter.js'
 import { dedentWithTrailingNewline } from '../runtime/dedent.js'
 
-type SkillMetadata = Pick<SkillFrontmatter, 'id' | 'agentsLabel' | 'category'>
+type SkillMetadata = Pick<SkillFrontmatter, 'id' | 'agentsLabel' | 'description' | 'category'>
 
 export function renderSkillCatalogSource(skills: SkillFrontmatter[]) {
   const coreSkills = skills.filter((skill) => skill.category === 'core')
@@ -13,6 +13,7 @@ export function renderSkillCatalogSource(skills: SkillFrontmatter[]) {
     
     type SkillMetadata = {
       agentsLabel: string
+      description: string
     }
     
     const CORE_SKILL_METADATA_BY_ID = {
@@ -30,12 +31,14 @@ export function renderSkillCatalogSource(skills: SkillFrontmatter[]) {
     export type SkillDefinition = {
       id: SkillId
       agentsLabel: string
+      description: string
     }
     
     function createSkillReferenceDefinition<TId extends SkillId>(id: TId, metadata: SkillMetadata) {
       return {
         id,
         agentsLabel: metadata.agentsLabel,
+        description: metadata.description,
       }
     }
     
@@ -82,7 +85,7 @@ function renderSkillMetadataEntries(skills: SkillMetadata[]) {
   return skills
     .map(
       (skill) =>
-        `  ${JSON.stringify(skill.id)}: {\n    agentsLabel: ${JSON.stringify(skill.agentsLabel)},\n  },`,
+        `  ${JSON.stringify(skill.id)}: {\n    agentsLabel: ${JSON.stringify(skill.agentsLabel)},\n    description: ${JSON.stringify(skill.description)},\n  },`,
     )
     .join('\n')
 }

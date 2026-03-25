@@ -27,6 +27,7 @@ import {
   SKILLS_LIST_COMMAND,
   SKILLS_UPDATE_COMMAND,
 } from '../skills/contract.js'
+import { parseSkillFrontmatter } from '../skills/frontmatter.js'
 import { CORE_SKILL_DEFINITIONS, SKILL_CATALOG } from './skill-catalog.js'
 import { getTestPackageManagerField } from '../test-support/package-manager.js'
 import * as templateModule from './index.js'
@@ -442,23 +443,18 @@ test('skill catalog is generated from skill source frontmatter metadata', async 
 
   for (const directory of installableSkillDirectories) {
     const skillSource = await readFile(path.join(skillRoot, directory, 'SKILL.md'), 'utf8')
-    const frontmatter = /^---\n([\s\S]*?)\n---/m.exec(skillSource)?.[1] ?? ''
-    const nameMatch = /^name:\s*(.+)$/m.exec(frontmatter)
-    const labelMatch = /^label:\s*(.+)$/m.exec(frontmatter)
-    const categoryMatch = /^category:\s*(core|optional)$/m.exec(frontmatter)
+    const frontmatter = parseSkillFrontmatter(skillSource, directory)
+    const catalogEntry = SKILL_CATALOG.find((skill) => skill.id === directory)
 
-    assert.equal(nameMatch?.[1] ?? '', directory)
-    assert.notEqual(labelMatch?.[1] ?? '', '', `${directory} must declare a label in frontmatter`)
-    assert.notEqual(
-      categoryMatch?.[1] ?? '',
-      '',
-      `${directory} must declare a category in frontmatter`,
+    assert.equal(frontmatter.id, directory)
+    assert.ok(
+      frontmatter.description.length <= 1024,
+      `${directory} description must stay within the Agent Skills frontmatter limit`,
     )
-    assert.match(skillCatalogSource, new RegExp(`'${escapeRegExp(directory)}': \\{`))
-    assert.match(
-      skillCatalogSource,
-      new RegExp(`agentsLabel: '${escapeRegExp(labelMatch?.[1] ?? '')}'`),
-    )
+    assert.ok(catalogEntry, `${directory} must exist in generated skill catalog`)
+    assert.match(skillCatalogSource, new RegExp(`["']${escapeRegExp(directory)}["']:\\s*\\{`))
+    assert.equal(catalogEntry.agentsLabel, frontmatter.agentsLabel)
+    assert.equal(catalogEntry.description, frontmatter.description)
   }
 })
 

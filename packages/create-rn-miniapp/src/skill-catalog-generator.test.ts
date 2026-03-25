@@ -6,6 +6,7 @@ test('renderSkillCatalogSource escapes labels with JSON-safe string serializatio
   const source = renderSkillCatalogSource([
     {
       id: 'test-skill',
+      description: "설명 첫 줄\n둘째 줄 'quoted'",
       agentsLabel: "한 줄\n둘째 줄 'quoted'",
       category: 'core',
       order: 1,
@@ -13,4 +14,5 @@ test('renderSkillCatalogSource escapes labels with JSON-safe string serializatio
   ])
 
   assert.match(source, /"한 줄\\n둘째 줄 'quoted'"/)
+  assert.match(source, /"설명 첫 줄\\n둘째 줄 'quoted'"/)
 })

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { syncRootReadmeManagedSections } from '../packages/create-rn-miniapp/src/root-readme.js'
+import { syncRootReadmeManagedSections } from '../packages/create-rn-miniapp/src/docs/root-readme.js'
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url))
 const readmePath = path.join(repoRoot, 'README.md')

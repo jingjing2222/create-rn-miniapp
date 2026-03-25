@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import {
   parseSkillFrontmatter,
   type SkillFrontmatter,
-} from '../packages/create-rn-miniapp/src/skills-frontmatter.js'
-import { renderSkillCatalogSource } from '../packages/create-rn-miniapp/src/skill-catalog-generator.js'
+} from '../packages/create-rn-miniapp/src/skills/frontmatter.js'
+import { renderSkillCatalogSource } from '../packages/create-rn-miniapp/src/skills/catalog-generator.js'
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url))
 const skillsRoot = path.join(repoRoot, 'skills')

@@ -3,6 +3,7 @@ import type { CommandSpec } from '../runtime/command-spec.js'
 import { getPackageManagerAdapter, type PackageManager } from '../runtime/package-manager.js'
 import type { ServerScaffoldState } from '../server/project.js'
 import type { OptionalSkillId } from '../templates/skill-catalog.js'
+import { SERVER_PROVIDER_METADATA, SERVER_PROVIDERS, type ServerProvider } from './catalog.js'
 import {
   ensureBackofficeFirebaseBootstrap,
   ensureBackofficeCloudflareBootstrap,
@@ -25,6 +26,8 @@ import {
 } from '../templates/server.js'
 import type { TemplateTokens } from '../templates/types.js'
 import { buildSupabaseBootstrapPlan } from './supabase/provision.js'
+
+export { SERVER_PROVIDERS, SERVER_PROVIDER_OPTIONS, type ServerProvider } from './catalog.js'
 
 type ProviderPlanOptions = {
   targetRoot: string
@@ -58,8 +61,8 @@ export type ServerProviderAdapter = {
 
 const supabaseAdapter: ServerProviderAdapter = {
   id: 'supabase',
-  label: 'Supabase',
-  readmeDescription: 'DB와 Functions를 같이 빠르게 시작하고 싶을 때',
+  label: SERVER_PROVIDER_METADATA.supabase.label,
+  readmeDescription: SERVER_PROVIDER_METADATA.supabase.readmeDescription,
   supportsTrpc: false,
   optionalSkillId: 'supabase-project',
   async detect(rootDir) {
@@ -100,8 +103,8 @@ function buildCloudflarePlan(options: ProviderPlanOptions): CommandSpec[] {
 
 const cloudflareAdapter: ServerProviderAdapter = {
   id: 'cloudflare',
-  label: 'Cloudflare Workers',
-  readmeDescription: 'edge runtime과 binding 중심으로 가고 싶을 때',
+  label: SERVER_PROVIDER_METADATA.cloudflare.label,
+  readmeDescription: SERVER_PROVIDER_METADATA.cloudflare.readmeDescription,
   supportsTrpc: true,
   optionalSkillId: 'cloudflare-worker',
   async detect(rootDir) {
@@ -130,8 +133,8 @@ const cloudflareAdapter: ServerProviderAdapter = {
 
 const firebaseAdapter: ServerProviderAdapter = {
   id: 'firebase',
-  label: 'Firebase',
-  readmeDescription: 'Functions, Firestore, Web SDK 흐름이 익숙할 때',
+  label: SERVER_PROVIDER_METADATA.firebase.label,
+  readmeDescription: SERVER_PROVIDER_METADATA.firebase.readmeDescription,
   supportsTrpc: false,
   optionalSkillId: 'firebase-functions',
   async detect(rootDir) {
@@ -162,15 +165,6 @@ const serverProviders = {
   cloudflare: cloudflareAdapter,
   firebase: firebaseAdapter,
 } as const satisfies Record<ServerProviderAdapter['id'], ServerProviderAdapter>
-
-export const SERVER_PROVIDERS = Object.keys(serverProviders) as Array<keyof typeof serverProviders>
-
-export const SERVER_PROVIDER_OPTIONS = SERVER_PROVIDERS.map((provider) => ({
-  value: provider,
-  label: serverProviders[provider].label,
-}))
-
-export type ServerProvider = (typeof SERVER_PROVIDERS)[number]
 
 export function getServerProviderAdapter(provider: ServerProvider): ServerProviderAdapter {
   return serverProviders[provider]

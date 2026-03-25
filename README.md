@@ -70,15 +70,15 @@ pnpm verify
 
 바로 설치할 수 있는 skill id와 용도는 이래요.
 
-- `docs-search`: Apps-in-Toss / TDS 공식 문서 검색
-- `project-validator`: AppInToss 프로젝트 구조 검증
-- `granite-routing`: route / page / navigation 패턴
-- `tds-ui`: TDS UI 선택과 form 패턴
-- `backoffice-react`: backoffice React 작업
-- `cloudflare-worker`: Cloudflare Worker 작업
-- `supabase-project`: Supabase project 작업
-- `firebase-functions`: Firebase Functions 작업
-- `trpc-boundary`: tRPC boundary 변경
+- `docs-search`: Apps-in-Toss / TDS 공식 문서 검색. 공식 Apps-in-Toss와 TDS 문서에서 capability, component, API 존재 여부를 확인할 때
+- `project-validator`: AppInToss 프로젝트 구조 검증. 생성된 AppInToss workspace 구조, 필수 파일, import 경계 drift를 점검할 때
+- `granite-routing`: route / page / navigation 패턴. Use when you are changing Granite route paths, page entries, params, or navigation flow in the MiniApp frontend. Do not use for capability lookup, provider runtime work, or TDS component selection.
+- `tds-ui`: TDS UI 선택과 form 패턴. Decision skill for choosing TDS React Native components and UI boundaries in MiniApp screens. Use when translating product requirements into TDS components, reconciling public docs with actual exports, or deciding controlled/uncontrolled state patterns. Do not use for route design, capability lookup, provider/runtime work, or non-TDS native module decisions.
+- `backoffice-react`: backoffice React 작업. Decide how to structure an optional backoffice React screen: pick list, detail, form, dashboard, or bulk-action archetypes; place query, component, and form state; split search, table, confirm, and export boundaries; and validate loading, error, empty, disabled, and permission states. Do not use for MiniApp route design, provider runtime drift, or tRPC contract changes.
+- `cloudflare-worker`: Cloudflare Worker 작업. Diagnose a Cloudflare Worker-backed server workspace: classify runtime, binding, env, local dev, and client-linkage drift; check D1/R2 and base URL alignment; and decide when the issue belongs to `trpc-boundary` or `server/README.md` Remote Ops. Do not use for deploy-only repair or generic UI work.
+- `supabase-project`: Supabase project 작업. Diagnose a Supabase-backed server workspace: separate DB, RLS, Edge Function, env, and project-ref drift; check frontend and backoffice alignment; and decide when the issue is remote state versus local linkage. Do not use for remote db apply/deploy or generic route/UI work.
+- `firebase-functions`: Firebase Functions 작업. Diagnose a Firebase-backed server workspace: choose callable, HTTP, or trigger surfaces; check project, region, emulator, and client-linkage drift; and separate local linkage issues from remote Firestore or IAM readiness. Do not use for deploy, seed, or repair procedures.
+- `trpc-boundary`: tRPC boundary 변경. Use when you are changing tRPC contracts, app-router shape, or client and server import order across the shared boundary. Do not use for provider runtime layout, remote operations, or generic route and UI work.
 
 예를 들어 필요한 skill 하나를 바로 넣고 싶다면 이렇게 하면 돼요.
 

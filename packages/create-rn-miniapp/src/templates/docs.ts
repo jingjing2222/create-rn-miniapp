@@ -8,6 +8,7 @@ import {
 } from '../skills/install.js'
 import {
   GENERATED_REPO_SKILLS_STRATEGY_README_LINES,
+  renderSkillRecommendationLines,
   renderSkillsInstallExample,
   renderSkillsStandardCommandSummary,
 } from '../docs/root-readme.js'
@@ -209,7 +210,7 @@ function renderInstalledSkillReadmeLines(installedSkillIds: string[]) {
   return installedSkillIds.map((skillId) => {
     try {
       const definition = getInstallableSkillDefinition(skillId)
-      return `- \`${definition.id}\`: ${definition.agentsLabel}`
+      return `- \`${definition.id}\`: ${definition.agentsLabel}. ${definition.description}`
     } catch {
       return `- \`${skillId}\``
     }
@@ -219,7 +220,6 @@ function renderInstalledSkillReadmeLines(installedSkillIds: string[]) {
 function renderRootReadmeSkillSection(options: {
   installedSkillIds: string[]
   recommendedSkillIds: string[]
-  recommendedSkillLabels: string[]
 }) {
   if (options.installedSkillIds.length > 0) {
     return dedent`
@@ -230,14 +230,15 @@ function renderRootReadmeSkillSection(options: {
     `
   }
 
-  if (options.recommendedSkillLabels.length === 0) {
+  if (options.recommendedSkillIds.length === 0) {
     return '필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.'
   }
 
   return dedent`
     필요할 때 project-local skills로 설치해서 팀과 같이 쓸 수 있어요.
 
-    추천 skill: ${options.recommendedSkillLabels.join(', ')}
+    추천 skill:
+    ${renderSkillRecommendationLines(options.recommendedSkillIds).join('\n')}
 
     설치 예시:
     \`\`\`bash
@@ -253,7 +254,6 @@ async function renderRootReadmeMarkdown(context: DocsRenderContext) {
     serverProvider: options.serverProvider,
     hasTrpc: options.hasTrpc,
   })
-  const recommendedSkillLabels = recommendedSkillIds.map((skillId) => `\`${skillId}\``)
   const installedSkillIds = installedSkills.map((skill) => skill.id)
 
   return dedentWithTrailingNewline`
@@ -270,7 +270,6 @@ async function renderRootReadmeMarkdown(context: DocsRenderContext) {
     ${renderRootReadmeSkillSection({
       installedSkillIds,
       recommendedSkillIds,
-      recommendedSkillLabels,
     })}
     
     ${renderSkillsStandardCommandSummary()}

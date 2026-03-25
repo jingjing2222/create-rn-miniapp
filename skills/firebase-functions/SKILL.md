@@ -1,20 +1,26 @@
 ---
 name: firebase-functions
-label: Firebase Functions 작업
-category: optional
-order: 7
-description: Use when you need Firebase Functions project layout, local dev context, or client linkage checks. Do not use for deploy, seed, or remote repair procedures.
+description: >-
+  Diagnose a Firebase-backed server workspace: choose callable, HTTP, or
+  trigger surfaces; check project, region, emulator, and client-linkage drift;
+  and separate local linkage issues from remote Firestore or IAM readiness. Do
+  not use for deploy, seed, or repair procedures.
+metadata:
+  create-rn-miniapp.agentsLabel: "Firebase Functions 작업"
+  create-rn-miniapp.category: "optional"
+  create-rn-miniapp.order: "7"
 ---
 
 # Firebase Functions Skill
 
-`server`가 Firebase Functions workspace일 때 사용하는 Skill입니다.
+Firebase provider를 진단할 때 쓰는 decision skill이다.
+목표는 callable/http/trigger surface를 먼저 고르고, region/project drift와 remote readiness 부족을 local 코드 문제와 분리하는 것이다.
 
 ## Use when
 
-- Firebase Functions/Firestore workspace 표면을 확인할 때
-- 작업 전에 현재 scaffold state와 client linkage를 읽어야 할 때
-- local dev, callable/http 진입점, env ownership을 다시 확인할 때
+- callable, http, Firestore trigger 중 어느 surface인지 먼저 정해야 할 때
+- project id, region, emulator, client linkage drift를 확인할 때
+- Firestore permission 문제와 deploy readiness 문제를 분리할 때
 
 ## Do not use for
 
@@ -22,16 +28,44 @@ description: Use when you need Firebase Functions project layout, local dev cont
 - MiniApp/AppInToss capability 탐색: `docs-search` 또는 공식 문서
 - route/page/navigation 설계: `granite-routing`
 
-## 읽는 순서
+## Read in order
 
-1. `server/.create-rn-miniapp/state.json`과 `server/README.md`를 먼저 확인한다.
-2. `references/overview.md`를 본다.
-3. 로컬 실행은 `references/local-dev.md`, client 연결은 `references/client-connection.md`, 이상 징후는 `references/troubleshooting.md`로 이동한다.
-4. 구조/ownership 규칙은 `docs/engineering/workspace-topology.md`를 같이 확인한다.
+1. `server/.create-rn-miniapp/state.json`
+2. `server/README.md`
+3. `../shared/references/server-common.md`
+4. `references/provider-overlay.md`
+5. workspace ownership이 헷갈리면 `docs/engineering/workspace-topology.md`
 
-## 체크 포인트
+## Default checks
 
-- Blaze, build IAM, Firestore 준비 여부를 확인했는가
-- state.json의 `remoteInitialization`이 현재 상황과 맞는가
-- `frontend`/`backoffice`가 같은 Firebase project config를 읽는가
-- 원격 deploy나 seed는 이 Skill이 아니라 `server/README.md`의 Remote Ops로 넘긴다.
+1. callable, http, Firestore trigger 중 어떤 surface인지 먼저 적는다.
+2. `FIREBASE_PROJECT_ID`, `FIREBASE_FUNCTION_REGION`이 client env와 같은지 본다.
+3. emulator, deployed function, direct Firestore read 중 어디에서만 깨지는지 분리한다.
+4. Blaze, IAM, Firestore readiness 부족이면 코드 수정보다 remote readiness로 분류한다.
+
+## Failure signatures
+
+- emulator는 되는데 deployed callable/http가 404 또는 region mismatch로 깨진다.
+- direct Firestore read는 permission denied인데 fallback callable은 된다.
+- deploy 전에 Blaze, IAM, Cloud Build, Firestore 준비 부족이 걸린다.
+- frontend와 backoffice가 다른 Firebase project id를 본다.
+
+## Smoke tests
+
+- `node ./scripts/check-env.mjs`
+- `node ./scripts/check-client-links.mjs`
+- `server` `build`
+- `server` `typecheck`
+- `server` `dev`
+
+## Handoff boundary
+
+- deploy, Firestore ensure, seed, repair는 `server/README.md` `Remote Ops`
+- 화면 구조는 `backoffice-react`, MiniApp route는 `granite-routing`
+
+## Report evidence
+
+- `state.json` 요약
+- chosen surface
+- project id / region / emulator 비교 결과
+- permission/readiness 문제인지, local linkage 문제인지

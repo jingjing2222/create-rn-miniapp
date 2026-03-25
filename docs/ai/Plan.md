@@ -1,3 +1,21 @@
+## 다음 작업: skills 체계 단일 PR 정비
+
+### 목표
+- root `skills/*/SKILL.md` frontmatter를 Agent Skills spec 친화 구조로 정리하고, repo 전용 값은 `metadata.create-rn-miniapp.*`로 이동한다.
+- parser, sync script, generated catalog, 관련 consumer가 새 metadata 구조를 읽도록 맞추고 generated artifact를 재생성한다.
+- `cloudflare-worker`, `supabase-project`, `firebase-functions`를 shared server-common reference + provider overlay 구조로 재편한다.
+- `backoffice-react`를 운영 화면 decision skill로 재작성하고, trigger 친화 description과 경량 eval 자산까지 한 PR에서 마무리한다.
+
+### 작업 순서
+1. `docs/ai/Plan.md`를 이번 PR 기준으로 갱신하고, git branch / current consumer surface / skill source를 다시 확인한다.
+2. frontmatter parser 변경은 failing test부터 추가하고, `skills/frontmatter`, catalog generator, sync pipeline, template tests를 새 metadata 구조에 맞게 고친다.
+3. 모든 root skill frontmatter를 `metadata.create-rn-miniapp.agentsLabel|category|order|version` 구조로 정리하고 generated catalog를 재생성한다.
+4. `skills/shared/references/server-common.md`를 추가하고, server provider skill 3종을 공통 규칙 + provider-specific overlay 구조로 재작성한다.
+5. `backoffice-react`를 decision skill로 재작성하고, `references/`를 archetype / data-boundary / bulk-action-and-forms / verification / gotchas 중심으로 분리한다.
+6. 약한 skill들의 description을 trigger 중심으로 고치고, catalog/README consumer에서 실제로 쓰는 정보만 low-risk 범위로 노출한다.
+7. skill별 should-trigger / should-not-trigger 경량 eval 자산을 추가하고, 경계와 expected output 품질을 같이 기록한다.
+8. 관련 테스트, `pnpm sync:skill-catalog`, `pnpm verify`를 실행해 회귀를 확인하고, 남는 리스크만 별도로 기록한다.
+
 ## 다음 작업: Granite runtime preset import 회귀 fix changeset 추가와 한글 PR 생성
 
 ### 목표

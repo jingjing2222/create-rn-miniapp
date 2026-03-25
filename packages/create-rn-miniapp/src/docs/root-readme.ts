@@ -1,9 +1,10 @@
 import {
   INSTALLABLE_SKILL_CATALOG,
   resolveAlwaysRecommendedSkillDefinitions,
+  getInstallableSkillDefinition,
 } from '../installable-skill-catalog.js'
-import { SERVER_PROVIDERS, getServerProviderAdapter } from '../providers/index.js'
-import { renderSkillsAddCommand } from '../skills/install.js'
+import { SERVER_PROVIDER_METADATA, SERVER_PROVIDERS } from '../providers/catalog.js'
+import { renderSkillsAddCommand } from '../skills/add-command.js'
 import {
   SKILLS_CHECK_COMMAND,
   SKILLS_LIST_COMMAND,
@@ -33,6 +34,10 @@ export const GENERATED_REPO_SKILLS_STRATEGY_README_LINES = [
   '- 추천 목록은 현재 workspace topology를 기준으로 자동으로 정해져요.',
 ]
 
+function formatSkillCatalogLine(skill: { id: string; agentsLabel: string; description: string }) {
+  return `- \`${skill.id}\`: ${skill.agentsLabel}. ${skill.description}`
+}
+
 export function resolveRootReadmeInstallExampleSkillIds() {
   return [
     ...resolveAlwaysRecommendedSkillDefinitions().map((skill) => skill.id),
@@ -56,7 +61,11 @@ export function renderSkillsStandardCommandSummary() {
 }
 
 export function renderRootReadmeSkillCatalogLines() {
-  return INSTALLABLE_SKILL_CATALOG.map((skill) => `- \`${skill.id}\`: ${skill.agentsLabel}`)
+  return INSTALLABLE_SKILL_CATALOG.map(formatSkillCatalogLine)
+}
+
+export function renderSkillRecommendationLines(skillIds: readonly string[]) {
+  return skillIds.map((skillId) => formatSkillCatalogLine(getInstallableSkillDefinition(skillId)))
 }
 
 export function renderRootReadmeSkillsSection() {
@@ -82,10 +91,9 @@ export function renderRootReadmeProviderSection() {
     ## server provider 고르기
     
     ${(
-      SERVER_PROVIDERS.map((provider) => {
-        const adapter = getServerProviderAdapter(provider)
-        return `- \`${provider}\`: ${adapter.readmeDescription}`
-      })
+      SERVER_PROVIDERS.map(
+        (provider) => `- \`${provider}\`: ${SERVER_PROVIDER_METADATA[provider].readmeDescription}`,
+      )
     ).join('\n')}
     
     상세 연결 순서와 운영 방식은 생성된 repo의 \`server/README.md\`와 루트 문서를 보면 돼요.

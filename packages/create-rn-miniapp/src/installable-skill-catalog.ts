@@ -7,14 +7,18 @@ import {
 
 type OfficialSkillMetadata = {
   agentsLabel: string
+  description: string
 }
 
 const OFFICIAL_SKILL_METADATA_BY_ID = {
   'docs-search': {
     agentsLabel: 'Apps-in-Toss / TDS 공식 문서 검색',
+    description:
+      '공식 Apps-in-Toss와 TDS 문서에서 capability, component, API 존재 여부를 확인할 때',
   },
   'project-validator': {
     agentsLabel: 'AppInToss 프로젝트 구조 검증',
+    description: '생성된 AppInToss workspace 구조, 필수 파일, import 경계 drift를 점검할 때',
   },
 } as const satisfies Record<string, OfficialSkillMetadata>
 
@@ -24,6 +28,7 @@ export type InstallableSkillId = LocalSkillId | OfficialSkillId
 export type InstallableSkillDefinition = {
   id: InstallableSkillId
   agentsLabel: string
+  description: string
   sourceRepo: string
 }
 
@@ -33,6 +38,7 @@ function createOfficialSkillDefinition<TId extends OfficialSkillId>(
   return {
     id,
     agentsLabel: OFFICIAL_SKILL_METADATA_BY_ID[id].agentsLabel,
+    description: OFFICIAL_SKILL_METADATA_BY_ID[id].description,
     sourceRepo: APPS_IN_TOSS_SKILLS_SOURCE_REPO,
   }
 }
@@ -41,6 +47,7 @@ function createLocalSkillDefinition(skill: LocalSkillDefinition): InstallableSki
   return {
     id: skill.id,
     agentsLabel: skill.agentsLabel,
+    description: skill.description,
     sourceRepo: SKILLS_SOURCE_REPO,
   }
 }

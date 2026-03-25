@@ -3,32 +3,47 @@
 
 type SkillMetadata = {
   agentsLabel: string
+  description: string
 }
 
 const CORE_SKILL_METADATA_BY_ID = {
   'granite-routing': {
     agentsLabel: 'route / page / navigation 패턴',
+    description:
+      'Use when you are changing Granite route paths, page entries, params, or navigation flow in the MiniApp frontend. Do not use for capability lookup, provider runtime work, or TDS component selection.',
   },
   'tds-ui': {
     agentsLabel: 'TDS UI 선택과 form 패턴',
+    description:
+      'Decision skill for choosing TDS React Native components and UI boundaries in MiniApp screens. Use when translating product requirements into TDS components, reconciling public docs with actual exports, or deciding controlled/uncontrolled state patterns. Do not use for route design, capability lookup, provider/runtime work, or non-TDS native module decisions.',
   },
 } as const satisfies Record<string, SkillMetadata>
 
 const OPTIONAL_SKILL_METADATA_BY_ID = {
   'backoffice-react': {
     agentsLabel: 'backoffice React 작업',
+    description:
+      'Decide how to structure an optional backoffice React screen: pick list, detail, form, dashboard, or bulk-action archetypes; place query, component, and form state; split search, table, confirm, and export boundaries; and validate loading, error, empty, disabled, and permission states. Do not use for MiniApp route design, provider runtime drift, or tRPC contract changes.',
   },
   'cloudflare-worker': {
     agentsLabel: 'Cloudflare Worker 작업',
+    description:
+      'Diagnose a Cloudflare Worker-backed server workspace: classify runtime, binding, env, local dev, and client-linkage drift; check D1/R2 and base URL alignment; and decide when the issue belongs to `trpc-boundary` or `server/README.md` Remote Ops. Do not use for deploy-only repair or generic UI work.',
   },
   'supabase-project': {
     agentsLabel: 'Supabase project 작업',
+    description:
+      'Diagnose a Supabase-backed server workspace: separate DB, RLS, Edge Function, env, and project-ref drift; check frontend and backoffice alignment; and decide when the issue is remote state versus local linkage. Do not use for remote db apply/deploy or generic route/UI work.',
   },
   'firebase-functions': {
     agentsLabel: 'Firebase Functions 작업',
+    description:
+      'Diagnose a Firebase-backed server workspace: choose callable, HTTP, or trigger surfaces; check project, region, emulator, and client-linkage drift; and separate local linkage issues from remote Firestore or IAM readiness. Do not use for deploy, seed, or repair procedures.',
   },
   'trpc-boundary': {
     agentsLabel: 'tRPC boundary 변경',
+    description:
+      'Use when you are changing tRPC contracts, app-router shape, or client and server import order across the shared boundary. Do not use for provider runtime layout, remote operations, or generic route and UI work.',
   },
 } as const satisfies Record<string, SkillMetadata>
 
@@ -39,12 +54,14 @@ export type SkillId = CoreSkillId | OptionalSkillId
 export type SkillDefinition = {
   id: SkillId
   agentsLabel: string
+  description: string
 }
 
 function createSkillReferenceDefinition<TId extends SkillId>(id: TId, metadata: SkillMetadata) {
   return {
     id,
     agentsLabel: metadata.agentsLabel,
+    description: metadata.description,
   }
 }
 
