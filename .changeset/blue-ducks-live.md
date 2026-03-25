@@ -1,5 +1,6 @@
 ---
 'create-rn-miniapp': patch
+'@create-rn-miniapp/scaffold-templates': patch
 ---
 
 skill frontmatter를 metadata 기반으로 정리하고 skill catalog 파이프라인을 같은 구조로 다시 맞췄습니다.

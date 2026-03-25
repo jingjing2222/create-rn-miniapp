@@ -1,3 +1,15 @@
+## 다음 작업: skills 체계 PR의 두 publish 패키지 patch changeset 정리
+
+### 목표
+- 현재 skill 체계 정비 PR에 연결된 Changeset이 `create-rn-miniapp` 하나만 올리도록 되어 있는 상태를 바로잡는다.
+- publish 패키지인 `create-rn-miniapp`, `@create-rn-miniapp/scaffold-templates` 두 개를 모두 patch 대상으로 맞춘다.
+- 변경은 Plan과 existing changeset에만 국한하고, `pnpm verify` 후 현재 브랜치에 push한다.
+
+### 작업 순서
+1. 현재 changeset과 publish 패키지 구성을 다시 확인해 이번 수정 범위를 두 패키지 patch 반영으로 한정한다.
+2. 기존 changeset frontmatter를 두 패키지 patch로 갱신하고, 설명이 실제 PR diff와 어긋나지 않는지 점검한다.
+3. `pnpm verify`로 회귀가 없는지 확인한 뒤 단일 목적 커밋으로 정리해 원격 브랜치에 push한다.
+
 ## 다음 작업: Skill 표준 재검수와 잔여 비표준 찾기
 
 ### 목표
