@@ -1,0 +1,66 @@
+[
+  {
+    "query": "이 endpoint를 callable로 둘지 http로 둘지 먼저 결정해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "emulator에서는 되는데 deployed function이 404라서 region drift인지 보고 싶어",
+    "should_trigger": true
+  },
+  {
+    "query": "direct Firestore read는 permission denied인데 callable fallback은 돼서 어디가 문제인지 분류해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "frontend와 backoffice가 같은 Firebase project id를 보는지 점검 순서를 알려줘",
+    "should_trigger": true
+  },
+  {
+    "query": "Blaze, IAM, Firestore 준비 부족인지 local 코드 문제인지 먼저 잘라줘",
+    "should_trigger": true
+  },
+  {
+    "query": "project id와 function region이 client env와 안 맞는 것 같아서 evidence를 모아줘",
+    "should_trigger": true
+  },
+  {
+    "query": "trigger성 작업인데 http 함수로 붙여도 되는지 surface 선택 기준을 줘",
+    "should_trigger": true
+  },
+  {
+    "query": "remote repair로 넘길지 local diagnosis로 끝낼지 handoff 기준을 정리해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "Firebase deploy를 지금 실행해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Firestore seed를 지금 넣어줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Supabase project ref mismatch를 진단해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Cloudflare D1 binding drift를 봐줘",
+    "should_trigger": false
+  },
+  {
+    "query": "tRPC contract order를 바꿔줘",
+    "should_trigger": false
+  },
+  {
+    "query": "backoffice CSV export 구조를 정해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "MiniApp route/page 구조를 설계해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Firebase 기초 개념을 교과서처럼 설명해줘",
+    "should_trigger": false
+  }
+]

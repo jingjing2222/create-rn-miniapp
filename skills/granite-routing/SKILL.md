@@ -26,11 +26,11 @@ metadata:
 ## 읽는 순서
 
 1. `references/patterns.md`에서 route/page/navigation 패턴을 확인한다.
-2. 강제 규칙과 금지 import는 `../shared/references/frontend-policy.md`를 기준으로 본다.
+2. 강제 규칙과 금지 import는 `references/frontend-policy.md`를 기준으로 본다.
 3. 기능 존재 여부와 공식 API lookup은 `docs-search` 또는 Granite/AppInToss 공식 문서로 확인하고, UI 선택은 `tds-ui`로 넘긴다.
 
 ## 핵심 원칙
 
-- 규칙은 `../shared/references/frontend-policy.md`가 소유한다.
+- 규칙 요약은 `references/frontend-policy.md`가 소유한다.
 - 이 Skill은 구현 패턴과 예시를 제공하고, 규칙의 근거 문서를 대체하지 않는다.
 - route 설계 전에는 entry file, impl file, params 흐름, `router.gen.ts` 동기화까지 같이 본다.

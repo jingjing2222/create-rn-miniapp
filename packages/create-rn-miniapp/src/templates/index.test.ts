@@ -45,7 +45,6 @@ import {
   syncRootWorkspaceManifest,
   type TemplateTokens,
 } from './index.js'
-import { renderSharedFrontendPolicyReferenceMarkdown } from './frontend-policy.js'
 
 async function materializeDocsWorkspaceState(
   targetRoot: string,
@@ -458,26 +457,23 @@ test('skill catalog is generated from skill source frontmatter metadata', async 
   }
 })
 
-test('skill docs share a single frontend policy path reference', async () => {
-  const sharedReferencePath = fileURLToPath(
-    new URL('../../../../skills/shared/references/frontend-policy.md', import.meta.url),
-  )
-  const sharedReferenceSource = await readFile(sharedReferencePath, 'utf8')
-  const skillDocs = [
+test('skill docs keep bundled references inside each skill directory', async () => {
+  const checkedFiles = [
     '../../../../skills/granite-routing/SKILL.md',
     '../../../../skills/granite-routing/references/patterns.md',
+    '../../../../skills/cloudflare-worker/SKILL.md',
+    '../../../../skills/firebase-functions/SKILL.md',
+    '../../../../skills/supabase-project/SKILL.md',
   ]
 
-  assert.match(sharedReferenceSource, /docs\/engineering\/frontend-policy\.md/)
-
-  for (const relativePath of skillDocs) {
+  for (const relativePath of checkedFiles) {
     const source = await readFile(fileURLToPath(new URL(relativePath, import.meta.url)), 'utf8')
-    assert.doesNotMatch(source, /docs\/engineering\/frontend-policy\.md/)
-    assert.match(source, /shared\/references\/frontend-policy\.md/)
+
+    assert.doesNotMatch(source, /\.\.\/shared\/references\//)
   }
 })
 
-test('trigger eval assets live under evals/evals.json with a parseable JSON shape', async () => {
+test('trigger eval assets use the standard eval_queries.json shape', async () => {
   const skillRoot = fileURLToPath(new URL('../../../../skills', import.meta.url))
   const triggerEvalSkillIds = [
     'backoffice-react',
@@ -488,47 +484,32 @@ test('trigger eval assets live under evals/evals.json with a parseable JSON shap
 
   for (const skillId of triggerEvalSkillIds) {
     const legacyMarkdownPath = path.join(skillRoot, skillId, 'evals', 'trigger-cases.md')
-    const evalJsonPath = path.join(skillRoot, skillId, 'evals', 'evals.json')
+    const legacyEvalDirPath = path.join(skillRoot, skillId, 'evals')
+    const evalQueriesPath = path.join(skillRoot, skillId, 'eval_queries.json')
 
     assert.equal(await pathExists(legacyMarkdownPath), false)
-    assert.equal(await pathExists(evalJsonPath), true)
+    assert.equal(await pathExists(legacyEvalDirPath), false)
+    assert.equal(await pathExists(evalQueriesPath), true)
 
-    const evalSource = await readFile(evalJsonPath, 'utf8')
-    const parsed = JSON.parse(evalSource) as {
-      skill_name: string
-      evaluation_type: string
-      output_quality_bar: string[]
-      evals: Array<{
-        id: string
-        prompt: string
-        should_trigger: boolean
-      }>
-    }
+    const evalSource = await readFile(evalQueriesPath, 'utf8')
+    const parsed = JSON.parse(evalSource) as Array<{
+      query: string
+      should_trigger: boolean
+    }>
 
-    assert.equal(parsed.skill_name, skillId)
-    assert.equal(parsed.evaluation_type, 'trigger')
-    assert.ok(
-      parsed.output_quality_bar.length > 0,
-      `${skillId} should define an output quality bar`,
-    )
-    assert.ok(parsed.evals.length >= 16, `${skillId} should keep enough trigger cases`)
+    assert.ok(parsed.length >= 16, `${skillId} should keep enough trigger cases`)
 
-    const ids = new Set<string>()
-
-    for (const entry of parsed.evals) {
-      assert.ok(entry.id.length > 0, `${skillId} eval id should not be empty`)
-      assert.equal(ids.has(entry.id), false, `${skillId} eval ids must stay unique`)
-      ids.add(entry.id)
-      assert.ok(entry.prompt.length > 0, `${skillId} eval prompt should not be empty`)
+    for (const entry of parsed) {
+      assert.ok(entry.query.length > 0, `${skillId} eval query should not be empty`)
       assert.equal(typeof entry.should_trigger, 'boolean')
     }
 
     assert.ok(
-      parsed.evals.some((entry) => entry.should_trigger),
+      parsed.some((entry) => entry.should_trigger),
       `${skillId} should include positives`,
     )
     assert.ok(
-      parsed.evals.some((entry) => !entry.should_trigger),
+      parsed.some((entry) => !entry.should_trigger),
       `${skillId} should include negatives`,
     )
   }
@@ -1031,17 +1012,6 @@ test('granite routing references official docs-search instead of removed local c
   assert.doesNotMatch(routingPatternsSource, /\.agents\/skills\//)
   assert.doesNotMatch(routingPatternsSource, /miniapp-capabilities/)
   assert.match(routingPatternsSource, /docs-search/)
-})
-
-test('shared frontend policy reference stays synced with the frontend policy renderer', async () => {
-  const sharedReferenceSource = await readFile(
-    fileURLToPath(
-      new URL('../../../../skills/shared/references/frontend-policy.md', import.meta.url),
-    ),
-    'utf8',
-  )
-
-  assert.equal(sharedReferenceSource, renderSharedFrontendPolicyReferenceMarkdown())
 })
 
 test('root AGENTS follows the code-owned generated AGENTS contract', async () => {

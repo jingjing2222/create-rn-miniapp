@@ -1,3 +1,16 @@
+## 다음 작업: Agent Skills 표준 재대조와 PR 변경 축 재분류
+
+### 목표
+- 현재 PR에 남아 있는 Agent Skills 비표준 요소를 공식 문서 기준으로 다시 점검한다.
+- skill source 변경과 parser/catalog/README consumer 변경을 축별로 나눠 왜 파일 수가 늘었는지 설명 가능한 상태로 정리한다.
+- low-risk로 바로 고칠 수 있는 비표준 요소가 있으면 후속 수정까지 이어간다.
+
+### 작업 순서
+1. Agent Skills 공식 specification, best practices, eval 가이드를 다시 확인해 구조적으로 의미가 있는 디렉토리와 관례를 정리한다.
+2. 현재 브랜치 diff에서 skill 관련 변경 파일을 축별로 분류한다.
+3. 남아 있는 비표준 요소를 findings로 정리하고, 즉시 수정 가능한 항목은 로컬에서 고친다.
+4. 결과와 변경 이유를 리뷰어/사용자 관점으로 요약한다.
+
 ## 다음 작업: skill eval 자산을 JSON 표준 경로로 재정리
 
 ### 목표

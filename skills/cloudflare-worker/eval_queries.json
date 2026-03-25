@@ -1,0 +1,66 @@
+[
+  {
+    "query": "frontend는 localhost를 보는데 backoffice는 다른 `workers.dev` URL을 봐서 어디부터 봐야 할지 정리해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "`wrangler.vitest.jsonc`에서는 D1이 잡히는데 실제 dev request에서는 binding이 없다고 나와",
+    "should_trigger": true
+  },
+  {
+    "query": "Worker local dev는 뜨는데 client가 HTML을 받아서 base URL drift인지 보고 싶어",
+    "should_trigger": true
+  },
+  {
+    "query": "`worker-configuration.d.ts`와 실제 binding 설정이 어긋난 것 같은데 분류해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "Cloudflare 쪽 문제인지 `trpc-boundary`로 넘길 문제인지 먼저 잘라줘",
+    "should_trigger": true
+  },
+  {
+    "query": "`state.json`이 `skipped`인데 deployed Worker 동작을 가정해도 되는지 판단해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "frontend/backoffice가 같은 Worker를 보는지 read-only 체크 순서를 알려줘",
+    "should_trigger": true
+  },
+  {
+    "query": "request surface 문제인지 D1/R2 binding 문제인지 evidence 기준으로 구분해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "AppRouter import order를 바꿔줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Cloudflare deploy를 지금 실행해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "MiniApp route/page 구조를 정해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "backoffice bulk action 구조를 잡아줘",
+    "should_trigger": false
+  },
+  {
+    "query": "TDS component를 골라줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Supabase Edge Function 404를 봐줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Firebase callable function region mismatch를 봐줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Cloudflare 소개나 Workers 기본 개념을 설명해줘",
+    "should_trigger": false
+  }
+]

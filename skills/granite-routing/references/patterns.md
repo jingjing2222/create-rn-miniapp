@@ -5,7 +5,7 @@
 - last_verified: 2026-03-19
 
 이 문서는 MiniApp `frontend`의 route, page, navigation 패턴을 빠르게 보는 참고 문서입니다.
-강제 규칙은 `../../shared/references/frontend-policy.md`가 소유하고, 기능 존재 여부나 공식 API lookup은 `docs-search`와 Granite/AppInToss 공식 문서를 기준으로 확인합니다.
+강제 규칙은 `frontend-policy.md`와 generated repo의 `docs/engineering/frontend-policy.md`를 기준으로 보고, 기능 존재 여부나 공식 API lookup은 `docs-search`와 Granite/AppInToss 공식 문서를 기준으로 확인합니다.
 
 ## 1) Routing Policy
 
@@ -95,7 +95,7 @@
 
 - Apps-in-Toss docs/TDS docs lookup: `docs-search`
 - Granite reference docs: https://www.granite.run/ko/
-- Hard rules: `../../shared/references/frontend-policy.md`
+- Hard rules: `frontend-policy.md`
 
 ## 7) Granite Reference Evidence
 

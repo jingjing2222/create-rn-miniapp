@@ -32,7 +32,7 @@ Supabase provider를 진단할 때 쓰는 decision skill이다.
 
 1. `server/.create-rn-miniapp/state.json`
 2. `server/README.md`
-3. `../shared/references/server-common.md`
+3. `references/server-common.md`
 4. `references/provider-overlay.md`
 5. workspace ownership이 헷갈리면 `docs/engineering/workspace-topology.md`
 
