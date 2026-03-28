@@ -1,3 +1,16 @@
+## 다음 작업: project-local skills 동기화 경로를 experimental_install 기준으로 전환
+
+### 목표
+- project-local/team-shared skills 업데이트 안내와 실행 경로를 `npx skills experimental_install` 기준으로 통일한다.
+- `skills check`/`skills update`가 홈 lock만 보는 현재 한계를 문서와 생성 템플릿에 반영해 잘못된 가이드를 제거한다.
+- `origin/main` 최신 상태를 반영한 뒤 관련 문서/테스트/changeset 여부를 점검하고 한글 PR 생성까지 마무리한다.
+
+### 작업 순서
+1. `origin/main` 최신 상태를 fast-forward로 반영하기 전 작업 트리 상태와 영향 파일 범위를 다시 확인한다.
+2. `skills check`/`skills update`/`experimental_install` 관련 코드, README, 생성 문서 템플릿을 전수 검색해 source of truth를 정리한다.
+3. 필요한 테스트나 스냅샷을 먼저 추가하거나 갱신한 뒤 구현과 문서 계약을 `experimental_install` 기준으로 맞춘다.
+4. 변경 주변 SSoT drift를 좁게 점검하고 `pnpm verify`, changeset 필요 여부, 커밋/푸시/한글 PR 생성까지 끝낸다.
+
 ## 다음 작업: skills 체계 PR의 두 publish 패키지 patch changeset 정리
 
 ### 목표

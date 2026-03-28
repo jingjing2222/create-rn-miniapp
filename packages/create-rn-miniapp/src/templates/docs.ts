@@ -10,7 +10,7 @@ import {
   GENERATED_REPO_SKILLS_STRATEGY_README_LINES,
   renderSkillRecommendationLines,
   renderSkillsInstallExample,
-  renderSkillsStandardCommandSummary,
+  renderSkillsProjectSyncGuide,
 } from '../docs/root-readme.js'
 import {
   resolveTemplatesPackageRoot,
@@ -272,7 +272,7 @@ async function renderRootReadmeMarkdown(context: DocsRenderContext) {
       recommendedSkillIds,
     })}
     
-    ${renderSkillsStandardCommandSummary()}
+    ${renderSkillsProjectSyncGuide()}
     
     ## Verify
     ${(renderRootVerifyStepsMarkdown(tokens.packageManager).split('\n').filter(Boolean)).join('\n')}

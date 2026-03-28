@@ -18,8 +18,8 @@ export const PROJECT_SKILLS_DIR_CANDIDATES = [
   PROJECT_SKILLS_MIRROR_DIR,
 ] as const
 export const SKILLS_LIST_COMMAND = 'npx skills list'
-export const SKILLS_CHECK_COMMAND = 'npx skills check'
-export const SKILLS_UPDATE_COMMAND = 'npx skills update'
+export const SKILLS_EXPERIMENTAL_INSTALL_COMMAND = 'npx skills experimental_install'
+export const SKILLS_PROJECT_SYNC_DIFF_COMMAND = 'git diff -- .agents/skills skills-lock.json'
 
 function resolveGitHubRepositorySlug(repositoryUrl: string | undefined) {
   if (!repositoryUrl) {

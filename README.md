@@ -64,8 +64,9 @@ pnpm verify
 <!-- generated:skills-strategy:start -->
 ## skills 전략
 - `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 방법만 알려줘요.
-- 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 바로 하면 돼요.
+- 실제 설치는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 하고, project-local/team-shared skill 재동기화는 `npx skills experimental_install`을 써요.
 - 추천 목록에는 공식 `docs-search`, `project-validator`와 workspace overlay skill이 같이 들어가요.
+- `npx skills check`, `npx skills update`는 홈 lock만 봐서 project-local skill 업데이트에는 맞지 않아요.
 - 이 저장소의 `skills/`는 scaffold/workspace 특화 overlay skill만 관리하고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.
 
 바로 설치할 수 있는 skill id와 용도는 이래요.
@@ -87,7 +88,12 @@ npx skills add toss/apps-in-toss-skills --skill docs-search --skill project-vali
 npx skills add jingjing2222/create-rn-miniapp --skill granite-routing --skill tds-ui --copy
 ```
 
-설치 뒤에는 `npx skills list`, `npx skills check`, `npx skills update`만 기억하면 돼요.
+설치 뒤에는 이렇게 관리해요.
+
+- 설치 상태 확인: `npx skills list`
+- project-local/team-shared skill 재동기화: `npx skills experimental_install`
+- 반영 내용 확인: `git diff -- .agents/skills skills-lock.json`
+- `npx skills check`, `npx skills update`는 홈 lock만 봐서 project-local skill 업데이트에는 맞지 않아요.
 <!-- generated:skills-strategy:end -->
 
 ## CLI 옵션은 `--help`로 확인해요

@@ -10,6 +10,6 @@
   "notes": [
     "Use docs-search or official TDS docs for public component lookup.",
     "Use anomalies.json as the local overlay for slug aliases, export gaps, and docs-missing gates.",
-    "Update this skill through the repository source and standard `npx skills update` flow."
+    "Update this skill through the repository source, then re-sync project skills with `npx skills experimental_install` and review `git diff -- .agents/skills skills-lock.json`."
   ]
 }

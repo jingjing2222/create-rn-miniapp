@@ -18,14 +18,14 @@ import {
   renderRootReadmeSkillCatalogLines,
   resolveRootReadmeInstallExampleSkillIds,
   renderSkillsInstallExample,
-  renderSkillsStandardCommandSummary,
+  renderSkillsProjectSyncGuide,
   renderRootReadmeProviderSection,
   renderRootReadmeSkillsSection,
 } from '../docs/root-readme.js'
 import {
-  SKILLS_CHECK_COMMAND,
+  SKILLS_EXPERIMENTAL_INSTALL_COMMAND,
   SKILLS_LIST_COMMAND,
-  SKILLS_UPDATE_COMMAND,
+  SKILLS_PROJECT_SYNC_DIFF_COMMAND,
 } from '../skills/contract.js'
 import { parseSkillFrontmatter } from '../skills/frontmatter.js'
 import { CORE_SKILL_DEFINITIONS, SKILL_CATALOG } from './skill-catalog.js'
@@ -931,7 +931,7 @@ test('README treats generated skills as a first-class scaffold output and avoids
   const expectedCoreInstallCommand = renderSkillsInstallExample(
     resolveRootReadmeInstallExampleSkillIds(),
   )
-  const expectedCommandSummary = renderSkillsStandardCommandSummary()
+  const expectedProjectSyncGuide = renderSkillsProjectSyncGuide()
 
   assert.match(
     readmeSource,
@@ -945,11 +945,15 @@ test('README treats generated skills as a first-class scaffold output and avoids
   )
   assert.match(
     readmeSource,
-    /실제 설치, 확인, 업데이트는 \[`@vercel-labs\/skills`\]\(https:\/\/github\.com\/vercel-labs\/skills\) 표준 CLI로 바로 하면 돼요\./,
+    /실제 설치는 \[`@vercel-labs\/skills`\]\(https:\/\/github\.com\/vercel-labs\/skills\) 표준 CLI로 하고, project-local\/team-shared skill 재동기화는 `npx skills experimental_install`을 써요\./,
   )
   assert.match(
     readmeSource,
     /추천 목록에는 공식 `docs-search`, `project-validator`와 workspace overlay skill이 같이 들어가요\./,
+  )
+  assert.match(
+    readmeSource,
+    /`npx skills check`, `npx skills update`는 홈 lock만 봐서 project-local skill 업데이트에는 맞지 않아요\./,
   )
   assert.match(
     readmeSource,
@@ -970,7 +974,7 @@ test('README treats generated skills as a first-class scaffold output and avoids
   assert.doesNotMatch(readmeSource, /Decide how to structure an optional backoffice React screen/)
   assert.doesNotMatch(readmeSource, /miniapp-capabilities/)
   assert.match(readmeSource, new RegExp(escapeRegExp(expectedCoreInstallCommand)))
-  assert.match(readmeSource, new RegExp(escapeRegExp(expectedCommandSummary)))
+  assert.match(readmeSource, new RegExp(escapeRegExp(expectedProjectSyncGuide)))
   assert.doesNotMatch(readmeSource, /지금 설치할 수 있는 skill id는 이거예요\./)
   assert.doesNotMatch(readmeSource, /canonical/i)
   assert.doesNotMatch(readmeSource, /source of truth/i)
@@ -1229,9 +1233,17 @@ test('applyDocsTemplates keeps AGENTS skill-free and renders README onboarding w
   assert.match(readme, /## skills 전략/)
   assert.match(readme, /npx skills add/)
   assert.doesNotMatch(readme, /이 저장소의 `skills\/`/)
-  for (const command of [SKILLS_LIST_COMMAND, SKILLS_CHECK_COMMAND, SKILLS_UPDATE_COMMAND]) {
+  for (const command of [
+    SKILLS_LIST_COMMAND,
+    SKILLS_EXPERIMENTAL_INSTALL_COMMAND,
+    SKILLS_PROJECT_SYNC_DIFF_COMMAND,
+  ]) {
     assert.match(readme, new RegExp(escapeRegExp(command)))
   }
+  assert.match(
+    readme,
+    /`npx skills check`, `npx skills update`는 홈 lock만 봐서 project-local skill 업데이트에는 맞지 않아요\./,
+  )
   assert.doesNotMatch(frontendPolicy, /\.agents\/skills\//)
   assert.match(frontendPolicy, /UI는 TDS를 사용한다\./)
   assert.match(
@@ -1976,6 +1988,8 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
   assert.doesNotMatch(readme, /추천 skill:/)
   assert.doesNotMatch(readme, /설치 예시:/)
   assert.doesNotMatch(readme, /npx skills add/)
+  assert.match(readme, new RegExp(escapeRegExp(SKILLS_EXPERIMENTAL_INSTALL_COMMAND)))
+  assert.match(readme, new RegExp(escapeRegExp(SKILLS_PROJECT_SYNC_DIFF_COMMAND)))
 })
 
 test('applyDocsTemplates keeps frontend policy generic even when project-local core skills are installed', async (t) => {
