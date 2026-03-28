@@ -255,6 +255,9 @@ async function renderRootReadmeMarkdown(context: DocsRenderContext) {
     hasTrpc: options.hasTrpc,
   })
   const installedSkillIds = installedSkills.map((skill) => skill.id)
+  const updateGuide = renderSkillsProjectSyncGuide(
+    installedSkillIds.length > 0 ? installedSkillIds : recommendedSkillIds,
+  )
 
   return dedentWithTrailingNewline`
     # ${tokens.displayName}
@@ -272,7 +275,7 @@ async function renderRootReadmeMarkdown(context: DocsRenderContext) {
       recommendedSkillIds,
     })}
     
-    ${renderSkillsProjectSyncGuide()}
+    ${updateGuide}
     
     ## Verify
     ${(renderRootVerifyStepsMarkdown(tokens.packageManager).split('\n').filter(Boolean)).join('\n')}

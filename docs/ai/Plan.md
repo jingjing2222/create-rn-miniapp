@@ -1,3 +1,29 @@
+## 다음 작업: skills 안내를 Claude + universal 동시 지원으로 재정리
+
+### 목표
+- 생성 README와 루트 README가 `.agents/skills`와 `.claude/skills`를 함께 고려하도록 바꾼다.
+- 자동 설치와 설치 예시가 Claude Code에서도 바로 읽히는 경로까지 포함하도록 맞춘다.
+- 업데이트 안내는 `experimental_install` 단일 경로 대신 두 agent 모두에 맞는 안전한 경로로 정리한다.
+
+### 작업 순서
+1. Claude 설치 경로와 universal 설치 경로를 모두 반영하는 failing test부터 고정한다.
+2. `skills add` 예시/자동 설치가 두 agent를 함께 타게 command builder를 수정한다.
+3. README 렌더러를 Claude+universal 공통 안내로 바꾸고 root README sync를 반영한다.
+4. 타깃 테스트 후 `pnpm verify`, 커밋, 푸시, PR 설명 업데이트까지 마무리한다.
+
+## 다음 작업: skills 설치/업데이트 경로를 universal 기준으로 고정
+
+### 목표
+- skills 안내를 universal agent 경로 `.agents/skills` 기준으로 단순화한다.
+- 설치 예시와 자동 설치 명령이 실제로 universal로 들어가도록 `skills add` 경로까지 맞춘다.
+- README, 생성 README, 테스트, PR 설명을 universal 기준으로 일관되게 정리한다.
+
+### 작업 순서
+1. `skills add`에서 agent 미지정 시 동작과 `-a universal` 동작을 다시 확인한다.
+2. 설치 예시/자동 설치/업데이트 안내를 universal 기준으로 고정하는 failing test부터 맞춘다.
+3. 렌더러와 install command builder를 수정하고 README sync까지 반영한다.
+4. `pnpm verify` 후 커밋, 푸시, PR 업데이트를 마무리한다.
+
 ## 다음 작업: skills 업데이트 안내 용어 단순화
 
 ### 목표

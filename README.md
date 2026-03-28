@@ -64,7 +64,8 @@ pnpm verify
 <!-- generated:skills-strategy:start -->
 ## skills 전략
 - `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 방법만 알려줘요.
-- 실제 설치는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 하고, 업데이트할 때는 `npx skills experimental_install`을 써요.
+- 아래 예시는 `.agents/skills`와 `.claude/skills`를 같이 맞추는 기준이에요.
+- 설치와 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI의 `npx skills add ...` 명령으로 맞춰요.
 - 추천 목록에는 공식 `docs-search`, `project-validator`와 workspace overlay skill이 같이 들어가요.
 - `npx skills check`, `npx skills update`는 여기서 쓰는 skill을 업데이트할 때는 맞지 않아요.
 - 이 저장소의 `skills/`는 scaffold/workspace 특화 overlay skill만 관리하고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.
@@ -84,16 +85,21 @@ pnpm verify
 예를 들어 필요한 skill 하나를 바로 넣고 싶다면 이렇게 하면 돼요.
 
 ```bash
-npx skills add toss/apps-in-toss-skills --skill docs-search --skill project-validator --copy
-npx skills add jingjing2222/create-rn-miniapp --skill granite-routing --skill tds-ui --copy
+npx skills add toss/apps-in-toss-skills --skill docs-search --skill project-validator --agent universal --agent claude-code --copy
+npx skills add jingjing2222/create-rn-miniapp --skill granite-routing --skill tds-ui --agent universal --agent claude-code --copy
 ```
 
 설치 뒤에는 이렇게 관리해요.
 
 - 설치 상태 확인: `npx skills list`
-- 업데이트: `npx skills experimental_install`
-- 바뀐 내용 확인: `git diff -- .agents/skills skills-lock.json`
+- 업데이트할 때는 설치에 쓴 `npx skills add ...` 명령을 다시 실행해 주세요.
+- 바뀐 내용 확인: `git diff -- .agents/skills .claude/skills skills-lock.json`
 - `npx skills check`, `npx skills update`는 여기서 쓰는 skill을 업데이트할 때는 맞지 않아요.
+
+```bash
+npx skills add toss/apps-in-toss-skills --skill docs-search --skill project-validator --agent universal --agent claude-code --copy
+npx skills add jingjing2222/create-rn-miniapp --skill granite-routing --skill tds-ui --agent universal --agent claude-code --copy
+```
 <!-- generated:skills-strategy:end -->
 
 ## CLI 옵션은 `--help`로 확인해요

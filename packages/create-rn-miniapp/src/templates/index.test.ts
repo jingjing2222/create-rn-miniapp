@@ -23,8 +23,8 @@ import {
   renderRootReadmeSkillsSection,
 } from '../docs/root-readme.js'
 import {
-  SKILLS_EXPERIMENTAL_INSTALL_COMMAND,
   SKILLS_LIST_COMMAND,
+  SKILLS_PROJECT_AGENTS,
   SKILLS_PROJECT_SYNC_DIFF_COMMAND,
 } from '../skills/contract.js'
 import { parseSkillFrontmatter } from '../skills/frontmatter.js'
@@ -931,7 +931,9 @@ test('README treats generated skills as a first-class scaffold output and avoids
   const expectedCoreInstallCommand = renderSkillsInstallExample(
     resolveRootReadmeInstallExampleSkillIds(),
   )
-  const expectedProjectSyncGuide = renderSkillsProjectSyncGuide()
+  const expectedProjectSyncGuide = renderSkillsProjectSyncGuide(
+    resolveRootReadmeInstallExampleSkillIds(),
+  )
 
   assert.match(
     readmeSource,
@@ -945,7 +947,11 @@ test('README treats generated skills as a first-class scaffold output and avoids
   )
   assert.match(
     readmeSource,
-    /실제 설치는 \[`@vercel-labs\/skills`\]\(https:\/\/github\.com\/vercel-labs\/skills\) 표준 CLI로 하고, 업데이트할 때는 `npx skills experimental_install`을 써요\./,
+    /아래 예시는 `\.agents\/skills`와 `\.claude\/skills`를 같이 맞추는 기준이에요\./,
+  )
+  assert.match(
+    readmeSource,
+    /설치와 업데이트는 \[`@vercel-labs\/skills`\]\(https:\/\/github\.com\/vercel-labs\/skills\) 표준 CLI의 `npx skills add \.\.\.` 명령으로 맞춰요\./,
   )
   assert.match(
     readmeSource,
@@ -977,6 +983,7 @@ test('README treats generated skills as a first-class scaffold output and avoids
   assert.match(readmeSource, new RegExp(escapeRegExp(expectedProjectSyncGuide)))
   assert.doesNotMatch(readmeSource, /지금 설치할 수 있는 skill id는 이거예요\./)
   assert.doesNotMatch(readmeSource, /canonical/i)
+  assert.doesNotMatch(readmeSource, /experimental_install/)
   assert.doesNotMatch(readmeSource, /source of truth/i)
   assert.doesNotMatch(readmeSource, /생성물 계약/)
   assert.doesNotMatch(readmeSource, /Provider IaC/)
@@ -1232,18 +1239,18 @@ test('applyDocsTemplates keeps AGENTS skill-free and renders README onboarding w
   assert.doesNotMatch(repoContract, /\.claude\/skills/)
   assert.match(readme, /## skills 전략/)
   assert.match(readme, /npx skills add/)
+  for (const agent of SKILLS_PROJECT_AGENTS) {
+    assert.match(readme, new RegExp(escapeRegExp(`--agent ${agent}`)))
+  }
   assert.doesNotMatch(readme, /이 저장소의 `skills\/`/)
-  for (const command of [
-    SKILLS_LIST_COMMAND,
-    SKILLS_EXPERIMENTAL_INSTALL_COMMAND,
-    SKILLS_PROJECT_SYNC_DIFF_COMMAND,
-  ]) {
+  for (const command of [SKILLS_LIST_COMMAND, SKILLS_PROJECT_SYNC_DIFF_COMMAND]) {
     assert.match(readme, new RegExp(escapeRegExp(command)))
   }
   assert.match(
     readme,
     /`npx skills check`, `npx skills update`는 여기서 쓰는 skill을 업데이트할 때는 맞지 않아요\./,
   )
+  assert.doesNotMatch(readme, /experimental_install/)
   assert.doesNotMatch(frontendPolicy, /\.agents\/skills\//)
   assert.match(frontendPolicy, /UI는 TDS를 사용한다\./)
   assert.match(
@@ -1883,6 +1890,9 @@ test('applyDocsTemplates omits local skill routing and docs/skills for base-only
   assert.match(copilot, /AGENTS\.md/)
   assert.match(readme, /## skills 전략/)
   assert.match(readme, /npx skills add/)
+  for (const agent of SKILLS_PROJECT_AGENTS) {
+    assert.match(readme, new RegExp(escapeRegExp(`--agent ${agent}`)))
+  }
   assert.match(readme, /추천 skill:/)
   assert.match(readme, /docs-search/)
   assert.match(readme, /project-validator/)
@@ -1891,6 +1901,7 @@ test('applyDocsTemplates omits local skill routing and docs/skills for base-only
   assert.match(readme, /Granite route 경로, page entry, param, navigation 흐름을 바꿀 때/)
   assert.doesNotMatch(readme, /Use when you are changing Granite route paths/)
   assert.match(docsIndex, /repo-contract\.md/)
+  assert.doesNotMatch(readme, /experimental_install/)
   assert.match(docsIndex, /frontend-policy\.md/)
   assert.match(docsIndex, /workspace-topology\.md/)
   assert.doesNotMatch(docsIndex, /skills\.md/)
@@ -1987,9 +1998,40 @@ test('applyDocsTemplates replaces install CTA with installed skill summary when 
   assert.doesNotMatch(readme, /Use when you are changing Granite route paths/)
   assert.doesNotMatch(readme, /추천 skill:/)
   assert.doesNotMatch(readme, /설치 예시:/)
-  assert.doesNotMatch(readme, /npx skills add/)
-  assert.match(readme, new RegExp(escapeRegExp(SKILLS_EXPERIMENTAL_INSTALL_COMMAND)))
   assert.match(readme, new RegExp(escapeRegExp(SKILLS_PROJECT_SYNC_DIFF_COMMAND)))
+  assert.match(
+    readme,
+    /업데이트할 때는 설치에 쓴 `npx skills add \.\.\.` 명령을 다시 실행해 주세요\./,
+  )
+  assert.match(
+    readme,
+    /npx skills add jingjing2222\/create-rn-miniapp --skill granite-routing --skill tds-ui/,
+  )
+  assert.doesNotMatch(readme, /experimental_install/)
+})
+
+test('applyDocsTemplates keeps the same resync guidance for Claude skill paths', async (t) => {
+  const targetRoot = await createTempTargetRoot(t)
+  const tokens = createTokens('pnpm')
+
+  await mkdir(path.join(targetRoot, '.claude', 'skills', 'tds-ui'), { recursive: true })
+  await writeFile(
+    path.join(targetRoot, '.claude', 'skills', 'tds-ui', 'SKILL.md'),
+    '# TDS\n',
+    'utf8',
+  )
+
+  await applyDocsTemplates(targetRoot, tokens)
+
+  const readme = await readFile(path.join(targetRoot, 'README.md'), 'utf8')
+
+  assert.match(readme, /현재 설치된 skills가 있어요\./)
+  assert.match(
+    readme,
+    /업데이트할 때는 설치에 쓴 `npx skills add \.\.\.` 명령을 다시 실행해 주세요\./,
+  )
+  assert.match(readme, new RegExp(escapeRegExp(SKILLS_PROJECT_SYNC_DIFF_COMMAND)))
+  assert.doesNotMatch(readme, /experimental_install/)
 })
 
 test('applyDocsTemplates keeps frontend policy generic even when project-local core skills are installed', async (t) => {

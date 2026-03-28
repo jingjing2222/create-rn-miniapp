@@ -2,7 +2,7 @@ import {
   getInstallableSkillDefinition,
   type InstallableSkillId,
 } from '../installable-skill-catalog.js'
-import { createSkillsAddArgs } from './contract.js'
+import { createSkillsAddArgs, SKILLS_PROJECT_AGENTS } from './contract.js'
 
 type SkillSourceGroup = {
   sourceRepo: string
@@ -44,6 +44,7 @@ export function renderSkillsAddCommand(skillIds: string[]) {
         ...createSkillsAddArgs({
           source: group.sourceRepo,
           skillIds: group.skillIds,
+          agents: SKILLS_PROJECT_AGENTS,
         }),
       ].join(' '),
     )
