@@ -9,6 +9,7 @@ const packageJson = require('../../package.json') as {
 
 export const SKILLS_SOURCE_REPO = resolveGitHubRepositorySlug(packageJson.repository?.url)
 export const APPS_IN_TOSS_SKILLS_SOURCE_REPO = 'toss/apps-in-toss-skills'
+export const SKILLS_PROJECT_AGENTS = ['universal', 'claude-code'] as const
 export const PROJECT_SKILLS_CANONICAL_DIR = '.agents/skills'
 export const PROJECT_SKILLS_MIRROR_DIR = '.claude/skills'
 export const PROJECT_SKILLS_LOCAL_DIR = 'skills'
@@ -18,8 +19,8 @@ export const PROJECT_SKILLS_DIR_CANDIDATES = [
   PROJECT_SKILLS_MIRROR_DIR,
 ] as const
 export const SKILLS_LIST_COMMAND = 'npx skills list'
-export const SKILLS_CHECK_COMMAND = 'npx skills check'
-export const SKILLS_UPDATE_COMMAND = 'npx skills update'
+export const SKILLS_PROJECT_SYNC_DIFF_COMMAND =
+  'git diff -- .agents/skills .claude/skills skills-lock.json'
 
 function resolveGitHubRepositorySlug(repositoryUrl: string | undefined) {
   if (!repositoryUrl) {
@@ -61,6 +62,7 @@ export function createProjectSkillGeneratedPath(
 export function createSkillsAddArgs(options: {
   source: string
   skillIds: readonly string[]
+  agents?: readonly string[]
   copy?: boolean
   yes?: boolean
 }) {
@@ -68,6 +70,7 @@ export function createSkillsAddArgs(options: {
     'add',
     options.source,
     ...options.skillIds.flatMap((skillId) => ['--skill', skillId]),
+    ...(options.agents?.flatMap((agent) => ['--agent', agent]) ?? []),
     ...(options.copy === false ? [] : ['--copy']),
     ...(options.yes === true ? ['-y'] : []),
   ]

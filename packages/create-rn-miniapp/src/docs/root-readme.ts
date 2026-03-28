@@ -6,9 +6,10 @@ import {
 import { SERVER_PROVIDER_METADATA, SERVER_PROVIDERS } from '../providers/catalog.js'
 import { renderSkillsAddCommand } from '../skills/add-command.js'
 import {
-  SKILLS_CHECK_COMMAND,
+  PROJECT_SKILLS_CANONICAL_DIR,
+  PROJECT_SKILLS_MIRROR_DIR,
   SKILLS_LIST_COMMAND,
-  SKILLS_UPDATE_COMMAND,
+  SKILLS_PROJECT_SYNC_DIFF_COMMAND,
 } from '../skills/contract.js'
 import { CORE_SKILL_DEFINITIONS } from '../templates/skill-catalog.js'
 import dedent from '../runtime/dedent.js'
@@ -21,16 +22,20 @@ export const ROOT_README_PROVIDER_SECTION_END_MARKER = '<!-- generated:server-pr
 export const GENERATOR_REPO_SKILLS_STRATEGY_README_LINES = [
   '## skills 전략',
   '- `create-rn-miniapp`는 skill을 직접 관리하지 않고, 추천 skill과 설치 방법만 알려줘요.',
-  '- 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 바로 하면 돼요.',
+  `- 아래 예시는 \`${PROJECT_SKILLS_CANONICAL_DIR}\`와 \`${PROJECT_SKILLS_MIRROR_DIR}\`를 같이 맞추는 기준이에요.`,
+  '- 설치와 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI의 `npx skills add ...` 명령으로 맞춰요.',
   '- 추천 목록에는 공식 `docs-search`, `project-validator`와 workspace overlay skill이 같이 들어가요.',
+  '- `npx skills check`, `npx skills update`는 여기서 쓰는 skill을 업데이트할 때는 맞지 않아요.',
   '- 이 저장소의 `skills/`는 scaffold/workspace 특화 overlay skill만 관리하고, 생성된 repo `README.md`가 추천 목록을 자동으로 보여줘요.',
 ]
 
 export const GENERATED_REPO_SKILLS_STRATEGY_README_LINES = [
   '## skills 전략',
   '- 이 workspace는 skill을 기본 포함하지 않고, 추천 overlay skill과 설치 방법만 README에 적어 둬요.',
-  '- 실제 설치, 확인, 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI로 바로 하면 돼요.',
+  `- 아래 예시는 \`${PROJECT_SKILLS_CANONICAL_DIR}\`와 \`${PROJECT_SKILLS_MIRROR_DIR}\`를 같이 맞추는 기준이에요.`,
+  '- 설치와 업데이트는 [`@vercel-labs/skills`](https://github.com/vercel-labs/skills) 표준 CLI의 `npx skills add ...` 명령으로 맞춰요.',
   '- 추천 목록에는 공식 `docs-search`, `project-validator`와 workspace overlay skill이 같이 들어가요.',
+  '- `npx skills check`, `npx skills update`는 여기서 쓰는 skill을 업데이트할 때는 맞지 않아요.',
   '- 추천 목록은 현재 workspace topology를 기준으로 자동으로 정해져요.',
 ]
 
@@ -60,8 +65,19 @@ export function renderSkillsInstallExample(skillIds: readonly string[]) {
   return renderSkillsAddCommand(exampleSkillIds)
 }
 
-export function renderSkillsStandardCommandSummary() {
-  return `설치 뒤에는 \`${SKILLS_LIST_COMMAND}\`, \`${SKILLS_CHECK_COMMAND}\`, \`${SKILLS_UPDATE_COMMAND}\`만 기억하면 돼요.`
+export function renderSkillsProjectSyncGuide(skillIds: readonly string[]) {
+  return dedent`
+    설치 뒤에는 이렇게 관리해요.
+
+    - 설치 상태 확인: \`${SKILLS_LIST_COMMAND}\`
+    - 업데이트할 때는 설치에 쓴 \`npx skills add ...\` 명령을 다시 실행해 주세요.
+    - 바뀐 내용 확인: \`${SKILLS_PROJECT_SYNC_DIFF_COMMAND}\`
+    - \`npx skills check\`, \`npx skills update\`는 여기서 쓰는 skill을 업데이트할 때는 맞지 않아요.
+
+    \`\`\`bash
+    ${renderSkillsInstallExample(skillIds)}
+    \`\`\`
+  `
 }
 
 export function renderRootReadmeSkillCatalogLines() {
@@ -85,8 +101,8 @@ export function renderRootReadmeSkillsSection() {
     \`\`\`bash
     ${renderSkillsInstallExample(resolveRootReadmeInstallExampleSkillIds())}
     \`\`\`
-    
-    ${renderSkillsStandardCommandSummary()}
+
+    ${renderSkillsProjectSyncGuide(resolveRootReadmeInstallExampleSkillIds())}
   `
 }
 

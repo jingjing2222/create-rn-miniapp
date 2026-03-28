@@ -17,6 +17,7 @@ import {
 import {
   APPS_IN_TOSS_SKILLS_SOURCE_REPO,
   SKILLS_LIST_COMMAND,
+  SKILLS_PROJECT_AGENTS,
   SKILLS_SOURCE_REPO,
 } from './skills/contract.js'
 
@@ -54,10 +55,12 @@ test('renderSkillsAddCommand produces the standard npx skills command', () => {
   const expectedCommand = [
     ['npx', 'skills', 'add', APPS_IN_TOSS_SKILLS_SOURCE_REPO]
       .concat(['--skill', 'docs-search', '--skill', 'project-validator'])
+      .concat(SKILLS_PROJECT_AGENTS.flatMap((agent) => ['--agent', agent]))
       .concat(['--copy'])
       .join(' '),
     ['npx', 'skills', 'add', SKILLS_SOURCE_REPO]
       .concat(['--skill', 'granite-routing', '--skill', 'tds-ui'])
+      .concat(SKILLS_PROJECT_AGENTS.flatMap((agent) => ['--agent', agent]))
       .concat(['--copy'])
       .join(' '),
   ].join('\n')
@@ -103,7 +106,7 @@ test('renderInstalledSkillsSummary renders discovered project-local skill paths'
       { id: 'granite-routing', skillsRoot: '.agents/skills' },
     ]),
     [
-      'project-local skills를 설치했어요.',
+      'skills를 설치했어요.',
       '- granite-routing: `.agents/skills/granite-routing`',
       '- tds-ui: `skills/tds-ui`',
       `필요하면 \`${SKILLS_LIST_COMMAND}\`로 다시 확인해 주세요.`,
@@ -132,6 +135,10 @@ test('buildSkillsInstallCommands groups selected skills by source repo and uses 
         'docs-search',
         '--skill',
         'project-validator',
+        '--agent',
+        SKILLS_PROJECT_AGENTS[0],
+        '--agent',
+        SKILLS_PROJECT_AGENTS[1],
         '--copy',
         '-y',
       ],
@@ -149,6 +156,10 @@ test('buildSkillsInstallCommands groups selected skills by source repo and uses 
         'granite-routing',
         '--skill',
         'tds-ui',
+        '--agent',
+        SKILLS_PROJECT_AGENTS[0],
+        '--agent',
+        SKILLS_PROJECT_AGENTS[1],
         '--copy',
         '-y',
       ],

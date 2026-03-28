@@ -1,3 +1,55 @@
+## 다음 작업: skills 안내를 Claude + universal 동시 지원으로 재정리
+
+### 목표
+- 생성 README와 루트 README가 `.agents/skills`와 `.claude/skills`를 함께 고려하도록 바꾼다.
+- 자동 설치와 설치 예시가 Claude Code에서도 바로 읽히는 경로까지 포함하도록 맞춘다.
+- 업데이트 안내는 `experimental_install` 단일 경로 대신 두 agent 모두에 맞는 안전한 경로로 정리한다.
+
+### 작업 순서
+1. Claude 설치 경로와 universal 설치 경로를 모두 반영하는 failing test부터 고정한다.
+2. `skills add` 예시/자동 설치가 두 agent를 함께 타게 command builder를 수정한다.
+3. README 렌더러를 Claude+universal 공통 안내로 바꾸고 root README sync를 반영한다.
+4. 타깃 테스트 후 `pnpm verify`, 커밋, 푸시, PR 설명 업데이트까지 마무리한다.
+
+## 다음 작업: skills 설치/업데이트 경로를 universal 기준으로 고정
+
+### 목표
+- skills 안내를 universal agent 경로 `.agents/skills` 기준으로 단순화한다.
+- 설치 예시와 자동 설치 명령이 실제로 universal로 들어가도록 `skills add` 경로까지 맞춘다.
+- README, 생성 README, 테스트, PR 설명을 universal 기준으로 일관되게 정리한다.
+
+### 작업 순서
+1. `skills add`에서 agent 미지정 시 동작과 `-a universal` 동작을 다시 확인한다.
+2. 설치 예시/자동 설치/업데이트 안내를 universal 기준으로 고정하는 failing test부터 맞춘다.
+3. 렌더러와 install command builder를 수정하고 README sync까지 반영한다.
+4. `pnpm verify` 후 커밋, 푸시, PR 업데이트를 마무리한다.
+
+## 다음 작업: skills 업데이트 안내 용어 단순화
+
+### 목표
+- 사용자 문서와 PR에서 `project-local`, `team-shared`, `홈 lock` 같은 내부 용어를 걷어낸다.
+- README와 생성 README가 설치/업데이트 흐름만 짧게 설명하도록 문구를 단순화한다.
+- 관련 테스트, changeset, PR 제목/본문까지 같은 톤으로 정리한다.
+
+### 작업 순서
+1. 사용자에게 보이는 README/생성 README/skill metadata/PR 본문에서 과한 용어가 남은 위치를 다시 찾는다.
+2. 테스트 기대값을 먼저 더 짧은 사용자 문장 기준으로 바꾼다.
+3. 렌더러와 metadata, changeset 문구를 같은 톤으로 정리한다.
+4. `pnpm verify` 후 커밋, 푸시, PR 제목/본문 업데이트까지 마무리한다.
+
+## 다음 작업: project-local skills 동기화 경로를 experimental_install 기준으로 전환
+
+### 목표
+- project-local/team-shared skills 업데이트 안내와 실행 경로를 `npx skills experimental_install` 기준으로 통일한다.
+- `skills check`/`skills update`가 홈 lock만 보는 현재 한계를 문서와 생성 템플릿에 반영해 잘못된 가이드를 제거한다.
+- `origin/main` 최신 상태를 반영한 뒤 관련 문서/테스트/changeset 여부를 점검하고 한글 PR 생성까지 마무리한다.
+
+### 작업 순서
+1. `origin/main` 최신 상태를 fast-forward로 반영하기 전 작업 트리 상태와 영향 파일 범위를 다시 확인한다.
+2. `skills check`/`skills update`/`experimental_install` 관련 코드, README, 생성 문서 템플릿을 전수 검색해 source of truth를 정리한다.
+3. 필요한 테스트나 스냅샷을 먼저 추가하거나 갱신한 뒤 구현과 문서 계약을 `experimental_install` 기준으로 맞춘다.
+4. 변경 주변 SSoT drift를 좁게 점검하고 `pnpm verify`, changeset 필요 여부, 커밋/푸시/한글 PR 생성까지 끝낸다.
+
 ## 다음 작업: skills 체계 PR의 두 publish 패키지 patch changeset 정리
 
 ### 목표

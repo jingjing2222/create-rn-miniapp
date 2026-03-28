@@ -15,6 +15,7 @@ import {
   createSkillsAddArgs,
   PROJECT_SKILLS_DIR_CANDIDATES,
   SKILLS_LIST_COMMAND,
+  SKILLS_PROJECT_AGENTS,
   SKILLS_SOURCE_REPO,
 } from './contract.js'
 import {
@@ -150,7 +151,7 @@ export function renderInstalledSkillsSummary(
   })
 
   return dedent`
-    project-local skills를 설치했어요.
+    skills를 설치했어요.
     ${(
       normalizedSkills.map((skill) =>
         typeof skill === 'string'
@@ -198,6 +199,7 @@ export async function buildSkillsInstallCommands(options: {
         createSkillsAddArgs({
           source,
           skillIds: group.skillIds,
+          agents: SKILLS_PROJECT_AGENTS,
           yes: true,
         }),
       ),
