@@ -1,3 +1,43 @@
+## 다음 작업: TDS UI llms snapshot 변경의 changeset/PR 마감
+
+### 목표
+- `tds-ui` skill이 공식 TDS React Native `llms.txt`, `llms-full.txt` snapshot을 source repo에 동봉한 상태로 머지 준비를 마친다.
+- release note는 실제 사용자 변화인 "스캐폴딩 시 project-local skill이 bundled llms snapshot을 함께 복사한다"는 점을 한국어 changeset으로 남긴다.
+- 브랜치를 분리하고 `pnpm verify` 통과 상태에서 한국어 PR을 생성한다.
+
+### 작업 순서
+1. 이번 diff가 어떤 publish package 설명으로 귀결되는지 다시 확인하고, 최소 범위 changeset frontmatter를 정한다.
+2. `.changeset/*.md`에 한국어 patch changeset을 추가한다.
+3. `pnpm verify`를 다시 돌려 최종 상태를 확인한다.
+4. 작업 브랜치를 만들고 단일 목적 커밋을 만든 뒤 원격에 push한다.
+5. 한국어 제목과 섹션형 본문으로 PR을 연다.
+
+## 다음 작업: TDS UI skill의 llms snapshot 동봉과 scaffold install 동기화
+
+### 목표
+- `tds-ui`가 공식 `llms.txt` / `llms-full.txt` URL만 참조하는 데서 끝나지 않고, source repo 안에 snapshot 파일을 같이 들고 있게 만든다.
+- create scaffold의 project-local skill 설치가 `--copy` 기반이므로, 설치 시 target workspace에도 같은 snapshot 파일이 함께 들어가게 한다.
+- `generated/anomalies.json`은 로컬 overlay로 유지하되, installed skill은 네트워크 없이도 local snapshot을 SSoT로 읽을 수 있게 정리한다.
+
+### 작업 순서
+1. `tds-ui` 관련 테스트를 먼저 바꿔 local generated snapshot 파일(`generated/llms.txt`, `generated/llms-full.txt`)이 포함되어야 한다는 계약을 실패로 고정한다.
+2. 공식 URL에서 `llms.txt`, `llms-full.txt`를 내려받아 `skills/tds-ui/generated/` 아래에 저장한다.
+3. `SKILL.md`, `metadata.json`, `AGENTS.md`, references가 원격 URL 대신 local snapshot 경로를 우선 truth source로 읽고, upstream refresh source만 note로 남기게 수정한다.
+4. `pnpm verify`로 scaffold/install 계약이 깨지지 않는지 확인한다.
+
+## 다음 작업: TDS UI skill의 llms.txt 기반 SSoT 재정렬
+
+### 목표
+- `skills/tds-ui`가 로컬 curated reference를 사실상 원본처럼 설명하는 구조에서 벗어나, Toss TDS React Native의 `llms.txt`와 `llms-full.txt`를 source of truth로 따르게 만든다.
+- 현재 skill이 외부 문서와 어긋나는 부분을 coverage, 탐색 순서, 규칙 강도, anomaly overlay 관점에서 비교 정리한다.
+- 수정 시 로컬 skill에는 decision router, export anomaly, repo-specific guardrail만 남기고 문서 본문 중복은 줄이는 방향으로 설계를 확정한다.
+
+### 작업 순서
+1. `skills/tds-ui`의 SKILL, metadata, references, rules가 현재 무엇을 직접 서술하고 무엇을 외부 문서에 위임하는지 분해한다.
+2. `https://tossmini-docs.toss.im/tds-react-native/llms.txt`와 `llms-full.txt`를 읽고, 현재 skill과의 차이를 index coverage / component semantics / foundation 포함 여부 / 문서 탐색 방식 기준으로 비교한다.
+3. `generated/anomalies.json`과 repo-specific rule이 외부 SSoT 위에 얹혀야 하는 최소 overlay인지 검토한다.
+4. 최종적으로 `tds-ui`를 `llms.txt`/`llms-full.txt` 우선 참조 구조로 바꾸는 개편안을 정리하고, 필요한 파일 수정 범위를 확정한다.
+
 ## 다음 작업: skills 체계 PR의 두 publish 패키지 patch changeset 정리
 
 ### 목표

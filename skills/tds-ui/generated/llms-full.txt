@@ -1,0 +1,7577 @@
+﻿# Index (/tds-react-native/)
+
+## TDS를 소개해요
+
+![Image](https://static.toss.im/3d-common/tds-kv-no-text-hero.png)
+
+TDS는 토스 제품을 만들 때 공통적으로 사용하는 디자인 시스템이에요. 수백 개의 컴포넌트와 템플릿으로 구성되어 있고, 단순히 디자인 툴에만 머무는 것이 아니라 개발과 연결되어 토스 제품을 구성하는 하나의 언어처럼 사용돼요.
+
+### TDS가 지향하는 목표
+
+- 제품의 최소 품질을 언제나 보장해요. TDS를 사용하면 토스의 일관된 UI를 유지할 수 있기 때문이에요.
+- 생산성을 향상시키고 문제 해결에 집중할 수 있도록 도와줘요. 재사용 할 수 있는 아름다운 디자인 시스템으로 제품의 UI 개발 과정을 효율적으로 만들어요.
+- 일관성 있는 인터랙션, 애니메이션, 일러스트레이션, 디자인 템플릿을 통해 제품 완성도를 업계 최고 수준으로 끌어올리는 것이 최종 목표에요.
+
+---
+
+# AmountTop (/tds-react-native/components/amount-top/)
+
+# AmountTop
+
+`AmountTop` 컴포넌트는 금액이나 중요한 숫자를 크게 강조하여 표시하는 데 사용해요. 송금, 결제, 잔액 확인 등의 화면에서 유용해요.
+
+[Preview: Codes]
+
+## 사용 예제
+
+### title과 subTitle 전달하기
+
+title속성과 subTitle속성은 필수 값이에요. string을 전달하면 typography가 세팅돼요.
+
+| 속성 | typography |
+|-- | --- |
+| title | t1 |
+| subTitle | st11 |
+
+[Preview: Codes]
+
+```jsx copy
+<AmountTop
+  subTitle="보낼 금액"
+  title="50,000원"
+/>
+```
+
+typography의 커스텀이 필요할 경우, ReactNode를 직접 삽입할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<AmountTop
+  subTitle="보낼 금액"
+  title={<Txt typography="t3" fontWeight="semiBold" color={colors.blue500}>50,000원</Txt>}
+/>
+```
+
+### 버튼 추가
+
+button 속성을 통해 버튼을 삽입할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<AmountTop
+  subTitle="잔액"
+  title="1,234,567원"
+  button={
+    <Button size="medium" onPress={() => handleRefresh()}>
+      새로고침
+    </Button>
+  }
+/>
+```
+
+### 클릭 가능한 부제목
+
+`subTitle`에 `` 컴포넌트를 전달할 경우, `onPress`와 함께 사용하게 되면 underline이 표기돼요.
+
+[Preview: Codes]
+
+```jsx copy
+<AmountTop
+  subTitle={
+    <AmountTop.SubTitle onPress={() => handleChangeAccount()}>
+      토스뱅크 1234-5678-9012
+    </AmountTop.SubTitle>
+  }
+  title="1,234,567원"
+/>
+```
+
+### 패딩 조정
+
+```jsx copy
+// 상단 패딩 조정
+<AmountTop
+  topPadding={80}
+  bottomPadding={24}
+  subTitle="보낼 금액"
+  title="50,000원"
+/>
+
+// 좌우 패딩 제거
+<AmountTop
+  horizontalPadding={0}
+  subTitle="보낼 금액"
+  title="50,000원"
+/>
+```
+
+### 송금 화면
+
+```jsx copy
+const [amount, setAmount] = useState(0);
+
+<View style={{ flex: 1 }}>
+  <AmountTop
+    topPadding={64}
+    bottomPadding={16}
+    subTitle="보낼 금액"
+    title={`${amount.toLocaleString()}원`}
+    button={
+      <Button size="medium" style="weak" onPress={() => setAmount(0)}>
+        초기화
+      </Button>
+    }
+  />
+
+  <NumberKeypad
+    onKeyPress={(num) => setAmount(prev => prev * 10 + num)}
+    onBackspacePress={() => setAmount(prev => Math.floor(prev / 10))}
+  />
+</View>
+```
+
+### 계좌 잔액 화면
+
+```jsx copy
+<AmountTop
+  subTitle={
+    <AmountTop.SubTitle onPress={() => handleChangeAccount()}>
+      토스뱅크 · 입출금통장
+    </AmountTop.SubTitle>
+  }
+  title="1,234,567원"
+  button={
+    <Button size="medium" onPress={() => handleDeposit()}>
+      입금
+    </Button>
+  }
+/>
+```
+
+### 결제 확인 화면
+
+```jsx copy
+<AmountTop
+  topPadding={80}
+  bottomPadding={24}
+  subTitle="결제 금액"
+  title="89,000원"
+/>
+```
+
+### 커스텀 타이틀
+
+```jsx copy
+<AmountTop
+  subTitle="이번 달 지출"
+  title={
+    <View>
+      <Txt typography="t1" fontWeight="semiBold" color={colors.blue500}>
+        -{totalExpense.toLocaleString()}원
+      </Txt>
+      <Txt typography="t7" color={colors.grey600} style={{ marginTop: 4 }}>
+        지난달보다 10% 감소
+      </Txt>
+    </View>
+  }
+/>
+```
+
+## 인터페이스
+
+**Type: AmountTopProps**
+
+```typescript
+export interface AmountTopProps {
+  /**
+   * 상단 패딩을 픽셀 단위로 지정해요.
+   *
+   * @default 64
+   */
+  topPadding?: 0 | 64 | 80;
+
+  /**
+   * 하단 패딩을 픽셀 단위로 지정해요.
+   *
+   * @default 0
+   */
+  bottomPadding?: 0 | 16 | 24;
+
+  /**
+   * 좌우 패딩을 픽셀 단위로 지정해요.
+   *
+   * @default 24
+   */
+  horizontalPadding?: 0 | 24;
+
+  /**
+   * 부제목을 지정해요.
+   */
+  subTitle: ReactNode;
+
+  /**
+   * 메인 제목(금액)을 지정해요.
+   */
+  title: ReactNode;
+
+  /**
+   * 오른쪽에 표시될 버튼을 지정해요.
+   */
+  button?: ReactNode;
+}
+```
+
+**Type: AmountTopSubTitleProps**
+
+```typescript
+export interface AmountTopSubTitleProps {
+  /**
+   * 부제목의 내용을 지정해요.
+   */
+  children: string;
+
+  /**
+   * 부제목을 클릭했을 때 호출되는 함수예요.
+   */
+  onPress?: () => void;
+
+  /**
+   * 부제목에 밑줄을 표시할지 여부를 지정해요. onPress가 있으면 자동으로 true가 돼요.
+   */
+  underline?: boolean;
+}
+```
+
+---
+
+# Asset (/tds-react-native/components/asset/)
+
+# Asset
+
+[Image: Asset thumbnail - asset/Thumbnail-Asset.png]
+
+`Asset` 컴포넌트는 이미지, 아이콘, Lottie 애니메이션 등을 일정한 프레임 안에 표시하는 데 사용해요. 다양한 크기와 모양의 프레임을 제공해요.
+
+[Preview: Codes]
+
+## 사용 예제
+
+### 이미지 Asset
+
+[Preview: Codes]
+
+```jsx copy
+<View style={{ display: 'flex', flexDirection: 'row', gap: '32px' }}>
+  <Asset.Image
+    source={{ uri: 'https://static.toss.im/2d-emojis/svg/u1F600.svg' }}
+    frameShape={Asset.frameShape.SquareLarge}
+    backgroundColor={adaptive.grey100}
+    scale={0.55}
+  />
+  <Asset.Image
+    source={{ uri: 'https://static.toss.im/2d-emojis/svg/u1F600.svg' }}
+    frameShape={Asset.frameShape.SquareLarge}
+    backgroundColor={adaptive.grey100}
+    scale={0.55}
+    acc={<Asset.ContentImage source={{ uri: 'https://static.toss.im/icons/svg/icon-check-circle-green.svg' }} />}
+    accPosition="bottom-right"
+  />
+  <Asset.Image
+    source={{ uri: 'https://static.toss.im/2d-emojis/svg/u1F600.svg' }}
+    frameShape={Asset.frameShape.SquareLarge}
+    backgroundColor={adaptive.grey100}
+    scale={0.55}
+    overlap={{ color: '#3182F6' }}
+  />
+</View>
+```
+
+### 아이콘 Asset
+
+[Preview: Codes]
+
+```jsx copy
+<Asset.Icon name="heart-line" />
+```
+
+### 아이콘 색상 변경
+
+[Preview: Codes]
+
+```jsx copy
+<View style={{ display: 'flex', flexDirection: 'row', gap: '32px' }}>
+  <Asset.Icon color="green" name="heart-line" />
+  <Asset.Icon color="red" name="heart-line" />
+  <Asset.Icon color="blue" name="heart-line" />
+</View>
+```
+
+### Lottie Asset
+
+[Preview: Codes]
+
+```jsx copy
+<Asset.Lottie frameShape={Asset.frameShape.CleanW60} src="https://static.toss.im/lotties-common/alarm-spot.json" loop />
+```
+
+### 다양한 프레임 크기
+
+```jsx copy
+// 60px 프레임
+<Asset
+  resource={<Asset.Image source={{ uri: imageUrl }} />}
+  frame={Asset.frameShape.CleanW60}
+/>
+
+// 48px 프레임
+<Asset
+  resource={<Asset.Image source={{ uri: imageUrl }} />}
+  frame={Asset.frameShape.CleanW48}
+/>
+
+// 36px 프레임
+<Asset
+  resource={<Asset.Image source={{ uri: imageUrl }} />}
+  frame={Asset.frameShape.CleanW36}
+/>
+```
+
+### 커스텀 프레임
+
+```jsx copy
+<Asset
+  resource={<Asset.Image source={{ uri: imageUrl }} />}
+  frame={{
+    width: 80,
+    height: 80,
+    radius: 12,
+    color: '#f5f5f5',
+  }}
+/>
+```
+
+### 그림자 효과
+
+```jsx copy
+<Asset
+  resource={<Asset.Image source={{ uri: imageUrl }} />}
+  frame={Asset.frameShape.CleanW60}
+  union={{
+    type: 'overlap',
+    color: 'rgba(0, 0, 0, 0.1)',
+  }}
+/>
+```
+
+## 인터페이스
+
+**Type: LegacyFrameShape**
+
+```typescript
+export interface LegacyFrameShape {
+  /**
+   * 프레임의 너비를 픽셀 단위로 지정해요.
+   */
+  width: number;
+
+  /**
+   * 프레임의 높이를 픽셀 단위로 지정해요.
+   */
+  height: number;
+
+  /**
+   * 프레임의 모서리 반경을 픽셀 단위로 지정해요.
+   */
+  radius: number;
+
+  /**
+   * 프레임의 배경색을 지정해요.
+   */
+  color: string;
+
+  /**
+   * 프레임의 오버랩 설정을 지정해요.
+   */
+  overlap?: {
+    x: number;
+    y: number;
+    blur: number;
+  };
+}
+```
+
+**Type: AssetProps**
+
+```typescript
+export interface AssetProps {
+  /**
+   * Asset에 표시될 리소스를 지정해요.
+   */
+  resource: ReactElement;
+
+  /**
+   * Asset의 프레임 설정을 지정해요.
+   */
+  frame: LegacyFrameShape;
+
+  /**
+   * Asset의 유니온 설정을 지정해요.
+   */
+  union?: {
+    type: 'overlap';
+    color: string;
+  };
+
+  /**
+   * Asset의 스타일을 지정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# Badge (/tds-react-native/components/badge/)
+
+# Badge
+
+[Image: Badge thumbnail - badge/Thumbnail-Badge.png]
+
+`Badge` 컴포넌트는 항목의 상태를 빠르게 인식할 수 있도록 강조하는 데 사용돼요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 크기 조정하기
+
+`Badge` 컴포넌트의 크기를 변경하려면 `size` 속성을 사용하세요. `tiny`, `small`, `medium`, `large` 중 하나를 선택할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Badge size="tiny" type="blue" badgeStyle="fill">
+  tiny
+</Badge>
+<Badge size="small" type="blue" badgeStyle="fill">
+  small
+</Badge>
+<Badge size="medium" type="blue" badgeStyle="fill">
+  medium
+</Badge>
+<Badge size="large" type="blue" badgeStyle="fill">
+  large
+</Badge>
+```
+
+### 스타일
+
+`Badge` 컴포넌트의 스타일을 설정하려면 `style` 속성을 사용하세요. 선택 할 수 있는 값에는 `fill`과 `weak`이 있어요.
+이때, `type` 속성을 사용하여 원하는 색상을 설정할 수 있어요.
+
+#### fill
+
+`fill` 스타일은 채도가 높아 시각적으로 강렬하고 눈에 띄는 디자인이라 주요 항목을 강조하는 데 적합해요.
+
+[Preview: Codes]
+
+```jsx copy
+<Badge size="tiny" type="blue" badgeStyle="fill">
+  Badge
+</Badge>
+<Badge size="tiny" type="teal" badgeStyle="fill">
+  Badge
+</Badge>
+<Badge size="tiny" type="green" badgeStyle="fill">
+  Badge
+</Badge>
+<Badge size="tiny" type="red" badgeStyle="fill">
+  Badge
+</Badge>
+```
+
+#### weak
+
+`weak` 스타일은 채도가 낮아서 시각적으로 덜 눈에 띄어요.
+
+```jsx copy
+<Badge size="tiny" type="blue" badgeStyle="weak">
+  Badge
+</Badge>
+<Badge size="tiny" type="teal" badgeStyle="weak">
+  Badge
+</Badge>
+<Badge size="tiny" type="green" badgeStyle="weak">
+  Badge
+</Badge>
+<Badge size="tiny" type="red" badgeStyle="weak">
+  Badge
+</Badge>
+```
+
+## 인터페이스
+
+**Type: BadgeProps**
+
+```typescript
+export interface BadgeProps {
+  /**
+   * `Badge` 컴포넌트 내부에 표시될 텍스트를 지정해요.
+   */
+  children: string;
+
+  /**
+   * `Badge` 컴포넌트의 크기를 지정해요.
+   * @default 'small'
+   */
+  size?: Size;
+
+  /**
+   * `Badge` 컴포넌트의 왼쪽 여백을 설정해요.
+   *
+   * @default 0
+   */
+  marginLeft?: number;
+
+  /**
+   * `Badge` 컴포넌트의 오른쪽 여백을 설정해요.
+   *
+   * @default 0
+   */
+  marginRight?: number;
+
+  /**
+   * `Badge` 컴포넌트의 스타일(모양)을 설정해요. 'fill'은 채도가 높은 스타일, 'weak'은 채도가 낮은 스타일이에요.
+   *
+   * @default 'fill'
+   */
+  badgeStyle?: Style;
+
+  /**
+   * `Badge` 컴포넌트의 색상을 설정해요.
+   *
+   * @default 'blue'
+   */
+  type?: Type;
+
+  /**
+   * `Badge` 컴포넌트의 텍스트 스타일을 설정해요. 기본값은 상위 `Paragraph` 컴포넌트의 값을 따라가요.
+   * @default 't5'
+   */
+  typography?: Typography;
+
+  /**
+   * `Badge` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<ViewStyle>;
+
+  /**
+   * `Badge` 컴포넌트의 텍스트 굵기를 설정해요.
+   *
+   * @default 'semiBold'
+   */
+  fontWeight?: FontWeight;
+}
+```
+
+---
+
+# Board Row (/tds-react-native/components/board-row/)
+
+# Board Row
+
+`BoardRow`는 제한된 공간에서 많은 정보를 깔끔하게 정리해 표시하는 컴포넌트예요. 주로 Q&A와 같은 정보를 표현할 때 사용하며, 펼쳐졌다 접히는 방식으로 정보를 보여주는 아코디언 컴포넌트 같은 역할을 해요.
+
+## 사용법
+
+`BoardRow` 컴포넌트는 제목, 아이콘, 그리고 콘텐츠 영역으로 구성돼요. 사용자는 제목 영역을 클릭하여 콘텐츠 영역을 열거나 닫을 수 있어요. 제목 옆의 아이콘은 추가적인 정보나 상태를 시각적으로 표시하기 위해 사용해요.
+
+```jsx copy
+<BoardRow
+  icon={<BoardRow.QIcon />}
+  title="매도 환전이 무엇인가요?"
+  contents={<Txt>주식 거래가 실시간이 아니기 때문에 가격이 변할 것에 대비하는 금액을 말해요.</Txt>}
+/>
+```
+
+### 콘텐츠 영역 채우기
+
+`BoardRow`의 콘텐츠 영역에는 주로 `Txt`와 `Post` 컴포넌트를 사용해요. `Post` 컴포넌트를 활용하면 깔끔하게 정리된 정보를 전달할 수 있어요.
+
+```jsx copy
+<BoardRow
+  icon={<BoardRow.QIcon />}
+  title="질문을 적어주세요."
+  contents={
+    <>
+      <Post.Paragraph paddingBottom={24} typography="t6">
+        주식 거래가 실시간이 아니기 때문에 가격이 변할 것에 대비하는 금액을 말해요.
+      </Post.Paragraph>
+      <Post.Ol>
+        <Post.Li>아이템1</Post.Li>
+        <Post.Li>아이템2</Post.Li>
+      </Post.Ol>
+    </>
+  }
+/>
+```
+
+## 인터페이스
+
+**Type: BoardRowProps**
+
+```typescript
+export interface BoardRowProps {
+  /**
+   * `BoardRow` 컴포넌트의 헤더 영역에 표시될 제목이에요.
+   */
+  title: string;
+  /**
+   * `BoardRow` 컴포넌트 헤더 영역의 `title` 앞에 표시할 아이콘이에요.
+   * 주로 `BoardRow.QIcon` 컴포넌트를 사용해요.
+   */
+  icon?: ReactNode;
+  /**
+   * `BoardRow` 컴포넌트의 콘텐츠 영역에 표시될 내용이에요.
+   * 주로 `Txt` 혹은 `Post` 컴포넌트로 감싼 요소를 사용해요.
+   */
+  contents?: ReactNode;
+}
+```
+
+---
+
+# Border (/tds-react-native/components/border/)
+
+# Border
+
+[Image: Border thumbnail - border/Thumbnail-Border.png]
+
+`Border` 컴포넌트는 요소 주위에 선을 그려서 요소 간의 구분을 명확히 하고 싶을 때 사용해요. UI 요소 간의 명확한 구분과 계층 구조를 표현할 수 있어요.
+
+`Border` 컴포넌트는 주로 리스트나 섹션을 구분하는 데 사용돼요.
+
+[Preview: div]
+
+## 사용법
+
+### 항목 나누기
+
+리스트나 섹션을 나눌 때 `Border` 컴포넌트를 사용할 수 있어요. `type` 속성에 따라 적용되는 스타일이 다르니, 필요에 따라 적절한 값을 선택하세요.
+
+- `full`: 전체 너비에 맞춰서 선이 그려져요.
+- `padding24`: 양쪽에 `24px`의 여백을 두고 선이 그려져요.
+
+[Preview: Codes]
+
+```jsx copy
+<View
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    width: 350,
+    borderRadius: 20,
+    backgroundColor: colors.grey100,
+  }}
+>
+  <ListRow contents={<ListRow.Texts type="1RowTypeA" top="동해물과 백두산이" />} />
+  <Border type="full" />
+  <ListRow contents={<ListRow.Texts type="1RowTypeA" top="동해물과 백두산이" />} />
+</View>
+```
+
+### 왼쪽에 여백주기
+
+왼쪽 여백이 필요한 경우에는 `type` 값을 `padding24`로 사용하세요.
+
+[Preview: Codes]
+
+```jsx copy
+<View
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    width: 350,
+    borderRadius: 20,
+    backgroundColor: colors.grey100,
+  }}
+>
+  <ListRow contents={<ListRow.Texts type="1RowTypeA" top="동해물과 백두산이" />} />
+  <Border type="full" />
+  <ListRow contents={<ListRow.Texts type="1RowTypeA" top="동해물과 백두산이" />} />
+</View>
+```
+
+### 구간 나누기
+
+`Border` 컴포넌트로 구간을 나눈다면, `type`의 값으로 `height16`을 사용하세요.
+
+[Preview: Codes]
+
+```jsx copy
+<View
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+  }}
+>
+  <ListRow contents={<ListRow.Texts type="1RowTypeA" top="동해물과 백두산이" />} />
+  <Border type="padding24" />
+  <ListRow contents={<ListRow.Texts type="1RowTypeA" top="동해물과 백두산이" />} />
+</View>
+<View
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+  }}
+>
+  <ListRow contents={<ListRow.Texts type="1RowTypeA" top="동해물과 백두산이" />} />
+  <Border type="height16" />
+  <ListRow contents={<ListRow.Texts type="1RowTypeA" top="동해물과 백두산이" />} />
+</View>
+```
+
+## 인터페이스
+
+**Type: BorderProps**
+
+```typescript
+export interface BorderProps {
+  /**
+   * `Border` 컴포넌트의 형태를 결정해요.
+   * `Border` 컴포넌트로 항목을 나눈다면 `full` 또는 `padding24`를 사용하세요.
+   * 구간을 나눈다면 `height16`을 사용하세요.
+   *
+   * @default "full"
+   */
+  style?: 'full' | 'padding24' | 'height16';
+}
+```
+
+---
+
+# Bottom Info (/tds-react-native/components/bottom-info/)
+
+# Bottom Info
+
+`BottomInfo` 컴포넌트는 화면 하단에 중요한 정보나 주의사항을 명확하게 표시할 때 사용해요. 특히 금융 상품처럼 법적 고지나 디스클레이머(면책 조항)를 사용자에게 안내해야 하는 상황에서 유용해요. 주로 리스트 형식을 제공할 수 있는 `Post` 컴포넌트와 함께 사용해 정보를 깔끔하게 정리해 보여줄 수 있어요.
+
+[Preview: div]
+
+## 사용법
+
+### 콘텐츠 영역 채우기
+
+`BottomInfo`의 콘텐츠 영역에는 주로 `Post` 컴포넌트를 사용해요. `Post` 컴포넌트를 활용하면 깔끔하게 정리된 정보를 전달할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<BottomInfo>
+  <Post.Ul paddingBottom={24} typography="t7">
+    <Post.Li>
+      대출기간 40년의 경우 만39세 (만 나이를 사용해주세요!) 이하 또는 신혼부부(혼인신고후 7년이내) 대상으로 한
+      상품입니다.
+    </Post.Li>
+    <Post.Li>
+      회사 및 대출모집인은 해당상품에 대해 충분히 설명할 의무가 있으며, 고객님께서는 이에 대한 충분한 설명을 받으시길
+      바랍니다.
+    </Post.Li>
+    <Post.Li>대출금 중도상환시 중도상환수수료 부과기간 잔여일수에 대해 중도상환수수료가 발생할 수 있습니다.</Post.Li>
+  </Post.Ul>
+</BottomInfo>
+```
+
+## 인터페이스
+
+**Type: BottomInfoProps**
+
+```typescript
+export interface BottomInfoProps {
+  /**
+   * `BottomInfo` 컴포넌트 내부에 표시될 텍스트를 지정해요.
+   */
+  children?: ReactNode;
+  /**
+   * `BottomInfo` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# Button (/tds-react-native/components/button/)
+
+# Button
+
+[Image: Button thumbnail - button/Thumbnail-Button.png]
+
+`Button` 컴포넌트는 사용자가 어떤 액션을 트리거하거나 이벤트를 실행할 때 사용해요. 버튼은 기본적인 UI 요소로, 폼 제출, 다이얼로그 열기, 작업 취소, 삭제와 같은 다양한 액션을 처리하는 데 사용해요.
+
+[Preview: Codes]
+
+## 사용 예제
+
+### 크기 조정하기
+
+`Button` 컴포넌트의 크기를 변경하려면 `size` 속성을 사용하세요. `tiny`, `medium`, `large`, `big` 중 하나를 선택할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Button size="tiny">Tiny</Button>
+<Button size="medium">Medium</Button>
+<Button size="large">Large</Button>
+<Button size="big">Big</Button>
+```
+
+### 스타일
+
+버튼의 스타일을 설정하려면 `style` 속성을 사용하세요. 선택 할 수 있는 값에는 `fill`과 `weak`이 있어요.
+
+#### fill
+
+`fill` 스타일은 채도가 높아 시각적으로 강렬하고 눈에 띄는 디자인이라 주요 액션을 강조하는 데 적합해요. 사용자가 버튼을 즉시 인지하고 상호작용할 수 있도록 도와줘요.
+
+[Preview: Codes]
+
+```jsx copy
+<Button type="primary" style="fill">
+  Primary
+</Button>
+<Button type="dark" style="fill">
+  Dark
+</Button>
+<Button type="danger" style="fill">
+  Danger
+</Button>
+<View style={{ backgroundColor: colors.blue500, padding: 8 }}>
+  <Button type="light" style="fill">
+    Light
+  </Button>
+</View>
+```
+
+#### weak
+
+`weak` 스타일은 채도가 낮아 시각적으로 덜 강렬하며 부드럽고 조용한 느낌을 줘요. 그래서 덜 중요한 액션이나 보조적인 버튼에 적합해요. 이 스타일을 사용하면 주요 액션과 보조 액션을 명확히 구분할 수 있죠. `weak` 스타일의 버튼은 반투명하게 디자인되어 배경색이 살짝 드러나는 모습이에요.
+
+```jsx copy
+<Button type="primary" style="weak">
+  Primary
+</Button>
+<Button type="dark" style="weak">
+  Dark
+</Button>
+<Button type="danger" style="weak">
+  Danger
+</Button>
+<View style={{ backgroundColor: colors.blue500, padding: 8 }}>
+  <Button type="light" style="weak">
+    Light
+  </Button>
+</View>
+```
+
+### 형태
+
+버튼의 형태를 변경하려면 `display` 속성을 사용하세요. 선택할 수 있는 값에는 `block`, `full`이 있어요.
+
+- `block`: 버튼이 줄바꿈되어 화면 너비에 맞게 확장돼요.
+- `full`: 버튼이 부모 요소의 전체 너비를 차지해요.
+
+[Image: Button display exmplae - button/button-display.png]
+
+```tsx copy
+<Button display="block">Block</Button>
+<Button display="full">Full</Button>
+```
+
+### 로딩
+
+`loading` 속성을 사용해 버튼의 로딩 상태를 나타낼 수 있어요. 로딩중에는 버튼을 클릭할 수 없고, 로딩 중임을 시각적으로 나타내요.
+
+```jsx copy
+<Button type="primary" loading disabled>
+  Primary
+</Button>
+<Button type="dark" loading disabled>
+  Dark
+</Button>
+<Button type="danger" loading disabled>
+  Danger
+</Button>
+```
+
+### 비활성화
+
+버튼을 비활성화하려면 `disabled` 속성을 사용하세요. 비활성화된 버튼은 사용자가 클릭할 수 없고, 시각적으로도 비활성화된 상태임을 나타내요.
+
+```jsx copy
+<Button type="primary" disabled>
+  Primary
+</Button>
+<Button type="dark" disabled>
+  Dark
+</Button>
+<Button type="danger" disabled>
+  Danger
+</Button>
+```
+
+## 인터페이스
+
+**Type: ButtonProps**
+
+```typescript
+export interface ButtonProps {
+  /**
+   * `Button` 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * `Button` 컴포넌트가 눌렸을 때 호출되는 함수예요.
+   */
+  onPress?: PressableProps['onPress'];
+
+  /**
+   * `Button` 컴포넌트의 색상 타입을 지정해요.
+   *
+   * @default 'primary'
+   */
+  type?: 'primary' | 'danger' | 'light' | 'dark';
+
+  /**
+   * `Button` 컴포넌트의 스타일을 지정해요. 'fill'은 채워진 스타일, 'weak'은 투명한 스타일이에요.
+   *
+   * @default 'fill'
+   */
+  style?: 'fill' | 'weak';
+
+  /**
+   * `Button` 컴포넌트의 표시 방식을 지정해요. 'block'은 전체 너비를 차지하고, 'full'은 부모 컨테이너에 맞춰요.
+   *
+   * @default 'block'
+   */
+  display?: 'block' | 'full';
+
+  /**
+   * `Button` 컴포넌트의 크기를 지정해요.
+   *
+   * @default 'big'
+   */
+  size?: 'big' | 'large' | 'medium' | 'tiny';
+
+  /**
+   * true일 경우 버튼에 로딩 스피너가 표시되고 `Button` 컴포넌트가 클릭되지 않아요.
+   *
+   * @default false
+   */
+  loading?: boolean;
+
+  /**
+   * `Button` 컴포넌트를 비활성화할지 여부를 지정해요. true일 경우 `Button` 컴포넌트가 클릭되지 않아요.
+   *
+   * @default false
+   */
+  disabled?: boolean;
+
+  /**
+   * `Button` 컴포넌트의 외부 스타일을 변경할 때 사용해요. 가장 바깥쪽 `View`에 적용돼요.
+   */
+  viewStyle?: StyleProp<ViewStyle>;
+
+  /**
+   * `Button` 컴포넌트의 텍스트 색상을 지정해요. 기본으로 설정되는 색상을 덮어씌울 때 사용해요.
+   */
+  color?: string;
+
+  /**
+   * `Button` 컴포넌트의 컨테이너 스타일을 변경할 때 사용해요. `Button` 컴포넌트 내부의 `View`에 적용돼요.
+   */
+  containerStyle?: StyleProp<ViewStyle>;
+
+  /**
+   * `Button` 컴포넌트의 텍스트 스타일을 변경할 때 사용해요.
+   */
+  textStyle?: StyleProp<TextStyle>;
+
+  /**
+   * `Button` 컴포넌트의 왼쪽에 추가할 아이콘이나 텍스트를 지정해요.
+   */
+  leftAccessory?: ReactNode;
+}
+```
+
+---
+
+# Carousel (/tds-react-native/components/carousel/)
+
+# Carousel
+
+`Carousel` 컴포넌트는 여러 아이템을 가로로 슬라이드하며 보여주는 컴포넌트예요. 제스처를 통해 자연스럽게 아이템을 탐색할 수 있어요.
+
+## 사용 예제
+
+### 기본 사용
+
+Carousel을 사용하려면 `itemWidth`를 지정하고 `Carousel.Item`을 children으로 전달하세요.
+
+```jsx copy
+<Carousel itemWidth={320}>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'red' }} />
+  </Carousel.Item>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'blue' }} />
+  </Carousel.Item>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'green' }} />
+  </Carousel.Item>
+</Carousel>
+```
+
+### 이미지 캐러셀
+
+이미지를 슬라이드로 보여줄 수 있어요.
+
+```jsx copy
+const images = [
+  'https://example.com/image1.jpg',
+  'https://example.com/image2.jpg',
+  'https://example.com/image3.jpg',
+];
+
+<Carousel itemWidth={350}>
+  {images.map((imageUrl, index) => (
+    <Carousel.Item key={index}>
+      <Image
+        source={{ uri: imageUrl }}
+        style={{ width: 350, height: 250, borderRadius: 12 }}
+      />
+    </Carousel.Item>
+  ))}
+</Carousel>
+```
+
+### 카드 캐러셀
+
+여러 카드를 슬라이드로 보여줄 수 있어요.
+
+```jsx copy
+const cards = [
+  { title: '카드 1', description: '설명 1' },
+  { title: '카드 2', description: '설명 2' },
+  { title: '카드 3', description: '설명 3' },
+];
+
+<Carousel itemWidth={300}>
+  {cards.map((card, index) => (
+    <Carousel.Item key={index}>
+      <View style={{ width: 300, padding: 20, backgroundColor: 'white', borderRadius: 12 }}>
+        <Txt typography="h3">{card.title}</Txt>
+        <Txt typography="t5" style={{ marginTop: 8 }}>
+          {card.description}
+        </Txt>
+      </View>
+    </Carousel.Item>
+  ))}
+</Carousel>
+```
+
+### 아이템 간격 조정
+
+`itemGap`을 사용해 아이템 사이의 간격을 조정할 수 있어요.
+
+```jsx copy
+<Carousel itemWidth={320} itemGap={20}>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'red' }} />
+  </Carousel.Item>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'blue' }} />
+  </Carousel.Item>
+</Carousel>
+```
+
+### 패딩 조정
+
+`padding`을 사용해 캐러셀의 좌우 패딩을 조정할 수 있어요.
+
+```jsx copy
+<Carousel itemWidth={320} padding={16}>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'red' }} />
+  </Carousel.Item>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'blue' }} />
+  </Carousel.Item>
+</Carousel>
+```
+
+### 인디케이터 추가
+
+`renderIndicators`를 사용해 현재 위치를 나타내는 인디케이터를 추가할 수 있어요.
+
+```jsx copy
+<Carousel
+  itemWidth={320}
+  renderIndicators={({ activeIndex, itemsCount }) => (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
+      {Array.from({ length: itemsCount }).map((_, index) => (
+        <View
+          key={index}
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            marginHorizontal: 4,
+            backgroundColor: index === activeIndex ? colors.blue500 : colors.grey300,
+          }}
+        />
+      ))}
+    </View>
+  )}
+>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'red' }} />
+  </Carousel.Item>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'blue' }} />
+  </Carousel.Item>
+  <Carousel.Item>
+    <View style={{ width: 320, height: 200, backgroundColor: 'green' }} />
+  </Carousel.Item>
+</Carousel>
+```
+
+### 프로모션 배너
+
+```jsx copy
+const promotions = [
+  { title: '첫 송금 수수료 무료', image: '...' },
+  { title: '적금 금리 특별 혜택', image: '...' },
+  { title: '친구 초대 이벤트', image: '...' },
+];
+
+<Carousel
+  itemWidth={340}
+  itemGap={16}
+  renderIndicators={({ activeIndex, itemsCount }) => (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12 }}>
+      {Array.from({ length: itemsCount }).map((_, index) => (
+        <View
+          key={index}
+          style={{
+            width: index === activeIndex ? 20 : 6,
+            height: 6,
+            borderRadius: 3,
+            marginHorizontal: 3,
+            backgroundColor: index === activeIndex ? colors.blue500 : colors.grey300,
+          }}
+        />
+      ))}
+    </View>
+  )}
+>
+  {promotions.map((promo, index) => (
+    <Carousel.Item key={index}>
+      <Pressable onPress={() => handlePromotionPress(promo)}>
+        <Image source={{ uri: promo.image }} style={{ width: 340, height: 180, borderRadius: 12 }} />
+        <Txt typography="h4" style={{ marginTop: 12 }}>
+          {promo.title}
+        </Txt>
+      </Pressable>
+    </Carousel.Item>
+  ))}
+</Carousel>
+```
+
+## 중요 사항
+
+Carousel을 사용하려면 앱 최상위에 `GestureHandlerRootView`를 추가해야 안드로이드에서 정상적으로 동작해요.
+
+```jsx copy
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+function App() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* 앱 콘텐츠 */}
+    </GestureHandlerRootView>
+  );
+}
+```
+
+## 인터페이스
+
+**Type: CarouselProps**
+
+```typescript
+export interface CarouselProps {
+  /**
+   * 캐러셀의 아이템들을 지정해요. Carousel.Item을 children으로 전달해요.
+   */
+  children: ReactNode[];
+
+  /**
+   * 캐러셀 아이템의 너비를 픽셀 단위로 지정해요.
+   *
+   * @default 280
+   */
+  itemWidth?: number;
+
+  /**
+   * 캐러셀 아이템 사이의 간격을 픽셀 단위로 지정해요.
+   *
+   * @default 12
+   */
+  itemGap?: number;
+
+  /**
+   * 캐러셀을 둘러싸는 패딩을 픽셀 단위로 지정해요.
+   *
+   * @default 24
+   */
+  padding?: number;
+
+  /**
+   * 현재 활성화된 아이템을 나타내는 인디케이터를 렌더링하는 함수예요.
+   */
+  renderIndicators?: (data: { activeIndex: number; itemsCount: number }) => ReactNode;
+}
+```
+
+---
+
+# BarChart (/tds-react-native/components/Chart/bar-chart/)
+
+# BarChart
+
+`BarChart` 컴포넌트는 막대 그래프 형태로 데이터의 값을 시각화하는 도구예요.
+`BarChart`를 사용하면 데이터를 막대의 높이로 표현할 수 있고, 색상을 지정하여 특정 막대를 강조 할 수 있어요.
+이를 통해 사용자는 데이터의 중요도를 한눈에 파악할 수 있어요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 항목 구성하기
+
+`BarChart`에 `data`를 전달하려면 아래와 같은 항목을 포함해야 해요.
+
+- `value`: 해당 막대의 실제 값을 나타내요. 막대의 높이는 이 값에 비례해 설정돼요. 이 값은 보통 막대 상단에 표시돼요.
+- `xAxisLabel`: X축에 나타나는 레이블로, 각 막대가 나타내는 항목을 설명하는 텍스트예요.
+
+```jsx copy
+<BarChart
+  data={[
+    { value: 6, xAxisLabel: '1월' },
+    { value: 5, xAxisLabel: '2월' },
+    { value: 4, xAxisLabel: '3월' },
+    { value: 3, xAxisLabel: '4월' },
+    { value: 2, xAxisLabel: '5월' },
+    { value: 1, xAxisLabel: '6월' },
+  ]}
+/>
+```
+
+[Preview: Codes]
+
+```jsx copy
+<BarChart
+  data={[
+    { value: 6, xAxisLabel: '1월' },
+    { value: 5, xAxisLabel: '2월' },
+    { value: 4, xAxisLabel: '3월' },
+    { value: 3, xAxisLabel: '4월' },
+    { value: 2, xAxisLabel: '5월' },
+    { value: 1, xAxisLabel: '6월' },
+  ]}
+  fill={{
+    type: 'all-bar',
+    theme: 'green',
+  }}
+/>
+```
+
+### 차트 스타일 지정하기
+
+`BarChart`의 막대 스타일은 `fill`의 `type` 속성으로 설정할 수 있어요. 세 가지 타입인 `all-bar`, `single-bar`, `auto`를 지원해요.
+각 타입에 따라 추가적으로 필요한 속성도 달라져요.
+
+- `single-bar`: 오른쪽 끝 하나의 막대만 색상을 채우고, 나머지는 기본색(`grey100`)으로 설정돼요.
+- `all-bar`: 모든 막대를 하나의 색상으로 채워요.
+- `auto`: 기본 규칙에 따라 막대의 색상을 채워요.
+
+#### 전체 막대 색상 변경하기
+
+`all-bar`는 모든 막대에 동일한 색상을 적용하고 싶을 때 사용하는 옵션이에요.
+예를 들어, 모든 막대를 노란색으로 설정할 수 있어요. 이 경우 `theme` 속성을 이용해 적용할 색상만 지정해 주면 돼요.
+
+[Preview: Codes]
+
+```jsx copy
+<BarChart
+  data={[
+    { value: 6, xAxisLabel: '1월' },
+    { value: 5, xAxisLabel: '2월' },
+    { value: 4, xAxisLabel: '3월' },
+    { value: 3, xAxisLabel: '4월' },
+    { value: 2, xAxisLabel: '5월' },
+    { value: 1, xAxisLabel: '6월' },
+  ]}
+  fill={{
+    type: 'all-bar',
+    theme: 'yellow',
+  }}
+/>
+```
+
+#### 하나의 항목만 강조하기
+
+`single-bar`는 마지막 하나의 막대만 다른 색상으로 강조할 때 사용하는 옵션이에요.
+
+[Preview: Codes]
+
+```jsx copy
+<BarChart
+  data={[
+    { value: 6, xAxisLabel: '1월' },
+    { value: 5, xAxisLabel: '2월' },
+    { value: 4, xAxisLabel: '3월' },
+    { value: 3, xAxisLabel: '4월' },
+    { value: 2, xAxisLabel: '5월' },
+    { value: 1, xAxisLabel: '6월' },
+  ]}
+  fill={{
+    type: 'single-bar',
+    theme: 'blue',
+  }}
+/>
+```
+
+#### 자동으로 여러 항목 강조하기
+
+`auto`는 여러 개의 막대를 자동으로 색상 적용하고 싶을 때 사용하는 타입이에요.
+이 경우 `count` 속성을 설정해서 오른쪽부터 몇 개의 막대에 색상을 적용할지 지정할 수 있어요.
+`auto` 타입의 색상 적용 순서는 오른쪽부터 `blue → green → yellow → orange → red → grey` 순서로 적용돼요.
+
+[Preview: Codes]
+
+```jsx copy
+<BarChart
+  data={[
+    { value: 6, xAxisLabel: '1월' },
+    { value: 5, xAxisLabel: '2월' },
+    { value: 4, xAxisLabel: '3월' },
+    { value: 3, xAxisLabel: '4월' },
+    { value: 2, xAxisLabel: '5월' },
+    { value: 1, xAxisLabel: '6월' },
+  ]}
+  fill={{
+    type: 'auto',
+    count: 6,
+  }}
+/>
+```
+
+### 높이 설정하기
+
+차트 전체의 높이를 설정하는 속성이에요. 막대 개수에 상관없이 이 값에 따라 차트 전체 높이가 설정돼요.
+막대 하나하나의 높이가 아닌, `BarChart` 컴포넌트 전체의 세로 길이를 조정할 때 사용해요.
+
+[Preview: Codes]
+
+```jsx copy
+<BarChart
+  data={[
+    { value: 10, xAxisLabel: '1월' },
+    { value: 9, xAxisLabel: '2월' },
+    { value: 8, xAxisLabel: '3월' },
+    { value: 7, xAxisLabel: '4월' },
+    { value: 6, xAxisLabel: '5월' },
+    { value: 5, xAxisLabel: '6월' },
+  ]}
+  fill={{
+    type: 'single-bar',
+    theme: 'orange',
+  }}
+  height={300}
+/>
+```
+
+### 데이터가 많은 경우 표시하기
+
+data의 항목 개수가 12개를 초과하면, 차트에서는 첫 번째와 마지막 항목에만 상하에 보조 정보가 표시돼요.
+데이터가 많을 때 라벨이 겹쳐 보이는 것을 방지하기 위해 자동으로 제공되는 기능이에요.
+
+[Preview: Codes]
+
+```jsx copy
+<BarChart
+  data={[
+    { value: 8, xAxisLabel: '2012' },
+    { value: 7, xAxisLabel: '2013' },
+    { value: 6, xAxisLabel: '2014' },
+    { value: 5, xAxisLabel: '2015' },
+    { value: 4, xAxisLabel: '2016' },
+    { value: 3, xAxisLabel: '2017' },
+    { value: 2, xAxisLabel: '2018' },
+    { value: 3, xAxisLabel: '2019' },
+    { value: 4, xAxisLabel: '2020' },
+    { value: 5, xAxisLabel: '2021' },
+    { value: 6, xAxisLabel: '2022' },
+    { value: 7, xAxisLabel: '2023' },
+    { value: 8, xAxisLabel: '2024' },
+  ]}
+  fill={{
+    type: 'auto',
+    count: 13,
+  }}
+/>
+```
+
+## 인터페이스
+
+**Type: BarChartProps**
+
+```typescript
+export interface BarChartProps {
+  /**
+   * `BarChart` 컴포넌트에 표시할 데이터를 설정해요.
+   *
+   * @default []
+   *
+   * @remarks
+   * - `value`는 0 이상의 정수여야 해요.
+   * - `xAxisLabel`은 x축에 표시할 라벨을 설정해요.
+   * - `value`와 `xAxisLabel`은 1:1로 매칭돼야 해요.
+   *
+   * @example
+   * ```typescript
+   * const data = [
+   *   { value: 10, xAxisLabel: 'Label1' },
+   *   { value: 20, xAxisLabel: 'Label2' },
+   * ];
+   * ```
+   */
+  data?: Array<BarChartData>;
+
+  /**
+   * `BarChart` 컴포넌트의 색상 채우기 방식을 설정해요.
+   *
+   * @default 'all-bar'
+   *
+   * @remarks
+   * - `single-bar`: 오른쪽 끝 하나의 막대만 색상을 채우고, 나머지는 기본색(`grey100`)으로 설정돼요. `color` 속성을 사용해서 색상을 설정할 수 있어요.
+   * - `all-bar`: 모든 막대를 하나의 색상으로 채워요. `color` 속성을 사용해서 색상을 설정할 수 있어요.
+   * - `auto`: 기본 규칙에 따라 막대의 색상을 채워요. `count` 속성을 통해 색상이 적용될 막대의 개수를 설정할 수 있어요.
+   *   색상 순서는 다음과 같아요: ['blue', 'green', 'yellow', 'orange', 'red', 'grey'].
+   *
+   * @example
+   * ```typescript
+   * fill={{ type: 'single-bar', theme: 'blue' }}
+   * fill={{ type: 'all-bar', theme: 'green' }}
+   * fill={{ type: 'auto', count: 3 }}
+   * ```
+   */
+  fill?: SingleBar | AllBar | Auto;
+
+  /**
+   * `BarChart` 컴포넌트의 너비를 설정해요.
+   *
+   * @default Dimensions.get('window').width 
+   */
+  width?: number;
+
+  /**
+   * `BarChart` 컴포넌트의 높이를 설정해요.
+   *
+   * @default 205
+   */
+  height?: number;
+}
+```
+
+**Type: BarChartData**
+
+```typescript
+export interface BarChartData {
+  /**
+   * `BarChart` 컴포넌트에서 하나의 막대를 나타내는 데이터에요. `value`는 0 이상의 정수여야 해요.
+   * 이 값은 보통 막대 상단에 표시돼요.
+   * */
+  value: number;
+  /** 
+   * `BarChart` 컴포넌트에서 막대 하단 X축에 표시될 레이블이에요.
+   * */
+  xAxisLabel?: string;
+
+}
+```
+
+**Type: AllBar**
+
+```typescript
+export interface AllBar {
+  /**
+   * `BarChart` 컴포넌트를 하나의 색상으로 채워요. `color` 속성을 사용해서 색상을 설정할 수 있어요.
+   */
+  type: 'all-bar';
+  /**
+   * `BarChart` 컴포넌트에 채울 색상을 설정해요.
+   */
+  theme: Theme;
+}
+```
+
+**Type: SingleBar**
+
+```typescript
+export interface SingleBar {
+  /**
+   * `BarChart` 컴포넌트의 오른쪽 끝 하나만 색상을 채우고, 나머지는 기본색(`grey100`)으로 설정돼요. `color` 속성을 사용해서 색상을 설정할 수 있어요.
+   */
+  type: 'single-bar';
+  /**
+   * `BarChart` 컴포넌트에 채울 색상을 설정해요.
+   */
+  theme: Theme;
+}
+```
+
+**Type: Auto**
+
+```typescript
+export interface Auto {
+  /**
+   * `BarChart` 컴포넌트를 기본 규칙에 따라 막대의 색상을 오른쪽 부터 채워요. `count` 속성을 통해 색상이 적용될 막대의 개수를 제한할 수 있어요.
+   *  색상 순서는 다음과 같아요: ['blue', 'green', 'yellow', 'orange', 'red', 'grey'].
+   */
+  type: 'auto';
+  /**
+   * 색상을 적용할 막대의 개수예요.
+   */
+  count: number;
+}
+```
+
+---
+
+# Checkbox (/tds-react-native/components/checkbox/)
+
+# Checkbox
+
+`Checkbox` 컴포넌트는 사용자가 하나 이상의 항목을 선택할 때 사용해요. 체크된 상태와 체크되지 않은 상태를 나타내고, 여러 개의 항목을 동시에 선택할 수 있어요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 형태
+
+`Checkbox`는 두 가지 방법으로 표현할 수 있어요.
+
+- ``: 체크 아이콘이 원으로 감싸진 형태로 표현돼요.
+- ``: 체크 아이콘이 단독으로 표현돼요.
+
+[Preview: Codes]
+
+```jsx copy
+<Checkbox.Circle defaultChecked={true} />
+<Checkbox.Line defaultChecked={true} />
+```
+
+### 상태
+
+#### 상태를 외부에서 관리하는 방식
+
+`Checkbox`의 상태를 외부에서 관리하려면 `checked`와 `onCheckedChange` 속성을 함께 사용하세요. 이렇게 하면 체크박스가 선택되었는지 아닌지를 외부에서 직접 관리할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Checkbox.Circle checked={checked} onCheckedChange={setChecked} />
+<Checkbox.Line checked={checked} onCheckedChange={setChecked} />
+```
+
+#### 상태를 내부에서 관리하는 방식
+
+`Checkbox`의 상태를 내부에서 자동으로 관리하려면 `defaultChecked` 속성을 사용하세요. 이 속성은 체크박스가 처음 화면에 표시될 때 선택 상태를 정해주고, 그 후에는 컴포넌트가 스스로 상태를 관리해요. 이 방식은 상태 변화를 추적하지 않아도 될 때 유용해요.
+
+[Preview: Codes]
+
+```jsx copy
+<Checkbox.Circle defaultChecked={true} />
+<Checkbox.Line defaultChecked={true} />
+```
+
+### 크기 조정하기
+
+`Checkbox`의 크기를 변경하려면 `size` 속성을 사용하세요.
+
+[Preview: Codes]
+
+```jsx copy
+<Checkbox.Circle defaultChecked={true} size={36} />
+<Checkbox.Line defaultChecked={true} size={36} />
+```
+
+### 비활성화하기
+
+`Checkbox`를 비활성화하려면 `disabled` 속성을 사용하세요. 비활성화된 `Checkbox`를 클릭하면 선택 상태가 바뀌지 않고, 좌우로 흔들리는 애니메이션이 나타나요.
+
+[Preview: Codes]
+
+```jsx copy
+<Checkbox.Circle defaultChecked={true} disabled />
+<Checkbox.Circle disabled />
+<Checkbox.Line defaultChecked={true} disabled />
+<Checkbox.Line disabled />
+```
+
+## 인터페이스
+
+**Type: CheckboxProps**
+
+```typescript
+export interface CheckboxProps extends PressableProps {
+  /**
+   * 이 값이 `true`일 때 해당 `Checkbox`가 선택된 상태로 표현돼요. 주로 `Checkbox` 컴포넌트의 상태를 컴포넌트 외부에서 관리할 때, `onCheckedChange` 속성과 함께 사용해요.
+   */
+  checked?: boolean;
+
+  /**
+   * 이 값이 `true`일 때 `Checkbox` 컴포넌트가 비활성화돼요.
+   */
+  disabled?: boolean;
+
+  /**
+   * `Checkbox` 컴포넌트의 상태를 컴포넌트 내부에서 관리할 때, 초기 선택 상태를 지정해요.
+   */
+  defaultChecked?: boolean;
+
+  /**
+   * `Checkbox` 컴포넌트의 선택 상태가 변경될 때 실행되는 함수예요.
+   */
+  onCheckedChange?: (checked: boolean) => void;
+
+  /**
+   * `Checkbox` 컴포넌트의 크기를 설정해요.
+   *
+   * @default 24
+   */
+  size?: number;
+
+  /**
+   * `Checkbox` 컴포넌트의 스타일을 설정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# Dialog (/tds-react-native/components/dialog/)
+
+# Dialog
+
+`Dialog` 컴포넌트는 사용자에게 중요한 정보를 전달하거나 확인을 요청할 때 사용해요. `AlertDialog`와 `ConfirmDialog` 두 가지 타입을 제공해요.
+
+## 사용 예제
+
+### AlertDialog
+
+`AlertDialog`는 사용자에게 정보를 전달하고 확인을 받는 데 사용해요. 하나의 버튼만 표시돼요.
+
+```jsx copy
+import { useOverlay } from '@toss/tds-react-native';
+
+const overlay = useOverlay();
+
+const openAlertDialog = () => {
+  return new Promise<void>(resolve => {
+    overlay.open(({ isOpen, close, exit }) => (
+      <AlertDialog
+        open={isOpen}
+        title="저장 완료"
+        description="변경사항이 저장되었어요"
+        buttonText="확인"
+        onClose={() => {
+          resolve();
+          close();
+        }}
+        onExited={exit}
+      />
+    ));
+  });
+};
+```
+
+### ConfirmDialog
+
+`ConfirmDialog`는 사용자에게 선택을 요청할 때 사용해요. 두 개의 버튼을 표시할 수 있어요.
+
+```jsx copy
+import { useOverlay } from '@toss/tds-react-native';
+
+const overlay = useOverlay();
+
+const openConfirmDialog = () => {
+  return new Promise<boolean>(resolve => {
+    overlay.open(({ isOpen, close, exit }) => (
+      <ConfirmDialog
+        open={isOpen}
+        title="삭제 확인"
+        description="정말로 삭제하시겠어요?"
+        leftButton={
+          <ConfirmDialog.Button
+            style="weak"
+            type="dark"
+            onPress={() => {
+              resolve(false);
+              close();
+            }}
+          >
+            취소
+          </ConfirmDialog.Button>
+        }
+        rightButton={
+          <ConfirmDialog.Button
+            type="danger"
+            onPress={() => {
+              resolve(true);
+              close();
+            }}
+          >
+            삭제
+          </ConfirmDialog.Button>
+        }
+        onClose={() => {
+          resolve(false);
+          close();
+        }}
+        onExited={exit}
+      />
+    ));
+  });
+};
+```
+
+### 커스텀 콘텐츠
+
+`content` 속성을 사용해 다이얼로그에 커스텀 콘텐츠를 추가할 수 있어요.
+
+```jsx copy
+<AlertDialog
+  open={isOpen}
+  title="상세 정보"
+  content={
+    <View>
+      <Txt>커스텀 콘텐츠를 여기에 추가할 수 있어요</Txt>
+    </View>
+  }
+  onClose={() => setIsOpen(false)}
+/>
+```
+
+### 딤 클릭으로 닫기
+
+`closeOnDimmerClick` 속성을 사용해 딤 영역을 클릭했을 때 다이얼로그를 닫을 수 있어요.
+
+```jsx copy
+<AlertDialog
+  open={isOpen}
+  title="알림"
+  description="딤 영역을 클릭하면 닫혀요"
+  closeOnDimmerClick={true}
+  onClose={() => setIsOpen(false)}
+/>
+```
+
+## 인터페이스
+
+**Type: AlertDialogProps**
+
+```typescript
+export interface AlertDialogProps extends AccessibilityProps {
+  /**
+   * 다이얼로그가 보이는지 여부를 지정해요.
+   */
+  open: boolean;
+
+  /**
+   * 다이얼로그의 제목을 지정해요.
+   */
+  title: ReactNode;
+
+  /**
+   * 다이얼로그의 설명 텍스트를 지정해요.
+   */
+  description?: ReactNode;
+
+  /**
+   * 다이얼로그 본문에 표시될 커스텀 콘텐츠를 지정해요.
+   */
+  content?: ReactNode;
+
+  /**
+   * 다이얼로그 버튼의 텍스트를 지정해요.
+   *
+   * @default '확인'
+   */
+  buttonText?: string;
+
+  /**
+   * 다이얼로그 버튼을 클릭했을 때 호출되는 함수예요.
+   */
+  onButtonPress?: () => void;
+
+  /**
+   * 딤 영역을 클릭했을 때 다이얼로그를 닫을지 여부를 지정해요.
+   */
+  closeOnDimmerClick?: boolean;
+
+  /**
+   * 다이얼로그를 닫을 때 호출되는 함수예요.
+   */
+  onClose: () => void;
+
+  /**
+   * 다이얼로그가 완전히 사라진 후 호출되는 함수예요.
+   */
+  onExited?: () => void;
+
+  /**
+   * 다이얼로그가 완전히 나타난 후 호출되는 함수예요.
+   */
+  onEntered?: () => void;
+}
+```
+
+**Type: ConfirmDialogProps**
+
+```typescript
+export interface ConfirmDialogProps extends AccessibilityProps {
+  /**
+   * 다이얼로그가 보이는지 여부를 지정해요.
+   */
+  open: boolean;
+
+  /**
+   * 다이얼로그의 제목을 지정해요.
+   */
+  title: ReactNode;
+
+  /**
+   * 다이얼로그의 설명 텍스트를 지정해요.
+   */
+  description?: ReactNode;
+
+  /**
+   * 다이얼로그 본문에 표시될 커스텀 콘텐츠를 지정해요.
+   */
+  content?: ReactNode;
+
+  /**
+   * 다이얼로그 왼쪽에 표시될 버튼을 지정해요.
+   */
+  leftButton: ReactNode;
+
+  /**
+   * 다이얼로그 오른쪽에 표시될 버튼을 지정해요.
+   */
+  rightButton: ReactNode;
+
+  /**
+   * 딤 영역을 클릭했을 때 다이얼로그를 닫을지 여부를 지정해요.
+   */
+  closeOnDimmerClick?: boolean;
+
+  /**
+   * 다이얼로그를 닫을 때 호출되는 함수예요.
+   */
+  onClose: () => void;
+
+  /**
+   * 다이얼로그가 완전히 사라진 후 호출되는 함수예요.
+   */
+  onExited?: () => void;
+
+  /**
+   * 다이얼로그가 완전히 나타난 후 호출되는 함수예요.
+   */
+  onEntered?: () => void;
+}
+```
+
+---
+
+# Dropdown (/tds-react-native/components/dropdown/)
+
+# Dropdown
+
+`Dropdown` 컴포넌트는 여러 옵션 중 하나를 선택할 수 있는 드롭다운 메뉴를 제공해요. 버튼을 클릭하면 옵션 목록이 펼쳐져요.
+
+## 사용 예제
+
+### 기본 사용
+
+```jsx copy
+<Dropdown>
+  <Dropdown.Item onPress={() => console.log('옵션 1 선택')}>
+    옵션 1
+  </Dropdown.Item>
+  <Dropdown.Item onPress={() => console.log('옵션 2 선택')}>
+    옵션 2
+  </Dropdown.Item>
+  <Dropdown.Item onPress={() => console.log('옵션 3 선택')}>
+    옵션 3
+  </Dropdown.Item>
+</Dropdown>
+```
+
+### 비활성화된 아이템
+
+```jsx copy
+<Dropdown>
+  <Dropdown.Item onPress={() => {}}>활성화된 옵션</Dropdown.Item>
+  <Dropdown.Item disabled={true}>비활성화된 옵션</Dropdown.Item>
+  <Dropdown.Item onPress={() => {}}>활성화된 옵션</Dropdown.Item>
+</Dropdown>
+```
+
+### 메뉴 옵션
+
+```jsx copy
+const handleEdit = () => console.log('수정');
+const handleDelete = () => console.log('삭제');
+const handleShare = () => console.log('공유');
+
+<Dropdown>
+  <Dropdown.Item onPress={handleEdit}>수정하기</Dropdown.Item>
+  <Dropdown.Item onPress={handleShare}>공유하기</Dropdown.Item>
+  <Dropdown.Item onPress={handleDelete}>삭제하기</Dropdown.Item>
+</Dropdown>
+```
+
+## 인터페이스
+
+**Type: DropdownProps**
+
+```typescript
+export interface DropdownProps {
+  /**
+   * Dropdown의 아이템들을 지정해요. Dropdown.Item을 children으로 전달해요.
+   */
+  children: ReactNode;
+}
+```
+
+**Type: DropdownItemProps**
+
+```typescript
+export interface DropdownItemProps {
+  /**
+   * 아이템의 내용을 지정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * 아이템을 클릭했을 때 호출되는 함수예요.
+   */
+  onPress?: () => void;
+
+  /**
+   * 아이템의 비활성화 여부를 지정해요.
+   *
+   * @default false
+   */
+  disabled?: boolean;
+}
+```
+
+---
+
+# ErrorPage (/tds-react-native/components/error-page/)
+
+# ErrorPage
+
+`ErrorPage` 컴포넌트는 에러 상황을 사용자에게 친절하게 안내하는 페이지예요. HTTP 상태 코드에 따라 적절한 메시지와 이미지를 자동으로 표시해요.
+
+## 사용 예제
+
+### 기본 사용
+
+ErrorPage를 사용하려면 `statusCode`를 지정하세요. 상태 코드에 따라 적절한 메시지가 자동으로 표시돼요.
+
+```jsx copy
+<ErrorPage
+  statusCode={500}
+  onPressRightButton={() => {
+    // 닫기 동작
+  }}
+  onPressLeftButton={() => {
+    // 고객센터 문의 동작
+  }}
+/>
+```
+
+### 404 에러
+
+페이지나 정보를 찾을 수 없을 때 사용해요.
+
+```jsx copy
+<ErrorPage
+  statusCode={404}
+  onPressRightButton={() => navigation.goBack()}
+  onPressLeftButton={() => openCustomerCenter()}
+/>
+```
+
+### 400 에러
+
+입력한 정보가 올바르지 않을 때 사용해요.
+
+```jsx copy
+<ErrorPage
+  statusCode={400}
+  onPressRightButton={() => {
+    // 다시 입력하기
+    navigation.goBack();
+  }}
+  onPressLeftButton={() => openCustomerCenter()}
+/>
+```
+
+### 500 에러
+
+서버 에러나 일시적인 오류가 발생했을 때 사용해요.
+
+```jsx copy
+<ErrorPage
+  statusCode={500}
+  onPressRightButton={() => navigation.goBack()}
+  onPressLeftButton={() => openCustomerCenter()}
+/>
+```
+
+### 커스텀 메시지
+
+`title`과 `subtitle`을 지정해 기본 메시지를 변경할 수 있어요.
+
+```jsx copy
+<ErrorPage
+  statusCode={500}
+  title="서비스 점검 중이에요"
+  subtitle="더 나은 서비스를 위해 잠시 점검 중이에요. 곧 돌아올게요."
+  onPressRightButton={() => navigation.goBack()}
+/>
+```
+
+### 커스텀 콘텐츠
+
+children을 통해 추가 콘텐츠를 표시할 수 있어요.
+
+```jsx copy
+<ErrorPage statusCode={500}>
+  <View style={{ padding: 20 }}>
+    <Txt>추가 안내 사항을 여기에 표시할 수 있어요</Txt>
+  </View>
+</ErrorPage>
+```
+
+## 인터페이스
+
+**Type: ErrorPageProps**
+
+```typescript
+export interface ErrorPageProps extends PropsWithChildren {
+  /**
+   * HTTP 상태 코드를 지정해요. 상태 코드에 따라 기본 제목과 설명이 자동으로 설정돼요.
+   *
+   * @default 500
+   */
+  statusCode?: number;
+
+  /**
+   * 에러 페이지의 제목을 지정해요. 지정하지 않으면 statusCode에 따라 기본 제목이 표시돼요.
+   */
+  title?: string;
+
+  /**
+   * 에러 페이지의 부제목을 지정해요. 지정하지 않으면 statusCode에 따라 기본 부제목이 표시돼요.
+   */
+  subtitle?: string;
+
+  /**
+   * 오른쪽 버튼을 클릭했을 때 호출되는 함수예요.
+   */
+  onPressRightButton?: () => void;
+
+  /**
+   * 왼쪽 버튼(고객센터 문의)을 클릭했을 때 호출되는 함수예요.
+   */
+  onPressLeftButton?: () => void;
+}
+```
+
+---
+
+# Gradient (/tds-react-native/components/gradient/)
+
+# Gradient
+
+`Gradient` 컴포넌트는 선형 또는 방사형 그라데이션을 생성하는 데 사용해요. 배경이나 오버레이 효과를 만들 때 유용해요.
+
+## 사용 예제
+
+### LinearGradient
+
+선형 그라데이션을 생성해요.
+
+```jsx copy
+<View style={{ width: 300, height: 200 }}>
+  <LinearGradient
+    colors={['#FF6B6B', '#4ECDC4']}
+    degree="180deg"
+  />
+</View>
+```
+
+### 각도 조정
+
+```jsx copy
+// 수평 그라데이션
+<LinearGradient
+  colors={['#FF6B6B', '#4ECDC4']}
+  degree="90deg"
+/>
+
+// 수직 그라데이션
+<LinearGradient
+  colors={['#FF6B6B', '#4ECDC4']}
+  degree="180deg"
+/>
+
+// 대각선 그라데이션
+<LinearGradient
+  colors={['#FF6B6B', '#4ECDC4']}
+  degree="45deg"
+/>
+```
+
+### 여러 색상
+
+```jsx copy
+<LinearGradient
+  colors={['#FF6B6B', '#4ECDC4', '#45B7D1', '#96E6A1']}
+  degree="180deg"
+/>
+```
+
+### 색상 위치 지정
+
+```jsx copy
+<LinearGradient
+  colors={['#FF6B6B', '#4ECDC4']}
+  positions={[0.2, 0.8]}
+  degree="180deg"
+/>
+```
+
+### RadialGradient
+
+방사형 그라데이션을 생성해요.
+
+```jsx copy
+<View style={{ width: 300, height: 300 }}>
+  <RadialGradient
+    colors={['#FF6B6B', '#4ECDC4']}
+    cx={0.5}
+    cy={0.5}
+    r={0.5}
+  />
+</View>
+```
+
+### 중심점 조정
+
+```jsx copy
+// 왼쪽 상단이 중심
+<RadialGradient
+  colors={['#FF6B6B', '#4ECDC4']}
+  cx={0.2}
+  cy={0.2}
+  r={0.8}
+/>
+
+// 오른쪽 하단이 중심
+<RadialGradient
+  colors={['#FF6B6B', '#4ECDC4']}
+  cx={0.8}
+  cy={0.8}
+  r={0.8}
+/>
+```
+
+### 배경 오버레이
+
+```jsx copy
+<View style={{ flex: 1 }}>
+  <Image source={{ uri: imageUrl }} style={{ width: '100%', height: '100%' }} />
+  <View style={{ position: 'absolute', width: '100%', height: '100%' }}>
+    <LinearGradient
+      colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.7)']}
+      degree="180deg"
+    />
+  </View>
+  <View style={{ position: 'absolute', bottom: 20, left: 20 }}>
+    <Txt color="white" typography="h2">제목</Txt>
+  </View>
+</View>
+```
+
+## 인터페이스
+
+**Type: LinearGradientProps**
+
+```typescript
+export interface LinearGradientProps {
+  /**
+   * 그라데이션의 각도를 지정해요.
+   *
+   * @default '180deg'
+   */
+  degree?: string | number;
+
+  /**
+   * 그라데이션의 색상 배열을 지정해요.
+   */
+  colors: string[];
+
+  /**
+   * 각 색상의 위치를 0-1 사이의 값으로 지정해요.
+   */
+  positions?: number[];
+
+  /**
+   * 색상 전환의 이징 함수를 지정해요.
+   */
+  easing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+
+  /**
+   * 색상 정지점의 개수를 지정해요.
+   */
+  colorStopCount?: number;
+}
+```
+
+**Type: RadialGradientProps**
+
+```typescript
+export interface RadialGradientProps {
+  /**
+   * 그라데이션의 색상 배열을 지정해요.
+   */
+  colors: string[];
+
+  /**
+   * 각 색상의 위치를 0-1 사이의 값으로 지정해요.
+   */
+  positions?: number[];
+
+  /**
+   * 색상 전환의 이징 함수를 지정해요.
+   */
+  easing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+
+  /**
+   * 색상 정지점의 개수를 지정해요.
+   */
+  colorStopCount?: number;
+
+  /**
+   * 그라데이션의 중심 X 좌표를 0-1 사이의 값으로 지정해요.
+   */
+  cx?: number;
+
+  /**
+   * 그라데이션의 중심 Y 좌표를 0-1 사이의 값으로 지정해요.
+   */
+  cy?: number;
+
+  /**
+   * 그라데이션의 반경을 0-1 사이의 값으로 지정해요.
+   */
+  r?: number;
+}
+```
+
+---
+
+# GridList (/tds-react-native/components/grid-list/)
+
+# GridList
+
+`GridList` 컴포넌트는 아이템들을 그리드 형태로 배치하는 데 사용해요. 1열, 2열, 3열 레이아웃을 지원해요.
+
+## 사용 예제
+
+### 기본 사용
+
+```jsx copy
+<GridList column={3}>
+  <GridList.Item
+    image={<Icon name="icn-bank-toss" />}
+    title="토스뱅크"
+    onPress={() => handleBankSelect('toss')}
+  />
+  <GridList.Item
+    image={<Icon name="icn-bank-kb" />}
+    title="KB국민은행"
+    onPress={() => handleBankSelect('kb')}
+  />
+  <GridList.Item
+    image={<Icon name="icn-bank-shinhan" />}
+    title="신한은행"
+    onPress={() => handleBankSelect('shinhan')}
+  />
+</GridList>
+```
+
+### 열 개수 조정
+
+```jsx copy
+// 1열
+<GridList column={1}>
+  <GridList.Item image={<Icon name="icn-1" />} title="아이템 1" onPress={() => {}} />
+  <GridList.Item image={<Icon name="icn-2" />} title="아이템 2" onPress={() => {}} />
+</GridList>
+
+// 2열
+<GridList column={2}>
+  <GridList.Item image={<Icon name="icn-1" />} title="아이템 1" onPress={() => {}} />
+  <GridList.Item image={<Icon name="icn-2" />} title="아이템 2" onPress={() => {}} />
+  <GridList.Item image={<Icon name="icn-3" />} title="아이템 3" onPress={() => {}} />
+</GridList>
+
+// 3열
+<GridList column={3}>
+  <GridList.Item image={<Icon name="icn-1" />} title="아이템 1" onPress={() => {}} />
+  <GridList.Item image={<Icon name="icn-2" />} title="아이템 2" onPress={() => {}} />
+  <GridList.Item image={<Icon name="icn-3" />} title="아이템 3" onPress={() => {}} />
+</GridList>
+```
+
+### 은행 선택
+
+```jsx copy
+const banks = [
+  { id: 'toss', name: '토스뱅크', icon: 'icn-bank-toss' },
+  { id: 'kb', name: 'KB국민은행', icon: 'icn-bank-kb' },
+  { id: 'shinhan', name: '신한은행', icon: 'icn-bank-shinhan' },
+  { id: 'woori', name: '우리은행', icon: 'icn-bank-woori' },
+  { id: 'hana', name: '하나은행', icon: 'icn-bank-hana' },
+  { id: 'nh', name: 'NH농협은행', icon: 'icn-bank-nh' },
+];
+
+const [selectedBank, setSelectedBank] = useState(null);
+
+<GridList column={3}>
+  {banks.map(bank => (
+    <GridList.Item
+      key={bank.id}
+      image={<Icon name={bank.icon} />}
+      title={bank.name}
+      onPress={() => setSelectedBank(bank.id)}
+    />
+  ))}
+</GridList>
+```
+
+### 카테고리 선택
+
+```jsx copy
+const categories = [
+  { id: 'food', name: '식비', icon: 'icn-food' },
+  { id: 'transport', name: '교통', icon: 'icn-transport' },
+  { id: 'shopping', name: '쇼핑', icon: 'icn-shopping' },
+  { id: 'life', name: '생활', icon: 'icn-life' },
+];
+
+<GridList column={2}>
+  {categories.map(category => (
+    <GridList.Item
+      key={category.id}
+      image={<Icon name={category.icon} />}
+      title={category.name}
+      onPress={() => handleCategorySelect(category.id)}
+    />
+  ))}
+</GridList>
+```
+
+## 인터페이스
+
+**Type: GridListProps**
+
+```typescript
+export interface GridListProps {
+  /**
+   * GridList의 아이템들을 지정해요. GridList.Item을 children으로 전달해요.
+   */
+  children: ReactNode | ReactNode[];
+
+  /**
+   * GridList의 열 개수를 지정해요.
+   */
+  column: 1 | 2 | 3;
+
+  /**
+   * GridList의 스타일을 지정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+**Type: GridListItemProps**
+
+```typescript
+export interface GridListItemProps {
+  /**
+   * 아이템에 표시될 이미지를 지정해요. 최대 높이는 28px이에요.
+   */
+  image: ReactNode;
+
+  /**
+   * 아이템의 제목을 지정해요.
+   */
+  title: ReactNode;
+
+  /**
+   * 아이템의 스타일을 지정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+
+  /**
+   * 아이템을 클릭했을 때 호출되는 함수예요.
+   */
+  onPress?: () => void;
+}
+```
+
+---
+
+# Highlight (/tds-react-native/components/highlight/)
+
+# Highlight
+
+`Highlight` 컴포넌트는 특정 요소를 강조하고 설명을 표시하는 데 사용해요. 온보딩이나 튜토리얼에서 유용해요.
+
+## 사용 예제
+
+### 기본 사용
+
+```jsx copy
+const [showHighlight, setShowHighlight] = useState(false);
+const [targetRect, setTargetRect] = useState(null);
+
+const handleLayout = (event) => {
+  const { x, y, width, height } = event.nativeEvent.layout;
+  setTargetRect({ x, y, width, height });
+};
+
+<View>
+  <Button
+    onLayout={handleLayout}
+    onPress={() => {}}
+  >
+    시작하기
+  </Button>
+
+  {targetRect && (
+    <Highlight
+      open={showHighlight}
+      targetRect={targetRect}
+      message="이 버튼을 눌러 시작하세요"
+      onClose={() => setShowHighlight(false)}
+    />
+  )}
+</View>
+```
+
+### 온보딩 튜토리얼
+
+```jsx copy
+const [step, setStep] = useState(0);
+const [targetRects, setTargetRects] = useState({});
+
+const tutorialSteps = [
+  { target: 'sendButton', message: '여기를 눌러 송금을 시작하세요' },
+  { target: 'historyButton', message: '여기서 거래 내역을 확인할 수 있어요' },
+  { target: 'settingsButton', message: '설정에서 더 많은 기능을 사용할 수 있어요' },
+];
+
+const currentStep = tutorialSteps[step];
+
+<View>
+  <Button
+    onLayout={(e) => {
+      const rect = e.nativeEvent.layout;
+      setTargetRects(prev => ({ ...prev, sendButton: rect }));
+    }}
+  >
+    송금
+  </Button>
+
+  {currentStep && targetRects[currentStep.target] && (
+    <Highlight
+      open={true}
+      targetRect={targetRects[currentStep.target]}
+      message={currentStep.message}
+      onClose={() => {
+        if (step < tutorialSteps.length - 1) {
+          setStep(step + 1);
+        } else {
+          setStep(-1);
+        }
+      }}
+    />
+  )}
+</View>
+```
+
+## 인터페이스
+
+**Type: HighlightProps**
+
+```typescript
+export interface HighlightProps {
+  /**
+   * Highlight가 보이는지 여부를 지정해요.
+   */
+  open: boolean;
+
+  /**
+   * 하이라이트할 요소의 위치와 크기를 지정해요.
+   */
+  targetRect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+
+  /**
+   * 하이라이트 영역에 표시할 메시지를 지정해요.
+   */
+  message?: ReactNode;
+
+  /**
+   * Highlight를 닫을 때 호출되는 함수예요.
+   */
+  onClose: () => void;
+
+  /**
+   * Highlight가 완전히 사라진 후 호출되는 함수예요.
+   */
+  onExited?: () => void;
+}
+```
+
+---
+
+# Icon Button (/tds-react-native/components/icon-button/)
+
+# Icon Button
+
+`IconButton` 컴포넌트는 사용자가 특정 작업을 실행하거나 이벤트를 트리거할 때 사용해요. 아이콘으로 기능을 직관적으로 전달하면서, UI를 간결하게 유지할 수 있어요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 형태
+
+`IconButton`의 형태를 변경하려면 `variant` 속성을 사용하세요. 선택할 수 있는 값은 `'clear'`, `'fill'`, `'border'`가 있어요.
+
+#### clear
+
+배경 없이 아이콘만 보여주고 싶다면 `variant` 속성에 `'clear'`를 넣어주세요. 클릭한 상태에서는 배경 색이 보여요.
+
+[Preview: Codes]
+
+```jsx copy
+<IconButton name="icon-search-bold-mono" variant="clear" />
+<IconButton name="icon-line-three-mono" variant="clear" />
+<IconButton name="icon-alarm-mono" variant="clear" />
+<IconButton name="icon-setting-mono" variant="clear" />
+```
+
+#### fill
+
+아이콘 버튼에 배경색을 추가하려면 `variant`에 `'fill'`을 넣어주세요. 배경이 채워진 스타일로 아이콘이 강조돼요. 클릭한 상태에서는 배경 색이 사라져요.
+
+[Preview: Codes]
+
+```jsx copy
+<IconButton name="icon-search-bold-mono" variant="fill" />
+<IconButton name="icon-line-three-mono" variant="fill" />
+<IconButton name="icon-alarm-mono" variant="fill" />
+<IconButton name="icon-setting-mono" variant="fill" />
+```
+
+#### border
+
+테두리가 있는 스타일을 원한다면 `variant` 속성에 `'border'`를 넣어주세요. 버튼에 테두리가 생겨 아이콘이 구분되어 보여요. 클릭한 상태에서는 배경 색이 보여요.
+
+[Preview: Codes]
+
+```jsx copy
+<IconButton name="icon-search-bold-mono" variant="border" />
+<IconButton name="icon-line-three-mono" variant="border" />
+<IconButton name="icon-alarm-mono" variant="border" />
+<IconButton name="icon-setting-mono" variant="border" />
+```
+
+### 아이콘 색 변경하기
+
+아이콘 색을 변경하려면 `color` 속성을 사용하세요. 아이콘의 이름이 `-mono`로 끝나는 모노타입의 아이콘만 색을 변경할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<IconButton name="icon-search-bold-mono" color={adaptive.red500} />
+<IconButton name="icon-search-bold-mono" color={adaptive.blue500} />
+<IconButton name="icon-search-bold-mono" color={adaptive.yellow500} />
+<IconButton name="icon-search-bold-mono" color={adaptive.green500} />
+```
+
+### 배경 색 변경하기
+
+`IconButton` 컴포넌트의 배경 색을 변경하려면 `bgColor` 속성을 사용하세요. `variant` 속성의 값이 `'fill'`일 때는 지정한 색이 배경 색으로 적용되고, `'clear'`나 `'border'`일 때는 버튼을 눌렀을 때 배경 색으로 적용돼요.
+
+[Preview: Codes]
+
+```jsx copy
+<IconButton name="icon-search-bold-mono" variant="clear" bgColor={adaptive.greyOpacity100} />
+<IconButton name="icon-search-bold-mono" variant="fill" bgColor={adaptive.greyOpacity100} />
+<IconButton name="icon-search-bold-mono" variant="border" bgColor={adaptive.greyOpacity100} />
+```
+
+### 크기 조정하기
+
+아이콘의 크기를 변경하려면 `iconSize` 속성을 사용하세요.
+
+[Preview: Codes]
+
+```jsx copy
+<IconButton name="icon-search-bold-mono" iconSize={24} />
+<IconButton name="icon-search-bold-mono" iconSize={20} />
+<IconButton name="icon-search-bold-mono" iconSize={16} />
+```
+
+## 인터페이스
+
+**Type: IconButtonProps**
+
+```typescript
+export interface IconButtonProps extends PressableProps {
+  /**
+   * 사용할 아이콘의 경로를 지정해요. `source` 속성은 `name` 속성과 함께 사용할 수 없어요.
+   * `@react-native-bedrock/native`의 ImageProps['href'] 속성을 참고해 주세요.
+   */
+  source: "ImageProps['href']";
+
+  /**
+   * 사용할 아이콘의 이름을 지정해요. `name` 속성은 `source` 속성과 함께 사용할 수 없어요.
+   */
+  name: string;
+
+  /**
+   * `IconButton` 컴포넌트의 아이콘 색상을 설정해요. `-mono`로 끝나는 모노타입 아이콘을 사용할 때만 색상을 지정할 수 있어요.
+   */
+  color?: string;
+
+  /**
+   * `IconButton` 컴포넌트의 배경색을 설정해요.
+   *
+   * @default adaptive.greyOpacity100
+   */
+  bgColor?: string;
+
+  /**
+   * `IconButton` 컴포넌트의 형태를 설정해요.
+   *
+   * @default 'clear'
+   */
+  variant?: Variant;
+
+  /**
+   * `IconButton` 컴포넌트의 아이콘 크기를 설정해요.
+   *
+   * @default 24
+   */
+  iconSize?: number;
+
+  /**
+   * `IconButton` 컴포넌트의 `accessibilityLabel` 속성을 설정해요. 접근성 지원을 위해 의미 있는 라벨을 입력하세요.
+   */
+  label?: string;
+
+  /**
+   * `IconButton` 컴포넌트의 스타일을 설정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# NumberKeypad (/tds-react-native/components/keypad/)
+
+# NumberKeypad
+
+`NumberKeypad` 컴포넌트는 숫자를 입력할 수 있는 가상 키패드예요. 금액 입력, PIN 번호 입력 등에 사용해요.
+
+## 사용 예제
+
+### 기본 사용
+
+NumberKeypad를 사용하려면 `onKeyPress`와 `onBackspacePress` 함수를 지정하세요.
+
+```jsx copy
+const [value, setValue] = useState('');
+
+const handleKeyPress = (key: number) => {
+  setValue(prev => prev + key);
+};
+
+const handleBackspace = () => {
+  setValue(prev => prev.slice(0, -1));
+};
+
+<NumberKeypad
+  onKeyPress={handleKeyPress}
+  onBackspacePress={handleBackspace}
+/>
+```
+
+### 금액 입력
+
+NumberKeypad를 사용해 금액 입력 화면을 만들 수 있어요.
+
+```jsx copy
+const [amount, setAmount] = useState('');
+
+const handleKeyPress = (key: number) => {
+  setAmount(prev => {
+    const newValue = prev + key;
+    // 최대 금액 제한
+    if (Number(newValue) > 1000000) return prev;
+    return newValue;
+  });
+};
+
+const handleBackspace = () => {
+  setAmount(prev => prev.slice(0, -1));
+};
+
+const formattedAmount = amount ? `${Number(amount).toLocaleString()}원` : '0원';
+
+<View>
+  <Txt typography="h1" textAlign="center" style={{ marginBottom: 20 }}>
+    {formattedAmount}
+  </Txt>
+  <NumberKeypad
+    onKeyPress={handleKeyPress}
+    onBackspacePress={handleBackspace}
+  />
+</View>
+```
+
+### PIN 번호 입력
+
+PIN 번호나 비밀번호를 입력받을 수 있어요.
+
+```jsx copy
+const [pin, setPin] = useState('');
+const PIN_LENGTH = 6;
+
+const handleKeyPress = (key: number) => {
+  if (pin.length < PIN_LENGTH) {
+    setPin(prev => prev + key);
+  }
+};
+
+const handleBackspace = () => {
+  setPin(prev => prev.slice(0, -1));
+};
+
+<View>
+  <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+    {Array.from({ length: PIN_LENGTH }).map((_, index) => (
+      <View
+        key={index}
+        style={{
+          width: 12,
+          height: 12,
+          borderRadius: 6,
+          backgroundColor: index < pin.length ? colors.blue500 : colors.grey200,
+        }}
+      />
+    ))}
+  </View>
+  <NumberKeypad
+    onKeyPress={handleKeyPress}
+    onBackspacePress={handleBackspace}
+  />
+</View>
+```
+
+### 커스텀 숫자 배열
+
+`numbers` 속성을 사용해 키패드의 숫자 배열을 커스터마이징할 수 있어요.
+
+```jsx copy
+<NumberKeypad
+  numbers={[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]}
+  onKeyPress={handleKeyPress}
+  onBackspacePress={handleBackspace}
+/>
+```
+
+### 전화번호 입력
+
+전화번호 입력 화면을 만들 수 있어요.
+
+```jsx copy
+const [phone, setPhone] = useState('');
+
+const handleKeyPress = (key: number) => {
+  if (phone.length < 11) {
+    setPhone(prev => prev + key);
+  }
+};
+
+const handleBackspace = () => {
+  setPhone(prev => prev.slice(0, -1));
+};
+
+const formatPhoneNumber = (value: string) => {
+  if (value.length <= 3) return value;
+  if (value.length <= 7) return `${value.slice(0, 3)}-${value.slice(3)}`;
+  return `${value.slice(0, 3)}-${value.slice(3, 7)}-${value.slice(7)}`;
+};
+
+<View>
+  <Txt typography="h2" textAlign="center" style={{ marginBottom: 20 }}>
+    {formatPhoneNumber(phone) || '전화번호를 입력하세요'}
+  </Txt>
+  <NumberKeypad
+    onKeyPress={handleKeyPress}
+    onBackspacePress={handleBackspace}
+  />
+</View>
+```
+
+## 인터페이스
+
+**Type: NumberKeypadProps**
+
+```typescript
+export interface NumberKeypadProps {
+  /**
+   * 숫자 키패드의 숫자 배열을 지정해요.
+   * 기본값은 [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]이에요.
+   */
+  numbers?: NumberKey[];
+
+  /**
+   * 숫자 키를 클릭했을 때 호출되는 함수예요.
+   */
+  onKeyPress: (value: number) => void;
+
+  /**
+   * Backspace 키를 클릭했을 때 호출되는 함수예요.
+   */
+  onBackspacePress: () => void;
+
+  /**
+   * 키패드의 스타일을 지정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# ListFooter (/tds-react-native/components/list-footer/)
+
+# ListFooter
+
+`ListFooter` 컴포넌트는 리스트 항목의 마지막 부분에 위치해, 사용자에게 더 많은 항목을 불러오거나 목록을 확장하는 기능을 제공해요.
+기본적으로 "더 보기"와 같은 텍스트를 표시해 리스트가 이어질 수 있다는 암시를 주고, 다양한 옵션으로 시각적 요소를 맞춤 설정할 수 있어요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 텍스트 사용하기
+
+리스트의 마지막에 "더 보기" 같은 텍스트를 표시하고 싶다면 `text` 속성에 `ListFooter.Text` 컴포넌트를 전달하세요.
+
+[Preview: Codes]
+
+```jsx copy
+<ListFooter title={<ListFooter.Title>더 보기</ListFooter.Title>} />
+<ListFooter title={<ListFooter.Title color={adaptive.grey600}>더 보기</ListFooter.Title>} />
+<ListFooter
+  title={
+    <ListFooter.Title color={adaptive.blue400} fontWeight="bold">
+      더 보기
+    </ListFooter.Title>
+  }
+/>
+```
+
+### 아이콘과 함께 사용하기
+
+"더 보기" 기능을 아이콘으로 표시하고 싶다면 `right` 속성에 `ListFooter.Right` 컴포넌트와 `Icon` 컴포넌트로 조합된 요소를 전달하세요.
+
+[Preview: Codes]
+
+```jsx copy
+<ListFooter
+  title={<ListFooter.Title>더 보기</ListFooter.Title>}
+  right={
+    <ListFooter.Right>
+      <Icon name="icon-plus-small-mono" size={16} color={adaptive.blue500} />
+    </ListFooter.Right>
+  }
+/>
+<ListFooter
+  title={<ListFooter.Title color={adaptive.grey600}>더 보기</ListFooter.Title>}
+  right={
+    <ListFooter.Right>
+      <Icon name="icon-arrow-down-mono" color={adaptive.grey600} />
+    </ListFooter.Right>
+  }
+/>
+<ListFooter
+  title={<ListFooter.Title color={adaptive.grey600}>더 보기</ListFooter.Title>}
+  right={
+    <ListFooter.Right>
+      <Icon name="icon-arrow-up-mono" color={adaptive.grey600} />
+    </ListFooter.Right>
+  }
+/>
+```
+
+### 상단 구분선 조정하기
+
+`border` 속성을 사용해 `ListFooter`의 상단 구분선 스타일을 조정할 수 있어요.
+
+- `full`: 리스트의 시작에 가느다란 구분선을 전체 너비로 표시해요. 기본값으로 설정된 옵션이며, `ListFooter`의 경계를 분명히 하고 싶을 때 적합해요.
+- `none`: 구분선을 표시하지 않아요. 구분이 필요없거나 리스트가 하나로 이어진 느낌을 줄 때 사용해요.
+
+[Preview: Codes]
+
+```jsx copy
+<ListFooter borderType="full" title={<ListFooter.Title>더 보기</ListFooter.Title>} />
+<ListFooter borderType="none" title={<ListFooter.Title>더 보기</ListFooter.Title>} />
+```
+
+## 인터페이스
+
+**Type: ListFooterProps**
+
+```typescript
+export interface ListFooterProps {
+  /**
+   * `ListFooter` 컴포넌트의 제목을 설정해요.
+   * 주로 `ListFooter.Title` 컴포넌트를 사용해요.
+   */
+  title: ReactNode;
+
+  /**
+   * `ListFooter` 컴포넌트의 오른쪽 영역에 표시할 요소를 설정해요.
+   * 주로 `ListFooter.Right` 컴포넌트를 사용해요.
+   */
+  right?: ReactNode;
+
+  /**
+   * `ListFooter` 컴포넌트의 하단 구분선 스타일을 설정해요.
+   * - `full`: 전체 너비로 표시해요.
+   * - `none`: 구분선을 표시하지 않아요.
+   *
+   * @default 'full'
+   */
+  borderType?: 'full' | 'none';
+
+  /**
+   * `ListFooter` 컴포넌트를 눌렀을 때 실행되는 함수예요.
+   */
+  onPress?: TouchableHighlightProps['onPress'];
+}
+```
+
+**Type: ListFooterTitleProps**
+
+```typescript
+export interface ListFooterTitleProps extends TxtProps {
+  /**
+   * `ListFooter.Title` 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: string;
+  /**
+   * `ListFooter.Title` 컴포넌트의 텍스트 스타일을 설정해요.
+   * @default 't5'
+   */
+  typography?: Typography;
+  /**
+   * `ListFooter.Title` 컴포넌트의 텍스트 색상을 지정해요
+   * @default colors.blue500
+   */
+  color?: string;
+  /**
+   * `ListFooter.Title` 컴포넌트의 텍스트 굵기를 설정해요.
+   * @default 'medium'
+   */
+  fontWeight?: FontWeight;
+}
+```
+
+**Type: ListFooterRightProps**
+
+```typescript
+export interface ListFooterRightProps {
+  /**
+   * `ListFooter.Right` 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: ReactNode;
+  /**
+   * `ListFooter.Right` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# ListHeader (/tds-react-native/components/list-header/)
+
+# ListHeader
+
+[Image: ListHeader thumbnail - list-header/Thumbnail-ListHeader.png]
+
+`ListHeader` 컴포넌트는 사용자가 특정 동작을 실행하거나 추가 정보로 안내될 수 있는 헤더 UI 요소예요. 페이지나 섹션의 상단에 배치되어 사용자에게 제목, 설명, 그리고 상호작용 가능한 요소를 제공할 수 있어요. 주로 제목, 오른쪽의 부가 콘텐츠, 보조 설명을 포함해요.
+
+[Preview: Codes]
+
+## 사용 예제
+
+### 위치
+
+`ListHeader` 컴포넌트의 보조 설명은 `title` 속성을 기준으로 위 또는 아래에 배치될 수 있어요.
+`upper` 속성에 넣으면 상단에, `lower` 속성에 넣으면 하단에 배치돼요.
+주로 `ListHeader.DescriptionParagraph` 컴포넌트가 사용돼요.
+
+[Preview: Codes]
+
+```jsx copy
+<ListHeader
+  upper={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+  title={
+    <ListHeader.TitleParagraph typography="t5" fontWeight="bold">
+      타이틀 내용
+    </ListHeader.TitleParagraph>
+  }
+  right={
+    <ListHeader.RightText typography="t7">
+      악세사리
+    </ListHeader.RightText>
+  }
+/>
+
+<ListHeader
+  title={
+    <ListHeader.TitleParagraph typography="t5" fontWeight="bold">
+      타이틀 내용
+    </ListHeader.TitleParagraph>
+  }
+  right={
+    <ListHeader.RightText typography="t7">
+      악세사리
+    </ListHeader.RightText>
+  }
+  lower={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+/>
+```
+
+### 제목
+
+`ListHeader`에서 제목을 사용하는 방법으로 `ListHeader.TitleParagraph`,
+`ListHeader.TitleTextButton`, 그리고 `ListHeader.TitleSelector` 세 가지 방법을 제공하고 있어요.
+
+#### 제목으로 텍스트(문단) 사용하기
+
+`ListHeader` 컴포넌트에서 제목을 텍스트(문단)로 설정할 때,
+`title` 속성에 `ListHeader.TitleParagraph`을 사용해요.
+`ListHeader.TitleParagraph`은 `typography`와 `fontWeight`를 지정해 스타일을 변경할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<ListHeader
+  upper={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+  title={
+    <ListHeader.TitleParagraph typography="t5" fontWeight="bold">
+      타이틀 내용
+    </ListHeader.TitleParagraph>
+  }
+  right={<ListHeader.RightText typography="t7">악세사리</ListHeader.RightText>}
+/>
+```
+
+#### 제목으로 텍스트 버튼 사용하기
+
+`ListHeader` 컴포넌트에서 제목을 클릭할 수 있는 텍스트 버튼으로 설정할 때,
+`title` 속성에 `ListHeader.TitleTextButton`을 사용해요.
+`ListHeader.TitleTextButton`은 `typography`와 `fontWeight`를 지정해 스타일을 변경할 수 있어요.
+
+형태는 `variant` 속성으로 `TextButton` 컴포넌트의 타입으로 정의된 `clear`, `arrow`, `underline` 세 가지를 제공해요.
+
+[Preview: Codes]
+
+```jsx copy
+<ListHeader
+  upper={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+  title={
+    <ListHeader.TitleTextButton typography="t4" color={adaptive.grey600} fontWeight="bold" variant="clear">
+      타이틀 내용
+    </ListHeader.TitleTextButton>
+  }
+  right={
+    <ListHeader.RightText typography="t6">
+      악세사리
+    </ListHeader.RightText>
+  }
+/>
+<ListHeader
+  upper={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+  title={
+    <ListHeader.TitleTextButton typography="t4" color={adaptive.grey600} fontWeight="bold" variant="arrow">
+      타이틀 내용
+    </ListHeader.TitleTextButton>
+  }
+  right={
+    <ListHeader.RightText typography="t6">
+      악세사리
+    </ListHeader.RightText>
+  }
+/>
+<ListHeader
+  upper={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+  title={
+    <ListHeader.TitleTextButton typography="t4" color={adaptive.grey600} fontWeight="bold" variant="underline">
+      타이틀 내용
+    </ListHeader.TitleTextButton>
+  }
+  right={
+    <ListHeader.RightText typography="t6">
+      악세사리
+    </ListHeader.RightText>
+  }
+/>
+```
+
+#### 제목으로 셀렉터 사용하기
+
+제목에 선택 가능한 드롭다운 스타일의 셀렉터를 사용하고 싶을 때, `title` 속성에
+`ListHeader.TitleSelector`를 사용해요. `ListHeader.TitleSelector`은
+`typography`를 지정해 스타일을 변경할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<ListHeader
+  upper={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+  title={
+    <ListHeader.TitleSelector typography="t4" fontWeight="bold">
+      타이틀 내용
+    </ListHeader.TitleSelector>
+  }
+  right={<ListHeader.RightText typography="t6">악세사리</ListHeader.RightText>}
+/>
+```
+
+### 화살표
+
+오른쪽에 화살표 아이콘과 텍스트를 배치하려면 `ListHeader.RightArrow`를 사용해요.
+`ListHeader.RightArrow`는 클릭 가능한 요소로 사용할 수 있고,
+`onClick`을 추가해 클릭 시 발생하는 동작을 정의할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<ListHeader
+  upper={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+  title={
+    <ListHeader.TitleParagraph typography="t7" fontWeight="bold">
+      타이틀 내용
+    </ListHeader.TitleParagraph>
+  }
+  right={<ListHeader.RightArrow typography="t6">악세사리</ListHeader.RightArrow>}
+/>
+
+<ListHeader
+  title={
+    <ListHeader.TitleParagraph typography="t7" fontWeight="bold">
+      타이틀 내용
+    </ListHeader.TitleParagraph>
+  }
+  right={<ListHeader.RightArrow typography="t6">악세사리</ListHeader.RightArrow>}
+  lower={<ListHeader.DescriptionParagraph>보조설명 내용</ListHeader.DescriptionParagraph>}
+/>
+```
+
+## 인터페이스
+
+**Type: ListHeaderProps**
+
+```typescript
+export interface ListHeaderProps {
+  /**
+   * `ListHeader`의 상단에 표시될 보조 설명 영역이에요.
+   * `ListHeader.Description` 컴포넌트를 사용해서 보조 설명을 추가할 수 있어요.
+   *
+   * @example
+   * ```tsx
+   * <ListHeader.Description>보조 설명</ListHeader.Description>
+   * ```
+   */
+  upper?: ReactNode;
+
+  /**
+   * `ListHeader`의 제목을 설정해요.
+   * 제목 영역에는 주로 `ListHeader.TitleParagraph`, `ListHeader.TitleSelector`, `ListHeader.TitleTextButton` 컴포넌트가 사용돼요.
+   *
+   * @example
+   * ```tsx
+   * <ListHeader.TitleParagraph typography="t4">
+   *   타이틀
+   * </ListHeader.TitleParagraph>
+   * ```
+   */
+  title: ReactNode;
+
+  /**
+   * 제목 영역의 스타일을 설정해요.
+   */
+  titleViewStyle?: StyleProp<ViewStyle>;
+
+  /**
+   * `ListHeader`의 오른쪽에 표시될 요소를 설정해요.
+   * 오른쪽 영역에는 주로 `ListHeader.RightArrow` 또는 `ListHeader.RightText` 컴포넌트가 사용돼요.
+   *
+   * @example
+   * ```tsx
+   * <ListHeader.RightArrow typography="t6" color={adaptive.grey600}>
+   *   오른쪽
+   * </ListHeader.RightArrow>
+   * ```
+   */
+  right?: ReactNode;
+
+  /**
+   * 오른쪽 영역의 스타일을 설정해요.
+   */
+  rightViewStyle?: StyleProp<ViewStyle>;
+
+  /**
+   * `ListHeader`의 하단에 표시될 보조 설명 영역이에요.
+   * `ListHeader.Description` 컴포넌트를 사용해서 보조 설명을 추가할 수 있어요.
+   *
+   * @example
+   * ```tsx
+   * <ListHeader.Description>보조 설명</ListHeader.Description>
+   * ```
+   */
+  lower?: ReactNode;
+  /**
+   * `ListHeader` 컴포넌트를 눌렀을 때 실행되는 함수예요.
+   */
+  onPress?: PressableProps['onPress'];
+}
+```
+
+**Type: ListHeaderDescriptionParagraphProps**
+
+```typescript
+export interface ListHeaderDescriptionParagraphProps {
+  /**
+   * `ListHeader.Description` 컴포넌트 내부에 표시될 내용을 설정해요.
+   */
+  children: ReactNode;
+}
+```
+
+**Type: ListHeaderRightArrowProps**
+
+```typescript
+export interface ListHeaderRightArrowProps {
+  /**
+   * `ListHeader.RightArrow` 컴포넌트의 텍스트 스타일을 설정해요.
+   */
+  typography: 't6' | 't7';
+
+  /**
+   * `ListHeader.RightArrow` 컴포넌트 내부에 표시될 내용을 설정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * `ListHeader.RightArrow` 컴포넌트의 텍스트 색상을 설정해요.
+   *
+   * @default adaptive.grey700
+   */
+  color?: string;
+
+  /**
+   * `ListHeader.RightArrow` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<ViewStyle>;
+
+  /**
+   * `ListHeader.RightArrow` 컴포넌트를 눌렀을 때 실행되는 함수예요.
+   */
+  onPress?: PressableProps['onPress'];
+}
+```
+
+**Type: ListHeaderRightTextProps**
+
+```typescript
+export interface ListHeaderRightTextProps {
+  /**
+   * `ListHeader.RightText` 컴포넌트의 텍스트 스타일을 설정해요.
+   */
+  typography: 't6' | 't7';
+
+  /**
+   * `ListHeader.RightText` 컴포넌트 내부에 표시될 내용을 설정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * `ListHeader.RightText` 컴포넌트의 텍스트 색상을 설정해요.
+   *
+   * @default adaptive.grey700
+   */
+  color?: string;
+
+  /**
+   * `ListHeader.RightText` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<TextStyle>;
+}
+```
+
+**Type: ListHeaderTitleParagraphProps**
+
+```typescript
+export interface ListHeaderTitleParagraphProps {
+  /**
+   * `ListHeader.TitleParagraph` 컴포넌트의 텍스트 크기를 설정해요.
+   */
+  size?: 20 | 17 | 13;
+
+  /**
+   * `ListHeader.TitleParagraph` 컴포넌트의 텍스트 스타일을 설정해요.
+   *
+   * @default 't5'
+   */
+  typography?: 't4' | 't5' | 't7';
+
+  /**
+   * `ListHeader.TitleParagraph` 컴포넌트의 텍스트 굵기를 설정해요.
+   *
+   * @default 'regular'
+   */
+  fontWeight?: FontWeight;
+
+  /**
+   * `ListHeader.TitleParagraph` 컴포넌트의 텍스트 라인 수를 제한할 때 사용해요.
+   */
+  numberOfLines?: number;
+
+  /**
+   * `ListHeader.TitleParagraph` 컴포넌트의 텍스트 색상을 설정해요.
+   *
+   * @default adaptive.grey800
+   */
+  color?: string;
+
+  /**
+   * `ListHeader.TitleParagraph` 컴포넌트 내부에 표시될 내용을 설정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * `ListHeader.TitleParagraph` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<TextStyle>;
+}
+```
+
+**Type: ListHeaderTitleSelectorProps**
+
+```typescript
+export interface ListHeaderTitleSelectorProps {
+  /**
+   * `ListHeader.TitleSelector` 컴포넌트의 텍스트 스타일을 설정해요.
+   */
+  typography: 't4' | 't5' | 't7';
+
+  /**
+   * `ListHeader.TitleSelector` 컴포넌트의 텍스트 굵기를 설정해요.
+   *
+   * @default 'regular'
+   */
+  fontWeight: FontWeight;
+
+  /**
+   * `ListHeader.TitleSelector` 컴포넌트의 텍스트 라인 수를 제한할 때 사용해요.
+   */
+  numberOfLines?: number;
+
+  /**
+   * `ListHeader.TitleSelector` 컴포넌트가 눌렸을 때 실행되는 함수예요.
+   */
+  onPress?: PressableProps['onPress'];
+
+  /**
+   * `ListHeader.TitleSelector` 컴포넌트의 텍스트 색상을 설정해요.
+   *
+   * @default adaptive.grey900
+   */
+  color?: string;
+
+  /**
+   * `ListHeader.TitleSelector` 컴포넌트 내부에 표시될 내용을 설정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * `ListHeader.TitleSelector` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<TextStyle>;
+}
+```
+
+**Type: ListHeaderTitleTextButtonProps**
+
+```typescript
+export interface ListHeaderTitleTextButtonProps extends TextButtonProps {
+  /**
+   * `ListHeader.TitleTextButton` 컴포넌트의 텍스트 스타일을 설정해요.
+   */
+  typography: 't4' | 't5' | 't7';
+}
+```
+
+---
+
+# ListRow (/tds-react-native/components/list-row/)
+
+# ListRow
+
+[Image: ListRow thumbnail - list-row/Thumbnail-ListRow.png]
+
+`ListRow` 컴포넌트는 리스트의 각 행을 나타내는 컴포넌트예요. 왼쪽, 중앙, 오른쪽 영역으로 구성되어 있으며, 다양한 레이아웃과 스타일을 지원해요.
+
+## 사용 예제
+
+### 기본 사용
+
+ListRow를 사용하려면 `contents`를 지정하세요.
+
+```jsx copy
+<ListRow contents={<ListRow.Texts texts={[{ text: '메뉴 아이템' }]} />} onPress={() => console.log('클릭')} />
+```
+
+### 화살표 추가
+
+`withArrow` 속성을 사용하면 오른쪽에 화살표가 표시돼요.
+
+```jsx copy
+<ListRow
+  contents={<ListRow.Texts texts={[{ text: '설정' }]} />}
+  withArrow
+  onPress={() => navigation.navigate('Settings')}
+/>
+```
+
+### 아이콘과 함께 사용
+
+`left` 속성을 사용해 왼쪽에 아이콘을 추가할 수 있어요.
+
+```jsx copy
+<ListRow
+  left={<ListRow.Icon name="icon-notification" />}
+  contents={<ListRow.Texts texts={[{ text: '알림' }]} />}
+  withArrow
+  onPress={() => {}}
+/>
+```
+
+### 이미지와 함께 사용
+
+```jsx copy
+<ListRow
+  left={<ListRow.Image source={{ uri: 'https://example.com/image.jpg' }} />}
+  contents={
+    <ListRow.Texts texts={[{ text: '김토스' }, { text: '토스뱅크', typography: 't7', color: colors.grey600 }]} />
+  }
+  onPress={() => {}}
+/>
+```
+
+### 오른쪽 콘텐츠
+
+`right` 속성을 사용해 오른쪽에 추가 콘텐츠를 표시할 수 있어요.
+
+```jsx copy
+<ListRow
+  contents={<ListRow.Texts texts={[{ text: '푸시 알림' }]} />}
+  right={<Switch value={true} onValueChange={() => {}} />}
+/>
+
+<ListRow
+  contents={<ListRow.Texts texts={[{ text: '잔액' }]} />}
+  right={
+    <ListRow.RightTexts
+      texts={[{ text: '1,000,000원', fontWeight: 'semiBold' }]}
+    />
+  }
+/>
+```
+
+### 여러 줄 텍스트
+
+```jsx copy
+<ListRow
+  contents={
+    <ListRow.Texts
+      texts={[
+        { text: '계좌이체' },
+        { text: '토스뱅크 · 1234-5678-9012', typography: 't7', color: colors.grey600 },
+        { text: '김토스', typography: 't7', color: colors.grey600 },
+      ]}
+    />
+  }
+  right={
+    <ListRow.RightTexts
+      texts={[
+        { text: '-50,000원', fontWeight: 'semiBold' },
+        { text: '12.31 14:30', typography: 't7', color: colors.grey600 },
+      ]}
+    />
+  }
+/>
+```
+
+### 패딩 조정
+
+```jsx copy
+// 작은 패딩
+<ListRow
+  verticalPadding="small"
+  contents={<ListRow.Texts texts={[{ text: '작은 패딩' }]} />}
+/>
+
+// 큰 패딩
+<ListRow
+  verticalPadding="large"
+  contents={<ListRow.Texts texts={[{ text: '큰 패딩' }]} />}
+/>
+
+// 좌우 패딩 제거
+<ListRow
+  horizontalPadding={0}
+  contents={<ListRow.Texts texts={[{ text: '패딩 없음' }]} />}
+/>
+```
+
+### 정렬
+
+```jsx copy
+// 왼쪽 콘텐츠를 상단에 정렬
+<ListRow
+  left={<ListRow.Icon name="icon-info" />}
+  leftAlignment="top"
+  contents={
+    <ListRow.Texts
+      texts={[
+        { text: '제목' },
+        { text: '긴 설명 텍스트가 여러 줄로 표시될 수 있어요' },
+      ]}
+    />
+  }
+/>
+
+// 오른쪽 콘텐츠를 상단에 정렬
+<ListRow
+  contents={<ListRow.Texts texts={[{ text: '긴 텍스트' }]} />}
+  right={<Txt>오른쪽</Txt>}
+  rightAlignment="top"
+/>
+```
+
+### 비활성화
+
+```jsx copy
+<ListRow
+  contents={<ListRow.Texts texts={[{ text: '비활성화된 아이템' }]} />}
+  disabled={true}
+/>
+
+<ListRow
+  contents={<ListRow.Texts texts={[{ text: '비활성화 타입 2' }]} />}
+  disabled={true}
+  disabledStyle="type2"
+/>
+```
+
+### 애니메이션 효과
+
+ref를 사용해 깜빡임이나 빛나는 효과를 실행할 수 있어요.
+
+```jsx copy
+const listRowRef = useRef < ListRowRef > null;
+
+const handleBlink = () => {
+  listRowRef.current?.blink(1.5);
+};
+
+const handleShine = () => {
+  listRowRef.current?.shine(2);
+};
+
+<ListRow ref={listRowRef} contents={<ListRow.Texts texts={[{ text: '애니메이션 효과' }]} />} onPress={handleBlink} />;
+```
+
+## 인터페이스
+
+**Type: ListRowRef**
+
+```typescript
+export interface ListRowRef {
+  /**
+   * 깜빡임 효과를 실행해요.
+   */
+  blink: (duration?: number) => void;
+
+  /**
+   * 빛나는 효과를 실행해요.
+   */
+  shine: (playCount?: number) => void;
+}
+```
+
+**Type: ListRowProps**
+
+```typescript
+export interface ListRowProps {
+  /**
+   * 왼쪽에 표시될 내용을 지정해요.
+   */
+  left?: ReactNode;
+
+  /**
+   * 중앙에 표시될 메인 콘텐츠를 지정해요.
+   */
+  contents?: ReactNode;
+
+  /**
+   * 오른쪽에 표시될 내용을 지정해요.
+   */
+  right?: ReactNode;
+
+  /**
+   * 오른쪽 화살표를 표시할지 여부를 지정해요.
+   *
+   * @default false
+   */
+  withArrow?: boolean;
+
+  /**
+   * 왼쪽 영역의 수직 정렬을 지정해요.
+   *
+   * @default 'center'
+   */
+  leftAlignment?: 'top' | 'center';
+
+  /**
+   * 오른쪽 영역의 수직 정렬을 지정해요.
+   *
+   * @default 'center'
+   */
+  rightAlignment?: 'top' | 'center';
+
+  /**
+   * 좌우 패딩을 제거하고 싶은 경우 0을 지정해요.
+   */
+  horizontalPadding?: 0;
+
+  /**
+   * 상하 패딩을 지정해요.
+   *
+   * @default 24
+   */
+  verticalPadding?: 'extraSmall' | 8 | 'small' | 16 | 'medium' | 24 | 'large' | 32;
+
+  /**
+   * 컨테이너의 스타일을 지정해요.
+   */
+  containerStyle?: StyleProp<ViewStyle>;
+
+  /**
+   * ListRow의 스타일을 지정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+
+  /**
+   * ListRow를 클릭했을 때 호출되는 함수예요.
+   */
+  onPress?: () => void;
+
+  /**
+   * 모션 감소 모드를 사용할지 여부를 지정해요.
+   *
+   * @default false
+   */
+  preferReducedMotion?: boolean;
+
+  /**
+   * 비활성화 스타일 타입을 지정해요.
+   *
+   * @default 'type1'
+   */
+  disabledStyle?: 'type1' | 'type2';
+
+  /**
+   * ListRow의 비활성화 여부를 지정해요.
+   *
+   * @default false
+   */
+  disabled?: boolean;
+
+  /**
+   * 접근성 상태를 지정해요.
+   */
+  accessibilityState?: AccessibilityState;
+}
+```
+
+---
+
+# List (/tds-react-native/components/list/)
+
+# List
+
+`List` 컴포넌트는 여러 아이템을 세로로 나열할 때 사용해요. 아이템 사이에 구분선을 자동으로 추가할 수 있어요.
+
+## 사용 예제
+
+### 기본 사용
+
+List를 사용하려면 children으로 아이템들을 전달하세요.
+
+```jsx copy
+<List>
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 1' }]} />} />
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 2' }]} />} />
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 3' }]} />} />
+</List>
+```
+
+### 구분선 타입
+
+`rowSeparator` 속성을 사용해 아이템 사이의 구분선 스타일을 변경할 수 있어요.
+
+```jsx copy
+// 왼쪽 여백이 있는 구분선 (기본값)
+<List rowSeparator="indented">
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 1' }]} />} />
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 2' }]} />} />
+</List>
+
+// 전체 너비 구분선
+<List rowSeparator="full">
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 1' }]} />} />
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 2' }]} />} />
+</List>
+
+// 구분선 없음
+<List rowSeparator="none">
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 1' }]} />} />
+  <ListRow contents={<ListRow.Texts texts={[{ text: '아이템 2' }]} />} />
+</List>
+```
+
+### 설정 목록
+
+설정 화면에서 자주 사용하는 패턴이에요.
+
+```jsx copy
+<List>
+  <ListRow
+    contents={<ListRow.Texts texts={[{ text: '알림 설정' }]} />}
+    withArrow
+    onPress={() => navigation.navigate('Notification')}
+  />
+  <ListRow
+    contents={<ListRow.Texts texts={[{ text: '계정 설정' }]} />}
+    withArrow
+    onPress={() => navigation.navigate('Account')}
+  />
+  <ListRow
+    contents={<ListRow.Texts texts={[{ text: '개인정보 처리방침' }]} />}
+    withArrow
+    onPress={() => navigation.navigate('Privacy')}
+  />
+</List>
+```
+
+### 아이콘과 함께 사용
+
+```jsx copy
+<List>
+  <ListRow
+    left={<ListRow.Icon name="icon-notification" />}
+    contents={<ListRow.Texts texts={[{ text: '알림' }]} />}
+    right={<Switch value={true} />}
+  />
+  <ListRow
+    left={<ListRow.Icon name="icon-lock" />}
+    contents={<ListRow.Texts texts={[{ text: '보안' }]} />}
+    withArrow
+    onPress={() => {}}
+  />
+</List>
+```
+
+### 정보 목록
+
+```jsx copy
+<List rowSeparator="indented">
+  <ListRow
+    contents={
+      <ListRow.Texts
+        texts={[
+          { text: '계좌번호', typography: 't6', color: colors.grey600 },
+          { text: '1234-5678-9012', typography: 't5' },
+        ]}
+      />
+    }
+  />
+  <ListRow
+    contents={
+      <ListRow.Texts
+        texts={[
+          { text: '예금주', typography: 't6', color: colors.grey600 },
+          { text: '김토스', typography: 't5' },
+        ]}
+      />
+    }
+  />
+</List>
+```
+
+## 인터페이스
+
+**Type: ListProps**
+
+```typescript
+export interface ListProps {
+  /**
+   * 리스트의 row 엘리먼트 사이의 구분선 타입을 지정해요.
+   *
+   * @default 'indented'
+   */
+  rowSeparator?: 'full' | 'indented' | 'none';
+
+  /**
+   * 리스트의 아이템들을 지정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * 리스트의 스타일을 지정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# Loader (/tds-react-native/components/loader/)
+
+# Loader
+
+`Loader` 컴포넌트는 데이터를 불러오거나 처리하는 동안 로딩 상태를 시각적으로 표시해요. 애니메이션 효과로 사용자에게 진행 중임을 알리고 기다리도록 유도해요.
+
+[Preview: Codes]
+
+## 사용 예제
+
+### 기본 사용
+
+```jsx copy
+<Loader />
+```
+
+### 크기 조정
+
+`size` 속성으로 로더의 크기를 조정할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Loader size="small" />
+<Loader size="medium" />
+<Loader size="large" />
+```
+
+### 색상 타입
+
+배경색에 따라 적절한 `type`을 선택하여 가독성을 높일 수 있어요.
+
+```jsx copy
+<Loader type="primary" />
+<Loader type="dark" />
+<View style={{ backgroundColor: colors.blue500, padding: 16 }}>
+  <Loader type="light" />
+</View>
+```
+
+### 라벨 표시
+
+`label` 속성으로 로딩 메시지를 함께 표시할 수 있어요.
+
+```jsx copy
+<Loader label="불러오는 중..." />
+<Loader label="처리 중입니다" size="medium" />
+```
+
+### 지연 표시
+
+짧은 로딩 시간에 깜빡임을 방지하기 위해 `delay` 속성으로 로더 표시를 지연시킬 수 있어요.
+
+```jsx copy
+<Loader delay={700} />
+```
+
+### 전체 화면 로더
+
+`Loader.FullScreen`을 사용하면 화면 중앙에 로더를 표시할 수 있어요.
+
+```jsx copy
+<Loader.FullScreen />
+<Loader.FullScreen label="데이터를 불러오는 중..." />
+```
+
+### 중앙 정렬 로더
+
+`Loader.Centered`를 사용하면 패딩이 있는 중앙 정렬 로더를 표시할 수 있어요.
+
+```jsx copy
+<Loader.Centered />
+```
+
+## 인터페이스
+
+**Type: LoaderProps**
+
+```typescript
+export interface LoaderProps {
+  /**
+   * 로더의 크기를 지정해요.
+   *
+   * @default 'large'
+   */
+  size?: 'small' | 'medium' | 'large';
+
+  /**
+   * 로더의 색상 타입을 지정해요. 배경색에 따라 적절한 타입을 선택하세요.
+   *
+   * @default 'primary'
+   */
+  type?: 'primary' | 'dark' | 'light';
+
+  /**
+   * 로더의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<ViewStyle>;
+
+  /**
+   * 로더의 색상을 직접 지정할 때 사용해요. type 속성보다 우선해요.
+   */
+  customStrokeColor?: string;
+
+  /**
+   * 로더의 크기를 픽셀 단위로 직접 지정할 때 사용해요. size 속성보다 우선해요.
+   */
+  customSize?: number;
+
+  /**
+   * 로더 표시를 지연시킬 시간을 밀리초 단위로 지정해요. 짧은 로딩 시간에 깜빡임을 방지하기 위해 사용해요.
+   */
+  delay?: number;
+
+  /**
+   * 로더와 함께 표시할 라벨 텍스트를 지정해요.
+   */
+  label?: string;
+}
+```
+
+---
+
+# Navbar (/tds-react-native/components/navbar/)
+
+# Navbar
+
+[Image: Navbar thumbnail - navbar/Thumbnail-Navigation.png]
+
+`Navbar` 컴포넌트는 화면 상단에 표시되는 네비게이션 바예요. React Navigation과 함께 사용하기 쉽게 설계되었어요.
+
+## 사용 예제
+
+### 기본 사용
+
+```jsx copy
+<Navbar left={<Navbar.BackButton onPress={() => navigation.goBack()} />} title="페이지 제목" />
+```
+
+### 오른쪽 버튼 추가
+
+```jsx copy
+<Navbar
+  left={<Navbar.BackButton onPress={() => navigation.goBack()} />}
+  title="설정"
+  right={<Navbar.TextButton onPress={() => handleSave()}>저장</Navbar.TextButton>}
+/>
+```
+
+### 닫기 버튼
+
+```jsx copy
+<Navbar left={<Navbar.CloseButton onPress={() => navigation.goBack()} />} title="모달" />
+```
+
+### React Navigation과 함께 사용
+
+```jsx copy
+import { Navbar } from '@toss/tds-react-native';
+
+<Stack.Screen
+  name="Detail"
+  component={DetailScreen}
+  options={{
+    headerLeft: () => <Navbar.BackButton />,
+    headerTitle: () => <Navbar.Title>상세</Navbar.Title>,
+    headerRight: () => <Navbar.TextButton onPress={() => handleShare()}>공유</Navbar.TextButton>,
+  }}
+/>;
+```
+
+### 커스텀 왼쪽 버튼
+
+```jsx copy
+<Navbar
+  left={
+    <Pressable onPress={() => navigation.goBack()}>
+      <Icon name="icon-arrow-left" size={24} />
+    </Pressable>
+  }
+  title="뒤로 가기"
+/>
+```
+
+### 여러 개의 오른쪽 버튼
+
+```jsx copy
+<Navbar
+  left={<Navbar.BackButton onPress={() => navigation.goBack()} />}
+  title="편집"
+  right={
+    <View style={{ flexDirection: 'row', gap: 16 }}>
+      <Navbar.TextButton onPress={() => handleDelete()}>삭제</Navbar.TextButton>
+      <Navbar.TextButton onPress={() => handleSave()}>저장</Navbar.TextButton>
+    </View>
+  }
+/>
+```
+
+## 인터페이스
+
+**Type: NavbarProps**
+
+```typescript
+export interface NavbarProps {
+  /**
+   * Navbar의 왼쪽에 표시될 내용을 지정해요. 주로 뒤로가기 버튼이 들어가요.
+   */
+  left?: ReactNode;
+
+  /**
+   * Navbar의 중앙에 표시될 제목을 지정해요.
+   */
+  title?: ReactNode;
+
+  /**
+   * Navbar의 오른쪽에 표시될 내용을 지정해요. 주로 액션 버튼이 들어가요.
+   */
+  right?: ReactNode;
+}
+```
+
+---
+
+# Numeric Spinner (/tds-react-native/components/numeric-spinner/)
+
+# Numeric Spinner
+
+`NumericSpinner` 컴포넌트는 정수 입력을 쉽게 처리할 수 있도록, 숫자를 증감시키는 버튼을 제공해요. 키보드 없이 숫자를 입력하거나 수정할 때 사용해요.
+
+[Preview: NumericSpinner]
+
+## 사용법
+
+### 입력값 관리
+
+#### 입력값을 외부에서 관리하기
+
+`NumericSpinner` 컴포넌트의 입력값을 외부에서 관리하려면, `number`, `onNumberChange` 속성을 함께 사용하세요. `number`는 컴포넌트에 현재 값을 제공하고, `onNumberChange`는 입력값이 바뀔 때 호출되는 함수예요.
+
+[Preview: Codes]
+
+```jsx copy
+function Basic() {
+  const [value, setValue] = useState(0);
+  return (
+    <NumericSpinner
+      size="large"
+      number={value}
+      onNumberChange={number => {
+        setValue(number);
+      }}
+    />
+  );
+}
+```
+
+### 크기 변경하기
+
+`NumericSpinner` 컴포넌트의 크기를 변경하려면 `size` 속성을 사용하세요. 지원되는 크기는 `small`, `medium`, `large`가 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<NumericSpinner size="tiny" />
+<NumericSpinner size="small" />
+<NumericSpinner size="medium" />
+<NumericSpinner size="large" />
+```
+
+### 비활성화하기
+
+`NumericSpinner` 컴포넌트를 비활성화하려면 `disable` 속성을 사용하세요. 비활성화된 `NumericSpinner` 컴포넌트는 버튼을 클릭해도 숫자가 변하지 않아요.
+
+[Preview: Codes]
+
+```jsx copy
+<NumericSpinner size="large" disable />
+```
+
+## 인터페이스
+
+**Type: NumericSpinnerProps**
+
+```typescript
+export interface NumericSpinnerProps {
+  /**
+   * `NumericSpinner` 컴포넌트의 크기에요
+   */
+  size: 'tiny' | 'small' | 'medium' | 'large';
+  /**
+   * `NumericSpinner` 컴포넌트에 표시되는 값이에요. 주로 입력값을 컴포넌트 외부에서 관리할 때 `onNumberChange` 속성과 함께 사용해요.
+   *
+   * @default 0
+   */
+  number?: number;
+  /**
+   * `NumericSpinner` 컴포넌트의 초기 입력값이에요. 설정된 값으로 컴포넌트가 초기화되고, 이후 입력값은 `NumericSpinner` 컴포넌트 내부에서 관리돼요. 외부에서 값 변경을 추적할 필요가 없을 때 사용해요.
+   */
+  defaultNumber?: number;
+  /**
+   * 입력할 수 있는 최소값이에요. 설정된 값보다 작은 값은 사용자가 입력할 수 없어요.
+   *
+   * @default 0
+   */
+  minNumber?: number;
+  /**
+   * 입력할 수 있는 최대값이에요. 설정된 값보다 큰 값은 사용자가 입력할 수 없어요.
+   *
+   * @default 999
+   */
+  maxNumber?: number;
+  /**
+   * 이 값이 true일 때 `NumericSpinner` 컴포넌트가 비활성화돼요. 사용자가 버튼을 눌러도 숫자가 변하지 않아요.
+   *
+   * @default false
+   */
+  disable?: boolean;
+  /**
+   * 입력값이 변경될 때 호출되는 함수예요. 변경된 숫자 값을 매개변수로 받아 처리해요.
+   * 예를 들어, 입력값이 변경되면 이를 외부 상태에 반영할 때 사용해요.
+   */
+  onNumberChange?: (number: number) => void;
+}
+```
+
+---
+
+# Post (/tds-react-native/components/post/)
+
+# Post
+
+`Post` 컴포넌트는 포스트 형식의 줄글을 쓸 때 적용되는 스타일이에요. 각 스타일은 제목, 본문, 목록과 같은 구성요소로 나뉘어 있으며, 정보를 효과적으로 시각화해요. 공지 사항이나 이벤트 페이지 등에 사용해요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 제목에서 사용하기
+
+제목 스타일은 중요도에 따라 다양한 크기로 구분해요. 제목에서 사용할 수 있는 컴포넌트는 4가지 종류가 있어요.
+
+- `Post.H1`: 가장 큰 제목에 사용해요.
+- `Post.H2`: 큰 제목에 사용해요.
+- `Post.H3`: 일반적인 제목에 사용해요.
+- `Post.H4`: 작은 제목에 사용해요.
+
+[Preview: Codes]
+
+```jsx copy
+<Post.H1>H1 제목 타이틀</Post.H1>
+<Post.H2>H2 제목 타이틀</Post.H2>
+<Post.H3>H3 제목 타이틀</Post.H3>
+<Post.H4>H4 제목 타이틀</Post.H4>
+```
+
+### 본문에서 사용하기
+
+`Post.Paragraph` 컴포넌트는 기본 본문 스타일로, 주로 설명이 필요한 텍스트에 사용해요. 긴 문장을 잘 읽히도록 가독성 높은 글꼴과 적절한 여백을 제공해요.
+
+[Preview: Codes]
+
+```jsx copy
+<Post.Paragraph>
+  2018년 11월 22일부터 토스 가입 시 자동 발급되는 토스 계좌의 명칭이 {"'"}토스머니{"'"}로 변경됩니다.
+  {'\n'}
+  {'\n'}
+  또한, 토스 제휴 금융사 계좌 개설 시 자동 삭제되었던 토스머니가 다시 생성되며, 앞으로 모든 연락처 송금은
+  토스머니로 입금됩니다.
+</Post.Paragraph>
+<Post.Paragraph typography="t7">
+  2018년 11월 22일부터 토스 가입 시 자동 발급되는 토스 계좌의 명칭이 {"'"}토스머니{"'"}로 변경됩니다.
+  {'\n'}
+  {'\n'}
+  또한, 토스 제휴 금융사 계좌 개설 시 자동 삭제되었던 토스머니가 다시 생성되며, 앞으로 모든 연락처 송금은
+  토스머니로 입금됩니다.
+</Post.Paragraph>
+```
+
+### 목록에서 사용하기
+
+관련된 정보를 항목별로 구분하여 사용자에게 이해하기 쉽게 제공해요. 목록 스타일은 순서가 필요한 경우와 그렇지 않은 경우로 나뉘어 있어요.
+순서가 필요한 경우에는 `Post.Ol` 컴포넌트를 사용해요. 그렇지 않은 경우에는 `Post.Ul` 컴포넌트를 사용해요.
+
+각 항목을 표시할 경우에는 `Post.Li` 컴포넌트를 사용해요. `Post.Li` 컴포넌트는 부모 요소인 `Post.Ol`, `Post.Ul`에 포함하여 사용해요.
+
+#### 순서가 필요할 때
+
+`Post.Ol` 컴포넌트는 순서가 필요한 항목을 번호로 표시해요. 주로 단계별 지시 사항이나 절차를 안내하는데 적합해요.
+
+[Preview: Codes]
+
+```jsx copy
+<Post.Ol>
+  <Post.Li>
+    2018년 11월 22일부터 토스 가입 시 자동 발급되는 토스 계좌의 명칭이 {"'"}토스머니{"'"}로 변경됩니다.
+  </Post.Li>
+  <Post.Li>리스트 텍스트</Post.Li>
+  <Post.Ol>
+    <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+    <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+    <Post.Ol>
+      <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+      <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+    </Post.Ol>
+  </Post.Ol>
+  <Post.Li>리스트 텍스트</Post.Li>
+  <Post.Ol>
+    <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+  </Post.Ol>
+</Post.Ol>
+```
+
+#### 순서가 필요하지 않을 때
+
+`Post.Ul` 컴포넌트는 순서가 필요하지 않은 항목을 불릿 형태로 표시해요. 주로 간단한 정보나 조건 목록 등에 적합해요.
+
+[Preview: Codes]
+
+```jsx copy
+<Post.Ul>
+  <Post.Li>
+    2018년 11월 22일부터 토스 가입 시 자동 발급되는 토스 계좌의 명칭이 {"'"}토스머니{"'"}로 변경됩니다.
+  </Post.Li>
+  <Post.Li>리스트 텍스트</Post.Li>
+  <Post.Ul>
+    <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+    <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+    <Post.Ul>
+      <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+      <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+    </Post.Ul>
+  </Post.Ul>
+  <Post.Li>리스트 텍스트</Post.Li>
+  <Post.Ul>
+    <Post.Li>리스트 안의 리스트 텍스트</Post.Li>
+  </Post.Ul>
+</Post.Ul>
+```
+
+### 구분선 사용하기
+
+`Post.Hr` 컴포넌트는 요소 주위에 선을 그려서 요소 간의 구분을 명확히 하고 싶을 때 사용해요. UI 요소 간의 명확한 구분과 계층 구조를 표현할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Post.Paragraph>
+  2018년 11월 22일부터 토스 가입 시 자동 발급되는 토스 계좌의 명칭이 {"'"}토스머니{"'"}로 변경됩니다.
+</Post.Paragraph>
+<Post.Hr />
+<Post.Paragraph>
+  2018년 11월 22일부터 토스 가입 시 자동 발급되는 토스 계좌의 명칭이 {"'"}토스머니{"'"}로 변경됩니다.
+</Post.Paragraph>
+```
+
+## 인터페이스
+
+**Type: PostH1Props**
+
+```typescript
+export interface PostH1Props extends TxtProps {
+  /**
+   * 텍스트의 타이포그래피 스타일을 지정해요.
+   * 각 스타일은 텍스트의 크기, 굵기, 간격 등을 다르게 설정해서 다양한 화면 환경과 디자인 요구를 만족해요.
+   *
+   * `t1` ~ `t7`: 주로 본문 텍스트에 사용하는 크기와 굵기 스타일이에요.
+   * `st1` ~ `st13`: 서브 타이틀 또는 부가적인 텍스트에 적합한 스타일이에요. 예를 들어, `st1`은 작은 본문이나 설명 텍스트에 적합하고, `st10`은 강조 텍스트에 사용하기 좋아요.
+   * @default "t2"
+   */
+  typography?: Typography;
+  /**
+   * 컴포넌트 하단의 여백을 결정해요.
+   */
+  paddingBottom?: number;
+  /**
+   * 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: ReactNode;
+  /**
+   * 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: ViewProps['style'];
+}
+```
+
+**Type: PostH2Props**
+
+```typescript
+export interface PostH2Props extends TxtProps {
+  /**
+   * 텍스트의 타이포그래피 스타일을 지정해요.
+   * 각 스타일은 텍스트의 크기, 굵기, 간격 등을 다르게 설정해서 다양한 화면 환경과 디자인 요구를 만족해요.
+   *
+   * `t1` ~ `t7`: 주로 본문 텍스트에 사용하는 크기와 굵기 스타일이에요.
+   * `st1` ~ `st13`: 서브 타이틀 또는 부가적인 텍스트에 적합한 스타일이에요. 예를 들어, `st1`은 작은 본문이나 설명 텍스트에 적합하고, `st10`은 강조 텍스트에 사용하기 좋아요.
+   * @default "t2"
+   */
+  typography?: Typography;
+  /**
+   * 컴포넌트 하단의 여백을 결정해요.
+   */
+  paddingBottom?: number;
+  /**
+   * 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: ReactNode;
+  /**
+   * 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: ViewProps['style'];
+}
+```
+
+**Type: PostH3Props**
+
+```typescript
+export interface PostH3Props extends TxtProps {
+  /**
+   * 텍스트의 타이포그래피 스타일을 지정해요.
+   * 각 스타일은 텍스트의 크기, 굵기, 간격 등을 다르게 설정해서 다양한 화면 환경과 디자인 요구를 만족해요.
+   *
+   * `t1` ~ `t7`: 주로 본문 텍스트에 사용하는 크기와 굵기 스타일이에요.
+   * `st1` ~ `st13`: 서브 타이틀 또는 부가적인 텍스트에 적합한 스타일이에요. 예를 들어, `st1`은 작은 본문이나 설명 텍스트에 적합하고, `st10`은 강조 텍스트에 사용하기 좋아요.
+   * @default "t2"
+   */
+  typography?: Typography;
+  /**
+   * 컴포넌트 하단의 여백을 결정해요.
+   */
+  paddingBottom?: number;
+  /**
+   * 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: ReactNode;
+  /**
+   * 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: ViewProps['style'];
+}
+```
+
+**Type: PostH4Props**
+
+```typescript
+export interface PostH4Props extends TxtProps {
+  /**
+   * 텍스트의 타이포그래피 스타일을 지정해요.
+   * 각 스타일은 텍스트의 크기, 굵기, 간격 등을 다르게 설정해서 다양한 화면 환경과 디자인 요구를 만족해요.
+   *
+   * `t1` ~ `t7`: 주로 본문 텍스트에 사용하는 크기와 굵기 스타일이에요.
+   * `st1` ~ `st13`: 서브 타이틀 또는 부가적인 텍스트에 적합한 스타일이에요. 예를 들어, `st1`은 작은 본문이나 설명 텍스트에 적합하고, `st10`은 강조 텍스트에 사용하기 좋아요.
+   * @default "t2"
+   */
+  typography?: Typography;
+  /**
+   * 컴포넌트 하단의 여백을 결정해요.
+   */
+  paddingBottom?: number;
+  /**
+   * 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: ReactNode;
+  /**
+   * 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: ViewProps['style'];
+}
+```
+
+**Type: PostParagraphProps**
+
+```typescript
+export interface PostParagraphProps {
+  /**
+   * 텍스트의 타이포그래피 스타일을 지정해요.
+   * 각 스타일은 텍스트의 크기, 굵기, 간격 등을 다르게 설정해서 다양한 화면 환경과 디자인 요구를 만족해요.
+   *
+   * `t1` ~ `t7`: 주로 본문 텍스트에 사용하는 크기와 굵기 스타일이에요.
+   * `st1` ~ `st13`: 서브 타이틀 또는 부가적인 텍스트에 적합한 스타일이에요. 예를 들어, `st1`은 작은 본문이나 설명 텍스트에 적합하고, `st10`은 강조 텍스트에 사용하기 좋아요.
+   */
+  typography?: Typography;
+  /**
+   * 텍스트 아래 여백 크기를 결정해요. 단위는 `px`이에요. 예를 들어, `paddingBottom={10}`으로 설정하면 강조 영역 내부에 10px의 여백이 생겨요.
+   */
+  paddingBottom?: number;
+}
+```
+
+**Type: PostOlProps**
+
+```typescript
+export interface PostOlProps {
+  /**
+   * 텍스트의 타이포그래피 스타일을 지정해요.
+   * 각 스타일은 텍스트의 크기, 굵기, 간격 등을 다르게 설정해서 다양한 화면 환경과 디자인 요구를 만족해요.
+   *
+   * `t1` ~ `t7`: 주로 본문 텍스트에 사용하는 크기와 굵기 스타일이에요.
+   * `st1` ~ `st13`: 서브 타이틀 또는 부가적인 텍스트에 적합한 스타일이에요. 예를 들어, `st1`은 작은 본문이나 설명 텍스트에 적합하고, `st10`은 강조 텍스트에 사용하기 좋아요.
+   */
+  typography?: Typography;
+  /**
+   * 컴포넌트 하단의 여백을 결정해요.
+   */
+  paddingBottom?: number;
+  /**
+   * 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: ReactNode;
+  /**
+   * 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: ViewProps['style'];
+}
+```
+
+**Type: PostUlProps**
+
+```typescript
+export interface PostUlProps {
+  /**
+   * 텍스트의 타이포그래피 스타일을 지정해요.
+   * 각 스타일은 텍스트의 크기, 굵기, 간격 등을 다르게 설정해서 다양한 화면 환경과 디자인 요구를 만족해요.
+   *
+   * `t1` ~ `t7`: 주로 본문 텍스트에 사용하는 크기와 굵기 스타일이에요.
+   * `st1` ~ `st13`: 서브 타이틀 또는 부가적인 텍스트에 적합한 스타일이에요. 예를 들어, `st1`은 작은 본문이나 설명 텍스트에 적합하고, `st10`은 강조 텍스트에 사용하기 좋아요.
+   */
+  typography?: Typography;
+  /**
+   * 컴포넌트 하단의 여백을 결정해요.
+   */
+  paddingBottom?: number;
+  /**
+   * 컴포넌트 내부에 표시될 내용을 지정해요.
+   */
+  children: ReactNode;
+  /**
+   * 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: ViewProps['style'];
+}
+```
+
+**Type: PostHrProps**
+
+```typescript
+export interface PostHrProps {
+  /**
+   * 컴포넌트 하단의 여백을 결정해요.
+   */
+  paddingBottom?: number;
+  /**
+   * 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: ViewProps['style'];
+}
+```
+
+---
+
+# ProgressBar (/tds-react-native/components/progress-bar/)
+
+# ProgressBar
+
+`ProgressBar` 컴포넌트는 작업의 진행 상태를 시각적으로 표시하는 데 사용해요. 파일 업로드, 폼 작성 진행률 등을 나타낼 때 유용해요.
+
+[Preview: Codes]
+
+## 사용 예제
+
+### 기본 사용
+
+ProgressBar를 사용하려면 `progress`와 `size` 속성을 지정하세요.
+
+```jsx copy
+<ProgressBar progress={60} size="normal" />
+```
+
+### 크기 조정
+
+`size` 속성을 사용해 ProgressBar의 두께를 조정할 수 있어요.
+
+```jsx copy
+<ProgressBar progress={60} size="light" />
+<ProgressBar progress={60} size="normal" />
+<ProgressBar progress={60} size="bold" />
+```
+
+### 색상 변경
+
+`color` 속성을 사용해 진행 바의 색상을 변경할 수 있어요.
+
+```jsx copy
+import { colors } from '@toss/tds-colors';
+
+<ProgressBar progress={60} size="normal" color={colors.blue500} />
+<ProgressBar progress={60} size="normal" color={colors.green500} />
+<ProgressBar progress={60} size="normal" color={colors.red500} />
+```
+
+### 애니메이션
+
+`withAnimation` 속성을 사용해 진행률 변경 시 부드러운 애니메이션을 적용할 수 있어요.
+
+```jsx copy
+const [progress, setProgress] = useState(0);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setProgress(prev => {
+      if (prev >= 100) return 0;
+      return prev + 10;
+    });
+  }, 500);
+
+  return () => clearInterval(interval);
+}, []);
+
+<ProgressBar progress={progress} size="normal" withAnimation={true} />
+```
+
+### 진행률 표시
+
+ProgressBar와 함께 텍스트로 진행률을 표시할 수 있어요.
+
+```jsx copy
+const [progress, setProgress] = useState(45);
+
+<View>
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+    <Txt>파일 업로드 중</Txt>
+    <Txt>{progress}%</Txt>
+  </View>
+  <ProgressBar progress={progress} size="normal" withAnimation={true} />
+</View>
+```
+
+## 인터페이스
+
+**Type: ProgressBarProps**
+
+```typescript
+export interface ProgressBarProps extends ViewProps {
+  /**
+   * 진행률을 나타내는 값이에요. 0부터 100 사이의 숫자를 입력해요.
+   */
+  progress: number;
+
+  /**
+   * ProgressBar의 크기를 지정해요.
+   */
+  size: 'light' | 'normal' | 'bold';
+
+  /**
+   * ProgressBar의 트랙에 채워지는 색상을 지정해요.
+   */
+  color?: string;
+
+  /**
+   * 애니메이션을 사용할지 여부를 결정해요.
+   *
+   * @default false
+   */
+  withAnimation?: boolean;
+}
+```
+
+---
+
+# Radio (/tds-react-native/components/radio/)
+
+# Radio
+
+`Radio` 컴포넌트는 여러 옵션 중 하나를 선택할 수 있게 해주는 컴포넌트예요. 부드러운 애니메이션과 함께 선택된 옵션이 강조되어 표시돼요.
+
+## 사용 예제
+
+### 기본 사용
+
+Radio를 사용하려면 `value`, `onChange`, 그리고 `Radio.Option`을 children으로 전달하세요.
+
+```jsx copy
+const [value, setValue] = useState('option1');
+
+<Radio value={value} onChange={setValue}>
+  <Radio.Option value="option1">옵션 1</Radio.Option>
+  <Radio.Option value="option2">옵션 2</Radio.Option>
+  <Radio.Option value="option3">옵션 3</Radio.Option>
+</Radio>
+```
+
+### 여백 조정
+
+`horizontalMargin` 속성을 사용해 라디오 컴포넌트의 좌우 여백을 조정할 수 있어요.
+
+```jsx copy
+<Radio value={value} onChange={setValue} horizontalMargin={20}>
+  <Radio.Option value="option1">옵션 1</Radio.Option>
+  <Radio.Option value="option2">옵션 2</Radio.Option>
+</Radio>
+```
+
+### 비활성화
+
+전체 Radio를 비활성화하거나 개별 옵션을 비활성화할 수 있어요.
+
+```jsx copy
+// 전체 비활성화
+<Radio value={value} onChange={setValue} disabled={true}>
+  <Radio.Option value="option1">옵션 1</Radio.Option>
+  <Radio.Option value="option2">옵션 2</Radio.Option>
+</Radio>
+
+// 개별 옵션 비활성화
+<Radio value={value} onChange={setValue}>
+  <Radio.Option value="option1">옵션 1</Radio.Option>
+  <Radio.Option value="option2" disabled={true}>옵션 2 (비활성)</Radio.Option>
+  <Radio.Option value="option3">옵션 3</Radio.Option>
+</Radio>
+```
+
+### 두 개의 옵션
+
+예/아니오 같은 이진 선택에 사용할 수 있어요.
+
+```jsx copy
+const [agree, setAgree] = useState(false);
+
+<Radio value={agree} onChange={setAgree}>
+  <Radio.Option value={true}>예</Radio.Option>
+  <Radio.Option value={false}>아니오</Radio.Option>
+</Radio>
+```
+
+### 여러 개의 옵션
+
+네 개 이상의 옵션도 표시할 수 있어요.
+
+```jsx copy
+const [selected, setSelected] = useState('1개월');
+
+<Radio value={selected} onChange={setSelected}>
+  <Radio.Option value="1개월">1개월</Radio.Option>
+  <Radio.Option value="3개월">3개월</Radio.Option>
+  <Radio.Option value="6개월">6개월</Radio.Option>
+  <Radio.Option value="12개월">12개월</Radio.Option>
+</Radio>
+```
+
+### react-hook-form과 함께 사용
+
+`RadioInput` 컴포넌트를 사용하면 react-hook-form과 쉽게 통합할 수 있어요.
+
+```jsx copy
+import { useForm } from 'react-hook-form';
+import { RadioInput } from '@toss/tds-react-native';
+
+const { control, handleSubmit } = useForm({
+  defaultValues: {
+    paymentMethod: 'card',
+  },
+});
+
+const onSubmit = (data) => {
+  console.log(data);
+};
+
+<RadioInput control={control} name="paymentMethod">
+  <Radio.Option value="card">카드</Radio.Option>
+  <Radio.Option value="bank">계좌</Radio.Option>
+  <Radio.Option value="mobile">휴대폰</Radio.Option>
+</RadioInput>
+```
+
+### 추가 onChange 핸들러
+
+RadioInput에서 추가 onChange 핸들러를 사용할 수 있어요.
+
+```jsx copy
+<RadioInput
+  control={control}
+  name="paymentMethod"
+  onChange={(value) => {
+    console.log('선택된 값:', value);
+  }}
+>
+  <Radio.Option value="card">카드</Radio.Option>
+  <Radio.Option value="bank">계좌</Radio.Option>
+</RadioInput>
+```
+
+## 인터페이스
+
+**Type: RadioOptionProps**
+
+```typescript
+export interface RadioOptionProps<Value> {
+  /**
+   * 라디오 옵션의 값을 지정해요.
+   */
+  value: Value;
+
+  /**
+   * 라디오 옵션이 선택되었는지 여부를 지정해요.
+   *
+   * @default false
+   */
+  checked?: boolean;
+
+  /**
+   * 라디오 옵션의 비활성화 여부를 지정해요.
+   *
+   * @default false
+   */
+  disabled?: boolean;
+
+  /**
+   * 라디오 옵션을 클릭했을 때 호출되는 함수예요.
+   */
+  onPress?: (value: Value) => void;
+
+  /**
+   * 라디오 옵션의 내용을 지정해요.
+   */
+  children: ReactNode;
+}
+```
+
+**Type: RadioProps**
+
+```typescript
+export interface RadioProps<Value> {
+  /**
+   * 현재 선택된 라디오 옵션의 값을 지정해요.
+   */
+  value: Value;
+
+  /**
+   * 라디오 옵션이 선택될 때 호출되는 함수예요.
+   */
+  onChange: (value: Value) => void;
+
+  /**
+   * 라디오 컴포넌트의 비활성화 여부를 지정해요.
+   *
+   * @default false
+   */
+  disabled?: boolean;
+
+  /**
+   * 라디오 컴포넌트의 좌우 여백을 픽셀 단위로 지정해요.
+   *
+   * @default 0
+   */
+  horizontalMargin?: number;
+
+  /**
+   * 라디오 옵션들을 지정해요. Radio.Option 컴포넌트를 children으로 전달해요.
+   */
+  children: ReactElement<RadioOptionProps<Value>> | Array<ReactElement<RadioOptionProps<Value>>>;
+}
+```
+
+---
+
+# Rating (/tds-react-native/components/rating/)
+
+# Rating
+
+`Rating` 컴포넌트는 점수를 표시하거나 사용자의 입력을 받을 수 있어요. 주로 콘텐츠에 대한 평가를 보여주거나 평가를 진행하기 위해 사용돼요.
+
+[Preview: Rating]
+
+## 사용법
+
+### 사용자와 상호작용하기
+
+`Rating` 컴포넌트는 두 가지 방식으로 사용자에게 정보를 제공해요:
+
+- **읽기 전용**: 사용자는 컴포넌트로부터 정보를 확인할 수 있지만, 컴포넌트와 상호작용할 수 없어요.
+- **상호 작용**: 사용자가 컴포넌트를 직접 제어할 수 있어요. 주로 사용자 입력을 받기 위한 용도로 사용돼요.
+
+`Rating` 컴포넌트를 읽기 전용 모드로 사용하려면 `readonly` 속성을 설정하세요. `readonly`를 `true`로 설정하면 읽기 전용 모드로 사용할 수 있어요. 반대로, `readonly`를 `false`로 설정하면 사용자가 컴포넌트와 상호작용할 수 있어요.
+
+### 읽기 전용
+
+읽기 전용 모드는 `readonly` 속성을 `true`로 설정하여 사용할 수 있어요. 사용자는 컴포넌트를 클릭하거나 터치하여 상호작용할 수 없어요.
+
+#### 크기 조정하기
+
+`Rating` 컴포넌트의 크기를 변경하려면 `size` 속성을 사용하세요. `tiny`, `small`, `medium`, `large`, `big` 중 하나를 선택할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Rating readonly value={5} size="tiny" variant="full" />
+<Rating readonly value={5} size="small" variant="full" />
+<Rating readonly value={5} size="medium" variant="full" />
+<Rating readonly value={5} size="large" variant="full" />
+<Rating readonly value={5} size="big" variant="full" />
+```
+
+#### 형태 변경하기
+
+`Rating` 컴포넌트의 형태를 바꾸려면 `variant`를 사용하세요. `full`, `compact`, `iconOnly` 중에서 선택할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Rating readonly value={5} size="medium" variant="full" />
+<Rating readonly value={5} size="medium" variant="compact" />
+<Rating readonly value={5} size="medium" variant="iconOnly" />
+```
+
+### 상호 작용하기
+
+상호 작용 모드는 `readonly` 속성을 `false`로 설정하여 사용할 수 있어요. 사용자는 컴포넌트를 클릭하거나 터치하여 상호작용할 수 있어요.
+
+사용자의 입력을 받기 위해서 `value`와 `onValueChange` 속성을 함께 사용하세요. `value` 속성은 사용자가 선택한 점수를 나타내고, `onValueChange` 속성은 사용자가 점수를 선택했을 때 호출되는 콜백 함수에요.
+
+[Preview: Codes]
+
+```jsx copy
+function EditableRating() {
+  const [value, setValue] = useState(5);
+  return <Rating readOnly={false} value={value} max={5} size="medium" onValueChange={setValue} />;
+}
+```
+
+#### 크기 조정하기
+
+`Rating` 컴포넌트의 크기를 변경하려면 `size` 속성을 사용하세요. `medium`, `large`, `big` 중 하나를 선택할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Rating readonly={false} value={valueMedium} size="medium" onValueChange={setValueMedium} />
+<Rating readonly={false} value={valueLarge} size="large" onValueChange={setValueLarge} />
+<Rating readonly={false} value={valueBig} size="big" onValueChange={setValueBig} />
+```
+
+#### 형태 변경하기
+
+상호 작용하기 모드에서는 형태를 변경할 수 없어요. `variant` 속성은 읽기 전용 모드에서만 사용할 수 있어요.
+
+#### 비활성화하기
+
+`Rating` 컴포넌트를 비활성화하려면 `disabled` 속성을 사용하세요. 사용자와 상호작용할 수 없고, 시각적으로도 비활성화된 상태임을 나타내요.
+
+[Preview: Codes]
+
+```jsx copy
+<Rating readonly={false} value={value} size="medium" disabled onValueChange={handleValueChange} />
+<Rating readonly={false} value={value} size="large" disabled onValueChange={handleValueChange} />
+<Rating readonly={false} value={value} size="big" disabled onValueChange={handleValueChange} />
+```
+
+## 인터페이스
+
+`Rating` 컴포넌트는 `readonly` 속성에 따라 `EditableRating` 와 `ReadOnlyRating` 컴포넌트로 분기돼요.
+
+- `readonly` 속성이 `false`이면 `EditableRatingProps`를 확인하세요.
+- `readonly` 속성이 `true`이면 `ReadOnlyRatingProps`를 확인하세요.
+
+**Type: EditableRatingProps**
+
+```typescript
+export interface EditableRatingProps extends ViewProps {
+  /**
+   * 이 값이 `false`일 때 `Rating` 컴포넌트를 제어할 수 있어요.
+   *
+   * @default false
+   */
+  readOnly: false;
+  /**
+   * `Rating` 컴포넌트의 현재 점수를 결정해요.
+   */
+  value: number;
+
+  /**
+   * `Rating` 컴포넌트의 점수 상태가 바뀔 때 실행되는 함수에요.
+   * @default undefined
+   */
+  onValueChange?: (value: number) => void;
+
+  /**
+   * `Rating` 컴포넌트의 크기를 결정해요.
+   */
+  size: 'medium' | 'large' | 'big';
+
+  /**
+   * `Rating` 컴포넌트에 지정 가능한 최대 점수를 결정해요.
+   * @default 5
+   */
+  max?: number;
+
+  /**
+   * `Rating` 컴포넌트의 요소 간의 간격을 결정해요.
+   * 지정하지 않으면 `size`에 따라 미리 정의된 값이 할당돼요.
+   */
+  gap?: number;
+
+  /**
+   * `Rating` 컴포넌트를 클릭하거나 드래그할 때, 선택된 아이콘의 색상이 activeColor로 변경돼요.
+   * 활성 상태에서는 지정한 값으로 표현돼요.
+   * 비활성 상태에서는 `adaptive.greyOpacity200`로 표현돼요.
+   *
+   * @default adaptive.yellow400
+   */
+  activeColor?: string;
+
+  /**
+   * 이 값이 `true` 일 때 `Rating` 컴포넌트가 비활성화돼요.
+   * @default false
+   */
+  disabled?: boolean;
+}
+```
+
+**Type: ReadOnlyRatingProps**
+
+```typescript
+export interface ReadOnlyRatingProps extends ViewProps {
+  /**
+   * 이 값이 `true`일 때 `Rating` 컴포넌트를 제어할 수 없어요.
+   */
+  readOnly: true;
+  /**
+   * `Rating` 컴포넌트의 현재 점수를 결정해요.
+   */
+  value: number;
+  /**
+   * `Rating` 컴포넌트의 형태를 결정해요.
+   * - `full`: 전체 아이콘과 점수가 함께 보여져요.
+   * - `compact`: 하나의 아이콘과 점수가 함께 보여져요.
+   * - `iconOnly`: 전체 아이콘만 보여져요.
+   */
+  variant: 'full' | 'compact' | 'iconOnly';
+
+  /**
+   * `Rating` 컴포넌트의 크기를 결정해요.
+   */
+  size: 'tiny' | 'small' | 'medium' | 'large' | 'big';
+
+  /**
+   * `Rating` 컴포넌트에 지정 가능한 최대 점수를 결정해요.
+   * @default 5
+   */
+  max?: number;
+
+  /**
+   * `Rating` 컴포넌트의 요소 간의 간격을 결정해요.
+   * 지정하지 않으면 `size`에 따라 미리 정의된 값이 할당돼요.
+   */
+  gap?: number;
+
+  /**
+   * `Rating` 컴포넌트의 활성 색상을 지정해요.
+   * 비활성 상태에서는 `adaptive.greyOpacity200`로 표현돼요.
+   *
+   * @default adaptive.yellow400
+   */
+  activeColor?: string;
+}
+```
+
+---
+
+# Result (/tds-react-native/components/result/)
+
+# Result
+
+`Result` 컴포넌트는 특정 작업의 결과를 시각적으로 보여주는 페이지 컴포넌트예요. 주로 사용자가 작업을 성공했을 때나 에러가 발생했을 때 결과를 알리고, 다양한 메시지나 액션을 제공하는 데 사용해요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 요소 추가하기
+
+`figure` 속성을 사용하면 제목 상단에 다양한 시각적 요소를 추가할 수 있어요. `Asset` 컴포넌트를 활용해 아이콘, 로띠, 이미지 등의 리소스를 손쉽게 표현할 수 있어요. 이렇게 시각적 요소를 활용하면 사용자에게 메시지를 직관적으로 전달할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Result
+  figure={
+    <Asset.Image
+      source={{
+        uri: 'https://static.toss.im/2d-emojis/png/4x/u1F4FA.png',
+      }}
+      frameShape={Asset.frameShape.CircleLarge}
+    />
+  }
+  title="라이브 쇼핑 준비 중"
+  description="요금이 나오면 알림을 보내드릴게요."
+/>
+```
+
+### 버튼 추가하기
+
+`button` 속성을 사용하면 설명 아래에 액션 버튼을 추가할 수 있어요. `Result.Button` 컴포넌트를 활용해서 다시 시도하기, 홈으로 돌아가기 등의 동작을 쉽게 구현할 수 있어요. 사용자는 이 버튼으로 필요한 액션을 바로 수행할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Result
+  figure={<Asset.Icon name="icn-info-line" frameShape={Asset.frameShape.CleanH24} />}
+  title="다시 접속해주세요"
+  description={`페이지를 불러올 수 없습니다\n다시 시도해주세요`}
+  button={<Result.Button>재시도</Result.Button>}
+/>
+```
+
+## 인터페이스
+
+**Type: ResultProps**
+
+```typescript
+export interface ResultProps {
+  /**
+   * `Result` 컴포넌트의 `title` 위에 표시할 시각적 요소로, 주로 아이콘이나 이미지를 나타내요. `Asset` 컴포넌트를 사용해서 다양한 시각적 콘텐츠를 표현할 수 있어요.
+   */
+  figure?: ReactNode;
+  /**
+   * `Result` 컴포넌트의 결과 화면의 제목이에요. 사용자가 어떤 작업을 한 뒤의 성공 여부 같은 상태를 간결하게 전달하는 데에 사용해요.
+   */
+  title?: ReactNode;
+  /**
+   * `Result` 컴포넌트의 `title` 아래에 추가로 설명을 제공하는 영역이에요. 좀 더 자세한 정보를 제공할 때 사용해요.
+   */
+  description?: ReactNode;
+  /**
+   * `Result` 컴포넌트의 `description` 아래에 표시할 버튼이에요. `Result.Button` 컴포넌트를 사용해서 다시 시도하기, 홈으로 돌아가기 등과 같은 액션을 추가할 수 있어요.
+   */
+  button?: ReactNode;
+  /**
+   * `Result` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# SearchField (/tds-react-native/components/search-field/)
+
+# SearchField
+
+`SearchField` 컴포넌트는 검색 기능을 제공하는 입력 필드예요. 검색 아이콘과 클리어 버튼이 포함되어 있어 사용자가 쉽게 검색어를 입력하고 지울 수 있어요.
+
+## 사용 예제
+
+### 기본 사용
+
+SearchField를 사용하려면 기본 속성만 지정하면 돼요.
+
+```jsx copy
+<SearchField
+  placeholder="검색어를 입력하세요"
+  value={searchText}
+  onChange={(e) => setSearchText(e.nativeEvent.text)}
+/>
+```
+
+### 클리어 버튼
+
+`hasClearButton` 속성을 사용하면 입력된 텍스트를 쉽게 지울 수 있는 버튼이 표시돼요.
+
+```jsx copy
+<SearchField
+  placeholder="검색어를 입력하세요"
+  value={searchText}
+  onChange={(e) => setSearchText(e.nativeEvent.text)}
+  hasClearButton={true}
+/>
+```
+
+### 자동 포커스
+
+`autoFocus` 속성을 사용하면 화면이 렌더링될 때 자동으로 포커스가 맞춰져요.
+
+```jsx copy
+<SearchField
+  placeholder="검색어를 입력하세요"
+  autoFocus={true}
+  value={searchText}
+  onChange={(e) => setSearchText(e.nativeEvent.text)}
+/>
+```
+
+### 검색 기능 구현
+
+SearchField를 사용해 실시간 검색 기능을 구현할 수 있어요.
+
+```jsx copy
+const [searchText, setSearchText] = useState('');
+const [filteredResults, setFilteredResults] = useState([]);
+
+const handleSearch = (text: string) => {
+  setSearchText(text);
+  // 검색 로직
+  const results = data.filter(item =>
+    item.name.toLowerCase().includes(text.toLowerCase())
+  );
+  setFilteredResults(results);
+};
+
+<SearchField
+  placeholder="상품을 검색하세요"
+  value={searchText}
+  onChange={(e) => handleSearch(e.nativeEvent.text)}
+  hasClearButton={true}
+/>
+```
+
+### 최대 길이 제한
+
+`maxLength` 속성을 사용해 입력 가능한 최대 문자 수를 제한할 수 있어요.
+
+```jsx copy
+<SearchField
+  placeholder="검색어를 입력하세요"
+  maxLength={50}
+  value={searchText}
+  onChange={(e) => setSearchText(e.nativeEvent.text)}
+/>
+```
+
+### 비활성화
+
+`editable` 속성을 사용해 검색 필드를 비활성화할 수 있어요.
+
+```jsx copy
+<SearchField
+  placeholder="검색어를 입력하세요"
+  editable={false}
+  value={searchText}
+/>
+```
+
+## 인터페이스
+
+**Type: SearchFieldProps**
+
+```typescript
+export interface SearchFieldProps extends AccessibilityProps {
+  /**
+   * 검색 필드의 플레이스홀더 텍스트를 지정해요.
+   */
+  placeholder?: string;
+
+  /**
+   * 검색 필드의 스타일을 지정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+
+  /**
+   * 클리어 버튼을 표시할지 여부를 지정해요.
+   *
+   * @default false
+   */
+  hasClearButton?: boolean;
+
+  /**
+   * 검색 필드의 기본값을 지정해요.
+   */
+  defaultValue?: string;
+
+  /**
+   * 검색 필드의 값을 지정해요.
+   */
+  value?: string;
+
+  /**
+   * 텍스트가 변경될 때 호출되는 함수예요.
+   */
+  onChange?: (event: { nativeEvent: { text: string } }) => void;
+
+  /**
+   * 키보드 타입을 지정해요.
+   */
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+
+  /**
+   * 최대 입력 길이를 지정해요.
+   */
+  maxLength?: number;
+
+  /**
+   * 자동 포커스 여부를 지정해요.
+   */
+  autoFocus?: boolean;
+
+  /**
+   * 편집 가능 여부를 지정해요.
+   */
+  editable?: boolean;
+}
+```
+
+---
+
+# SegmentedControl (/tds-react-native/components/segmented-control/)
+
+# SegmentedControl
+
+`SegmentedControl` 컴포넌트는 여러 옵션 중 하나를 선택할 수 있는 세그먼트 컨트롤이에요. Radio와 비슷하지만 더 시각적으로 구분된 형태예요.
+
+## 사용 예제
+
+### 기본 사용
+
+```jsx copy
+const [value, setValue] = useState('tab1');
+
+<SegmentedControl value={value} onValueChange={setValue}>
+  <SegmentedControl.Item value="tab1">탭 1</SegmentedControl.Item>
+  <SegmentedControl.Item value="tab2">탭 2</SegmentedControl.Item>
+  <SegmentedControl.Item value="tab3">탭 3</SegmentedControl.Item>
+</SegmentedControl>
+```
+
+### 두 개의 옵션
+
+```jsx copy
+const [period, setPeriod] = useState('month');
+
+<SegmentedControl value={period} onValueChange={setPeriod}>
+  <SegmentedControl.Item value="month">월간</SegmentedControl.Item>
+  <SegmentedControl.Item value="year">연간</SegmentedControl.Item>
+</SegmentedControl>
+```
+
+### 여러 개의 옵션
+
+```jsx copy
+const [duration, setDuration] = useState('1m');
+
+<SegmentedControl value={duration} onValueChange={setDuration}>
+  <SegmentedControl.Item value="1m">1개월</SegmentedControl.Item>
+  <SegmentedControl.Item value="3m">3개월</SegmentedControl.Item>
+  <SegmentedControl.Item value="6m">6개월</SegmentedControl.Item>
+  <SegmentedControl.Item value="12m">12개월</SegmentedControl.Item>
+</SegmentedControl>
+```
+
+### 탭 네비게이션
+
+```jsx copy
+const [activeTab, setActiveTab] = useState('all');
+
+<View>
+  <SegmentedControl value={activeTab} onValueChange={setActiveTab}>
+    <SegmentedControl.Item value="all">전체</SegmentedControl.Item>
+    <SegmentedControl.Item value="deposit">입금</SegmentedControl.Item>
+    <SegmentedControl.Item value="withdrawal">출금</SegmentedControl.Item>
+  </SegmentedControl>
+
+  {activeTab === 'all' && <AllTransactions />}
+  {activeTab === 'deposit' && <DepositTransactions />}
+  {activeTab === 'withdrawal' && <WithdrawalTransactions />}
+</View>
+```
+
+## 인터페이스
+
+**Type: SegmentedControlProps**
+
+```typescript
+export interface SegmentedControlProps {
+  /**
+   * SegmentedControl의 아이템들을 지정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * 현재 선택된 값을 지정해요.
+   */
+  value?: string;
+
+  /**
+   * 값이 변경될 때 호출되는 함수예요.
+   */
+  onValueChange?: (value: string) => void;
+}
+```
+
+**Type: SegmentedControlItemProps**
+
+```typescript
+export interface SegmentedControlItemProps {
+  /**
+   * 아이템의 값을 지정해요.
+   */
+  value: string;
+
+  /**
+   * 아이템의 내용을 지정해요.
+   */
+  children: ReactNode;
+}
+```
+
+---
+
+# Shadow (/tds-react-native/components/shadow/)
+
+# Shadow
+
+`Shadow` 컴포넌트는 요소에 그림자 효과를 추가하는 데 사용해요. iOS와 Android 플랫폼에 맞는 그림자 스타일을 자동으로 생성해요.
+
+## 사용 예제
+
+### 기본 사용
+
+ShadowBackground를 사용하려면 `shadow` 속성을 지정하세요.
+
+```jsx copy
+<View style={{ position: 'relative', width: 200, height: 100 }}>
+  <ShadowBackground
+    shadow={{
+      color: '#000',
+      radius: 10,
+      opacity: 0.1,
+      offset: { x: 0, y: 2 }
+    }}
+  />
+  <View>{/* 실제 콘텐츠 */}</View>
+</View>
+```
+
+### 테마별 색상 지정
+
+`lightColor`와 `darkColor`를 사용해 라이트/다크 모드에 따라 다른 그림자 색상을 적용할 수 있어요.
+
+```jsx copy
+<View style={{ position: 'relative', width: 200, height: 100 }}>
+  <ShadowBackground
+    shadow={{
+      lightColor: '#000',
+      darkColor: '#fff',
+      radius: 10,
+      opacity: 0.1,
+      offset: { x: 0, y: 2 }
+    }}
+  />
+  <View>{/* 실제 콘텐츠 */}</View>
+</View>
+```
+
+### 다양한 그림자 효과
+
+```jsx copy
+// 약한 그림자
+<ShadowBackground
+  shadow={{
+    color: '#000',
+    radius: 4,
+    opacity: 0.05,
+    offset: { x: 0, y: 1 }
+  }}
+/>
+
+// 중간 그림자
+<ShadowBackground
+  shadow={{
+    color: '#000',
+    radius: 10,
+    opacity: 0.1,
+    offset: { x: 0, y: 2 }
+  }}
+/>
+
+// 강한 그림자
+<ShadowBackground
+  shadow={{
+    color: '#000',
+    radius: 20,
+    opacity: 0.15,
+    offset: { x: 0, y: 4 }
+  }}
+/>
+```
+
+### useShadow 훅 사용
+
+`useShadow` 훅을 사용해 그림자 스타일을 직접 적용할 수도 있어요.
+
+```jsx copy
+import { useShadow } from '@toss/tds-react-native';
+
+const MyComponent = () => {
+  const shadowStyle = useShadow({
+    color: '#000',
+    radius: 10,
+    opacity: 0.1,
+    offset: { x: 0, y: 2 }
+  });
+
+  return (
+    <View style={[{ width: 200, height: 100 }, shadowStyle]}>
+      {/* 콘텐츠 */}
+    </View>
+  );
+};
+```
+
+## 인터페이스
+
+**Type: ShadowBackgroundProps**
+
+```typescript
+export interface ShadowBackgroundProps extends ViewProps {
+  /**
+   * 그림자 설정을 지정해요.
+   */
+  shadow: ShadowProps;
+}
+```
+
+---
+
+# Skeleton (/tds-react-native/components/skeleton/)
+
+# Skeleton
+
+`Skeleton` 컴포넌트는 콘텐츠가 로딩되는 동안 임시 플레이스홀더를 표시하여 사용자 경험을 개선해요. 실제 콘텐츠의 레이아웃과 유사한 형태로 표시하여 로딩 시간을 덜 지루하게 만들어줘요.
+
+## 사용 예제
+
+### 기본 사용
+
+너비와 높이를 지정하여 스켈레톤을 표시할 수 있어요.
+
+```jsx copy
+<Skeleton width={200} height={20} />
+<Skeleton width="100%" height={40} />
+```
+
+### 다양한 형태
+
+`borderRadius`를 조정하여 다양한 형태의 스켈레톤을 만들 수 있어요.
+
+```jsx copy
+{/* 텍스트 라인 */}
+<Skeleton width={300} height={16} borderRadius={4} />
+
+{/* 이미지 */}
+<Skeleton width={100} height={100} borderRadius={8} />
+
+{/* 원형 프로필 */}
+<Skeleton width={48} height={48} borderRadius={24} />
+```
+
+### 리스트 스켈레톤
+
+여러 개의 스켈레톤을 조합하여 리스트 아이템의 로딩 상태를 표현할 수 있어요.
+
+```jsx copy
+<View>
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+    <Skeleton width={48} height={48} borderRadius={24} />
+    <View style={{ marginLeft: 12, flex: 1 }}>
+      <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+      <Skeleton width="60%" height={14} />
+    </View>
+  </View>
+  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+    <Skeleton width={48} height={48} borderRadius={24} />
+    <View style={{ marginLeft: 12, flex: 1 }}>
+      <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+      <Skeleton width="60%" height={14} />
+    </View>
+  </View>
+</View>
+```
+
+## 인터페이스
+
+**Type: SkeletonBaseProps**
+
+```typescript
+export interface SkeletonBaseProps {
+  /**
+   * 스켈레톤의 너비를 지정해요.
+   */
+  width?: ViewStyle['width'];
+
+  /**
+   * 스켈레톤의 높이를 지정해요.
+   */
+  height?: ViewStyle['height'];
+
+  /**
+   * 스켈레톤의 테두리 둥글기를 지정해요.
+   *
+   * @default 6
+   */
+  borderRadius?: ViewStyle['borderRadius'];
+
+  /**
+   * 스켈레톤의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# Slider (/tds-react-native/components/slider/)
+
+# Slider
+
+`Slider` 컴포넌트는 사용자가 슬라이딩 제스처로 값을 선택할 수 있게 해주는 컴포넌트예요. 볼륨 조절, 밝기 조절, 범위 선택 등에 사용해요.
+
+## 사용 예제
+
+### 기본 사용
+
+Slider를 사용하려면 `value`와 `onChange`를 지정하세요.
+
+```jsx copy
+const [value, setValue] = useState(50);
+
+<Slider
+  value={value}
+  onChange={setValue}
+/>
+```
+
+### 범위 설정
+
+`min`과 `max`를 사용해 슬라이더의 범위를 설정할 수 있어요.
+
+```jsx copy
+<Slider
+  min={0}
+  max={100}
+  value={value}
+  onChange={setValue}
+/>
+```
+
+### 간격 설정
+
+`step` 속성을 사용해 값 변경 간격을 설정할 수 있어요.
+
+```jsx copy
+// 5 단위로 변경
+<Slider
+  min={0}
+  max={100}
+  step={5}
+  value={value}
+  onChange={setValue}
+/>
+
+// 10 단위로 변경
+<Slider
+  min={0}
+  max={100}
+  step={10}
+  value={value}
+  onChange={setValue}
+/>
+```
+
+### 색상 변경
+
+`color` 속성을 사용해 슬라이더의 색상을 변경할 수 있어요.
+
+```jsx copy
+import { colors } from '@toss/tds-colors';
+
+<Slider
+  value={value}
+  onChange={setValue}
+  color={colors.blue400}
+/>
+
+<Slider
+  value={value}
+  onChange={setValue}
+  color={colors.green500}
+/>
+```
+
+### 값 표시와 함께 사용
+
+슬라이더의 현재 값을 텍스트로 함께 표시할 수 있어요.
+
+```jsx copy
+const [value, setValue] = useState(50);
+
+<View>
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+    <Txt>볼륨</Txt>
+    <Txt fontWeight="semiBold">{value}%</Txt>
+  </View>
+  <Slider
+    min={0}
+    max={100}
+    step={1}
+    value={value}
+    onChange={setValue}
+  />
+</View>
+```
+
+### 점수 선택
+
+별점이나 평점을 선택하는 데 사용할 수 있어요.
+
+```jsx copy
+const [rating, setRating] = useState(3);
+
+<View>
+  <Txt>별점: {rating}점</Txt>
+  <Slider
+    min={1}
+    max={5}
+    step={1}
+    value={rating}
+    onChange={setRating}
+  />
+</View>
+```
+
+### 접근성
+
+Slider는 스크린 리더 사용자를 위한 접근성 기능을 제공해요. iOS에서는 상하 스와이프로, Android에서는 볼륨 키로 값을 조절할 수 있어요.
+
+```jsx copy
+<Slider
+  value={value}
+  onChange={setValue}
+  accessibilityLabel="볼륨 조절"
+  accessibilityHint="슬라이더를 움직여 볼륨을 조절하세요"
+/>
+```
+
+## 인터페이스
+
+**Type: SliderProps**
+
+```typescript
+export interface SliderProps extends ViewProps {
+  /**
+   * 슬라이더의 최소값을 지정해요.
+   *
+   * @default 0
+   */
+  min?: number;
+
+  /**
+   * 슬라이더의 최대값을 지정해요.
+   *
+   * @default 100
+   */
+  max?: number;
+
+  /**
+   * 슬라이더의 현재 값을 지정해요.
+   *
+   * @default (min + max) / 2
+   */
+  value?: number;
+
+  /**
+   * 슬라이더의 값 변경 간격을 지정해요.
+   * 양의 정수만 입력 가능해요.
+   *
+   * @default 1
+   */
+  step?: number;
+
+  /**
+   * 슬라이더의 값이 변경될 때 호출되는 함수예요.
+   */
+  onChange?: (value: number) => void;
+
+  /**
+   * 슬라이더의 색상을 지정해요.
+   */
+  color?: string;
+}
+```
+
+---
+
+# Stepper (/tds-react-native/components/stepper/)
+
+# Stepper
+
+`Stepper` 컴포넌트는 여러 단계를 시각적으로 보여줄 때 사용하는 컴포넌트예요. 각 단계는 제목과 설명을 가질 수 있고, 오른쪽에는 아이콘이나 버튼을 추가할 수 있어요. 순차적인 흐름을 사용자에게 쉽게 전달하는 데 적합해요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 단계 추가하기
+
+`StepperRow` 컴포넌트의 `content` 속성에 `StepperRow.Texts` 컴포넌트를 사용해서 단계를 추가할 수 있어요.
+
+#### 제목과 설명 추가하기
+
+`StepperRow.Texts` 컴포넌트에서 `type` 속성을 사용하면 제목과 설명의 스타일을 변경할 수 있어요.
+
+- `A`: 일반 크기의 제목(`t5`), 일반 크기의 설명(`t6`)
+- `B`: 큰 크기의 제목(`t4`), 일반 크기의 설명(`t6`)
+- `C`: 일반 크기의 제목(`t5`), 작은 크기의 설명(`t7`)
+
+[Preview: Codes]
+
+```jsx copy
+<StepperRow
+  left={<StepperRow.NumberIcon number={1} />}
+  center={<StepperRow.Texts type="A" title="일반 크기의 제목" description="일반 크기의 설명" />}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={1} />}
+  center={<StepperRow.Texts type="B" title="큰 크기의 제목" description="일반 크기의 설명" />}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={1} />}
+  center={<StepperRow.Texts type="C" title="일반 크기의 제목" description="작은 크기의 설명" />}
+  hideLine
+/>
+```
+
+### 왼쪽에 요소 추가하기
+
+`StepperRow` 컴포넌트의 `left` 속성을 사용하면 콘텐츠 영역의 왼쪽에 요소를 배치할 수 있어요. 보통 단계를 나타내기 위한 숫자나 의미를 부각하는 아이콘을 배치하는 데 많이 사용해요.
+
+#### 왼쪽에 숫자 아이콘 추가하기
+
+`Stepper.NumberIcon` 컴포넌트를 사용해 왼쪽에 숫자 아이콘을 추가할 수 있어요. 각 단계를 명확히 구분할 수 있어 유용해요.
+
+[Preview: Codes]
+
+```jsx copy
+<StepperRow
+  left={<StepperRow.NumberIcon number={1} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={2} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={3} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  hideLine
+/>
+```
+
+#### 왼쪽에 에셋 추가하기
+
+`Asset` 컴포넌트를 사용해서 왼쪽에 원하는 에셋을 추가할 수 있어요. `Stepper` 컴포넌트의 여백 규칙을 지키려면 `Asset` 컴포넌트를 `Stepper.AssetFrame` 컴포넌트로 감싸서 사용하면 돼요.
+
+[Preview: Codes]
+
+```jsx copy
+<StepperRow
+  left={
+    <StepperRow.AssetFrame
+      shape={Asset.frameShape.CircleMedium}
+      content={<Asset.ContentImage source={{ uri: 'https://static.toss.im/2d-emojis/png/4x/u1F31D.png' }} />}
+      backgroundColor="transparent"
+    />
+  }
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+/>
+<StepperRow
+  left={
+    <StepperRow.AssetFrame
+      shape={Asset.frameShape.CircleMedium}
+      content={<Asset.ContentImage source={{ uri: 'https://static.toss.im/2d-emojis/png/4x/u1F31D.png' }} />}
+      backgroundColor="transparent"
+    />
+  }
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+/>
+<StepperRow
+  left={
+    <StepperRow.AssetFrame
+      shape={Asset.frameShape.CircleMedium}
+      content={<Asset.ContentImage source={{ uri: 'https://static.toss.im/2d-emojis/png/4x/u1F31D.png' }} />}
+      backgroundColor="transparent"
+    />
+  }
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  hideLine
+/>
+```
+
+### 오른쪽에 요소 추가하기
+
+`StepperRow` 컴포넌트의 `right` 속성을 사용해서 콘텐츠 영역의 오른쪽에 요소를 추가할 수 있어요.
+
+#### 오른쪽에 화살표 아이콘 추가하기
+
+`Stepper.RightArrow` 컴포넌트를 사용해서 오른쪽에 화살표 아이콘을 추가할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<StepperRow
+  left={<StepperRow.NumberIcon number={1} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  right={<StepperRow.RightArrow />}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={2} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  right={<StepperRow.RightArrow />}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={3} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  right={<StepperRow.RightArrow />}
+  hideLine
+/>
+```
+
+#### 오른쪽에 버튼 추가하기
+
+`Stepper.RightButton` 컴포넌트를 사용해서 오른쪽에 버튼을 추가할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<StepperRow
+  left={<StepperRow.NumberIcon number={1} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  right={<StepperRow.RightButton>버튼</StepperRow.RightButton>}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={2} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  right={<StepperRow.RightButton>버튼</StepperRow.RightButton>}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={3} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  right={<StepperRow.RightButton>버튼</StepperRow.RightButton>}
+  hideLine
+/>
+```
+
+### 연결선 가리기
+
+`StepperRow` 컴포넌트의 `hideLine` 속성을 사용하면 연결선을 숨길 수 있어요. 주로 마지막 단계에서 연결선을 제거할 때 사용해요.
+
+[Preview: Codes]
+
+```jsx copy
+<StepperRow
+  left={<StepperRow.NumberIcon number={1} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+/>
+<StepperRow
+  left={<StepperRow.NumberIcon number={2} />}
+  center={<StepperRow.Texts type="A" title="타이틀" description="설명" />}
+  hideLine
+/>
+```
+
+## 인터페이스
+
+**Type: StepperRowProps**
+
+```typescript
+export interface StepperRowProps {
+  /**
+   * `StepperRow` 컴포넌트의 왼쪽 영역에 표시될 컴포넌트를 지정해요. 주로 `StepperRow.NumberIcon`나 `StepperRow.AssetFrame` 컴포넌트가 사용돼요.
+   */
+  left: ReactNode;
+
+  /**
+   * `StepperRow` 컴포넌트의 중앙 영역에 표시될 타이틀과 설명을 지정해요. 주로 `StepperRow.Texts` 컴포넌트가 사용돼요.
+   */
+  center: ReactNode;
+
+  /**
+   * `StepperRow` 컴포넌트의 오륵쪽 영역에 표시될 컴포넌트를 지정해요. 주로 `StepperRow.RightArrow`나 `StepperRow.RightButton` 컴포넌트가 사용돼요.
+   */
+  right?: ReactNode;
+
+  /**
+   * `StepperRow` 컴포넌트의 연결선을 숨길지 여부를 설정해요. 주로 마지막 스텝에서 `true`를 사용하여 연결선을 제거해요.
+   * @default false
+   */
+  hideLine?: boolean;
+}
+```
+
+**Type: StepperRowAssetFrameProps**
+
+```typescript
+export interface StepperRowAssetFrameProps {
+  /**
+   * `Asset` 컴포넌트의 프레임 형태를 지정해요. 주로 `Asset`에서 제공하는 preset을 사용해요.
+   */
+  shape: 'FrameShapeType'; // todo: Asset 링크 추가하기
+
+  /**
+   * `Asset` 컴포넌트의 프레임 안에 표시될 콘텐츠를 지정해요. 주로 이미지나 아이콘을 추가해요.
+   */
+  content: ReactNode;
+}
+```
+
+**Type: StepperRowNumberIconProps**
+
+```typescript
+export interface StepperRowNumberIconProps {
+  /**
+   * `StepperRow` 컴포넌트 왼쪽에 순서를 나타내는 숫자를 설정해요.
+   */
+  number: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+}
+```
+
+**Type: StepperRowRightArrowProps**
+
+```typescript
+export interface StepperRowRightArrowProps {
+  /**
+   * 아이콘의 이름을 지정해요.
+   * @default 'icon-arrow-right-mono'
+   */
+  name?: string;
+
+  /**
+   * 아이콘의 색상을 지정해요.
+   * @default adaptive.grey400
+   */
+  color?: string;
+
+  /**
+   * 프레임의 모양을 설정해요.
+   * 더 큰 텍스트 스케일이 160보다 크거나 같으면, `Asset.frameShape.CleanW32` 로 자동 변경돼요.
+   * @default Asset.frameShape.CleanW24
+   */
+  frameShape?: 'Asset.FrameShapeType'; // todo: Asset 링크 추가하기
+}
+```
+
+**Type: StepperRowRightButtonProps**
+
+```typescript
+export interface StepperRowRightButtonProps extends ButtonProps {
+  /**
+   * 버튼의 크기를 설정해요.
+   * @default 'tiny'
+   */
+  size?: 'big' | 'large' | 'medium' | 'tiny';
+
+  /**
+   * 버튼의 타입을 설정해요.
+   * @default 'primary'
+   */
+  type?: 'primary' | 'danger' | 'light' | 'dark';
+}
+```
+
+**Type: StepperRowTextsProps**
+
+```typescript
+export interface StepperRowTextsProps {
+  /**
+   * `StepperRow.Texts` 컴포넌트의 텍스트의 타입을 설정해요. 타이틀과 설명의 스타일이 타입에 따라 달라져요.
+   * - `A`일 떄 타이틀은 `t5`, 설명은 `t6`에요.
+   * - `B`일 떄 타이틀은 `t4`, 설명은 `t6`에요.
+   * - `C`일 떄 타이틀은 `t5`, 설명은 `t7`에요.
+   */
+  type: 'A' | 'B' | 'C';
+
+  /**
+   * `StepperRow.Texts` 컴포넌트에 표시될 타이틀을 지정해요.
+   */
+  title: ReactNode;
+
+  /**
+   * `StepperRow.Texts` 컴포넌트에 표시될 설명을 지정해요.
+   */
+  description?: ReactNode;
+
+  /**
+   * 타이틀의 스타일링을 할 때 사용해요.
+   */
+  titleProps?: 'ParagraphTextProps'; // todo: Paragraph 링크 추가하기
+
+  /**
+   * 설명의 스타일링을 할 때 사용해요.
+   */
+  descriptionProps?: 'ParagraphTextProps'; // todo: Paragraph 링크 추가하기
+}
+```
+
+---
+
+# Switch (/tds-react-native/components/switch/)
+
+# Switch
+
+`Switch` 컴포넌트는 두 가지 상태(예: 켜짐/꺼짐, 활성화/비활성화)를 전환할 수 있는 UI 요소예요. 단순한 토글 방식으로 동작해서 주로 설정이나 옵션을 활성화하거나 비활성화할 때 사용해요. 체크박스와 비슷하지만 더 직관적인 시각적 요소로 사용자가 상태 변화를 쉽게 인식할 수 있어요.
+
+[Preview: Codes]
+
+## 사용 예제
+
+### 상태
+
+스위치의 켜짐과 꺼짐 상태를 표현하려면 `checked` 속성을 사용하세요. 상태를 바꾸려면 `onCheckedChange` 속성과 함께 사용하세요.
+
+[Preview: Codes]
+
+```jsx copy
+function States() {
+  const [checked1, setChecked1] = useState(true);
+  const [checked2, setChecked2] = useState(false);
+  return (
+    <View style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
+      <Switch checked={checked1} onCheckedChange={setChecked1} />
+      <Switch checked={checked2} onCheckedChange={setChecked2} />
+    </View>
+  );
+}
+```
+
+### 비활성화하기
+
+스위치를 비활성화하려면 `disabled` 속성을 사용하세요. 비활성화된 스위치는 사용자가 클릭할 수 없고, 시각적으로도 비활성화된 상태임을 나타내요.
+
+[Preview: Codes]
+
+```jsx copy
+<Switch checked disabled />
+<Switch checked={false} disabled />
+```
+
+## 인터페이스
+
+**Type: SwitchProps**
+
+```typescript
+export interface SwitchProps {
+  /**
+   * `Switch` 컴포넌트의 켜짐과 꺼짐 상태를 표현해요.  주로 `Switch` 컴포넌트의 상태를 컴포넌트 외부에서 관리할 때, `onCheckedChange` 속성과 함께 사용해요.
+   */
+  checked?: boolean;
+
+  /**
+   * `Switch` 컴포넌트의 선택 상태가 변경될 때 실행되는 함수예요.
+   */
+  onCheckedChange?: (value: boolean) => void;
+
+  /**
+   * `Switch` 컴포넌트의 상태를 컴포넌트 내부에서 관리할 때, 초기 선택 상태를 지정해요.
+   *
+   * @default false
+   */
+  defaultChecked?: boolean;
+
+  /**
+   * 이 값이 `true`일 때 컴포넌트가 비활성화돼요.
+   *
+   * @default false
+   */
+  disabled?: boolean;
+
+  /**
+   * `Switch` 컴포넌트를 클릭했을 때 실행되는 함수예요.
+   */
+  onPress?: PressableProps['onPress'];
+
+  /**
+   * `Switch` 컴포넌트의 스타일을 설정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# Tab (/tds-react-native/components/tab/)
+
+# Tab
+
+[Image: Tab thumbnail - tab/Thumbnail-Tab.png]
+
+`Tab` 컴포넌트는 여러 콘텐츠를 한 화면에서 효율적으로 전환할 수 있도록 도와줘요. 각 탭은 콘텐츠 목록을 보여주고, 사용자가 선택한 탭에 따라 해당 콘텐츠를 전환해요. `Tab` 컴포넌트를 사용하면 여러 콘텐츠를 한 번에 볼 수 있고, 전환도 간편하게 할 수 있어요.
+
+[Preview: Codes]
+
+## 사용법
+
+### 크기 조정하기
+
+`Tab` 컴포넌트의 크기를 변경하려면 `size` 속성을 사용하세요. `small`, `large` 중 하나를 선택할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+<Tab defaultValue="탭1" size="small">
+  <Tab.Item value={'탭1'}>탭1</Tab.Item>
+  <Tab.Item value={'탭2'}>탭2</Tab.Item>
+</Tab>
+<Tab defaultValue="탭1" size="large">
+  <Tab.Item value={'탭1'}>탭1</Tab.Item>
+  <Tab.Item value={'탭2'}>탭2</Tab.Item>
+</Tab>
+```
+
+### 스크롤 되게 하기
+
+아이템이 4개 이상이면 `fluid` 속성을 사용해보세요. 아이템이 많아지면 탭에 가로 스크롤이 생겨요.
+
+[Preview: Codes]
+
+```jsx copy
+<Tab fluid defaultValue="탭1">
+  {Array.from({ length: 20 }, (_, index) => (
+    <Tab.Item key={index} value={`탭${index + 1}`}>
+      긴텍스트
+    </Tab.Item>
+  ))}
+</Tab>
+```
+
+### 상태
+
+#### 상태를 외부에서 관리하는 방식
+
+`Tab`의 상태를 외부에서 관리하려면 `value`와 `onChange` 속성을 함께 사용하세요. 이렇게 하면 `Tab.Item` 컴포넌트가 선택되었는지 아닌지를 외부에서 직접 관리할 수 있어요.
+또한 `onChange`에 적절한 함수를 전달하여 값의 변화를 감지할 수 있어요.
+
+[Preview: Codes]
+
+```jsx copy
+function Controlled() {
+  const [value, setValue] = useState('0');
+  return (
+    <Tab value={value} onChange={setValue}>
+      <Tab.Item value={'0'}>탭1</Tab.Item>
+      <Tab.Item value={'1'}>탭2</Tab.Item>
+      <Tab.Item value={'2'}>탭3</Tab.Item>
+    </Tab>
+  );
+}
+```
+
+#### 상태를 내부에서 관리하는 방식
+
+`Tab`의 상태를 내부에서 자동으로 관리하려면 `defaultValue` 속성을 사용하세요. 이 속성은 처음 화면에 표시될 때 선택된 `Tab.Item` 컴포넌트를 정해줘요. 그 후에는 컴포넌트가 스스로 상태를 관리해요. 이 방식은 상태 변화를 추적하지 않아도 될 때 유용해요.
+
+[Preview: Codes]
+
+```jsx copy
+<Tab defaultValue="0">
+  <Tab.Item value={'0'}>탭1</Tab.Item>
+  <Tab.Item value={'1'}>탭2</Tab.Item>
+  <Tab.Item value={'2'}>탭3</Tab.Item>
+</Tab>
+```
+
+## 인터페이스
+
+**Type: TabProps**
+
+```typescript
+export interface TabProps {
+  /**
+   * 이 값이 `true`일 때 각 아이템의 너비가 글자 수에 맞춰져요. 아이템의 전체 크기가 `Tab`의 컨테이너를 넘어가면 가로 스크롤이 생겨요. `false`라면 최대 4개의 아이템 사용을 권장해요.
+   *
+   * @default false
+   */
+  fluid?: boolean;
+  /**
+   * 사이즈에 따라 `Tab` 컴포넌트의 높이와 텍스트 크기가 변경돼요.
+   * @default 'large'
+   */
+  size?: 'large' | 'small';
+
+  /**
+   * `Tab` 컴포넌트에서 초기 선택된 탭의 값을 설정해요. 탭의 상태를 컴포넌트 내부에서 관리할 때 사용해요.
+   */
+  defaultValue?: string;
+
+  /**
+   * `Tab` 컴포넌트에서 선택된 탭을 설정해요. `Tab` 컴포넌트의 상태를 컴포넌트 외부에서 관리할 때, `onChange` 속성과 함께 사용해요.
+   */
+  value?: string;
+
+  /**
+   * `Tab` 컴포넌트를 구성하는 하나 이상의 `Tab.Item` 컴포넌트를 받아요. `Tab.Item`은 각각의 탭을 나타내요.
+   */
+  children?: ReactNode;
+
+  /**
+   * 선택된 `Tab.Item` 컴포넌트가 변경될 때 실행되는 함수예요.
+   */
+  onChange?: (value: string) => void;
+}
+```
+
+**Type: TabItemProps**
+
+```typescript
+export interface TabItemProps {
+  /**
+   * 이 값이 `true`일 때 `Tab.Item`의 우측 상단에 빨간 동그라미가 표시돼요. 중요한 알림이나 새로운 업데이트가 있음을 사용자에게 시각적으로 전달할 수 있어요.
+   *
+   * @default false
+   */
+  redBean?: boolean;
+
+  /**
+   * 탭의 값을 설정해요. `Tab` 컴포넌트에서 탭을 구분하는 데 사용돼요.
+   */
+  value: string;
+
+  /**
+   * `Tab.Item` 컴포넌트 내부에 표시될 내용을 설정해요.
+   */
+  children: ReactNode;
+
+  /**
+   * `Tab.Item` 컴포넌트의 스타일을 설정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+
+  /**
+   * `Tab.Item` 컴포넌트를 클릭했을 때 실행되는 함수예요.
+   */
+  onPress?: PressableProps['onPress'];
+}
+```
+
+---
+
+# TableRow (/tds-react-native/components/table-row/)
+
+# TableRow
+
+`TableRow` 컴포넌트는 테이블 형태의 정보를 표시할 때 사용해요. 왼쪽과 오른쪽 두 개의 열로 구성되어 있으며, 정보를 명확하게 전달하는 데 유용해요.
+
+[Preview: Codes]
+
+## 사용 예제
+
+### 기본 사용
+
+TableRow를 사용하려면 `align`, `left`, `right`를 지정하세요.
+
+```jsx copy
+<TableRow
+  align="left"
+  left="받는분"
+  right="김토스"
+  leftRatio={40}
+/>
+```
+
+### 정렬
+
+`align` 속성을 사용해 정렬 방식을 지정할 수 있어요.
+
+```jsx copy
+// 왼쪽 정렬
+<TableRow
+  align="left"
+  left="계좌번호"
+  right="1234-5678-9012"
+  leftRatio={40}
+/>
+
+// 양쪽 정렬
+<TableRow
+  align="right"
+  left="받는분"
+  right="김토스"
+  leftRatio={40}
+/>
+```
+
+### 비율 조정
+
+`leftRatio`를 사용해 왼쪽 영역의 너비 비율을 조정할 수 있어요.
+
+```jsx copy
+<TableRow
+  align="left"
+  left="은행"
+  right="토스뱅크"
+  leftRatio={30}
+/>
+
+<TableRow
+  align="left"
+  left="계좌번호"
+  right="1234-5678-9012-3456"
+  leftRatio={30}
+/>
+```
+
+### 커스텀 텍스트 스타일
+
+`TableRow.LeftText`와 `TableRow.RightText`를 사용해 텍스트 스타일을 커스터마이징할 수 있어요.
+
+```jsx copy
+import { colors } from '@toss/tds-colors';
+
+<TableRow
+  align="left"
+  left={
+    <TableRow.LeftText color={colors.grey600}>
+      받는분
+    </TableRow.LeftText>
+  }
+  right={
+    <TableRow.RightText fontWeight="bold" color={colors.grey900}>
+      김토스
+    </TableRow.RightText>
+  }
+  leftRatio={40}
+/>
+```
+
+### 송금 정보
+
+송금 확인 화면에서 사용할 수 있어요.
+
+```jsx copy
+<View>
+  <TableRow
+    align="left"
+    left="받는분"
+    right="김토스"
+    leftRatio={35}
+  />
+  <TableRow
+    align="left"
+    left="받는 계좌"
+    right="토스뱅크 1234-5678-9012"
+    leftRatio={35}
+  />
+  <TableRow
+    align="left"
+    left="보낼 금액"
+    right={
+      <TableRow.RightText fontWeight="semiBold">
+        50,000원
+      </TableRow.RightText>
+    }
+    leftRatio={35}
+  />
+</View>
+```
+
+### 상품 정보
+
+```jsx copy
+<View>
+  <TableRow
+    align="right"
+    left="상품명"
+    right="토스 적금"
+    leftRatio={40}
+  />
+  <TableRow
+    align="right"
+    left="금리"
+    right="연 3.5%"
+    leftRatio={40}
+  />
+  <TableRow
+    align="right"
+    left="가입 기간"
+    right="12개월"
+    leftRatio={40}
+  />
+</View>
+```
+
+### 패딩 제거
+
+`horizontalPadding`을 사용해 좌우 패딩을 제거할 수 있어요.
+
+```jsx copy
+<TableRow
+  align="left"
+  left="항목"
+  right="값"
+  horizontalPadding={0}
+  leftRatio={40}
+/>
+```
+
+### List와 함께 사용
+
+TableRow를 List 안에서 사용하면 구분선이 자동으로 추가돼요.
+
+```jsx copy
+<List>
+  <TableRow
+    align="left"
+    left="이름"
+    right="김토스"
+    leftRatio={35}
+  />
+  <TableRow
+    align="left"
+    left="전화번호"
+    right="010-1234-5678"
+    leftRatio={35}
+  />
+  <TableRow
+    align="left"
+    left="이메일"
+    right="toss@example.com"
+    leftRatio={35}
+  />
+</List>
+```
+
+## 인터페이스
+
+**Type: TableRowProps**
+
+```typescript
+export interface TableRowProps {
+  /**
+   * 테이블 행의 정렬 방식을 지정해요.
+   */
+  align: TableRowAlign;
+
+  /**
+   * 왼쪽 영역의 너비 비율을 0-100 사이의 값으로 지정해요.
+   */
+  leftRatio?: number;
+
+  /**
+   * 왼쪽에 표시될 내용을 지정해요. 문자열이나 TableRow.LeftText 컴포넌트를 사용할 수 있어요.
+   */
+  left: ReactNode;
+
+  /**
+   * 오른쪽에 표시될 내용을 지정해요. 문자열이나 TableRow.RightText 컴포넌트를 사용할 수 있어요.
+   */
+  right: ReactNode;
+
+  /**
+   * 좌우 패딩을 지정해요.
+   *
+   * @default 24
+   */
+  horizontalPadding?: 0 | 24;
+
+  /**
+   * 테이블 행의 스타일을 지정해요.
+   */
+  style?: StyleProp<ViewStyle>;
+}
+```
+
+---
+
+# Text Button (/tds-react-native/components/text-button/)
+
+# Text Button
+
+`TextButton` 컴포넌트는 사용자가 어떤 액션을 트리거하거나 이벤트를 실행할 때 사용해요.
+
+## 사용 예제
+
+### 크기 조정하기
+
+`TextButton` 컴포넌트의 크기는 `typography` 속성을 사용해서 변경할 수 있어요. `t5`, `t4` 등 다양한 값으로 텍스트 크기를 조정할 수 있어요.
+
+```jsx copy
+<TextButton typography="t5" variant="arrow">
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t3" variant="arrow">
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t1" variant="arrow">
+  텍스트 버튼
+</TextButton>
+```
+
+### 형태 변경하기
+
+`TextButton` 컴포넌트의 모양을 변경하려면 `variant` 속성을 사용하세요. 사용할 수 있는 값은 `clear`, `arrow`, 그리고 `underline`이 있어요.
+
+#### 기본 형태
+
+`variant` 속성에 값을 지정하지 않으면 기본 형태인 `clear`로 표현돼요. `clear`는 보조 요소 없이 텍스트만 표시돼요.
+
+```jsx copy
+<TextButton typography="t5">
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t3">
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t1">
+  텍스트 버튼
+</TextButton>
+```
+
+#### 화살표 추가하기
+
+화살표 아이콘과 함께 사용하려면 `variant` 속성을 `arrow`로 설정하세요. 컴포넌트 오른쪽에 화살표가 추가돼요.
+
+```jsx copy
+<TextButton typography="t5" variant="arrow">
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t3" variant="arrow">
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t1" variant="arrow">
+  텍스트 버튼
+</TextButton>
+```
+
+#### 밑줄 긋기
+
+`TextButton` 컴포넌트에 밑줄을 추가하려면 `variant` 속성을 `underline`으로 설정하세요.
+
+```jsx copy
+<TextButton typography="t5" variant="underline">
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t3" variant="underline">
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t1" variant="underline">
+  텍스트 버튼
+</TextButton>
+```
+
+### 비활성화
+
+텍스트 버튼을 비활성화하려면 `disabled` 속성을 사용하세요. 비활성화된 텍스트 버튼은 사용자가 클릭할 수 없고, 시각적으로도 비활성화된 상태임을 나타내요.
+
+```jsx copy
+<TextButton typography="t5" disabled>
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t3" disabled>
+  텍스트 버튼
+</TextButton>
+<TextButton typography="t1" disabled>
+  텍스트 버튼
+</TextButton>
+```
+
+## 인터페이스
+
+**Type: TextButtonProps**
+
+```typescript
+export interface TextButtonProps  {
+  /**
+   * `TextButton` 컴포넌트의 형태를 결정해요.
+   *
+   * @default 'clear'
+   */
+  variant?: 'arrow' | 'underline' | 'clear';
+  /**
+   * `TextButton` 컴포넌트의 비활성화 여부를 나타내요.
+   */
+  disabled?: boolean;
+  /**
+   * `TextButton` 컴포넌트의 텍스트 스타일을 설정해요.
+   */
+  typography: Typography;
+  /**
+   * `TextButton` 컴포넌트의 텍스트 굵기를 설정해요.
+   *
+   * @default 'regular'
+   */
+  fontWeight?: 'regular' | 'medium' | 'semibold' | 'semiBold' | 'bold';
+  /**
+   * `TextButton` 컴포넌트의 텍스트 색상을 설정해요.
+   *
+   * @default adaptive.grey900
+   */
+  color?: string;
+  /**
+   * `TextButton` 컴포넌트가 눌렸을 때 실행되는 함수예요.
+   */
+  onPress?: PressableProps['onPress'];
+  /**
+   * `TextButton` 컴포넌트의 스타일을 변경할 때 사용해요.
+   */
+  style?: StyleProp<ViewStyle>;
+  /**
+   * `TextButton` 컴포넌트 내부에 표시될 내용을 설정해요.
+   */
+  children: ReactNode;
+}
+```
+
+---
+
+# TextField (/tds-react-native/components/text-field/)
+
+# TextField
+
+`TextField` 컴포넌트는 사용자로부터 텍스트 입력을 받는 데 사용해요. 다양한 스타일과 옵션을 제공하여 다양한 입력 상황에 맞게 사용할 수 있어요.
+
+## 사용 예제
+
+### 기본 사용
+
+TextField를 사용하려면 `variant`를 지정하세요.
+
+```jsx copy
+<TextField
+  variant="line"
+  placeholder="텍스트를 입력하세요"
+  value={value}
+  onChangeText={setValue}
+/>
+```
+
+### Variant
+
+TextField는 네 가지 variant를 제공해요.
+
+```jsx copy
+<TextField variant="box" placeholder="Box variant" />
+<TextField variant="line" placeholder="Line variant" />
+<TextField variant="big" placeholder="Big variant" />
+<TextField variant="hero" placeholder="Hero variant" />
+```
+
+### 라벨
+
+`label` 속성을 사용해 텍스트 필드에 라벨을 추가할 수 있어요.
+
+```jsx copy
+<TextField
+  variant="line"
+  label="이름"
+  placeholder="이름을 입력하세요"
+  value={value}
+  onChangeText={setValue}
+/>
+```
+
+### 라벨 옵션
+
+`labelOption`을 사용해 라벨 표시 방식을 조정할 수 있어요.
+
+```jsx copy
+// 값이 있을 때만 라벨 표시
+<TextField
+  variant="line"
+  label="이름"
+  labelOption="appear"
+  value={value}
+  onChangeText={setValue}
+/>
+
+// 항상 라벨 표시
+<TextField
+  variant="line"
+  label="이름"
+  labelOption="sustain"
+  value={value}
+  onChangeText={setValue}
+/>
+```
+
+### 도움말 및 에러
+
+`help`와 `hasError` 속성을 사용해 도움말과 에러 상태를 표시할 수 있어요.
+
+```jsx copy
+<TextField
+  variant="line"
+  label="이메일"
+  value={email}
+  onChangeText={setEmail}
+  help="이메일 형식으로 입력해주세요"
+/>
+
+<TextField
+  variant="line"
+  label="이메일"
+  value={email}
+  onChangeText={setEmail}
+  hasError={true}
+  help="올바른 이메일 형식이 아니에요"
+/>
+```
+
+### 접두사/접미사
+
+`prefix`와 `suffix`를 사용해 텍스트 앞뒤에 고정 텍스트를 표시할 수 있어요.
+
+```jsx copy
+<TextField
+  variant="line"
+  prefix="₩"
+  placeholder="0"
+  value={amount}
+  onChangeText={setAmount}
+/>
+
+<TextField
+  variant="line"
+  suffix="원"
+  placeholder="0"
+  value={amount}
+  onChangeText={setAmount}
+/>
+```
+
+### 포맷팅
+
+`format` 속성을 사용해 입력값을 특정 형식으로 변환할 수 있어요.
+
+```jsx copy
+import { TextField } from '@toss/tds-react-native';
+
+// 금액 포맷
+<TextField
+  variant="line"
+  value={amount}
+  onChangeText={setAmount}
+  format={TextField.format.amount}
+/>
+
+// 전화번호 포맷
+<TextField
+  variant="line"
+  value={phone}
+  onChangeText={setPhone}
+  format={TextField.format.phone}
+/>
+```
+
+### Clearable TextField
+
+`TextField.Clearable`을 사용하면 입력값을 쉽게 지울 수 있는 클리어 버튼이 표시돼요.
+
+```jsx copy
+<TextField.Clearable
+  variant="line"
+  placeholder="검색어를 입력하세요"
+  value={searchText}
+  onChangeText={setSearchText}
+  onClear={() => setSearchText('')}
+/>
+```
+
+### TextField Button
+
+`TextField.Button`을 사용하면 클릭 가능한 텍스트 필드를 만들 수 있어요.
+
+```jsx copy
+<TextField.Button
+  variant="line"
+  label="생년월일"
+  placeholder="생년월일을 선택하세요"
+  value={birthDate}
+  onPress={() => openDatePicker()}
+/>
+```
+
+### 비활성화
+
+`disabled` 속성을 사용해 텍스트 필드를 비활성화할 수 있어요.
+
+```jsx copy
+<TextField
+  variant="line"
+  placeholder="비활성화된 필드"
+  disabled={true}
+/>
+```
+
+## 인터페이스
+
+**Type: TextFieldProps**
+
+```typescript
+export interface TextFieldProps {
+  /**
+   * 텍스트 필드의 모양을 지정해요.
+   */
+  variant: TextFieldVariant;
+
+  /**
+   * 텍스트 필드의 값이에요.
+   */
+  value?: TextFieldValue;
+
+  /**
+   * 텍스트 필드의 기본값이에요.
+   */
+  defaultValue?: string;
+
+  /**
+   * 텍스트가 변경될 때 호출되는 함수예요.
+   */
+  onChangeText?: (text: string) => void;
+
+  /**
+   * 텍스트 필드의 상단 라벨을 지정해요.
+   */
+  label?: string;
+
+  /**
+   * 라벨 표시 옵션을 지정해요.
+   * - appear: value가 있을 때만 label이 보여요.
+   * - sustain: 항상 label이 보여요.
+   *
+   * @default 'appear'
+   */
+  labelOption?: 'appear' | 'sustain';
+
+  /**
+   * 텍스트 필드의 하단 도움말을 지정해요.
+   */
+  help?: ReactNode;
+
+  /**
+   * 텍스트 필드의 에러 여부를 지정해요.
+   *
+   * @default false
+   */
+  hasError?: boolean;
+
+  /**
+   * 텍스트 필드의 비활성화 여부를 지정해요.
+   *
+   * @default false
+   */
+  disabled?: boolean;
+
+  /**
+   * 텍스트 앞에 표시될 접두사를 지정해요.
+   */
+  prefix?: string;
+
+  /**
+   * 텍스트 뒤에 표시될 접미사를 지정해요.
+   */
+  suffix?: string;
+
+  /**
+   * 텍스트 필드의 오른쪽에 위치할 컴포넌트를 지정해요.
+   */
+  right?: ReactNode;
+
+  /**
+   * 플레이스홀더 텍스트를 지정해요.
+   */
+  placeholder?: string;
+
+  /**
+   * 금액, 휴대폰번호 등 특정 형식으로 변환해야 하는 경우 사용해요.
+   * - transform: 입력값(value) => 변환된 값
+   * - reset: 변환된 값 => 입력값(value)
+   *
+   * @example
+   * format={{
+   *   transform: value => commaizeNumber(value),
+   *   reset: formattedValue => decommaizeNumber(formattedValue)
+   * }}
+   */
+  format?: {
+    transform: (value: TextFieldValue) => TextFieldValue;
+    reset?: (formattedValue: TextFieldValue) => TextFieldValue;
+  };
+
+  /**
+   * 컨테이너의 스타일을 지정해요.
+   */
+  containerStyle?: ViewProps['style'];
+
+  /**
+   * 상단 패딩을 지정해요.
+   */
+  paddingTop?: number;
+
+  /**
+   * 하단 패딩을 지정해요.
+   */
+  paddingBottom?: number;
+
+  /**
+   * 키보드 타입을 지정해요.
+   */
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+
+  /**
+   * 최대 입력 길이를 지정해요.
+   */
+  maxLength?: number;
+
+  /**
+   * 자동 포커스 여부를 지정해요.
+   */
+  autoFocus?: boolean;
+
+  /**
+   * 편집 가능 여부를 지정해요.
+   */
+  editable?: boolean;
+}
+```
+
+**Type: ClearableTextFieldProps**
+
+```typescript
+export interface ClearableTextFieldProps extends Omit<TextFieldProps, 'right'> {
+  /**
+   * 클리어 버튼을 클릭했을 때 호출되는 함수예요.
+   */
+  onClear?: () => void;
+}
+```
+
+**Type: TextFieldButtonProps**
+
+```typescript
+export interface TextFieldButtonProps extends TextFieldProps {
+  /**
+   * 텍스트 필드의 포커스 여부를 지정해요.
+   *
+   * @default false
+   */
+  focused?: boolean;
+
+  /**
+   * 버튼을 클릭했을 때 호출되는 함수예요.
+   */
+  onPress?: () => void;
+
+  /**
+   * 텍스트 스타일을 지정해요.
+   */
+  style?: StyleProp<TextStyle>;
+}
+```
+
+---
+
+# Toast (/tds-react-native/components/toast/)
+
+# Toast
+
+`Toast` 컴포넌트는 사용자에게 짧은 메시지를 일시적으로 표시하는 데 사용해요. 액션의 결과나 상태 변화를 알리는 데 유용하며, 화면 상단이나 하단에 나타났다가 자동으로 사라져요.
+
+## 사용 예제
+
+### 기본 사용
+
+Toast를 사용하려면 `open`, `text`, `onClose` 속성을 지정하세요.
+
+```jsx copy
+<Toast
+  open={isOpen}
+  text="저장되었어요"
+  onClose={() => setIsOpen(false)}
+/>
+```
+
+### 위치 설정
+
+`position` 속성을 사용해 Toast가 표시될 위치를 지정할 수 있어요. `top` 또는 `bottom`을 선택할 수 있어요.
+
+```jsx copy
+<Toast
+  open={isOpen}
+  text="상단에 표시되는 Toast예요"
+  position="top"
+  onClose={() => setIsOpen(false)}
+/>
+
+<Toast
+  open={isOpen}
+  text="하단에 표시되는 Toast예요"
+  position="bottom"
+  onClose={() => setIsOpen(false)}
+/>
+```
+
+### 아이콘 추가
+
+Toast에 아이콘을 추가하려면 `icon` 속성을 사용하세요. `Toast.Icon` 또는 `Toast.LottieIcon`을 사용할 수 있어요.
+
+```jsx copy
+<Toast
+  open={isOpen}
+  text="아이콘이 있는 Toast예요"
+  icon={<Toast.Icon name="icn-attention-color" />}
+  onClose={() => setIsOpen(false)}
+/>
+
+<Toast
+  open={isOpen}
+  text="완료되었어요"
+  icon={<Toast.LottieIcon preset type="complete" />}
+  onClose={() => setIsOpen(false)}
+/>
+```
+
+### 버튼 추가
+
+하단 Toast에는 `button` 속성을 사용해 버튼을 추가할 수 있어요.
+
+```jsx copy
+<Toast
+  open={isOpen}
+  text="작업이 완료되었어요"
+  position="bottom"
+  button={<Toast.Button text="확인" onPress={() => setIsOpen(false)} />}
+  onClose={() => setIsOpen(false)}
+/>
+```
+
+### 지속 시간 조정
+
+`duration` 속성을 사용해 Toast가 화면에 표시되는 시간을 조정할 수 있어요.
+
+```jsx copy
+<Toast
+  open={isOpen}
+  text="5초 동안 표시돼요"
+  duration={5}
+  onClose={() => setIsOpen(false)}
+/>
+```
+
+### 하단 여백 조정
+
+`bottomOffset` 속성을 사용해 하단 Toast의 여백을 조정할 수 있어요.
+
+```jsx copy
+<Toast
+  open={isOpen}
+  text="하단 여백이 있는 Toast예요"
+  position="bottom"
+  bottomOffset={40}
+  onClose={() => setIsOpen(false)}
+/>
+```
+
+## 인터페이스
+
+**Type: ToastProps**
+
+```typescript
+export interface ToastProps {
+  /**
+   * Toast가 보이는지 여부를 지정해요.
+   */
+  open: boolean;
+
+  /**
+   * Toast에 표시될 텍스트 내용을 지정해요.
+   */
+  text: string;
+
+  /**
+   * Toast의 왼쪽에 표시될 아이콘을 지정해요.
+   *
+   * @example
+   * icon={}
+   * icon={}
+   * icon={}
+   */
+  icon?: ReactNode;
+
+  /**
+   * Toast가 표시되는 위치를 지정해요.
+   *
+   * @default 'bottom'
+   */
+  position?: 'top' | 'bottom';
+
+  /**
+   * Toast가 화면에 표시되는 시간을 초 단위로 지정해요.
+   * button이 있으면 5초, 없으면 3초가 기본값이에요.
+   *
+   * @default 3
+   */
+  duration?: number;
+
+  /**
+   * Toast를 닫을 때 호출되는 함수예요.
+   */
+  onClose: () => void;
+
+  /**
+   * Toast가 완전히 사라진 후 호출되는 함수예요.
+   */
+  onExited?: () => void;
+
+  /**
+   * Toast가 완전히 나타난 후 호출되는 함수예요.
+   */
+  onEntered?: () => void;
+
+  /**
+   * Toast 하단에 표시될 버튼을 지정해요. position이 'bottom'일 때만 사용 가능해요.
+   *
+   * @example
+   * button={}
+   */
+  button?: ReactNode;
+
+  /**
+   * Toast의 하단 여백을 픽셀 단위로 지정해요. position이 'bottom'일 때만 사용 가능해요.
+   *
+   * @default 20
+   */
+  bottomOffset?: number;
+}
+```
+
+---
+
+# Colors (/tds-react-native/foundation/colors/)
+
+# Colors
+
+토스의 색상 시스템은 개발자와 디자이너가 **통일된 색상 이름**을 사용하도록 도와줘요. 
+이 시스템을 활용하면 디자인 가이드에 맞춰 일관된 UI를 쉽게 구현할 수 있어요.
+
+## 기본 사용법
+
+`@toss/tds-react-native` 패키지의 `colors` 객체에서 원하는 색상을 가져와 사용할 수 있어요.
+
+```jsx
+import { colors } from '@toss/tds-react-native';
+
+<View style={{ width:100, height:100, backgroundColor: colors.blue500 }} />
+```
+
+## 기본 색상
+
+[Preview: div]
+
+## 배경 색상
+
+[Preview: BackgroundPalette]
+
+---
+
+# Typography (/tds-react-native/foundation/typography/)
+
+# Typography
+
+Typography는 디자인 시스템의 핵심 요소로, 텍스트의 가독성을 보장하고 일관된 방향성을 유지하며 브랜드 아이덴티티를 전달하는 중요한 역할을 해요. 폰트 크기, 라인 높이 등을 통해 정보의 계층 구조를 명확히 하고, 다양한 디바이스와 환경에서 통일된 비주얼을 제공하는 데 초점을 맞춰요.
+
+우리의 디자인 시스템은 다양한 플랫폼에서의 일관된 사용자 경험을 제공하기 위해 설계되었어요. 안드로이드와 iOS뿐 아니라, 웹 페이지에서도 이질감 없이 동일한 텍스트 스타일이 적용될 수 있도록 명확한 규칙을 따르고 있어요. 특히 네이티브 환경에서의 더 큰 텍스트 모드와 같은 접근성 옵션을 지원하며, 폰트 크기와 텍스트 스타일이 이에 맞춰 동적으로 조정되도록 설계했어요.
+
+## 규칙 알아보기
+
+### 토큰
+
+Typography 토큰은 계층 구조를 가지고 있어요. 사용 방법은 아래 표에서 확인할 수 있어요. Typography를 **사용하는 입장에서 구체적인 폰트 크기와 라인 높이를 외우거나 직접 계산할 필요는 없어요.** 사용자는 계층화된 토큰을 그대로 사용하도록 추상화되어 있어요.
+
+또한, **아래 표에 나온 값을 직접 하드코딩하지 않길 권장해요.** 이 표는 더 큰 텍스트가 적용되지 않은 기본적인 상황을 가정한 것이며, 값을 직접 하드코딩하면 더 큰 텍스트로 인해 시스템의 폰트 크기가 변경되는 상황에서 유연하게 대응하기 어려울 수 있어요.
+
+[Preview: Token]
+
+### 더 큰 텍스트
+
+더 큰 텍스트는 iOS와 Android에서 제공하는 접근성 설정으로, 사용자가 텍스트 크기를 조정해 가독성을 높이는 기능이에요. 이 설정은 네이티브 환경뿐 아니라 앱 내부의 웹 페이지에서도 동일하게 적용되어야 해요. 네이티브 설정으로 텍스트 비율이 커진 경우, 웹 페이지 본문 텍스트가 상대적으로 작아 가독성이 떨어질 수 있기 때문이에요.
+
+이런 문제를 방지하려면, 사용자가 기기에서 더 큰 텍스트 모드를 활성화하고 비율을 변경했을 때 적용되는 실제 폰트 크기를 아래 표에 정리했어요. 이 표를 참고하면 네이티브와 웹 간 텍스트 비율 차이를 줄이고 모든 환경에서 일관된 사용자 경험을 제공할 수 있어요. 표에 나온 값을 고정 값으로 하드코딩하지 않는 것이 중요해요. 하드코딩된 값은 더 큰 텍스트 모드에서 유연한 대응을 어렵게 만들 수 있어요.
+
+Android, iOS, 웹 간의 차이로 인해 완벽히 동일한 규칙을 적용하기는 어려워요. 하지만 플랫폼 간 차이를 최소화하기 위해 근사한 값을 기준으로 규칙을 마련했어요. 아래에서 이를 확인할 수 있어요.
+
+#### iOS
+
+iOS는 xLarge와, xxLarge와, xxxLarge와와 같이 제한된 수의 더 큰 텍스트 단계를 제공해요. 우리는 이 단계를 비율로 추상화해서 Android, iOS, 그리고 웹 간의 규칙을 일관되게 맞췄어요. 아래 표에서는 네이티브 환경의 각 설정에 따라 웹에서 보여줘야 할 값을 확인할 수 있어요.
+
+[Preview: Component]
+
+#### Android
+
+한편, Android는 iOS와 달리 100% 이상의 모든 값을 지원하고 제한된 단계로 표현할 수 없어요. 그래서 다음 표와 같은 규칙을 마련했어요. 표에 표시된 NN%는 비율을 나타내요.
+
+예를 들어 사용자가 110%로 설정하고 Typography 1 토큰을 사용했다면, 해당 토큰의 공식(`30 x NN x 0.01`)에 따라 33으로 계산돼요.
+
+[Preview: Component]
+
+## 전체 보기
+
+[Preview: Basic]
+
+---
+
+# @toss-design-system에서 마이그레이션 (/tds-react-native/migration/from-toss-design-system/)
+
+# @toss-design-system에서 마이그레이션
+
+> **Deprecation Notice**
+> 
+>   `@toss-design-system/*` scope의 패키지들은 더 이상 지원되지 않습니다.
+>   해당 scope에 대한 npm 권한은 회수되었으며, 앞으로 새로운 버전이 배포되지 않습니다.
+> 
+>   모든 사용자는 `@toss/tds-*` scope의 패키지로 마이그레이션해야 합니다.
+
+## 개요
+
+기존 `@toss-design-system/react-native` 패키지를 사용하고 계셨다면, `@toss/tds-react-native` 패키지로 마이그레이션해야 합니다.
+이 가이드에서는 자동화된 CLI 도구를 사용하여 쉽게 마이그레이션하는 방법을 안내합니다.
+
+## 패키지 매핑
+
+다음은 기존 패키지와 새 패키지 간의 매핑입니다:
+
+| 기존 패키지 | 새 패키지 | 버전 |
+|------------|----------|------|
+| `@toss-design-system/colors` | `@toss/tds-colors` | ^0 |
+| `@toss-design-system/css-utils` | `@toss/tds-css-utils` | ^0 |
+| `@toss-design-system/typography` | `@toss/tds-typography` | ^0 |
+| `@toss-design-system/color-utils` | `@toss/tds-color-utils` | ^0 |
+| `@toss-design-system/spring-easing` | `@toss/tds-spring-easing` | ^0 |
+| `@toss-design-system/easings` | `@toss/tds-easings` | ^0 |
+| `@toss-design-system/react-native` | `@toss/tds-react-native` | ^1 |
+| `@toss-design-system/mobile` | `@toss/tds-mobile` | ^2 |
+| `@toss-design-system/mobile-bedrock` | `@toss/tds-mobile-ait` | ^1 |
+| `@toss-design-system/mobile-migration` | `@toss/tds-mobile-migration` | ^2 |
+
+## CLI를 활용한 자동 마이그레이션
+
+`@toss/tds-migration` CLI 도구를 사용하면 import path와 package.json dependencies를 자동으로 변환할 수 있습니다.
+
+### 1. 마이그레이션 CLI 설치
+
+```sh
+# pnpm
+pnpm add -D @toss/tds-migration
+
+# yarn
+yarn add -D @toss/tds-migration
+
+# npm
+npm install -D @toss/tds-migration
+```
+
+### 2. Import Path 마이그레이션
+
+TypeScript/TSX 파일의 import path를 자동으로 변환합니다.
+
+```sh
+# pnpm
+pnpm exec tds-migrate imports --path "src/**/*.{ts,tsx}"
+
+# yarn
+yarn tds-migrate imports --path "src/**/*.{ts,tsx}"
+
+# npx
+npx tds-migrate imports --path "src/**/*.{ts,tsx}"
+```
+
+**변환 예시:**
+
+```diff
+- import { Button } from '@toss-design-system/react-native';
+- import { colors } from '@toss-design-system/colors';
++ import { Button } from '@toss/tds-react-native';
++ import { colors } from '@toss/tds-colors';
+```
+
+### 3. package.json Dependencies 마이그레이션
+
+package.json의 dependencies를 자동으로 변환합니다.
+
+```sh
+# pnpm
+pnpm exec tds-migrate deps --path "**/package.json"
+
+# yarn
+yarn tds-migrate deps --path "**/package.json"
+
+# npx
+npx tds-migrate deps --path "**/package.json"
+```
+
+**변환 예시:**
+
+```diff
+{
+  "dependencies": {
+-   "@toss-design-system/react-native": "1.2.1",
+-   "@toss-design-system/colors": "0.1.0"
++   "@toss/tds-react-native": "^1",
++   "@toss/tds-colors": "^0"
+  }
+}
+```
+
+### 4. 전체 마이그레이션 (한 번에 실행)
+
+`import path`와 `package.json`을 모두 마이그레이션합니다.
+
+```sh
+# pnpm
+pnpm exec tds-migrate all --path "."
+
+# yarn
+yarn tds-migrate all --path "."
+
+# npx
+npx tds-migrate all --path "."
+```
+
+### 5. 패키지 재설치
+
+마이그레이션 후 패키지를 다시 설치합니다.
+
+```sh
+# pnpm
+pnpm install
+
+# yarn
+yarn install
+
+# npm
+npm install
+```
+
+## CLI 옵션
+
+| 옵션 | 설명 | 기본값 |
+|------|------|--------|
+| `-p, --path <path>` | 마이그레이션 대상 경로 (glob 패턴) | `**/*.{ts,tsx}` / `**/package.json` |
+| `--tsconfig <path>` | tsconfig.json 경로 | `tsconfig.json` |
+| `--dry-run` | 변경 없이 미리보기만 | `false` |
+
+### Dry-run 모드
+
+실제 변경 전에 어떤 파일이 변경될지 미리 확인할 수 있습니다.
+
+```sh
+npx tds-migrate imports --path "src/**/*.{ts,tsx}" --dry-run
+```
+
+## 수동 마이그레이션
+
+CLI 도구 대신 수동으로 마이그레이션하려면 다음 단계를 따르세요.
+
+### 1. 새 패키지 설치
+
+```sh
+# pnpm
+pnpm add @toss/tds-react-native@^1
+pnpm remove @toss-design-system/react-native
+
+# yarn
+yarn add @toss/tds-react-native@^1
+yarn remove @toss-design-system/react-native
+
+# npm
+npm install @toss/tds-react-native@^1
+npm uninstall @toss-design-system/react-native
+```
+
+### 2. Import 경로 변경
+
+IDE의 전역 검색 및 바꾸기 기능을 사용하여 import 경로를 변경합니다.
+
+```diff
+- import { Button, Switch } from '@toss-design-system/react-native';
++ import { Button, Switch } from '@toss/tds-react-native';
+```
+
+## 주의사항
+
+> **mobile-bedrock → mobile-ait 변경 (해당 패키지 사용 시)**
+> 
+>   `@toss-design-system/mobile-bedrock` 패키지는 `@toss/tds-mobile-ait`로 변경되었습니다.
+>   패키지 이름만 변경된 것이 아니라, Provider 이름도 변경되었습니다.
+> 
+>   CLI는 import 문과 JSX 엘리먼트를 모두 자동으로 변경합니다:
+> 
+>   ```diff
+  - import { TDSMobileBedrockProvider } from '@toss-design-system/mobile-bedrock';
+  + import { TDSMobileAITProvider } from '@toss/tds-mobile-ait';
+
+  - <TDSMobileBedrockProvider>
+  + <TDSMobileAITProvider>
+      {/* ... */}
+  - </TDSMobileBedrockProvider>
+  + </TDSMobileAITProvider>
+  ```
+
+## 문의
+
+마이그레이션 중 문제가 발생하거나 문의사항이 있으시면 앱인토스 커뮤니티로 연락해 주세요.
+
+---
+
+# Start (/tds-react-native/start/)
+
+## TDS React Native 시작하기
+
+TDS React Native 패키지를 사용하면 모바일 환경에서 다양한 UI 컴포넌트를 쉽게 적용할 수 있어요. 이 문서에서는 TDS React Native을 프로젝트에 설치하고 사용하는 방법을 알려드려요.
+
+### 1. 필수 패키지 설치하기
+
+먼저, TDS React Native을 사용하려면 다음 명령어를 터미널에서 실행해서 필요한 패키지들을 추가해 주세요.
+
+```sh npm2yarn
+npm install @toss/tds-react-native
+```
+
+> tds-react-native는 react를 18버전까지 지원합니다. 19버전은 아직 지원하지 않아요.
+
+### 2. Provider 설정하기
+
+TDS React Native을 사용하려면, 프로젝트의 최상위를 `TDSProvider`로 감싸야 해요. 이 컴포넌트는 TDS React Native의 컴포넌트들이 올바르게 동작할 수 있도록 설정해 줘요.
+
+```jsx copy
+import { TDSProvider } from '@toss/tds-react-native';
+
+function App({ Component, pageProps }) {
+  return (
+    <TDSProvider>
+      <Component {...pageProps} />
+    </TDSProvider>
+  );
+}
+```
+
+### 3. 사용하기
+
+패키지 설치와 설정이 끝났다면, 이제 컴포넌트를 프로젝트에 불러와서 사용할 수 있어요. 예를 들어, `Button` 컴포넌트를 사용하려면 다음과 같이 코드를 작성하면 돼요.
+
+```js copy
+import { Button } from '@toss/tds-react-native';
+
+const App = () => <Button>버튼</Button>;
+```

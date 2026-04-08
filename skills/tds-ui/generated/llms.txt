@@ -1,0 +1,70 @@
+﻿# TDS Documentation - React Native
+
+> Toss Design System (TDS) is a comprehensive design system for building Toss products.
+> This file provides an index of all available documentation with links to individual LLM-optimized text files.
+
+- Documentation Type: react-native
+- Total Documents: 47
+- Full Documentation: /tds-react-native/llms-full.txt
+
+## Components
+
+- [AmountTop](/tds-react-native/components/amount-top/llm.txt): `AmountTop` 컴포넌트는 금액이나 중요한 숫자를 크게 강조하여 표시하는 데 사용해요. 송금, 결제, 잔액 확인 등의 화면에서 유용해요.
+- [Asset](/tds-react-native/components/asset/llm.txt): [Image: Asset thumbnail - asset/Thumbnail-Asset.png]
+- [Badge](/tds-react-native/components/badge/llm.txt): [Image: Badge thumbnail - badge/Thumbnail-Badge.png]
+- [BarChart](/tds-react-native/components/Chart/bar-chart/llm.txt): `BarChart` 컴포넌트는 막대 그래프 형태로 데이터의 값을 시각화하는 도구예요.
+- [Board Row](/tds-react-native/components/board-row/llm.txt): `BoardRow`는 제한된 공간에서 많은 정보를 깔끔하게 정리해 표시하는 컴포넌트예요. 주로 Q&A와 같은 정보를 표현할 때 사용하며, 펼쳐졌다 접히는 방식으로 정보를 보여주는 아코디언 컴포넌트 같은 역할을 해요.
+- [Border](/tds-react-native/components/border/llm.txt): [Image: Border thumbnail - border/Thumbnail-Border.png]
+- [Bottom Info](/tds-react-native/components/bottom-info/llm.txt): `BottomInfo` 컴포넌트는 화면 하단에 중요한 정보나 주의사항을 명확하게 표시할 때 사용해요. 특히 금융 상품처럼 법적 고지나 디스클레이머(면책 조항)를 사용자에게 안내해야 하는 상황에서 유용해요. 주로 리스트 형식을 제공할 수 있는 `Post` 컴포넌트와 함께 사용해 정보를 깔끔하게 정리해 보여줄 수 있어요.
+- [Button](/tds-react-native/components/button/llm.txt): [Image: Button thumbnail - button/Thumbnail-Button.png]
+- [Carousel](/tds-react-native/components/carousel/llm.txt): `Carousel` 컴포넌트는 여러 아이템을 가로로 슬라이드하며 보여주는 컴포넌트예요. 제스처를 통해 자연스럽게 아이템을 탐색할 수 있어요.
+- [Checkbox](/tds-react-native/components/checkbox/llm.txt): `Checkbox` 컴포넌트는 사용자가 하나 이상의 항목을 선택할 때 사용해요. 체크된 상태와 체크되지 않은 상태를 나타내고, 여러 개의 항목을 동시에 선택할 수 있어요.
+- [Dialog](/tds-react-native/components/dialog/llm.txt): `Dialog` 컴포넌트는 사용자에게 중요한 정보를 전달하거나 확인을 요청할 때 사용해요. `AlertDialog`와 `ConfirmDialog` 두 가지 타입을 제공해요.
+- [Dropdown](/tds-react-native/components/dropdown/llm.txt): `Dropdown` 컴포넌트는 여러 옵션 중 하나를 선택할 수 있는 드롭다운 메뉴를 제공해요. 버튼을 클릭하면 옵션 목록이 펼쳐져요.
+- [ErrorPage](/tds-react-native/components/error-page/llm.txt): `ErrorPage` 컴포넌트는 에러 상황을 사용자에게 친절하게 안내하는 페이지예요. HTTP 상태 코드에 따라 적절한 메시지와 이미지를 자동으로 표시해요.
+- [Gradient](/tds-react-native/components/gradient/llm.txt): `Gradient` 컴포넌트는 선형 또는 방사형 그라데이션을 생성하는 데 사용해요. 배경이나 오버레이 효과를 만들 때 유용해요.
+- [GridList](/tds-react-native/components/grid-list/llm.txt): `GridList` 컴포넌트는 아이템들을 그리드 형태로 배치하는 데 사용해요. 1열, 2열, 3열 레이아웃을 지원해요.
+- [Highlight](/tds-react-native/components/highlight/llm.txt): `Highlight` 컴포넌트는 특정 요소를 강조하고 설명을 표시하는 데 사용해요. 온보딩이나 튜토리얼에서 유용해요.
+- [Icon Button](/tds-react-native/components/icon-button/llm.txt): `IconButton` 컴포넌트는 사용자가 특정 작업을 실행하거나 이벤트를 트리거할 때 사용해요. 아이콘으로 기능을 직관적으로 전달하면서, UI를 간결하게 유지할 수 있어요.
+- [List](/tds-react-native/components/list/llm.txt): `List` 컴포넌트는 여러 아이템을 세로로 나열할 때 사용해요. 아이템 사이에 구분선을 자동으로 추가할 수 있어요.
+- [ListFooter](/tds-react-native/components/list-footer/llm.txt): `ListFooter` 컴포넌트는 리스트 항목의 마지막 부분에 위치해, 사용자에게 더 많은 항목을 불러오거나 목록을 확장하는 기능을 제공해요.
+- [ListHeader](/tds-react-native/components/list-header/llm.txt): [Image: ListHeader thumbnail - list-header/Thumbnail-ListHeader.png]
+- [ListRow](/tds-react-native/components/list-row/llm.txt): [Image: ListRow thumbnail - list-row/Thumbnail-ListRow.png]
+- [Loader](/tds-react-native/components/loader/llm.txt): `Loader` 컴포넌트는 데이터를 불러오거나 처리하는 동안 로딩 상태를 시각적으로 표시해요. 애니메이션 효과로 사용자에게 진행 중임을 알리고 기다리도록 유도해요.
+- [Navbar](/tds-react-native/components/navbar/llm.txt): [Image: Navbar thumbnail - navbar/Thumbnail-Navigation.png]
+- [NumberKeypad](/tds-react-native/components/keypad/llm.txt): `NumberKeypad` 컴포넌트는 숫자를 입력할 수 있는 가상 키패드예요. 금액 입력, PIN 번호 입력 등에 사용해요.
+- [Numeric Spinner](/tds-react-native/components/numeric-spinner/llm.txt): `NumericSpinner` 컴포넌트는 정수 입력을 쉽게 처리할 수 있도록, 숫자를 증감시키는 버튼을 제공해요. 키보드 없이 숫자를 입력하거나 수정할 때 사용해요.
+- [Post](/tds-react-native/components/post/llm.txt): `Post` 컴포넌트는 포스트 형식의 줄글을 쓸 때 적용되는 스타일이에요. 각 스타일은 제목, 본문, 목록과 같은 구성요소로 나뉘어 있으며, 정보를 효과적으로 시각화해요. 공지 사항이나 이벤트 페이지 등에 사용해요.
+- [ProgressBar](/tds-react-native/components/progress-bar/llm.txt): `ProgressBar` 컴포넌트는 작업의 진행 상태를 시각적으로 표시하는 데 사용해요. 파일 업로드, 폼 작성 진행률 등을 나타낼 때 유용해요.
+- [Radio](/tds-react-native/components/radio/llm.txt): `Radio` 컴포넌트는 여러 옵션 중 하나를 선택할 수 있게 해주는 컴포넌트예요. 부드러운 애니메이션과 함께 선택된 옵션이 강조되어 표시돼요.
+- [Rating](/tds-react-native/components/rating/llm.txt): `Rating` 컴포넌트는 점수를 표시하거나 사용자의 입력을 받을 수 있어요. 주로 콘텐츠에 대한 평가를 보여주거나 평가를 진행하기 위해 사용돼요.
+- [Result](/tds-react-native/components/result/llm.txt): `Result` 컴포넌트는 특정 작업의 결과를 시각적으로 보여주는 페이지 컴포넌트예요. 주로 사용자가 작업을 성공했을 때나 에러가 발생했을 때 결과를 알리고, 다양한 메시지나 액션을 제공하는 데 사용해요.
+- [SearchField](/tds-react-native/components/search-field/llm.txt): `SearchField` 컴포넌트는 검색 기능을 제공하는 입력 필드예요. 검색 아이콘과 클리어 버튼이 포함되어 있어 사용자가 쉽게 검색어를 입력하고 지울 수 있어요.
+- [SegmentedControl](/tds-react-native/components/segmented-control/llm.txt): `SegmentedControl` 컴포넌트는 여러 옵션 중 하나를 선택할 수 있는 세그먼트 컨트롤이에요. Radio와 비슷하지만 더 시각적으로 구분된 형태예요.
+- [Shadow](/tds-react-native/components/shadow/llm.txt): `Shadow` 컴포넌트는 요소에 그림자 효과를 추가하는 데 사용해요. iOS와 Android 플랫폼에 맞는 그림자 스타일을 자동으로 생성해요.
+- [Skeleton](/tds-react-native/components/skeleton/llm.txt): `Skeleton` 컴포넌트는 콘텐츠가 로딩되는 동안 임시 플레이스홀더를 표시하여 사용자 경험을 개선해요. 실제 콘텐츠의 레이아웃과 유사한 형태로 표시하여 로딩 시간을 덜 지루하게 만들어줘요.
+- [Slider](/tds-react-native/components/slider/llm.txt): `Slider` 컴포넌트는 사용자가 슬라이딩 제스처로 값을 선택할 수 있게 해주는 컴포넌트예요. 볼륨 조절, 밝기 조절, 범위 선택 등에 사용해요.
+- [Stepper](/tds-react-native/components/stepper/llm.txt): `Stepper` 컴포넌트는 여러 단계를 시각적으로 보여줄 때 사용하는 컴포넌트예요. 각 단계는 제목과 설명을 가질 수 있고, 오른쪽에는 아이콘이나 버튼을 추가할 수 있어요. 순차적인 흐름을 사용자에게 쉽게 전달하는 데 적합해요.
+- [Switch](/tds-react-native/components/switch/llm.txt): `Switch` 컴포넌트는 두 가지 상태(예: 켜짐/꺼짐, 활성화/비활성화)를 전환할 수 있는 UI 요소예요. 단순한 토글 방식으로 동작해서 주로 설정이나 옵션을 활성화하거나 비활성화할 때 사용해요. 체크박스와 비슷하지만 더 직관적인 시각적 요소로 사용자가 상태 변화를 쉽게 인식할 수 있어요.
+- [Tab](/tds-react-native/components/tab/llm.txt): [Image: Tab thumbnail - tab/Thumbnail-Tab.png]
+- [TableRow](/tds-react-native/components/table-row/llm.txt): `TableRow` 컴포넌트는 테이블 형태의 정보를 표시할 때 사용해요. 왼쪽과 오른쪽 두 개의 열로 구성되어 있으며, 정보를 명확하게 전달하는 데 유용해요.
+- [Text Button](/tds-react-native/components/text-button/llm.txt): `TextButton` 컴포넌트는 사용자가 어떤 액션을 트리거하거나 이벤트를 실행할 때 사용해요.
+- [TextField](/tds-react-native/components/text-field/llm.txt): `TextField` 컴포넌트는 사용자로부터 텍스트 입력을 받는 데 사용해요. 다양한 스타일과 옵션을 제공하여 다양한 입력 상황에 맞게 사용할 수 있어요.
+- [Toast](/tds-react-native/components/toast/llm.txt): `Toast` 컴포넌트는 사용자에게 짧은 메시지를 일시적으로 표시하는 데 사용해요. 액션의 결과나 상태 변화를 알리는 데 유용하며, 화면 상단이나 하단에 나타났다가 자동으로 사라져요.
+
+## Foundation
+
+- [Colors](/tds-react-native/foundation/colors/llm.txt): 토스의 색상 시스템은 개발자와 디자이너가 **통일된 색상 이름**을 사용하도록 도와줘요.
+- [Typography](/tds-react-native/foundation/typography/llm.txt): Typography는 디자인 시스템의 핵심 요소로, 텍스트의 가독성을 보장하고 일관된 방향성을 유지하며 브랜드 아이덴티티를 전달하는 중요한 역할을 해요. 폰트 크기, 라인 높이 등을 통해 정보의 계층 구조를 명확히 하고, 다양한 디바이스와 환경에서 통일된 비주얼을 제공하는 데 초점을 맞춰요.
+
+## Index
+
+- [Index](/tds-react-native/index/llm.txt): ![Image](https://static.toss.im/3d-common/tds-kv-no-text-hero.png)
+
+## Migration
+
+- [@toss-design-system에서 마이그레이션](/tds-react-native/migration/from-toss-design-system/llm.txt): **Deprecation Notice**
+
+## Start
+
+- [Start](/tds-react-native/start/llm.txt): TDS React Native 패키지를 사용하면 모바일 환경에서 다양한 UI 컴포넌트를 쉽게 적용할 수 있어요. 이 문서에서는 TDS React Native을 프로젝트에 설치하고 사용하는 방법을 알려드려요.

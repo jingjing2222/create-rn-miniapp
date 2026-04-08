@@ -1,23 +1,26 @@
 # Feedback And Loading
 
-## actions
+이 파일은 action / feedback 계열 canonical leaf를 고르는 routing note다.
 
-- 기본 액션은 `button`이다.
-- 약한 링크성 액션은 `text-button`이다.
-- icon-only compact action은 `icon-button`이다.
+## Canonical leaf docs
 
-## blocking vs non-blocking feedback
+- `button`: `generated/llms-full.txt`에서 `# Button` section
+- `text-button`: `generated/llms-full.txt`에서 `# Text Button` section
+- `icon-button`: `generated/llms-full.txt`에서 `# Icon Button` section
+- `dialog`: `generated/llms-full.txt`에서 `# Dialog` section
+- `toast`: `generated/llms-full.txt`에서 `# Toast` section
+- `loader`: `generated/llms-full.txt`에서 `# Loader` section
+- `skeleton`: `generated/llms-full.txt`에서 `# Skeleton` section
+- `progress-bar`: `generated/llms-full.txt`에서 `# ProgressBar` section
+- `result`: `generated/llms-full.txt`에서 `# Result` section
+- `error-page`: `generated/llms-full.txt`에서 `# ErrorPage` section
 
-- 짧은 완료/복사/저장 안내는 `toast`를 고른다.
-- 결정을 멈춰 세우는 확인/경고는 `dialog`를 고른다.
-- 성공/실패 전체 화면은 `result`를 고른다.
-- 404/500 같은 상태 코드는 `error-page`를 고른다.
+## Comparison prompts
 
-## loading
-
-- 순수 대기 상태는 `loader`를 쓴다.
-- 곧 같은 레이아웃이 나타날 placeholder는 `skeleton`을 쓴다.
-- 퍼센트나 진행량이 있으면 `progress-bar`를 쓴다.
+- `button` vs `text-button` vs `icon-button`: emphasis, icon-only affordance, disabled/loading behavior를 비교한다.
+- `dialog` vs `toast` vs `result` vs `error-page`: blocking 여부, page-level 결과 여부, status-code semantics 여부를 비교한다.
+- `loader` vs `skeleton`: 실제 콘텐츠를 대체하는 placeholder인지 단순 대기 스피너인지 비교한다.
+- `progress-bar`: 수치형 진행률이 있을 때만 leaf docs를 추가로 읽는다.
 
 ## answer reminders
 

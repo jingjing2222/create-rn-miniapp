@@ -1,5 +1,7 @@
 # Export Gaps
 
+이 파일은 공식 `llms` 문서 위에 덧입히는 local anomaly overlay다. canonical semantics는 항상 공식 문서를 우선한다.
+
 - `chart`의 docs slug는 `Chart/bar-chart`다.
 - `stepper-row`의 docs slug는 `stepper`다.
 - `navbar`는 docs leaf page가 있지만 package root export 경로가 다르다.

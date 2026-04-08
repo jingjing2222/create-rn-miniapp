@@ -1,15 +1,21 @@
 {
   "name": "tds-ui",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "package": {
     "name": "@toss/tds-react-native",
     "version": "2.0.2"
   },
-  "lastVerifiedAt": "2026-03-21",
-  "truthSources": ["generated/anomalies.json", "docs-search"],
+  "lastVerifiedAt": "2026-04-08",
+  "truthSources": ["generated/llms.txt", "generated/llms-full.txt", "generated/anomalies.json"],
+  "upstreamSources": [
+    "https://tossmini-docs.toss.im/tds-react-native/llms.txt",
+    "https://tossmini-docs.toss.im/tds-react-native/llms-full.txt"
+  ],
   "notes": [
-    "Use docs-search or official TDS docs for public component lookup.",
-    "Use anomalies.json as the local overlay for slug aliases, export gaps, and docs-missing gates.",
+    "Use generated/llms.txt as the bundled canonical index and generated/llms-full.txt as the bundled canonical wide-context dump.",
+    "Use anomalies.json only as the local overlay for slug aliases, export gaps, and docs-missing gates.",
+    "Refresh the bundled llms snapshots from upstreamSources when the official TDS docs change.",
+    "When the bundled llms snapshots and local references disagree on semantics, prefer the bundled docs and keep local files limited to routing and guardrails.",
     "Update this skill through the repository source and standard `npx skills update` flow."
   ]
 }

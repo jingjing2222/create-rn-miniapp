@@ -1,18 +1,18 @@
 ---
 name: tds-ui
 description: Decision skill for choosing TDS React Native components and UI boundaries in MiniApp screens. Use when translating product requirements into TDS components, reconciling public docs with actual exports, or deciding controlled/uncontrolled state patterns. Do not use for route design, capability lookup, provider/runtime work, or non-TDS native module decisions.
-compatibility: Intended for create-rn-miniapp repositories. Assumes the generated MiniApp workspace layout plus bundled TDS metadata.json and generated/anomalies.json assets.
+compatibility: Intended for create-rn-miniapp repositories. Assumes bundled TDS React Native `generated/llms.txt` / `generated/llms-full.txt` snapshots plus `metadata.json` and `generated/anomalies.json`.
 metadata:
   create-rn-miniapp.agentsLabel: "TDS UI 선택과 form 패턴"
   create-rn-miniapp.category: "core"
   create-rn-miniapp.order: "3"
-  create-rn-miniapp.version: "2.0.0"
+  create-rn-miniapp.version: "2.1.0"
 ---
 
 # TDS UI Decision Skill
 
 이 Skill은 MiniApp 화면 요구사항을 TDS React Native 컴포넌트로 정확히 매핑할 때 사용한다.
-이 Skill의 목적은 "어떤 TDS 컴포넌트를 언제 써야 하는지"를 결정하고, 공개 문서와 실제 export 차이까지 같이 처리하는 것이다.
+이 Skill은 TDS를 다시 설명하는 문서가 아니다. bundled `generated/llms.txt` / `generated/llms-full.txt` snapshot을 local canonical source로 삼고, 이 Skill은 그 snapshot으로 라우팅하고 repo-specific anomaly와 답변 계약만 덧입히는 overlay다.
 
 ## Use when
 
@@ -29,18 +29,30 @@ metadata:
 - provider/runtime bootstrap
 - TDS 밖 native module 선택
 
+## Canonical truth sources
+
+- `generated/llms.txt`
+- `generated/llms-full.txt`
+- `generated/anomalies.json`
+
+이 snapshot들은 공식 `https://tossmini-docs.toss.im/tds-react-native/llms.txt`, `llms-full.txt`에서 내려받은 copy다.
+snapshot과 로컬 overlay가 충돌하면, 컴포넌트 의미와 prop contract는 bundled `llms` snapshot을 우선하고 로컬 파일은 slug/import/docs-missing 같은 anomaly와 output contract만 보강한다.
+
 ## Read in order
 
-1. `metadata.json`
-2. `generated/anomalies.json`
-3. `docs-search` 또는 TDS React Native 공식 문서
+1. `generated/llms.txt`
+   - index 역할이다. 어떤 component/foundation/start/migration 문서가 있는지 먼저 확인한다.
+   - 보통 여기서 canonical section 이름과 docs path를 찾는다.
+2. `generated/llms-full.txt`
+   - 후보 section heading을 검색해서 examples, interface, foundation 내용을 확인한다.
+   - 여러 후보를 한 번에 비교해야 할 때도 이 파일 하나에서 해결한다.
+3. `generated/anomalies.json`
+   - docs slug alias, root import gap, export-only / docs-missing gate를 로컬 overlay로 적용한다.
 4. `AGENTS.md`
-5. `references/decision-matrix.md`
-6. `references/form-patterns.md`
-7. `references/layout-and-navigation.md`
-8. `references/feedback-and-loading.md`
-
-개별 근거가 더 필요할 때만 `AGENTS.md`에서 필요한 rule 파일명을 고른 뒤 그 파일 하나만 추가로 읽는다.
+   - output contract와 review rule index를 확인한다.
+5. `references/*.md`
+   - 공식 문서를 대체하지 않는다.
+   - 필요한 category의 docs path와 repo-specific comparison 질문만 빠르게 확인한다.
 
 ## Decision algorithm
 
@@ -50,22 +62,27 @@ metadata:
    - list / list-summary / grid / accordion / step-flow / hero-amount / article / disclaimer / chart
    - primary-action / text-action / icon-action / dialog / toast / loading / result / error-page
    - top-nav / bottom-action / sheet
-2. `docs-search` 또는 공식 문서에서 doc-backed 후보를 먼저 찾는다.
-3. docs slug mismatch는 anomaly alias를 따른다.
+2. `generated/llms.txt`에서 canonical section 이름과 docs path를 먼저 찾는다.
+   - component 선택이면 component section을 찾는다.
+   - color / typography / visual token 질문이면 foundation section을 먼저 찾는다.
+   - 설치/마이그레이션 질문이면 `start` / `migration` section을 찾되, 이 Skill의 본업은 UI 선택이라는 점을 명시한다.
+3. `generated/llms-full.txt`에서 해당 section heading을 검색해 docs-backed 후보를 고른다.
+4. docs slug mismatch는 anomaly alias를 따른다.
    - `chart` -> docs `Chart/bar-chart`
    - `stepper-row` -> docs `stepper`
-4. export mismatch는 anomaly 규칙을 따른다.
+5. export mismatch는 anomaly 규칙을 따른다.
    - `navbar`는 docs는 있지만 root export path가 다르므로 `@toss/tds-react-native/extensions/page-navbar`를 먼저 확인한다.
-5. public docs 없는 export는 기본 추천 대상이 아니다.
+6. public docs 없는 export는 기본 추천 대상이 아니다.
    - `agreement`, `bottom-cta`, `bottom-sheet`, `fixed-bottom-cta`, `icon`, `tooltip`, `top`, `txt`
    - 이 항목은 사용자가 명시적으로 요구하거나 기존 코드베이스에서 이미 쓰고 있을 때만 추천한다.
    - 추천 시 반드시 `export-only / docs-missing`이라고 표시한다.
-6. `paragraph`는 기본 추천 금지다.
+7. `paragraph`는 기본 추천 금지다.
    - component dir는 있지만 root export와 public docs가 약하다.
-7. 상태 관리는 공식 문서와 `references/form-patterns.md` 기준을 그대로 따른다.
+8. 상태 관리는 공식 문서와 `references/form-patterns.md` 기준을 그대로 따른다.
    - controlled: `value`/`onChange`, `checked`/`onCheckedChange`, `onValueChange`
    - uncontrolled: `defaultValue`, `defaultChecked`
-8. 최종 답변에는 반드시 아래를 포함한다.
+9. 로컬 references는 공식 문서 요약본이 아니라 비교 관점 checklist로만 쓴다.
+10. 최종 답변에는 반드시 아래를 포함한다.
    - 추천 컴포넌트
    - 왜 이 컴포넌트인지
    - 왜 가장 가까운 대안이 아닌지
@@ -76,50 +93,17 @@ metadata:
    - anomaly note 여부
    - 위 7항 중 하나라도 빠지면 `incomplete answer`로 간주한다.
    - export-only를 추천할 때는 반드시 doc-backed fallback도 같이 적는다.
-9. TDS로 대체 가능한 RN primitive를 직접 추천하지 않는다.
+11. TDS로 대체 가능한 RN primitive를 직접 추천하지 않는다.
 
-## Default selection map
+## Canonical lookup shortcuts
 
-- 자유 텍스트 입력: `text-field`
-- 검색 입력: `search-field`
-- 다중 선택: `checkbox`
-- 단일 선택: `radio`
-- 시각적으로 압축된 단일 선택: `segmented-control`
-- 즉시 반영되는 on/off 설정: `switch`
-- 콘텐츠 섹션 전환: `tab`
-- 오버플로 메뉴/액션 메뉴: `dropdown`
-- 정수 증감: `numeric-spinner`
-- 숫자 패드 입력: `keypad`
-- 연속 값 선택: `slider`
-- 평점 표시/입력: `rating`
-- 기본 액션: `button`
-- 약한 액션/링크성 액션: `text-button`
-- 아이콘만 있는 액션: `icon-button`
-- 블로킹 확인/안내: `dialog`
-- 짧은 비차단 피드백: `toast`
-- 스피너 로딩: `loader`
-- 레이아웃형 로딩 placeholder: `skeleton`
-- 수치형 진행 상태: `progress-bar`
-- 작업 결과 전체 화면: `result`
-- 상태코드 기반 오류 페이지: `error-page`
-- 기본 세로 목록: `list` + `list-row`
-- 섹션 헤더: `list-header`
-- 더보기/목록 확장 footer: `list-footer`
-- key/value 요약: `table-row`
-- 그리드 배치: `grid-list`
-- FAQ/아코디언: `board-row`
-- 단계 흐름 요약: `stepper-row`
-- 상단 네비게이션: `navbar`
-- 큰 금액 hero: `amount-top`
-- 하단 안내/법적 고지: `bottom-info`
-- 긴 설명/공지/본문: `post`
-- 미디어/아이콘/Lottie 프레임: `asset`
-- 상태 배지: `badge`
-- 가로 스와이프 카드/배너: `carousel`
-- 막대형 데이터 시각화: `chart`
-- 튜토리얼/온보딩 강조: `highlight`
-- 구분선/구간 나누기: `border`
-- 그림자/그라데이션 효과: `shadow`, `gradient`
+- input / selection surfaces: `references/form-patterns.md`
+- action / feedback / loading surfaces: `references/feedback-and-loading.md`
+- list / navigation / boundary surfaces: `references/layout-and-navigation.md`
+- display / visual utility surfaces: `references/display-patterns.md`
+- category shortlist와 foundation/start/migration 진입: `references/decision-matrix.md`
+- export gap, docs-missing gate, output contract: `references/export-gaps.md`, `references/policy-summary.md`
+- upstream refresh source: `metadata.json`
 
 ## Required comparisons
 

@@ -9,7 +9,8 @@ incorrect:
 correct:
   - "먼저 doc-backed 후보를 고르고 anomaly는 note로 분리한다."
 reference:
-  - docs-search
+  - generated/llms.txt
+  - generated/llms-full.txt
   - generated/anomalies.json
   - references/decision-matrix.md
 ---
