@@ -6,6 +6,7 @@ import { runCommand, runCommandWithOutput } from '../../runtime/commands.js'
 import {
   buildSkillsInstallCommands,
   listInstalledProjectSkillEntries,
+  resolveLocalSourceSkillIds,
   renderInstalledSkillsSummary,
   syncInstalledSkillArtifacts,
 } from '../../skills/install.js'
@@ -47,6 +48,7 @@ async function syncCreateManifestAfterOptionalWorkspaces(ctx: CreateContext) {
 }
 
 async function maybeInstallSelectedSkills(ctx: CreateContext) {
+  const localSourceSkillIds = await resolveLocalSourceSkillIds(ctx.options.selectedSkills)
   const installCommands = await buildSkillsInstallCommands({
     packageManager: ctx.options.packageManager,
     targetRoot: ctx.targetRoot,
@@ -65,7 +67,9 @@ async function maybeInstallSelectedSkills(ctx: CreateContext) {
     await runCommandWithOutput(installCommand)
   }
 
-  await syncInstalledSkillArtifacts(ctx.targetRoot)
+  await syncInstalledSkillArtifacts(ctx.targetRoot, {
+    allowDownloadFailureSkillIds: localSourceSkillIds,
+  })
   const installedSkills = await listInstalledProjectSkillEntries(ctx.targetRoot)
 
   return {

@@ -42,6 +42,19 @@ type SkillMirrorMetadata = {
 
 type SyncInstalledSkillArtifactsOptions = {
   fetchImpl?: typeof fetch
+  allowDownloadFailureSkillIds?: readonly string[]
+}
+
+type ResolvedSkillsSource = {
+  source: string
+  usesLocalCheckout: boolean
+}
+
+class SkillMirrorDownloadError extends Error {
+  constructor(sourceUrl: string, statusOrReason: number | string) {
+    super(`tds-ui llms mirror를 다운로드하지 못했어요: ${sourceUrl} (${statusOrReason})`)
+    this.name = 'SkillMirrorDownloadError'
+  }
 }
 
 async function pathExists(targetPath: string) {
@@ -53,8 +66,8 @@ async function pathExists(targetPath: string) {
   }
 }
 
-async function resolveInstalledProjectSkills(targetRoot: string) {
-  const installed = new Map<string, InstalledProjectSkill>()
+async function enumerateInstalledProjectSkills(targetRoot: string) {
+  const installed: InstalledProjectSkill[] = []
 
   for (const skillsRoot of PROJECT_SKILLS_DIR_CANDIDATES) {
     const skillDirectory = path.join(targetRoot, skillsRoot)
@@ -73,17 +86,30 @@ async function resolveInstalledProjectSkills(targetRoot: string) {
       }
 
       if (await pathExists(path.join(skillDirectory, entry.name, 'SKILL.md'))) {
-        if (!installed.has(entry.name)) {
-          installed.set(entry.name, {
-            id: entry.name,
-            skillsRoot,
-          })
-        }
+        installed.push({
+          id: entry.name,
+          skillsRoot,
+        })
       }
     }
   }
 
-  return [...installed.values()].sort((left, right) => left.id.localeCompare(right.id))
+  return installed.sort(
+    (left, right) =>
+      left.id.localeCompare(right.id) || left.skillsRoot.localeCompare(right.skillsRoot),
+  )
+}
+
+async function resolveInstalledProjectSkills(targetRoot: string) {
+  const installed = new Map<string, InstalledProjectSkill>()
+
+  for (const skill of await enumerateInstalledProjectSkills(targetRoot)) {
+    if (!installed.has(skill.id)) {
+      installed.set(skill.id, skill)
+    }
+  }
+
+  return [...installed.values()]
 }
 
 function readMetadataStringArray(
@@ -188,12 +214,17 @@ async function syncTdsUiMirrorArtifacts(skillDirectory: string, fetchImpl: typeo
 
     const targetPath = resolveMirrorTargetPath(skillDirectory, relativePath)
 
-    const response = await fetchImpl(sourceUrl)
+    let response: Awaited<ReturnType<typeof fetchImpl>>
+
+    try {
+      response = await fetchImpl(sourceUrl)
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      throw new SkillMirrorDownloadError(sourceUrl, reason)
+    }
 
     if (!response.ok) {
-      throw new Error(
-        `tds-ui llms mirror를 다운로드하지 못했어요: ${sourceUrl} (${response.status})`,
-      )
+      throw new SkillMirrorDownloadError(sourceUrl, response.status)
     }
 
     downloads.push({
@@ -225,17 +256,26 @@ export async function syncInstalledSkillArtifacts(
   options: SyncInstalledSkillArtifactsOptions = {},
 ) {
   const fetchImpl = options.fetchImpl ?? globalThis.fetch
+  const allowDownloadFailureSkillIds = new Set(options.allowDownloadFailureSkillIds ?? [])
 
   if (typeof fetchImpl !== 'function') {
     throw new Error('skill mirror를 다운로드할 fetch 구현을 찾지 못했어요.')
   }
 
-  for (const skill of await resolveInstalledProjectSkills(targetRoot)) {
+  for (const skill of await enumerateInstalledProjectSkills(targetRoot)) {
     if (skill.id !== 'tds-ui') {
       continue
     }
 
-    await syncTdsUiMirrorArtifacts(path.join(targetRoot, skill.skillsRoot, skill.id), fetchImpl)
+    try {
+      await syncTdsUiMirrorArtifacts(path.join(targetRoot, skill.skillsRoot, skill.id), fetchImpl)
+    } catch (error) {
+      if (error instanceof SkillMirrorDownloadError && allowDownloadFailureSkillIds.has(skill.id)) {
+        continue
+      }
+
+      throw error
+    }
   }
 }
 
@@ -312,18 +352,41 @@ export function renderInstalledSkillsSummary(
   `
 }
 
-async function resolveSkillsSource(sourceRepo: string) {
+async function resolveSkillsSource(sourceRepo: string): Promise<ResolvedSkillsSource> {
   if (sourceRepo !== SKILLS_SOURCE_REPO) {
-    return sourceRepo
+    return {
+      source: sourceRepo,
+      usesLocalCheckout: false,
+    }
   }
 
   const localRepoRoot = path.resolve(import.meta.dirname, '../../../..')
 
   if (await pathExists(path.join(localRepoRoot, 'skills'))) {
-    return localRepoRoot
+    return {
+      source: localRepoRoot,
+      usesLocalCheckout: true,
+    }
   }
 
-  return sourceRepo
+  return {
+    source: sourceRepo,
+    usesLocalCheckout: false,
+  }
+}
+
+export async function resolveLocalSourceSkillIds(skillIds: InstallableSkillId[]) {
+  const localSourceSkillIds: InstallableSkillId[] = []
+
+  for (const group of groupSkillIdsBySource(skillIds)) {
+    const source = await resolveSkillsSource(group.sourceRepo)
+
+    if (source.usesLocalCheckout) {
+      localSourceSkillIds.push(...group.skillIds)
+    }
+  }
+
+  return localSourceSkillIds
 }
 
 export async function buildSkillsInstallCommands(options: {
@@ -346,7 +409,7 @@ export async function buildSkillsInstallCommands(options: {
       ...adapter.dlx(
         SKILLS_CLI,
         createSkillsAddArgs({
-          source,
+          source: source.source,
           skillIds: group.skillIds,
           yes: true,
         }),

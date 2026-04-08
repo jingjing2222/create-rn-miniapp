@@ -326,7 +326,17 @@ test('skill auto-install downloads tds-ui llms mirrors after installation succee
   )
 
   assert.match(patchSource, /syncInstalledSkillArtifacts/)
-  assert.match(patchSource, /await syncInstalledSkillArtifacts\(ctx\.targetRoot\)/)
+  assert.match(patchSource, /await syncInstalledSkillArtifacts\(ctx\.targetRoot, \{/)
+})
+
+test('skill auto-install tolerates tds-ui mirror download failures only for locally sourced skills', async () => {
+  const patchSource = await readFile(
+    fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.match(patchSource, /resolveLocalSourceSkillIds\(ctx\.options\.selectedSkills\)/)
+  assert.match(patchSource, /allowDownloadFailureSkillIds: localSourceSkillIds/)
 })
 
 test('skill auto-install does not silently continue when installation or mirror sync fails', async () => {

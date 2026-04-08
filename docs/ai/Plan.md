@@ -1,3 +1,16 @@
+## 다음 작업: tds-ui install mirror 리뷰 코멘트 2건 수정
+
+### 목표
+- 로컬 repo source에서 `tds-ui`를 설치할 때 네트워크가 없어도 scaffold가 hard-fail 하지 않게 되돌린다.
+- `.agents/skills`와 `.claude/skills`에 동시에 설치된 `tds-ui`가 있으면 llms mirror 파일을 양쪽 모두에 동기화한다.
+- 두 회귀를 실패 테스트로 먼저 고정하고, `pnpm verify` 통과까지 다시 확인한 뒤 현재 브랜치에 커밋/푸시한다.
+
+### 작업 순서
+1. `skills-install.test.ts`에 오프라인 로컬 설치 fallback과 multi-root mirror sync 케이스를 먼저 추가해 실패를 재현한다.
+2. `skills/install.ts`에서 설치 source가 로컬 repo인지 구분할 수 있는 신호를 유지하고, network fetch 실패를 local source install에서는 non-fatal로 처리한다.
+3. installed skill 탐색이 duplicate skill id를 하나로 접지 않도록 별도 enumerator를 두고, `tds-ui` mirror sync가 모든 installed root를 순회하게 수정한다.
+4. 관련 테스트와 `pnpm verify`를 실행한 뒤 현재 브랜치에 단일 목적 커밋으로 정리해 push한다.
+
 ## 다음 작업: tds-ui install mirror write scope escape 차단
 
 ### 목표
