@@ -329,6 +329,18 @@ test('skill auto-install downloads tds-ui llms mirrors after installation succee
   assert.match(patchSource, /await syncInstalledSkillArtifacts\(ctx\.targetRoot\)/)
 })
 
+test('skill auto-install does not silently continue when installation or mirror sync fails', async () => {
+  const patchSource = await readFile(
+    fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
+    'utf8',
+  )
+
+  assert.doesNotMatch(patchSource, /추천 agent skills 자동 설치는 건너뛰었어요\./)
+  assert.doesNotMatch(patchSource, /필요하면 나중에 직접 실행해 주세요:/)
+  assert.doesNotMatch(patchSource, /renderSkillsAddCommand\(/)
+  assert.doesNotMatch(patchSource, /catch \(error\)/)
+})
+
 test('create skill auto-install defers summary notes until finalize appends provisioning notes first', async () => {
   const patchSource = await readFile(
     fileURLToPath(new URL('../create/phases/patch.ts', import.meta.url)),
