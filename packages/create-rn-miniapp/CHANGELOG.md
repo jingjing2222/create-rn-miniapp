@@ -1,5 +1,24 @@
 # create-rn-miniapp
 
+## 0.1.8
+
+### Patch Changes
+
+- 5eb99db: `tds-ui` skill이 TDS 문서를 찾을 때 `llms-full.txt`를 바로 뒤지지 않고, 먼저 `llms.txt` 인덱스로 후보와 docs path를 좁히도록 정리했습니다.
+
+  - `SKILL.md`, `AGENTS.md`, decision matrix, category reference가 모두 `llms.txt`를 shortlist 진입점으로 설명하도록 맞췄습니다.
+  - `llms-full.txt`는 후보가 정해진 뒤 examples, interface, semantics를 확인하는 용도로만 읽도록 계약을 분리했습니다.
+  - 관련 템플릿 테스트를 보강해 `tds-ui` skill이 index-first, full-on-demand 흐름을 계속 유지하는지 검증합니다.
+
+- 4173d3c: `tds-ui` skill이 source repo에 llms snapshot을 커밋하지 않고도, 스캐폴딩 시 공식 TDS React Native `llms.txt`, `llms-full.txt`를 설치된 workspace에 내려받아 mirror하도록 정리했습니다.
+
+  - source repo의 `skills/tds-ui/generated/`에는 `anomalies.json`만 유지하고, llms snapshot은 install-time download로 전환했습니다.
+  - skill metadata, AGENTS, references는 공식 URL을 canonical truth source로 두고, 설치된 workspace에서는 `generated/llms*.txt` mirror를 우선 읽도록 정리했습니다.
+  - create flow에 `tds-ui` llms mirror download hook을 추가하고 관련 회귀 테스트를 갱신했습니다.
+
+- Updated dependencies [5eb99db]
+  - @create-rn-miniapp/scaffold-templates@0.1.8
+
 ## 0.1.7
 
 ### Patch Changes
