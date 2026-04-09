@@ -1,3 +1,15 @@
+## 다음 작업: 추천 agent skills 설치 시 tds-ui metadata ENOENT 회귀 수정
+
+### 목표
+- `skills add --copy`가 `.agents/skills`와 `.claude/skills`에 `metadata.json` 없이 설치하는 실제 출력 형태를 테스트로 먼저 고정한다.
+- `syncInstalledSkillArtifacts`가 `skills/tds-ui`의 canonical metadata를 읽어 agent mirror들에도 필요한 metadata와 llms mirror를 채우도록 수정한다.
+- `pnpm verify`로 추천 skill 자동 설치 회귀가 없는지 다시 확인한다.
+
+### 작업 순서
+1. 실제 `skills add` 출력과 동일하게 `skills/tds-ui`에만 `metadata.json`이 있고 agent mirror에는 없는 상태를 failing test로 추가한다.
+2. `packages/create-rn-miniapp/src/skills/install.ts`에서 tds-ui metadata source를 한 번만 해석하고, 설치된 각 root에 metadata/llms mirror를 동기화하도록 수정한다.
+3. 타깃 테스트 후 `pnpm verify`를 돌려 전체 회귀를 확인한다.
+
 ## 다음 작업: tds-ui llms index-first 정리 changeset/브랜치/PR 마감
 
 ### 목표

@@ -40,6 +40,10 @@ type SkillMirrorMetadata = {
   installMirrors: Record<string, string>
 }
 
+type SkillMirrorMetadataSource = {
+  metadataContents: string
+}
+
 type SyncInstalledSkillArtifactsOptions = {
   fetchImpl?: typeof fetch
   allowDownloadFailureSkillIds?: readonly string[]
@@ -183,13 +187,32 @@ function resolveMirrorTargetPath(skillDirectory: string, relativePath: string) {
   return targetPath
 }
 
-async function readSkillMirrorMetadata(
-  skillDirectory: string,
+async function resolveSkillMirrorMetadataSource(
+  skillDirectories: readonly string[],
   skillId: string,
-): Promise<SkillMirrorMetadata> {
-  const metadata = JSON.parse(
-    await readFile(path.join(skillDirectory, 'metadata.json'), 'utf8'),
-  ) as Record<string, unknown> | null
+): Promise<SkillMirrorMetadataSource> {
+  for (const skillDirectory of skillDirectories) {
+    const metadataPath = path.join(skillDirectory, 'metadata.json')
+
+    if (!(await pathExists(metadataPath))) {
+      continue
+    }
+
+    const metadataContents = await readFile(metadataPath, 'utf8')
+
+    return {
+      metadataContents,
+    }
+  }
+
+  throw new Error(`${skillId} metadata.json을 찾지 못했어요.`)
+}
+
+function parseSkillMirrorMetadataContents(
+  metadataContents: string,
+  skillId: string,
+): SkillMirrorMetadata {
+  const metadata = JSON.parse(metadataContents) as Record<string, unknown> | null
 
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
     throw new Error(`${skillId} metadata.json 형식이 잘못됐어요.`)
@@ -201,36 +224,58 @@ async function readSkillMirrorMetadata(
   }
 }
 
-async function syncTdsUiMirrorArtifacts(skillDirectory: string, fetchImpl: typeof fetch) {
-  const metadata = await readSkillMirrorMetadata(skillDirectory, 'tds-ui')
+async function syncTdsUiMirrorArtifacts(
+  skillDirectories: readonly string[],
+  fetchImpl: typeof fetch,
+) {
+  const metadataSource = await resolveSkillMirrorMetadataSource(skillDirectories, 'tds-ui')
+  const metadata = parseSkillMirrorMetadataContents(metadataSource.metadataContents, 'tds-ui')
   const downloads: Array<{ targetPath: string; contents: string }> = []
-
-  for (const sourceUrl of metadata.upstreamSources) {
+  const metadataWrites = skillDirectories.map((skillDirectory) => ({
+    targetPath: path.join(skillDirectory, 'metadata.json'),
+    contents: metadataSource.metadataContents,
+  }))
+  const downloadPlans = metadata.upstreamSources.map((sourceUrl) => {
     const relativePath = metadata.installMirrors[sourceUrl]
 
     if (!relativePath) {
       throw new Error(`tds-ui metadata.installMirrors에 누락된 URL이 있어요: ${sourceUrl}`)
     }
 
-    const targetPath = resolveMirrorTargetPath(skillDirectory, relativePath)
+    return {
+      sourceUrl,
+      targetPaths: skillDirectories.map((skillDirectory) =>
+        resolveMirrorTargetPath(skillDirectory, relativePath),
+      ),
+    }
+  })
 
+  for (const metadataWrite of metadataWrites) {
+    await writeFile(metadataWrite.targetPath, metadataWrite.contents, 'utf8')
+  }
+
+  for (const downloadPlan of downloadPlans) {
     let response: Awaited<ReturnType<typeof fetchImpl>>
 
     try {
-      response = await fetchImpl(sourceUrl)
+      response = await fetchImpl(downloadPlan.sourceUrl)
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
-      throw new SkillMirrorDownloadError(sourceUrl, reason)
+      throw new SkillMirrorDownloadError(downloadPlan.sourceUrl, reason)
     }
 
     if (!response.ok) {
-      throw new SkillMirrorDownloadError(sourceUrl, response.status)
+      throw new SkillMirrorDownloadError(downloadPlan.sourceUrl, response.status)
     }
 
-    downloads.push({
-      targetPath,
-      contents: await response.text(),
-    })
+    const contents = await response.text()
+
+    for (const targetPath of downloadPlan.targetPaths) {
+      downloads.push({
+        targetPath,
+        contents,
+      })
+    }
   }
 
   for (const download of downloads) {
@@ -262,20 +307,23 @@ export async function syncInstalledSkillArtifacts(
     throw new Error('skill mirror를 다운로드할 fetch 구현을 찾지 못했어요.')
   }
 
-  for (const skill of await enumerateInstalledProjectSkills(targetRoot)) {
-    if (skill.id !== 'tds-ui') {
-      continue
+  const installedSkills = await enumerateInstalledProjectSkills(targetRoot)
+  const tdsUiDirectories = installedSkills
+    .filter((skill) => skill.id === 'tds-ui')
+    .map((skill) => path.join(targetRoot, skill.skillsRoot, skill.id))
+
+  if (tdsUiDirectories.length === 0) {
+    return
+  }
+
+  try {
+    await syncTdsUiMirrorArtifacts(tdsUiDirectories, fetchImpl)
+  } catch (error) {
+    if (error instanceof SkillMirrorDownloadError && allowDownloadFailureSkillIds.has('tds-ui')) {
+      return
     }
 
-    try {
-      await syncTdsUiMirrorArtifacts(path.join(targetRoot, skill.skillsRoot, skill.id), fetchImpl)
-    } catch (error) {
-      if (error instanceof SkillMirrorDownloadError && allowDownloadFailureSkillIds.has(skill.id)) {
-        continue
-      }
-
-      throw error
-    }
+    throw error
   }
 }
 
