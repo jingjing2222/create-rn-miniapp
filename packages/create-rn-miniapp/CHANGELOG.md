@@ -1,5 +1,11 @@
 # create-rn-miniapp
 
+## 0.1.11
+
+### Patch Changes
+
+- 0272f95: Cloudflare server scaffold가 `frontend/.env.local`, `backoffice/.env.local` placeholder를 자동으로 만들고, Worker URL을 자동으로 채우지 못한 경우 안내 문구도 값 입력 중심으로 정리했어요. tRPC shared package도 `package.json` export와 shared TypeScript dependency를 같이 넣어 RN `ait build`에서 workspace package 해석이 끊기지 않게 맞췄어요.
+
 ## 0.1.10
 
 ### Patch Changes
