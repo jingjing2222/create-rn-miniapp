@@ -258,6 +258,12 @@ test('syncInstalledSkillArtifacts tolerates download failures for locally source
 
   await mkdir(skillRoot, { recursive: true })
   await writeFile(path.join(skillRoot, 'SKILL.md'), '# TDS\n', 'utf8')
+  for (const skillsRoot of ['.agents/skills', '.claude/skills']) {
+    const mirrorSkillRoot = path.join(targetRoot, skillsRoot, 'tds-ui')
+
+    await mkdir(mirrorSkillRoot, { recursive: true })
+    await writeFile(path.join(mirrorSkillRoot, 'SKILL.md'), '# TDS\n', 'utf8')
+  }
   await writeFile(
     path.join(skillRoot, 'metadata.json'),
     `${JSON.stringify(
@@ -282,12 +288,20 @@ test('syncInstalledSkillArtifacts tolerates download failures for locally source
     }),
   )
 
+  const expectedMetadataContents = await readFile(path.join(skillRoot, 'metadata.json'), 'utf8')
+
+  for (const skillsRoot of ['skills', '.agents/skills', '.claude/skills']) {
+    assert.equal(
+      await readFile(path.join(targetRoot, skillsRoot, 'tds-ui', 'metadata.json'), 'utf8'),
+      expectedMetadataContents,
+    )
+  }
   await assert.rejects(readFile(path.join(skillRoot, 'generated', 'llms.txt'), 'utf8'), {
     code: 'ENOENT',
   })
 })
 
-test('syncInstalledSkillArtifacts syncs llms mirrors into every installed tds-ui root', async (t) => {
+test('syncInstalledSkillArtifacts reuses canonical tds-ui metadata and fills agent mirrors that were installed without it', async (t) => {
   const targetRoot = await mkdtemp(path.join(os.tmpdir(), 'create-rn-miniapp-skill-mirror-'))
 
   t.after(async () => {
@@ -298,25 +312,42 @@ test('syncInstalledSkillArtifacts syncs llms mirrors into every installed tds-ui
   const llmsFullUrl = 'https://tossmini-docs.toss.im/tds-react-native/llms-full.txt'
   const requestedUrls: string[] = []
 
-  for (const skillsRoot of ['.agents/skills', '.claude/skills']) {
+  for (const skillsRoot of ['skills', '.agents/skills', '.claude/skills']) {
     const skillRoot = path.join(targetRoot, skillsRoot, 'tds-ui')
 
     await mkdir(skillRoot, { recursive: true })
     await writeFile(path.join(skillRoot, 'SKILL.md'), '# TDS\n', 'utf8')
-    await writeFile(
-      path.join(skillRoot, 'metadata.json'),
-      `${JSON.stringify(
-        {
-          upstreamSources: [llmsIndexUrl, llmsFullUrl],
-          installMirrors: {
-            [llmsIndexUrl]: 'generated/llms.txt',
-            [llmsFullUrl]: 'generated/llms-full.txt',
-          },
+  }
+
+  const canonicalSkillRoot = path.join(targetRoot, 'skills', 'tds-ui')
+
+  await writeFile(
+    path.join(canonicalSkillRoot, 'metadata.json'),
+    `${JSON.stringify(
+      {
+        upstreamSources: [llmsIndexUrl, llmsFullUrl],
+        installMirrors: {
+          [llmsIndexUrl]: 'generated/llms.txt',
+          [llmsFullUrl]: 'generated/llms-full.txt',
         },
-        null,
-        2,
-      )}\n`,
-      'utf8',
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  )
+
+  const expectedMetadataContents = await readFile(
+    path.join(canonicalSkillRoot, 'metadata.json'),
+    'utf8',
+  )
+
+  for (const skillsRoot of ['.agents/skills', '.claude/skills']) {
+    await assert.rejects(
+      readFile(path.join(targetRoot, skillsRoot, 'tds-ui', 'metadata.json'), 'utf8'),
+      {
+        code: 'ENOENT',
+      },
     )
   }
 
@@ -332,11 +363,16 @@ test('syncInstalledSkillArtifacts syncs llms mirrors into every installed tds-ui
     },
   })
 
-  assert.deepEqual(requestedUrls, [llmsIndexUrl, llmsFullUrl, llmsIndexUrl, llmsFullUrl])
+  assert.deepEqual(requestedUrls, [llmsIndexUrl, llmsFullUrl])
 
-  for (const skillsRoot of ['.agents/skills', '.claude/skills']) {
+  for (const skillsRoot of ['skills', '.agents/skills', '.claude/skills']) {
+    const skillRoot = path.join(targetRoot, skillsRoot, 'tds-ui')
     const generatedRoot = path.join(targetRoot, skillsRoot, 'tds-ui', 'generated')
 
+    assert.equal(
+      await readFile(path.join(skillRoot, 'metadata.json'), 'utf8'),
+      expectedMetadataContents,
+    )
     assert.equal(
       await readFile(path.join(generatedRoot, 'llms.txt'), 'utf8'),
       `downloaded:${llmsIndexUrl}`,
