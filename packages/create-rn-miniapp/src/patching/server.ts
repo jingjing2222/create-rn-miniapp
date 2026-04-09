@@ -588,7 +588,7 @@ function renderCloudflareServerReadme(options?: {
     
     - miniapp frontend \`.env.local\`은 \`${contract.frontend.envFile}\`에 두고 ${formatEnvKeys(contract.frontend.envKeys)}를 사용해요.
     - backoffice \`.env.local\`은 \`${contract.backoffice.envFile}\`에 두고 ${formatEnvKeys(contract.backoffice.envKeys)}를 사용해요.
-    - provisioning이 성공하면 frontend/backoffice \`.env.local\`에 Worker URL이 자동으로 기록돼요.
+    - scaffold가 frontend/backoffice \`.env.local\` placeholder를 자동으로 만들고, provisioning이 성공하면 Worker URL까지 자동으로 기록해요.
     - Worker 코드는 \`${CLOUDFLARE_D1_BINDING_NAME}\` D1 binding과 \`${CLOUDFLARE_R2_BINDING_NAME}\` R2 binding을 사용할 수 있어요.
     ${
       trpcEnabled

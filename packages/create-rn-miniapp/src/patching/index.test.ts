@@ -705,6 +705,7 @@ test('patchFrontendWorkspace adds cloudflare API bootstrap when cloudflare serve
   }
   const graniteConfig = await readFile(path.join(frontendRoot, 'granite.config.ts'), 'utf8')
   const granitePreset = await readFile(path.join(frontendRoot, 'scaffold.preset.ts'), 'utf8')
+  const envFile = await readFile(path.join(frontendRoot, '.env.local'), 'utf8')
   const envTypes = await readFile(path.join(frontendRoot, 'src', 'env.d.ts'), 'utf8')
   const apiClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'api.ts'), 'utf8')
 
@@ -730,6 +731,7 @@ test('patchFrontendWorkspace adds cloudflare API bootstrap when cloudflare serve
     granitePreset,
     /export const scaffoldEnvBindings = \{ MINIAPP_API_BASE_URL: miniappApiBaseUrl \}/,
   )
+  assert.equal(envFile, 'MINIAPP_API_BASE_URL=\n')
   assert.match(envTypes, /readonly MINIAPP_API_BASE_URL: string/)
   assert.match(apiClient, /import\.meta\.env\.MINIAPP_API_BASE_URL/)
   assert.match(apiClient, /export async function apiFetch/)
@@ -804,6 +806,7 @@ test('patchFrontendWorkspace adds cloudflare trpc client when trpc overlay is se
       noEmit?: boolean
     }
   }
+  const envFile = await readFile(path.join(frontendRoot, '.env.local'), 'utf8')
   const trpcClient = await readFile(path.join(frontendRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
 
   assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
@@ -815,6 +818,7 @@ test('patchFrontendWorkspace adds cloudflare trpc client when trpc overlay is se
   assert.equal(tsconfig.compilerOptions?.allowImportingTsExtensions, true)
   assert.equal(tsconfig.compilerOptions?.moduleResolution, 'bundler')
   assert.equal(tsconfig.compilerOptions?.noEmit, true)
+  assert.equal(envFile, 'MINIAPP_API_BASE_URL=\n')
   assert.equal(await pathExists(path.join(frontendRoot, 'src', 'lib', 'api.ts')), false)
   assert.match(trpcClient, /createTRPCProxyClient/)
   assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/app-router'/)
@@ -1376,10 +1380,12 @@ test('patchBackofficeWorkspace adds cloudflare API bootstrap when cloudflare ser
   ) as {
     dependencies?: Record<string, string>
   }
+  const envFile = await readFile(path.join(backofficeRoot, '.env.local'), 'utf8')
   const envTypes = await readFile(path.join(backofficeRoot, 'src', 'vite-env.d.ts'), 'utf8')
   const apiClient = await readFile(path.join(backofficeRoot, 'src', 'lib', 'api.ts'), 'utf8')
 
   assert.equal(packageJson.dependencies?.['@supabase/supabase-js'], undefined)
+  assert.equal(envFile, 'VITE_API_BASE_URL=\n')
   assert.match(envTypes, /readonly VITE_API_BASE_URL: string/)
   assert.match(apiClient, /import\.meta\.env\.VITE_API_BASE_URL/)
   assert.match(apiClient, /export async function apiFetch/)
@@ -1656,6 +1662,7 @@ test('patchBackofficeWorkspace adds cloudflare trpc client without api helper wh
     dependencies?: Record<string, string>
     devDependencies?: Record<string, string>
   }
+  const envFile = await readFile(path.join(backofficeRoot, '.env.local'), 'utf8')
   const trpcClient = await readFile(path.join(backofficeRoot, 'src', 'lib', 'trpc.ts'), 'utf8')
 
   assert.equal(packageJson.dependencies?.['@trpc/client'], '^11.13.4')
@@ -1664,6 +1671,7 @@ test('patchBackofficeWorkspace adds cloudflare trpc client without api helper wh
     packageJson.scripts?.typecheck,
     'pnpm --dir ../packages/app-router run build && tsc -b --pretty false',
   )
+  assert.equal(envFile, 'VITE_API_BASE_URL=\n')
   assert.equal(await pathExists(path.join(backofficeRoot, 'src', 'lib', 'api.ts')), false)
   assert.match(trpcClient, /createTRPCProxyClient/)
   assert.match(trpcClient, /import type \{ AppRouter \} from '@workspace\/app-router'/)

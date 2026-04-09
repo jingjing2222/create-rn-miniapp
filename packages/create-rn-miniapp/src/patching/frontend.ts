@@ -80,6 +80,26 @@ const FRONTEND_FIREBASE_ENV_TYPES = dedentWithTrailingNewline`
   }
 `
 
+const FRONTEND_PROVIDER_ENV_PLACEHOLDERS: Partial<Record<ServerProvider, string>> = {
+  supabase: dedentWithTrailingNewline`
+    MINIAPP_SUPABASE_URL=
+    MINIAPP_SUPABASE_PUBLISHABLE_KEY=
+  `,
+  cloudflare: dedentWithTrailingNewline`
+    MINIAPP_API_BASE_URL=
+  `,
+  firebase: dedentWithTrailingNewline`
+    MINIAPP_FIREBASE_API_KEY=
+    MINIAPP_FIREBASE_AUTH_DOMAIN=
+    MINIAPP_FIREBASE_PROJECT_ID=
+    MINIAPP_FIREBASE_STORAGE_BUCKET=
+    MINIAPP_FIREBASE_MESSAGING_SENDER_ID=
+    MINIAPP_FIREBASE_APP_ID=
+    MINIAPP_FIREBASE_MEASUREMENT_ID=
+    MINIAPP_FIREBASE_FUNCTION_REGION=
+  `,
+}
+
 const FRONTEND_SUPABASE_CLIENT = dedentWithTrailingNewline`
   import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
@@ -649,6 +669,29 @@ async function writeFrontendFirebaseBootstrap(frontendRoot: string) {
   )
 }
 
+async function ensureFrontendLocalEnvPlaceholder(
+  frontendRoot: string,
+  serverProvider: ServerProvider | null,
+) {
+  if (!serverProvider) {
+    return
+  }
+
+  const envPlaceholder = FRONTEND_PROVIDER_ENV_PLACEHOLDERS[serverProvider]
+
+  if (!envPlaceholder) {
+    return
+  }
+
+  const envPath = path.join(frontendRoot, '.env.local')
+
+  if (await pathExists(envPath)) {
+    return
+  }
+
+  await writeTextFile(envPath, envPlaceholder)
+}
+
 async function ensureFrontendPackageJsonForWorkspace(
   frontendRoot: string,
   packageJson: PackageJson,
@@ -752,6 +795,7 @@ export async function ensureFrontendSupabaseBootstrap(targetRoot: string, tokens
     },
   ])
   await writeFrontendSupabaseBootstrap(frontendRoot)
+  await ensureFrontendLocalEnvPlaceholder(frontendRoot, 'supabase')
   await applyWorkspaceProjectTemplate(targetRoot, 'frontend', tokens)
 }
 
@@ -777,6 +821,7 @@ export async function ensureFrontendCloudflareBootstrap(
     },
   ])
   await writeFrontendCloudflareBootstrap(frontendRoot)
+  await ensureFrontendLocalEnvPlaceholder(frontendRoot, 'cloudflare')
   await applyWorkspaceProjectTemplate(targetRoot, 'frontend', tokens)
 }
 
@@ -799,6 +844,7 @@ export async function ensureFrontendFirebaseBootstrap(targetRoot: string, tokens
     },
   ])
   await writeFrontendFirebaseBootstrap(frontendRoot)
+  await ensureFrontendLocalEnvPlaceholder(frontendRoot, 'firebase')
   await applyWorkspaceProjectTemplate(targetRoot, 'frontend', tokens)
 }
 
@@ -872,6 +918,8 @@ export async function patchFrontendWorkspace(
     await ensureFrontendFirebaseCryptoShim(frontendRoot)
     await writeFrontendFirebaseBootstrap(frontendRoot)
   }
+
+  await ensureFrontendLocalEnvPlaceholder(frontendRoot, options.serverProvider)
 
   await applyWorkspaceProjectTemplate(targetRoot, 'frontend', tokens)
 }

@@ -877,13 +877,9 @@ export function formatCloudflareManualSetupNote(options: {
           기존 Cloudflare Worker를 골라서 원격 초기화는 자동으로 건너뛰었어요.
         `
       : ''
-  const backofficeBlock = options.hasBackoffice
-    ? dedent`
-
-        ${path.join(options.targetRoot, 'backoffice', '.env.local')}
-        VITE_API_BASE_URL=<배포된 Worker URL>
-      `
-    : ''
+  const clientEnvGuidance = options.hasBackoffice
+    ? 'frontend/.env.local 과 backoffice/.env.local placeholder는 자동으로 만들었어요.'
+    : 'frontend/.env.local placeholder는 자동으로 만들었어요.'
   const tokenGuideBlock = renderOptionalMarkdownLines(buildCloudflareApiTokenGuideLines())
   const serverEnv = createCloudflareServerEnvValues({
     accountId: options.accountId,
@@ -895,12 +891,10 @@ export function formatCloudflareManualSetupNote(options: {
   }).trimEnd()
 
   return {
-    title: 'Cloudflare API URL을 이렇게 넣어 주세요',
+    title: 'Cloudflare Worker URL만 채워 주세요',
     body: dedent`
-      Cloudflare Worker \`${options.workerName}\`의 배포 URL을 확인한 뒤 아래 파일에 직접 넣어 주세요.${skippedInitializationBlock}
-
-      ${path.join(options.targetRoot, 'frontend', '.env.local')}
-      MINIAPP_API_BASE_URL=<배포된 Worker URL>${backofficeBlock}
+      ${clientEnvGuidance}
+      Cloudflare Worker \`${options.workerName}\`의 배포 URL만 해당 파일의 빈 값에 채워 주세요.${skippedInitializationBlock}
 
       ${path.join(options.targetRoot, 'server', '.env.local')}
       ${serverEnv}

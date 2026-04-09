@@ -1,6 +1,6 @@
 import path from 'node:path'
 import type { ServerProvider } from '../providers/index.js'
-import { removePathIfExists, writeWorkspaceNpmrc } from '../templates/filesystem.js'
+import { pathExists, removePathIfExists, writeWorkspaceNpmrc } from '../templates/filesystem.js'
 import { applyWorkspaceProjectTemplate } from '../templates/server.js'
 import type { TemplateTokens } from '../templates/types.js'
 import {
@@ -71,6 +71,25 @@ const BACKOFFICE_FIREBASE_ENV_TYPES = dedentWithTrailingNewline`
     readonly env: ImportMetaEnv
   }
 `
+
+const BACKOFFICE_PROVIDER_ENV_PLACEHOLDERS: Partial<Record<ServerProvider, string>> = {
+  supabase: dedentWithTrailingNewline`
+    VITE_SUPABASE_URL=
+    VITE_SUPABASE_PUBLISHABLE_KEY=
+  `,
+  cloudflare: dedentWithTrailingNewline`
+    VITE_API_BASE_URL=
+  `,
+  firebase: dedentWithTrailingNewline`
+    VITE_FIREBASE_API_KEY=
+    VITE_FIREBASE_AUTH_DOMAIN=
+    VITE_FIREBASE_PROJECT_ID=
+    VITE_FIREBASE_STORAGE_BUCKET=
+    VITE_FIREBASE_MESSAGING_SENDER_ID=
+    VITE_FIREBASE_APP_ID=
+    VITE_FIREBASE_MEASUREMENT_ID=
+  `,
+}
 
 const BACKOFFICE_SUPABASE_CLIENT = dedentWithTrailingNewline`
   import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -237,6 +256,29 @@ async function writeBackofficeFirebaseBootstrap(backofficeRoot: string) {
   )
 }
 
+async function ensureBackofficeLocalEnvPlaceholder(
+  backofficeRoot: string,
+  serverProvider: ServerProvider | null,
+) {
+  if (!serverProvider) {
+    return
+  }
+
+  const envPlaceholder = BACKOFFICE_PROVIDER_ENV_PLACEHOLDERS[serverProvider]
+
+  if (!envPlaceholder) {
+    return
+  }
+
+  const envPath = path.join(backofficeRoot, '.env.local')
+
+  if (await pathExists(envPath)) {
+    return
+  }
+
+  await writeTextFile(envPath, envPlaceholder)
+}
+
 async function ensureBackofficePackageJsonForWorkspace(
   backofficeRoot: string,
   packageJson: PackageJson,
@@ -356,6 +398,7 @@ export async function ensureBackofficeSupabaseBootstrap(
   ])
   await patchBackofficeEntryFiles(backofficeRoot)
   await writeBackofficeSupabaseBootstrap(backofficeRoot)
+  await ensureBackofficeLocalEnvPlaceholder(backofficeRoot, 'supabase')
   await applyWorkspaceProjectTemplate(targetRoot, 'backoffice', tokens)
 }
 
@@ -380,6 +423,7 @@ export async function ensureBackofficeCloudflareBootstrap(
   ])
   await patchBackofficeEntryFiles(backofficeRoot)
   await writeBackofficeCloudflareBootstrap(backofficeRoot)
+  await ensureBackofficeLocalEnvPlaceholder(backofficeRoot, 'cloudflare')
   await applyWorkspaceProjectTemplate(targetRoot, 'backoffice', tokens)
 }
 
@@ -404,6 +448,7 @@ export async function ensureBackofficeFirebaseBootstrap(
   ])
   await patchBackofficeEntryFiles(backofficeRoot)
   await writeBackofficeFirebaseBootstrap(backofficeRoot)
+  await ensureBackofficeLocalEnvPlaceholder(backofficeRoot, 'firebase')
   await applyWorkspaceProjectTemplate(targetRoot, 'backoffice', tokens)
 }
 
@@ -476,6 +521,8 @@ export async function patchBackofficeWorkspace(
   if (options.serverProvider === 'firebase') {
     await writeBackofficeFirebaseBootstrap(backofficeRoot)
   }
+
+  await ensureBackofficeLocalEnvPlaceholder(backofficeRoot, options.serverProvider)
 
   await applyWorkspaceProjectTemplate(targetRoot, 'backoffice', tokens)
 }
